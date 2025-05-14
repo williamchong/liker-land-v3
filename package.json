@@ -30,6 +30,7 @@
     "npm": "^10.9.2",
     "nuxt": "^3.16.0",
     "nuxt-auth-utils": "^0.5.17",
+    "nuxt-gtag": "^3.0.2",
     "nuxt-security": "^2.2.0",
     "pinia": "^3.0.1",
     "viem": "^2.23.12",

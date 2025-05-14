@@ -1,4 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+
+const {
+  GA_TRACKING_ID,
+} = process.env
+
 export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
@@ -10,6 +15,7 @@ export default defineNuxtConfig({
     'nuxt-auth-utils',
     '@vueuse/nuxt',
     'nuxt-security',
+    'nuxt-gtag',
   ],
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
@@ -33,6 +39,9 @@ export default defineNuxtConfig({
     },
   },
   compatibilityDate: '2024-11-01',
+  gtag: {
+    id: GA_TRACKING_ID,
+  },
   i18n: {
     locales: [
       {
