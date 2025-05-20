@@ -1,65 +1,33 @@
 export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
-  const nftStore = useNFTStore()
   const metadataStore = useMetadataStore()
   const bookstoreStore = useBookstoreStore()
+  const evmBookInfo = useEVMBookInfo({ nftClassId })
+  const legacyBookInfo = useLegacyBookInfo({ nftClassId })
+  const isEVM = computed(() => checkIsEVMAddress(nftClassId))
 
-  const nftClass = computed(() => nftStore.getNFTClassById(nftClassId))
-  const iscnIdPrefix = computed(() => nftClass.value?.parent.iscn_id_prefix)
-  const iscnRecordData = computed(() => nftStore.getISCNDataByNFTClassId(nftClassId))
+  const bookInfo = isEVM.value ? evmBookInfo : legacyBookInfo
 
-  const publisherWalletAddress = computed(() => nftClass.value?.owner)
-  const publisherName = computed(() => {
-    return metadataStore.getLikerInfoByWalletAddress(publisherWalletAddress.value)?.displayName
-  })
-
-  const contentMetadata = computed(() => iscnRecordData.value?.contentMetadata)
-
-  const name = computed(() => contentMetadata.value?.name)
-  const description = computed(() => contentMetadata.value?.description)
-
-  const author = computed(() => contentMetadata.value?.author)
   const authorName = computed(() => {
-    return (typeof author.value === 'string' ? author.value : author.value?.name) || publisherName.value
+    const author = bookInfo.author.value
+    if (typeof author === 'string') return author
+    if (typeof author === 'object' && 'name' in author) return author.name
+    return ''
   })
 
-  const coverSrc = computed(() => normalizeURIToHTTP(nftClass.value?.metadata.image))
+  const publisherName = computed(() => metadataStore.getLikerInfoByWalletAddress(bookInfo.publisherWalletAddress.value)?.displayName || '')
 
-  const publishedDate = computed(() => {
-    const datePublished = contentMetadata.value?.datePublished
-    return datePublished ? new Date(datePublished) : undefined
-  })
-
-  const releasedDate = computed(() => {
-    if (publishedDate.value) return publishedDate.value
-    return new Date(nftClass.value?.created_at || Date.now())
-  })
-
-  const externalURL = computed(() => contentMetadata.value?.url || contentMetadata.value?.external_url)
-
-  const contentFingerprints = computed(() => {
-    return iscnRecordData.value?.contentFingerprints || []
-  })
-
-  const nftClassContentURLs = computed(() => contentMetadata.value?.sameAs || [])
-
-  const nftClassReadActionTargets = computed(() => {
-    const { potentialAction } = contentMetadata.value || {}
-    if (!potentialAction) return []
-    let targets: ReadActionTarget[] = []
-    if (Array.isArray(potentialAction)) {
-      const readAction = potentialAction.find(
-        action => action.name === 'ReadAction',
-      )
-      if (!readAction) return [];
-      ({ targets } = readAction)
+  const readActionEntryPoints = computed(() => {
+    const potentialAction = bookInfo.potentialAction.value
+    let readAction: ReadAction | undefined
+    if (potentialAction && potentialAction['@type'] === 'ReadAction') {
+      readAction = potentialAction as ReadAction
     }
-    else {
-      const readAction = potentialAction.ReadAction
-      if (!readAction) return [];
-      ({ targets } = readAction)
+    let entryPoints: ReadActionEntryPoint[] = []
+    if (readAction) {
+      entryPoints = readAction.target || []
     }
-    return targets.map((target) => {
-      const { contentType, url, name } = target
+    return entryPoints.map((entryPoint) => {
+      const { contentType, url, name } = entryPoint
       return {
         url: normalizeURIToHTTP(url),
         name,
@@ -69,10 +37,10 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
   })
 
   const contentURLs = computed(() => {
-    if (nftClassReadActionTargets.value.length) {
-      return nftClassReadActionTargets.value
+    if (readActionEntryPoints.value.length) {
+      return readActionEntryPoints.value
     }
-    return nftClassContentURLs.value.map(url => ({
+    return bookInfo.sameAs.value.map(url => ({
       url: normalizeURIToHTTP(url),
       name: extractFilenameFromContentURL(url),
       type: extractContentTypeFromURL(url),
@@ -93,22 +61,13 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
   })
 
   return {
-    iscnIdPrefix,
-    nftClass,
+    isEVM,
 
-    name,
-    description,
-    coverSrc,
+    ...bookInfo,
+
     authorName,
-
     publisherName,
-    publisherWalletAddress,
 
-    publishedDate,
-    releasedDate,
-
-    externalURL,
-    contentFingerprints,
     contentURLs,
     contentTypes,
 

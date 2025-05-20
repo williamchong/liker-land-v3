@@ -21,7 +21,7 @@
       <UCard v-else>
         <UButton
           :label="$t('user_page_login')"
-          :loading="userStore.isLoggingIn"
+          :loading="accountStore.isLoggingIn"
           variant="outline"
           block
           @click="handleLogin"
@@ -98,20 +98,19 @@
         />
 
         <UCard :ui="{ body: '!px-3 space-y-4' }">
-          <div class="flex justify-between flex-wrap gap-2 px-3">
-            <div class="flex items-center gap-2">
-              <UIcon
-                name="i-material-symbols-language"
-                class="size-5"
-              />
-              <span
-                class="text-sm"
-                v-text="$t('user_page_locale')"
-              />
-            </div>
-
+          <AccountSettingsItem
+            icon="i-material-symbols-language"
+            :label="$t('user_page_locale')"
+          >
             <LocaleSwitcher :is-icon-hidden="true" />
-          </div>
+          </AccountSettingsItem>
+
+          <AccountSettingsItem
+            icon="i-material-symbols-arrow-split-rounded"
+            :label="$t('user_page_evm_switch')"
+          >
+            <USwitch v-model="accountStore.isEVMMode" />
+          </AccountSettingsItem>
 
           <UButton
             :label="$t('user_page_contact_support')"
@@ -167,13 +166,13 @@
 <script setup lang="ts">
 const { t: $t } = useI18n()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
-const userStore = useAccountStore()
+const accountStore = useAccountStore()
 
 async function handleLogin() {
-  await userStore.login()
+  await accountStore.login()
 }
 
 async function handleLogout() {
-  await userStore.logout()
+  await accountStore.logout()
 }
 </script>

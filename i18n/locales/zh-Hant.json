@@ -1,7 +1,10 @@
 {
+  "account_page_update_settings_error": "未能更新帳戶設定。",
   "app_header_shelf": "書架",
   "app_header_store": "書店",
   "bookshelf_more_menu_title": "更多選項",
+  "bookshelf_no_items": "你的書架沒有書",
+  "bookshelf_no_items_cta_button": "前往書店",
   "bookshelf_open_in_epub": "打開 EPUB 版本",
   "bookshelf_open_in_pdf": "打開 PDF 版本",
   "bookshelf_open_in_type": "打開 {type} 版本",
@@ -32,6 +35,7 @@
   "user_page_account_title": "個人賬戶",
   "user_page_contact_support": "聯絡我們",
   "user_page_cosmos_wallet": "Cosmos 地址",
+  "user_page_evm_switch": "切換至 EVM",
   "user_page_evm_wallet": "EVM 地址",
   "user_page_faq": "常見問題",
   "user_page_liker_id": "Liker ID",

@@ -1,7 +1,10 @@
 {
+  "account_page_update_settings_error": "Unable to update account settings.",
   "app_header_shelf": "Bookshelf",
   "app_header_store": "Bookstore",
   "bookshelf_more_menu_title": "More Options",
+  "bookshelf_no_items": "Your bookshelf is empty",
+  "bookshelf_no_items_cta_button": "Visit Bookstore",
   "bookshelf_open_in_epub": "Open EPUB",
   "bookshelf_open_in_pdf": "Open PDF",
   "bookshelf_open_in_type": "Open {type}",
@@ -32,6 +35,7 @@
   "user_page_account_title": "User Account",
   "user_page_contact_support": "Contact Us",
   "user_page_cosmos_wallet": "Cosmos Wallet Address",
+  "user_page_evm_switch": "EVM Mode",
   "user_page_evm_wallet": "EVM Wallet Address",
   "user_page_faq": "FAQ",
   "user_page_liker_id": "Liker ID",
