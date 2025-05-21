@@ -76,10 +76,6 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 
 const props = defineProps({
-  id: {
-    type: String,
-    required: true,
-  },
   nftClassId: {
     type: String,
     default: '',
@@ -134,11 +130,13 @@ const menuItems = computed<DropdownMenuItem[]>(() => {
 
 watch(isVisible, (visible) => {
   if (visible) {
-    emit('visible', props.id)
-    nftStore.lazyFetchNFTClassAggregatedMetadataById(props.id)
+    emit('visible', props.nftClassId)
+    nftStore.lazyFetchNFTClassAggregatedMetadataById(props.nftClassId).catch(() => {
+      console.warn(`Failed to fetch aggregated metadata for the NFT class [${props.nftClassId}]`)
+    })
     if (bookInfo.publisherWalletAddress.value) {
       metadataStore.lazyFetchLikerInfoByWalletAddress(bookInfo.publisherWalletAddress.value).catch(() => {
-        // NOTE: Ignore error
+        console.warn(`Failed to fetch Liker info of the wallet [${bookInfo.publisherWalletAddress.value}] for the NFT class [${props.nftClassId}]`)
       })
     }
   }
@@ -146,7 +144,6 @@ watch(isVisible, (visible) => {
 
 function openContentURL(contentURL: { type?: string, url: string, name: string }) {
   emit('open', {
-    id: props.id,
     nftClassId: props.nftClassId,
     type: contentURL.type,
     url: contentURL.url,

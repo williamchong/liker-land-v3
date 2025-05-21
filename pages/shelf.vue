@@ -55,8 +55,8 @@
       >
         <BookshelfItem
           v-for="item in bookshelfStore.items"
-          :id="item.id"
-          :key="item.id"
+          :id="item.nftClassId"
+          :key="item.nftClassId"
           :nft-class-id="item.nftClassId"
           @open="handleBookshelfItemOpen"
         />
