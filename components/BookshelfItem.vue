@@ -3,26 +3,11 @@
     ref="lazyLoadTrigger"
     class="flex flex-col justify-end group"
   >
-    <div class="flex items-end aspect-2/3">
-      <img
-        :class="[
-          'bg-white',
-          'border',
-          'border-[#EBEBEB]',
-          'rounded-lg',
-          'group-hover:shadow-xl',
-          'group-hover:scale-105',
-          'transition-all',
-          'duration-200',
-          'ease-in-out',
-          'origin-bottom',
-          'cursor-pointer',
-        ]"
-        :src="bookCoverSrc"
-        :alt="bookInfo.name.value"
-        @click="handleCoverClick"
-      >
-    </div>
+    <BookCover
+      :src="bookCoverSrc"
+      :alt="bookInfo.name.value"
+      @click="handleCoverClick"
+    />
 
     <div class="flex items-start gap-1 mt-2 h-[48px]">
       <div
