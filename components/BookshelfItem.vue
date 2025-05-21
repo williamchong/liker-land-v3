@@ -9,64 +9,65 @@
       @click="handleCoverClick"
     />
 
-    <div class="flex items-start gap-1 mt-2 h-[48px]">
+    <div class="mt-2 h-[70px]">
+      <div class="flex items-start gap-1">
+        <div
+          class="text-sm laptop:text-base text-[#1A1A1A] font-semibold line-clamp-2 grow"
+          v-text="bookInfo.name"
+        />
+        <UDropdownMenu
+          v-if="isLargerScreen"
+          :items="menuItems"
+        >
+          <UButton
+            class="-mr-1.5 -mt-0.5"
+            icon="i-material-symbols-more-vert"
+            size="sm"
+            color="neutral"
+            variant="link"
+          />
+        </UDropdownMenu>
+        <UDrawer
+          v-else
+          :handle="false"
+        >
+          <UButton
+            class="-mr-1.5 -mt-0.5"
+            icon="i-material-symbols-more-vert"
+            size="sm"
+            color="neutral"
+            variant="link"
+          />
+          <template #content>
+            <UCard :ui="{ header: 'text-center font-bold' }">
+              <template #header>
+                {{ $t('bookshelf_more_menu_title') }}
+              </template>
+              <UButton
+                v-for="item in menuItems"
+                :key="item.label"
+                class="cursor-pointer"
+                :icon="item.icon"
+                :label="item.label"
+                :href="item.href"
+                :target="item.target"
+                :rel="item.rel"
+                variant="link"
+                color="neutral"
+                size="xl"
+                block
+                :ui="{ base: 'justify-start' }"
+                @click="item.onSelect"
+              />
+            </UCard>
+          </template>
+        </UDrawer>
+      </div>
+
       <div
-        class="text-sm laptop:text-base text-[#1A1A1A] font-semibold line-clamp-2 grow"
-        v-text="bookInfo.name"
+        class="mt-0.5 text-xs laptop:text-sm text-[#9B9B9B] line-clamp-1"
+        v-text="bookInfo.authorName"
       />
-
-      <UDropdownMenu
-        v-if="isLargerScreen"
-        :items="menuItems"
-      >
-        <UButton
-          class="-mr-1.5 -mt-0.5"
-          icon="i-material-symbols-more-vert"
-          size="sm"
-          color="neutral"
-          variant="link"
-        />
-      </UDropdownMenu>
-      <UDrawer
-        v-else
-        :handle="false"
-      >
-        <UButton
-          class="-mr-1.5 -mt-0.5"
-          icon="i-material-symbols-more-vert"
-          size="sm"
-          color="neutral"
-          variant="link"
-        />
-        <template #content>
-          <UCard :ui="{ header: 'text-center font-bold' }">
-            <template #header>
-              {{ $t('bookshelf_more_menu_title') }}
-            </template>
-
-            <UButton
-              v-for="item in menuItems"
-              :key="item.label"
-              class="cursor-pointer"
-              :icon="item.icon"
-              :label="item.label"
-              :href="item.href"
-              :target="item.target"
-              :rel="item.rel"
-              variant="link"
-              color="neutral"
-              size="xl"
-              block
-              :ui="{ base: 'justify-start' }"
-              @click="item.onSelect"
-            />
-          </UCard>
-        </template>
-      </UDrawer>
-    </div>
-
-    <div class="mt-0.5 text-xs laptop:text-sm text-[#9B9B9B] line-clamp-1">
-      {{ bookInfo.authorName }}
     </div>
   </li>
 </template>
