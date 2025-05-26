@@ -1,10 +1,11 @@
 <template>
   <li
     ref="lazyLoadTrigger"
-    class="flex flex-col justify-end group"
+    class="flex flex-col justify-end"
   >
     <BookCover
       :src="bookCoverSrc"
+      :to="bookInfo.productPageRoute.value"
       :alt="bookName"
     />
 
@@ -53,7 +54,7 @@ const props = defineProps({
 
 const emit = defineEmits(['visible', 'open'])
 
-const { t: $t } = useI18n()
+const formatPrice = useFormatPrice()
 const nftStore = useNFTStore()
 const metadataStore = useMetadataStore()
 const bookInfo = useBookInfo({ nftClassId: props.nftClassId })
@@ -62,7 +63,7 @@ const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value |
 const bookName = computed(() => bookInfo.name.value || props.bookName)
 const authorName = computed(() => bookInfo.authorName.value)
 
-const formattedPrice = computed(() => props.price > 0 ? `$${props.price}` : $t('price_free'))
+const formattedPrice = computed(() => formatPrice(props.price))
 
 useVisibility('lazyLoadTrigger', (visible) => {
   if (visible) {
@@ -70,9 +71,9 @@ useVisibility('lazyLoadTrigger', (visible) => {
     nftStore.lazyFetchNFTClassAggregatedMetadataById(props.nftClassId).catch(() => {
       console.warn(`Failed to fetch aggregated metadata for the NFT class [${props.nftClassId}]`)
     })
-    if (bookInfo.publisherWalletAddress.value) {
-      metadataStore.lazyFetchLikerInfoByWalletAddress(bookInfo.publisherWalletAddress.value).catch(() => {
-        console.warn(`Failed to fetch Liker info of the wallet [${bookInfo.publisherWalletAddress.value}] for the NFT class [${props.nftClassId}]`)
+    if (bookInfo.nftClassOwnerWalletAddress.value) {
+      metadataStore.lazyFetchLikerInfoByWalletAddress(bookInfo.nftClassOwnerWalletAddress.value).catch(() => {
+        console.warn(`Failed to fetch Liker info of the wallet [${bookInfo.nftClassOwnerWalletAddress.value}] for the NFT class [${props.nftClassId}]`)
       })
     }
   }

@@ -3,7 +3,7 @@ export function useEVMBookInfo({ nftClassId = '' }: { nftClassId?: string } = {}
 
   const nftClass = computed(() => nftStore.getNFTClassById(nftClassId))
 
-  const publisherWalletAddress = computed(() => nftClass.value?.owner_address)
+  const nftClassOwnerWalletAddress = computed(() => nftClass.value?.owner_address || '')
 
   const contentMetadata = computed(() => nftClass.value?.metadata)
 
@@ -11,6 +11,7 @@ export function useEVMBookInfo({ nftClassId = '' }: { nftClassId?: string } = {}
   const description = computed(() => contentMetadata.value?.description)
 
   const author = computed(() => contentMetadata.value?.author)
+  const publisher = computed(() => contentMetadata.value?.publisher)
 
   const coverSrc = computed(() => normalizeURIToHTTP(contentMetadata.value?.thumbnailUrl))
 
@@ -36,9 +37,9 @@ export function useEVMBookInfo({ nftClassId = '' }: { nftClassId?: string } = {}
     name,
     description,
     coverSrc,
+    nftClassOwnerWalletAddress,
     author,
-
-    publisherWalletAddress,
+    publisher,
 
     publishedDate,
     releasedDate,

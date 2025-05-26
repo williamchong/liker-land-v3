@@ -47,6 +47,7 @@ declare interface ISCNContentMetadata {
   'name': string
   'sameAs': string[]
   'potentialAction'?: PotentialAction
+  'publisher': string
   'datePublished'?: string
   'thumbnailUrl': string
   'url'?: string

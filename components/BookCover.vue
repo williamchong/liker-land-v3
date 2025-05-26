@@ -1,29 +1,58 @@
 <template>
-  <div class="relative flex items-end aspect-2/3">
-    <img
-      ref="imgElement"
-      :class="[
-        'bg-white',
-        'border',
-        'border-[#EBEBEB]',
-        'rounded-lg',
-        'group-hover:shadow-xl',
-        'group-hover:scale-105',
-        'transition-all',
-        'duration-200',
-        'ease-in-out',
-        'origin-bottom',
-        'cursor-pointer',
-        hasLoaded && !hasError ? 'opacity-100' : 'opacity-0',
-      ]"
-      :src="props.src"
-      :alt="props.alt"
-      @load="handleImageLoad"
-      @error="handleImageError"
-      @click="emit('click', $event)"
+  <div
+    :class="[
+      { relative: isShowPlaceholder },
+      'flex',
+      { 'aspect-2/3': !isVerticalCenter || isShowPlaceholder },
+      isVerticalCenter ? 'items-center' : 'items-end',
+    ]"
+  >
+    <component
+      :is="props.to ? NuxtLink : 'div'"
+      :class="{
+        'relative': hasShadow && hasLoaded,
+        'w-full h-full': hasError,
+      }"
+      :to="props.to"
     >
+      <div
+        v-if="hasShadow"
+        :class="[
+          'absolute',
+          'inset-0',
+          'bg-[#D3D3D3]',
+          borderRadiusClass,
+          'opacity-20',
+          'brightness-50',
+          'blur-xl',
+          'scale-110',
+          'origin-[top_center]',
+          '-translate-x-[10px]',
+          'pointer-events-none',
+        ]"
+        :style="{ backgroundImage: hasLoaded && !hasError ? `url(${props.src})` : '' }"
+      />
+      <img
+        ref="imgElement"
+        :class="[
+          { relative: hasShadow },
+          'bg-white',
+          coverClass,
+          !isShowPlaceholder ? 'opacity-100' : 'opacity-0',
+          { 'blur-xl': !hasLoaded },
+          'transition-all',
+          'duration-300',
+          'ease-out',
+        ]"
+        :src="props.src"
+        :alt="props.alt"
+        @load="handleImageLoad"
+        @error="handleImageError"
+        @click="emit('click', $event)"
+      >
+    </component>
     <div
-      v-if="!hasLoaded || hasError"
+      v-if="isShowPlaceholder"
       :class="[
         'absolute',
         'flex',
@@ -31,7 +60,8 @@
         'items-center',
         'inset-0',
         'bg-[#E2E2E2]/60',
-        'rounded-lg',
+        'pointer-events-none',
+        coverClass,
         { 'animate-pulse': !hasLoaded },
       ]"
     >
@@ -46,6 +76,10 @@
 </template>
 
 <script setup lang="ts">
+import type { RouteLocationRaw } from 'vue-router'
+
+import { NuxtLink } from '#components'
+
 const props = defineProps({
   src: {
     type: String,
@@ -55,6 +89,18 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  to: {
+    type: Object as PropType<RouteLocationRaw>,
+    default: undefined,
+  },
+  isVerticalCenter: {
+    type: Boolean,
+    default: false,
+  },
+  hasShadow: {
+    type: Boolean,
+    default: false,
+  },
 })
 const emit = defineEmits(['click'])
 
@@ -62,6 +108,36 @@ const hasLoaded = ref(false)
 const hasError = ref(false)
 
 const imgElement = useTemplateRef<HTMLImageElement>('imgElement')
+
+const borderRadiusClass = 'rounded-lg'
+
+const coverClass = computed(() => {
+  const classes = [
+    'border',
+    'border-[#EBEBEB]',
+    borderRadiusClass,
+  ]
+  if (hasLoaded.value) {
+    const instance = getCurrentInstance()
+    if (props.to || (instance?.vnode.props?.onClick)) {
+      classes.push(
+        'cursor-pointer',
+        'hover:shadow-xl',
+        'hover:scale-105',
+        'transition-all',
+        'duration-200',
+        'ease-in-out',
+        'origin-bottom',
+      )
+    }
+  }
+  else {
+    classes.push('pointer-events-none')
+  }
+  return classes
+})
+
+const isShowPlaceholder = computed(() => !props.src || !hasLoaded.value || hasError.value)
 
 onMounted(() => {
   if (imgElement.value?.complete) {

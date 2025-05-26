@@ -5,7 +5,7 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
 
   const iscnRecordData = computed(() => nftStore.getISCNDataByNFTClassId(nftClassId))
 
-  const publisherWalletAddress = computed(() => nftClass.value?.owner)
+  const nftClassOwnerWalletAddress = computed(() => nftClass.value?.owner)
 
   const contentMetadata = computed(() => iscnRecordData.value?.contentMetadata)
 
@@ -13,6 +13,7 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
   const description = computed(() => contentMetadata.value?.description)
 
   const author = computed(() => contentMetadata.value?.author)
+  const publisher = computed(() => contentMetadata.value?.publisher)
 
   const coverSrc = computed(() => normalizeURIToHTTP(nftClass.value?.metadata.image))
 
@@ -38,9 +39,9 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
     name,
     description,
     coverSrc,
+    nftClassOwnerWalletAddress,
     author,
-
-    publisherWalletAddress,
+    publisher,
 
     publishedDate,
     releasedDate,

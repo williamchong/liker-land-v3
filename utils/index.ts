@@ -20,7 +20,7 @@ export function getResizedImageURL(imageURL: string, { size }: { size?: number }
 export function extractContentTypeFromURL(url: string) {
   if (url?.includes('epub')) return 'epub'
   if (url?.includes('pdf')) return 'pdf'
-  return undefined
+  return 'unknown'
 }
 
 export function extractFilenameFromContentURL(url: string) {
@@ -37,6 +37,12 @@ export function getLikerLandV2NFTClassPageURL(nftClassId: string) {
 export function getRouteQuery(key: string, defaultValue = '') {
   const route = useRoute()
   const value = route.query[key]
+  return (Array.isArray(value) ? value[0] : value) || defaultValue
+}
+
+export function getRouteParam(key: string, defaultValue = '') {
+  const route = useRoute()
+  const value = route.params[key]
   return (Array.isArray(value) ? value[0] : value) || defaultValue
 }
 

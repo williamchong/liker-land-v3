@@ -4,14 +4,15 @@ declare interface BookstorePrice {
   name: {
     en: string
     zh: string
-  }
+  } | string
   description: {
     en: string
     zh: string
-  }
+  } | string
   stock: number
   isSoldOut: boolean
   isAutoDeliver: boolean
+  isUnlisted: boolean
   autoMemo: string
   hasShipping: boolean
   isPhysicalOnly: boolean
@@ -31,6 +32,10 @@ declare interface BookstoreInfo {
   enableCustomMessagePage: boolean
   name: string
   description: string
+  author: {
+    name: string
+    description: string
+  }
   keywords: string[]
   thumbnailUrl: string
   usageInfo: string
