@@ -196,7 +196,8 @@
                   class="cursor-pointer"
                   :label="$t('product_page_checkout_button_label')"
                   size="xl"
-                  :disabled="!!selectedPricingItem?.isSoldOut"
+                  :loading="isPurchasing"
+                  :disabled="!!selectedPricingItem?.isSoldOut || isPurchasing"
                   block
                   @click="handlePurchaseButtonClick"
                 />
@@ -315,7 +316,8 @@
           :label="$t('product_page_sticky_purchase_button_label')"
           color="primary"
           size="xl"
-          :disabled="!!selectedPricingItem?.isSoldOut"
+          :loading="isPurchasing"
+          :disabled="!!selectedPricingItem?.isSoldOut || isPurchasing"
           block
           @click="handleStickyPurchaseButtonClick"
         />
@@ -333,7 +335,10 @@ const { t: $t } = useI18n()
 const toast = useToast()
 const wipModal = useWIPModal()
 const formatPrice = useFormatPrice()
+const { loggedIn: hasLoggedIn, user } = useUserSession()
+const accountStore = useAccountStore()
 const nftStore = useNFTStore()
+const { handleError } = useErrorHandler()
 
 const nftClassId = computed(() => getRouteParam('id'))
 
@@ -468,27 +473,48 @@ async function handleSocialButtonClick(key: string) {
 }
 
 function handleAddToCartButtonClick() {
+  useTrackEvent('add_to_cart', { nft_class_id: nftClassId.value })
   // TODO: Implement add to cart functionality
   wipModal.open({
     title: $t('product_page_add_to_cart_button_label'),
   })
 }
 
-function handlePurchaseButtonClick() {
-  // TODO: Implement purchase functionality
-  wipModal.open({
-    title: $t('product_page_checkout_button_label'),
-  })
+const isPurchasing = ref(false)
+
+async function handlePurchaseButtonClick() {
+  useTrackEvent('add_to_cart', { nft_class_id: nftClassId.value })
+  if (!selectedPricingItem.value) return
+  try {
+    isPurchasing.value = true
+    if (!hasLoggedIn.value) {
+      await accountStore.login()
+      if (!hasLoggedIn.value) return
+    }
+    const { url, paymentId } = await createNFTBookPurchase({
+      email: user.value?.email,
+      nftClassId: nftClassId.value,
+      price: selectedPricingItem.value.price,
+      priceIndex: selectedPricingItem.value.index,
+      from: route.query.from as string,
+      coupon: route.query.coupon as string,
+    })
+    useTrackEvent('begin_checkout', { payment_id: paymentId })
+    await navigateTo(url, { external: true })
+  }
+  catch (error) {
+    isPurchasing.value = false
+    await handleError(error)
+  }
 }
 
 function handleStickyPurchaseButtonClick() {
-  // TODO: Implement purchase functionality
-  wipModal.open({
-    title: $t('product_page_sticky_purchase_button_label'),
-  })
+  useTrackEvent('purchase_sticky_button_click', { nft_class_id: nftClassId.value })
+  handlePurchaseButtonClick()
 }
 
 function handleGiftButtonClick() {
+  useTrackEvent('gift_button_click', { nft_class_id: nftClassId.value })
   // TODO: Implement gift functionality
   wipModal.open({
     title: $t('product_page_gift_button_label'),

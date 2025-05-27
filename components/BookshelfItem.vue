@@ -140,7 +140,9 @@ useVisibility('lazyLoadTrigger', (visible) => {
   }
 })
 
-function openContentURL(contentURL: { type?: string, url: string, name: string, index?: number }) {
+function openContentURL(contentURL: ContentURL) {
+  const readerRoute = bookInfo.getReaderRoute.value({ contentURL })
+  navigateTo(readerRoute)
   emit('open', {
     nftClassId: props.nftClassId,
     type: contentURL.type,
@@ -151,7 +153,7 @@ function openContentURL(contentURL: { type?: string, url: string, name: string, 
 }
 
 function handleCoverClick() {
-  const contentURL = bookInfo.contentURLs.value.find(url => url.type === 'epub') ?? bookInfo.contentURLs.value[0]
+  const contentURL = bookInfo.defaultContentURL.value
   if (contentURL) {
     openContentURL(contentURL)
   }

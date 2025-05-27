@@ -8,9 +8,10 @@
     </NuxtLink>
 
     <BookCover
-      class="relative max-w-[164px] max-h-[30vh] mt-[8vh] shrink-0 box-[0,2px,4px,0_rgba(0,0,0,.10)]"
+      class="relative max-w-[164px] w-full max-h-[25vh] mt-[8vh] shrink-0"
       :src="props.bookCoverSrc"
       :alt="props.bookName"
+      :has-shadow="true"
     />
     <img
       class="w-full max-w-[432px] h-[78px] -mt-[10px] object-cover pointer-events-none"
@@ -40,7 +41,7 @@
       v-text="props.bookName"
     />
 
-    <footer class="flex flex-col items-center w-full min-h-10 mt-[56px]">
+    <footer class="flex flex-col items-center w-full min-h-10 mt-[56px] px-4 text-center">
       <slot
         v-if="$slots.footer"
         class="mt-[56px]"

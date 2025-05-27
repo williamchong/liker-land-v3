@@ -1,11 +1,14 @@
 export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
+  const { user } = useUserSession()
   const { t: $t } = useI18n()
   const localeRoute = useLocaleRoute()
   const localeString = useLocaleString()
+  const nftStore = useNFTStore()
   const metadataStore = useMetadataStore()
   const bookstoreStore = useBookstoreStore()
   const evmBookInfo = useEVMBookInfo({ nftClassId })
   const legacyBookInfo = useLegacyBookInfo({ nftClassId })
+  const bookshelfStore = useBookshelfStore()
   const isEVM = computed(() => checkIsEVMAddress(nftClassId))
 
   const bookInfo = isEVM.value ? evmBookInfo : legacyBookInfo
@@ -35,7 +38,7 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
     return bookInfo.publishedDate.value?.toISOString().split('T')[0] || ''
   })
 
-  const readActionEntryPoints = computed(() => {
+  const readActionEntryPoints = computed<ContentURL[]>(() => {
     const potentialAction = bookInfo.potentialAction.value
     let readAction: ReadAction | undefined
     if (potentialAction && potentialAction['@type'] === 'ReadAction') {
@@ -56,7 +59,7 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
     })
   })
 
-  const contentURLs = computed(() => {
+  const contentURLs = computed<ContentURL[]>(() => {
     if (readActionEntryPoints.value.length) {
       return readActionEntryPoints.value
     }
@@ -66,6 +69,30 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
       type: extractContentTypeFromURL(url),
       index,
     }))
+  })
+
+  const defaultContentURL = computed(() => {
+    return contentURLs.value.find(url => url.type === 'epub') || contentURLs.value[0]
+  })
+
+  const getReaderRoute = computed(() => ({ nftId, contentURL: inputContentURL }: { nftId?: string, contentURL?: ContentURL }) => {
+    const contentURL = inputContentURL || defaultContentURL.value
+    if (!contentURL) return undefined
+
+    const { type, name, index } = contentURL
+    const query: Record<string, string | number> = {
+      nft_class_id: nftClassId,
+      filename: name,
+      index: index,
+    }
+    if (nftId !== undefined) {
+      // NOTE: Reader will fetch nftId from the current user if not provided
+      query.nft_id = nftId
+    }
+    return localeRoute({
+      name: `reader-${type}`,
+      query,
+    })
   })
 
   const contentTypes = computed(() => {
@@ -115,14 +142,31 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
         isSoldOut: item.isSoldOut,
         canTip: item.isAllowCustomPrice,
         isPhysicalOnly: item.isPhysicalOnly,
+        isAutoDeliver: item.isAutoDeliver,
       }
     })
+  })
+
+  const userOwnedNFTIds = computed(() => {
+    // TODO: Merge bookshelfStore.getNFTsByNFTClassId and nftStore.getNFTIdsByNFTClassIdAndOwnerWalletAddress to avoid confusion
+    // Find the NFT Ids from the user bookshelf by the NFT class Id
+    let nftIds = bookshelfStore.getNFTsByNFTClassId(nftClassId).map(nft => nft.token_id)
+    if (!nftIds.length) {
+      // Find the NFT Ids owned by the user by the NFT class Id
+      const userWallet = isEVM.value ? user.value?.evmWallet : user.value?.likeWallet
+      nftIds = nftStore.getNFTIdsByNFTClassIdAndOwnerWalletAddress(nftClassId, userWallet || '')
+    }
+    return nftIds
   })
 
   const productPageRoute = computed(() => localeRoute({
     name: 'store-id',
     params: { id: nftClassId },
   }))
+
+  function getIsAutoDelivery(index?: number) {
+    return bookstoreInfo.value?.prices.find(item => item.index === index)?.isAutoDeliver || false
+  }
 
   return {
     isEVM,
@@ -137,6 +181,7 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
     formattedPublishedDate,
 
     contentURLs,
+    defaultContentURL,
     contentTypes,
     formattedContentTypes,
 
@@ -148,6 +193,11 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
 
     pricingItems,
 
+    userOwnedNFTIds,
+
     productPageRoute,
+    getReaderRoute,
+
+    getIsAutoDelivery,
   }
 }

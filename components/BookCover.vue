@@ -116,6 +116,7 @@ const coverClass = computed(() => {
     'border',
     'border-[#EBEBEB]',
     borderRadiusClass,
+    { 'shadow-[0_2px_4px_0_rgba(0,0,0,0.10)]': props.hasShadow },
   ]
   if (hasLoaded.value) {
     const instance = getCurrentInstance()

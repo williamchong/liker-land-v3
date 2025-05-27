@@ -9,6 +9,11 @@ definePageMeta({
     name: 'reader',
     mode: 'in-out',
   },
+  middleware(to, from) {
+    if (from.meta.name === 'claim-page') {
+      to.meta.layoutTransition = false
+    }
+  },
 })
 
 const { t: $t } = useI18n()

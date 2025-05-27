@@ -136,22 +136,16 @@ watch(
 
 function handleBookshelfItemOpen({
   type,
-  name,
   nftClassId,
-  index,
 }: {
   type: string
   name: string
   nftClassId?: string
   index?: number
 }) {
-  navigateTo(localeRoute({
-    name: `reader-${type}`,
-    query: {
-      nft_class_id: nftClassId?.toLowerCase(),
-      filename: name,
-      index: index ?? 0,
-    },
-  }))
+  useTrackEvent('shelf_open_book', {
+    content_type: type,
+    nft_class_id: nftClassId,
+  })
 }
 </script>

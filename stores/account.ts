@@ -47,11 +47,14 @@ export const useAccountStore = defineStore('account', () => {
     },
   )
 
-  async function login() {
+  async function login(preferredConnectorId?: string) {
     try {
       isLoggingIn.value = true
 
-      const connectorId: string = await loginModal.open()
+      let connectorId: string | undefined = preferredConnectorId
+      if (!connectorId || !connectors.some((c: { id: string }) => c.id === connectorId)) {
+        connectorId = await loginModal.open()
+      }
       if (!connectorId) return
 
       const connector = connectors.find(

@@ -31,6 +31,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
         res = await fetchLikeCoinChainNFTs({
           nftOwner: user.value?.evmWallet,
           key,
+          nocache: isRefresh,
         })
         res.data.forEach((item) => {
           const nftClassId = item.contract_address as `0x${string}`

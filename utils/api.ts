@@ -134,7 +134,9 @@ export function fetchLegacyLikeCoinChainNFTClassOwnersById(nftClassId: string, {
 export const likeCoinNFTClassAggregatedMetadataOptions = ['class_chain', 'class_api', 'iscn', 'owner', 'purchase', 'bookstore'] as const
 export type LikeCoinNFTClassAggregatedMetadataOptionKey = typeof likeCoinNFTClassAggregatedMetadataOptions[number]
 export interface FetchLikeCoinNFTClassAggregatedMetadataOptions {
+  include?: LikeCoinNFTClassAggregatedMetadataOptionKey[]
   exclude?: LikeCoinNFTClassAggregatedMetadataOptionKey[]
+  nocache?: boolean
 }
 
 export interface FetchLikeCoinNFTClassAggregatedMetadataResponseData {
@@ -146,12 +148,120 @@ export interface FetchLikeCoinNFTClassAggregatedMetadataResponseData {
 
 export function fetchLikeCoinNFTClassAggregatedMetadataById(nftClassId: string, options: FetchLikeCoinNFTClassAggregatedMetadataOptions = { exclude: [] }) {
   const { fetch } = useLikeCoinAPI()
+  const includedOptionSet = new Set(options.include || likeCoinNFTClassAggregatedMetadataOptions)
   const excludedOptionSet = new Set(options.exclude || [])
-  return fetch<FetchLikeCoinNFTClassAggregatedMetadataResponseData>('/likerland/nft/metadata', {
+  const query: Record<string, string | string[]> = {
+    class_id: nftClassId,
+    data: [...includedOptionSet].filter(option => !excludedOptionSet.has(option)),
+  }
+  if (options.nocache) query.ts = `${Math.round(Date.now() / 1000)}`
+  return fetch<FetchLikeCoinNFTClassAggregatedMetadataResponseData>('/likerland/nft/metadata', { query })
+}
+
+export function createNFTBookPurchase({
+  email,
+  nftClassId,
+  from = 'liker_land',
+  price,
+  priceIndex,
+  coupon,
+  referrer,
+  utmCampaign,
+  utmMedium,
+  utmSource,
+  gaClientId,
+  gaSessionId,
+  gadClickId,
+  gadSource,
+  fbClickId,
+}: {
+  email?: string
+  nftClassId: string
+  price: number
+  priceIndex: number
+  coupon?: string
+  from?: string
+  referrer?: string
+  utmCampaign?: string
+  utmMedium?: string
+  utmSource?: string
+  gaClientId?: string
+  gaSessionId?: string
+  gadClickId?: string
+  gadSource?: string
+  fbClickId?: string
+}) {
+  const { fetch } = useLikeCoinAPI()
+  return fetch<{ url: string, paymentId: string }>(`/likernft/book/purchase/${nftClassId}/new`, {
+    method: 'POST',
     query: {
-      class_id: nftClassId,
-      data: likeCoinNFTClassAggregatedMetadataOptions.filter(option => !excludedOptionSet.has(option)),
+      price_index: priceIndex,
+      from,
     },
+    body: {
+      email,
+      customPriceInDecimal: Math.floor(price * 100),
+      coupon,
+      referrer,
+      utmCampaign,
+      utmSource,
+      utmMedium,
+      gaClientId,
+      gaSessionId,
+      gadClickId,
+      gadSource,
+      fbClickId,
+      site: '3ook.com',
+    },
+  })
+}
+
+export interface FetchCartStatusByIdResponseData {
+  email: string
+  status: 'paid' | 'pendingClaim' | 'pending' | 'pendingNFT' | 'completed' | 'done'
+  sessionId: string
+  isPaid: boolean
+  isPendingClaim: boolean
+  priceInDecimal: number
+  price: number
+  originalPriceInDecimal: number
+  from: string
+  timestamp: number
+  quantity: number
+  classIds: string[]
+  classIdsWithPrice: {
+    classId: string
+    priceIndex: number
+    quantity: number
+    price: number
+    priceInDecimal: number
+    originalPriceInDecimal: number
+  }[]
+}
+
+export function fetchCartStatusById({ cartId, token }: { cartId: string, token: string }) {
+  const { fetch } = useLikeCoinAPI()
+  return fetch<FetchCartStatusByIdResponseData>(`/likernft/book/purchase/cart/${cartId}/status`, {
+    query: { token },
+  })
+}
+
+export interface ClaimCartByIdResponseData {
+  classIds: string[]
+  newClaimedNFTs: {
+    classId: string
+    nftId: string
+  }[]
+  allItemsAutoClaimed: boolean
+  errors?: { error: string }[]
+}
+
+export function claimCartById({ cartId, token, paymentId, wallet }: { cartId: string, token: string, paymentId: string, wallet: string }) {
+  const { fetch } = useLikeCoinAPI()
+  return fetch<ClaimCartByIdResponseData>(`/likernft/book/purchase/cart/${cartId}/claim`, {
+    method: 'POST',
+    query: { token },
+    body: { wallet, paymentId },
   })
 }
 

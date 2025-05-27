@@ -120,3 +120,10 @@ declare interface NFTOwner {
   count: number
   nfts: NFTIdList
 }
+
+declare interface ContentURL {
+  url: string
+  name: string
+  type: string
+  index: number
+}
