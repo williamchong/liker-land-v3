@@ -23,8 +23,8 @@ export function createWagmiConfig({
         chains: [optimismSepolia, optimism],
         options: {
           apiKey,
-          accentColor: '#28646E',
-          customHeaderText: 'Liker Land',
+          accentColor: '#131313',
+          customHeaderText: '3ook.com',
           customLogo: customLogoURL,
           isDarkMode: false,
           magicSdkConfiguration: {

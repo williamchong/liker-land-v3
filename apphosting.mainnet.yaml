@@ -40,7 +40,7 @@ env:
   - variable: MAGIC_LINK_CHAIN_ID
     value: 10
   - variable: MAGIC_LINK_CUSTOM_LOGO_URL
-    value: https://liker.land/logo.png
+    value: https://3ook.com/android-chrome-512x512.png
   - variable: MAGIC_LINK_RPC_URL
     value: https://mainnet.optimism.io
   - variable: NUXT_SESSION_PASSWORD

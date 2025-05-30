@@ -1,6 +1,6 @@
 {
-  "name": "Liker Land (v3)",
-  "short_name": "Liker Land",
+  "name": "3ook.com",
+  "short_name": "3ook.com",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
@@ -13,7 +13,7 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#28646e",
+  "theme_color": "#131313",
   "background_color": "#F2F0E9",
   "display": "standalone"
 }
