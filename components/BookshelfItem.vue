@@ -139,12 +139,13 @@ useVisibility('lazyLoadTrigger', (visible) => {
   }
 })
 
-function openContentURL(contentURL: { type?: string, url: string, name: string }) {
+function openContentURL(contentURL: { type?: string, url: string, name: string, index?: number }) {
   emit('open', {
     nftClassId: props.nftClassId,
     type: contentURL.type,
     url: contentURL.url,
     name: contentURL.name,
+    index: contentURL.index,
   })
 }
 
