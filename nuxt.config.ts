@@ -31,6 +31,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     airtableAPISecret: process.env.AIRTABLE_API_SECRET,
+    minimaxGroupId: process.env.MINIMAX_GROUP_ID,
+    minimaxAPIKey: process.env.MINIMAX_API_KEY,
     public: {
       airtableCMSBaseId: process.env.AIRTABLE_CMS_BASE_ID,
       airtableCMSProductsTableId: process.env.AIRTABLE_CMS_PRODUCTS_TABLE_ID,

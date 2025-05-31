@@ -58,20 +58,42 @@
               @click="isDesktopToCOpen = !isDesktopToCOpen"
             />
 
-            <UButton
-              class="laptop:hidden"
-              icon="i-material-symbols-headphones-rounded"
-              variant="ghost"
-              :disabled="isReaderLoading"
-              @click="textToSpeechWIPModal.open"
-            />
-            <UButton
-              class="max-laptop:hidden"
-              icon="i-material-symbols-headphones-rounded"
-              :label="$t('reader_text_to_speech_button')"
-              variant="ghost"
-              :disabled="isReaderLoading"
-              @click="textToSpeechWIPModal.open"
+            <template v-if="!isTextToSpeechOn || !isTextToSpeechPlaying">
+              <UButton
+                class="laptop:hidden"
+                icon="i-material-symbols-headphones-rounded"
+                variant="ghost"
+                :disabled="isReaderLoading"
+                @click="startTextToSpeech"
+              />
+              <UButton
+                class="max-laptop:hidden"
+                icon="i-material-symbols-headphones-rounded"
+                :label="$t('reader_text_to_speech_button')"
+                variant="ghost"
+                :disabled="isReaderLoading"
+                @click="startTextToSpeech"
+              />
+            </template>
+            <template v-else>
+              <UButton
+                class="laptop:hidden"
+                icon="i-material-symbols-pause-rounded"
+                variant="ghost"
+                @click="pauseTextToSpeech"
+              />
+              <UButton
+                class="max-laptop:hidden"
+                icon="i-material-symbols-pause-rounded"
+                :label="$t('reader_text_to_speech_button')"
+                variant="ghost"
+                @click="pauseTextToSpeech"
+              />
+            </template>
+            <USelect
+              v-if="isShowTextToSpeechOptions"
+              v-model="ttsLanguage"
+              :items="ttsLanguageOptions"
             />
 
             <USlideover
@@ -217,10 +239,10 @@ import ePub, {
   type Rendition as RenditionBase,
   type NavItem,
   type Location,
+  EpubCFI,
 } from 'epubjs'
 
 import type Section from 'epubjs/types/section'
-import { WIPModal } from '#components'
 
 declare interface EpubView {
   window: Window
@@ -252,13 +274,6 @@ const {
   bookFileURLWithCORS,
 } = useReader()
 const { handleError } = useErrorHandler()
-const overlay = useOverlay()
-
-const textToSpeechWIPModal = overlay.create(WIPModal, {
-  props: {
-    title: $t('reader_text_to_speech_title'),
-  },
-})
 
 const isReaderLoading = ref(false)
 const isDesktopToCOpen = ref(false)
@@ -296,6 +311,18 @@ onMounted(async () => {
 })
 
 const rendition = ref<Rendition>()
+const textContentElements = ref<{ cfi: string, el: Element, text: string }[]>([])
+const ttsLanguageOptions = [
+  { label: '粵', value: 'zh-HK' },
+  { label: '國', value: 'zh-TW' },
+  { label: 'En', value: 'en-US' },
+]
+const ttsLanguage = ref('zh-HK')
+watch(ttsLanguage, (newLanguage, oldLanguage) => {
+  if (newLanguage !== oldLanguage) {
+    useTrackEvent('tts_language_change')
+  }
+})
 
 const navItems = ref<NavItem[]>([])
 const activeNavItemLabel = computed(() => {
@@ -315,6 +342,7 @@ const isAtFirstPage = computed(() => {
   return currentSectionIndex.value === 0 && percentage.value === 0
 })
 const isRightToLeft = ref(false)
+const currentPageEndCfi = ref<string>('')
 
 const FONT_SIZE_OPTIONS = [
   6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72,
@@ -391,6 +419,26 @@ async function loadEPub() {
 
   rendition.value.on('rendered', (section: Section, view: EpubView) => {
     currentSectionIndex.value = section.index
+    const elements = Array.from(section.contents.querySelectorAll('p, h1, h2, h3, h4, h5, h6'))
+      .filter(element => !!element.textContent?.trim())
+      .map((el) => {
+        const range = new Range()
+        range.selectNodeContents(el)
+        const cfi = section.cfiFromRange(range)
+        const text = el.textContent?.trim() || ''
+        const segments = splitTextIntoSegments(text)
+        return { cfi, el, text, segments }
+      })
+
+    textContentElements.value = elements.reduce((acc, element) => {
+      return acc.concat(element.segments.map((text) => {
+        return ({
+          cfi: element.cfi,
+          el: element.el,
+          text,
+        })
+      }))
+    }, [] as { cfi: string, el: Element, text: string }[])
     isRightToLeft.value = view.settings.direction === 'rtl'
 
     if (cleanUpClickListener) {
@@ -416,9 +464,14 @@ async function loadEPub() {
         }
       }
     })
+
+    if (isTextToSpeechOn.value) {
+      startTextToSpeech()
+    }
   })
 
   rendition.value.on('relocated', (location: Location) => {
+    currentPageEndCfi.value = location.end.cfi
     const href = location.start.href
     if (navItems.value.some(item => item.href === href)) {
       activeNavItemHref.value = href
@@ -469,6 +522,107 @@ function increaseFontSize() {
 
 function decreaseFontSize() {
   adjustFontSize(-1)
+}
+
+const isShowTextToSpeechOptions = ref(false)
+const isTextToSpeechOn = ref(false)
+const isTextToSpeechPlaying = ref(false)
+const audioQueue = ref<HTMLAudioElement[]>([])
+const currentAudioIndex = ref(0)
+
+function pauseTextToSpeech() {
+  if (isTextToSpeechOn.value) {
+    if (audioQueue.value[currentAudioIndex.value]) {
+      audioQueue.value[currentAudioIndex.value].pause()
+    }
+    isTextToSpeechPlaying.value = false
+    useTrackEvent('tts_pause')
+  }
+}
+
+function createAudio(element: { cfi: string, el: Element, text: string }) {
+  const audio = new Audio()
+  const params = new URLSearchParams({
+    text: element.text,
+    language: ttsLanguage.value,
+  })
+  audio.src = `/api/reader/tts?${params.toString()}`
+
+  audio.onplay = () => {
+    rendition.value?.display(element.cfi)
+    rendition.value?.annotations.remove(element.cfi, 'highlight')
+    rendition.value?.annotations.highlight(element.cfi, {}, () => {}, '', {
+      fill: '#FFEB3B',
+    })
+  }
+  audio.onended = () => {
+    rendition.value?.annotations.remove(element.cfi, 'highlight')
+    if (audioQueue.value.length < textContentElements.value.length) {
+      const nextAudio = createAudio(textContentElements.value[audioQueue.value.length])
+      audioQueue.value.push(nextAudio)
+    }
+    if (currentAudioIndex.value < audioQueue.value.length - 1) {
+      currentAudioIndex.value++
+      const element = textContentElements.value[currentAudioIndex.value]
+      const cfi = new EpubCFI(element.cfi)
+      if (cfi.compare(cfi, currentPageEndCfi.value) >= 0) {
+        nextPage()
+      }
+      setTimeout(() => {
+        audioQueue.value[currentAudioIndex.value].play()
+      }, 200) // Add a small delay since some minimax voice doesn't have gap at the end
+    }
+    else {
+      nextPage()
+    }
+  }
+
+  audio.onerror = (e) => {
+    console.warn('Audio playback error:', e)
+  }
+  return audio
+}
+
+async function startTextToSpeech() {
+  isShowTextToSpeechOptions.value = true
+  if (!isTextToSpeechPlaying.value) {
+    isTextToSpeechPlaying.value = true
+    if (audioQueue.value[currentAudioIndex.value]) {
+      audioQueue.value[currentAudioIndex.value].play()
+      useTrackEvent('tts_resume')
+    }
+    return
+  }
+
+  audioQueue.value.forEach((audio) => {
+    audio.pause()
+    audio.src = ''
+  })
+  audioQueue.value = []
+  currentAudioIndex.value = 0
+  isTextToSpeechOn.value = true
+  useTrackEvent('tts_start')
+
+  try {
+    // load up to 2 paragraphs for text-to-speech
+    for (let i = 0; i < Math.min(2, textContentElements.value.length); i++) {
+      const audio = createAudio(textContentElements.value[i])
+      audioQueue.value.push(audio)
+    }
+
+    if (audioQueue.value.length > 0) {
+      audioQueue.value[0].play()
+    }
+    else {
+      nextPage()
+    }
+  }
+  catch (error) {
+    isTextToSpeechOn.value = false
+    await handleError(error, {
+      title: $t('error_text_to_speech_failed'),
+    })
+  }
 }
 
 const isShiftPressed = useKeyModifier('Shift')
