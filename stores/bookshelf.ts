@@ -71,6 +71,14 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
         nftClassIds.value.push(...newNFTClassIds)
       }
     }
+    catch (error) {
+      const statusCode = getErrorStatusCode(error)
+      if (statusCode === 404) {
+        // NOTE: For a new wallet address, the API will return 404
+        return
+      }
+      throw error
+    }
     finally {
       isFetching.value = false
       hasFetched.value = true
