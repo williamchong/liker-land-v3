@@ -331,6 +331,8 @@ import { FetchError } from 'ofetch'
 import type { TabsItem } from '@nuxt/ui'
 
 const route = useRoute()
+const localeRoute = useLocaleRoute()
+const getRouteBaseName = useRouteBaseName()
 const { t: $t } = useI18n()
 const toast = useToast()
 const wipModal = useWIPModal()
@@ -341,6 +343,13 @@ const nftStore = useNFTStore()
 const { handleError } = useErrorHandler()
 
 const nftClassId = computed(() => getRouteParam('id'))
+if (nftClassId.value !== nftClassId.value.toLowerCase()) {
+  await navigateTo(localeRoute({
+    name: getRouteBaseName(route),
+    params: { id: nftClassId.value.toLowerCase() },
+    query: route.query,
+  }), { replace: true })
+}
 
 await callOnce(async () => {
   try {
