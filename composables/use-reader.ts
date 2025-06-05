@@ -1,13 +1,20 @@
 export default function () {
   const config = useRuntimeConfig()
+  const route = useRoute()
 
   const nftClassId = computed(() => getRouteQuery('nft_class_id'))
   const bookInfo = useBookInfo({ nftClassId: nftClassId.value })
 
-  const nftId = computed(() => {
-    const id = getRouteQuery('nft_id')
-    return id !== undefined && id !== '' ? id : bookInfo.userOwnedNFTIds.value[0]
-  })
+  const nftId = computed(() => getRouteQuery('nft_id'))
+  if (!nftId.value) {
+    navigateTo({
+      query: {
+        ...route.query,
+        nft_id: bookInfo.userOwnedNFTIds.value[0] || '',
+      },
+    }, { replace: true })
+  }
+
   const filename = computed(() => getRouteQuery('filename'))
   const fileIndex = computed(() => getRouteQuery('index', '0'))
 
