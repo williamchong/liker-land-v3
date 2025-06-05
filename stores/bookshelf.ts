@@ -34,7 +34,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
           nocache: isRefresh,
         })
         res.data.forEach((item) => {
-          const nftClassId = item.contract_address as `0x${string}`
+          const nftClassId = item.contract_address.toLowerCase() as `0x${string}`
           if (!nftByNFTClassIds.value[nftClassId]) {
             nftByNFTClassIds.value[nftClassId] = {}
 
