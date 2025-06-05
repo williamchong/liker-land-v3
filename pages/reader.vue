@@ -16,10 +16,23 @@ definePageMeta({
   },
 })
 
+const route = useRoute()
+const localeRoute = useLocaleRoute()
+const getRouteBaseName = useRouteBaseName()
 const { t: $t } = useI18n()
 
 const nftClassId = computed(() => getRouteQuery('nft_class_id'))
 const bookInfo = useBookInfo({ nftClassId: nftClassId.value })
+
+if (nftClassId.value !== nftClassId.value.toLowerCase()) {
+  await navigateTo(localeRoute({
+    name: getRouteBaseName(route),
+    query: {
+      ...route.query,
+      nft_class_id: nftClassId.value.toLowerCase(),
+    },
+  }), { replace: true })
+}
 
 useHead({
   titleTemplate: () => {
