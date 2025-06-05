@@ -79,10 +79,9 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
     const contentURL = inputContentURL || defaultContentURL.value
     if (!contentURL) return undefined
 
-    const { type, name, index } = contentURL
+    const { type, index } = contentURL
     const query: Record<string, string | number> = {
       nft_class_id: nftClassId.toLowerCase(),
-      filename: name,
       index: index,
     }
     if (nftId !== undefined) {

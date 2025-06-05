@@ -8,7 +8,6 @@ export default function () {
     const id = getRouteQuery('nft_id')
     return id !== undefined && id !== '' ? id : bookInfo.userOwnedNFTIds.value[0]
   })
-  const filename = computed(() => getRouteQuery('filename'))
   const fileIndex = computed(() => getRouteQuery('index', '0'))
 
   const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 300 }))
@@ -27,7 +26,6 @@ export default function () {
   return {
     nftClassId,
     nftId,
-    filename,
     fileIndex,
 
     bookInfo,
