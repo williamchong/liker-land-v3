@@ -1,9 +1,52 @@
-import { Readable } from 'stream'
+interface TTSChunk {
+  data: {
+    audio: string
+    status: number // 1: streaming chunk, 2: final summary chunk
+  }
+  trace_id: string
+  base_resp: {
+    status_code: number
+    status_msg: string
+  }
+  extra_info?: {
+    audio_length: number
+    audio_sample_rate: number
+    audio_size: number
+    audio_bitrate: number
+    word_count: number
+    invisible_character_ratio: number
+    audio_format: string
+    usage_characters: number
+  }
+}
 
 const LANG_MAPPING = {
   'en-US': 'English',
   'zh-TW': 'Chinese',
   'zh-HK': 'Chinese,Yue',
+}
+
+function processEventData(eventData: string) {
+  const dataMatch = eventData.match(/^data:\s*(.+)$/m)
+  if (!dataMatch) return null
+
+  const jsonStr = dataMatch[1].trim()
+  if (!jsonStr) return null
+
+  const parsed: TTSChunk = JSON.parse(jsonStr) // this might throw if the JSON is malformed
+
+  if (parsed.base_resp?.status_code !== 0) {
+    throw createError({
+      name: 'TTS_API_ERROR',
+      message: parsed.base_resp?.status_msg || 'Unknown API error',
+    })
+  }
+
+  if (parsed.data.status === 1 && parsed.data.audio) {
+    return Buffer.from(parsed.data.audio, 'hex')
+  }
+
+  return null
 }
 
 export default defineEventHandler(async (event) => {
@@ -39,6 +82,7 @@ export default defineEventHandler(async (event) => {
   try {
     const command = {
       text: text,
+      stream: true,
       model: 'speech-02-hd',
       voice_setting: {
         voice_id: 'Chinese (Mandarin)_Warm_Bestie',
@@ -49,33 +93,70 @@ export default defineEventHandler(async (event) => {
       language_boost: LANG_MAPPING[language],
     }
 
-    interface MinimaxT2AResponse {
-      data: {
-        audio: string
-      }
-    }
-
-    const response = await $fetch<MinimaxT2AResponse>(`https://api.minimaxi.chat/v1/t2a_v2?GroupId=${minimaxGroupId}`, {
+    const response = await $fetch<ReadableStream>(`https://api.minimaxi.chat/v1/t2a_v2?GroupId=${minimaxGroupId}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${minimaxAPIKey}`,
       },
+      responseType: 'stream',
       body: command,
     })
 
-    const audioHex = response.data.audio
-    if (!audioHex || typeof audioHex !== 'string') {
-      console.error(`[Speech] Invalid audio response for user ${session.user.evmWallet}:`, response)
-      throw createError({
-        status: 500,
-        message: 'INVALID_AUDIO_RESPONSE',
-      })
-    }
-    const audioBuffer = Buffer.from(audioHex, 'hex')
-    const stream = Readable.from(audioBuffer)
+    let buffer = ''
+    const processStream = new TransformStream({
+      start() {
+        buffer = ''
+      },
+      transform(chunk, controller) {
+        try {
+          buffer += chunk
+          let eventEndIndex = buffer.indexOf('\n\n')
+          while (eventEndIndex !== -1) {
+            const event = buffer.substring(0, eventEndIndex).trim()
+            buffer = buffer.substring(eventEndIndex + 2) // '\n\n' is 2 characters long
+            if (event) {
+              try {
+                const audioBuffer = processEventData(event)
+                if (audioBuffer) {
+                  controller.enqueue(audioBuffer)
+                }
+              }
+              catch (error) {
+                console.error(`[Speech] Error processing event for user ${session.user.evmWallet}:`, error)
+                controller.error((error as Error).message || 'TTS_PROCESSING_ERROR')
+                return
+              }
+            }
+            eventEndIndex = buffer.indexOf('\n\n')
+          }
+        }
+        catch (error) {
+          console.error(`[Speech] Error processing chunk for user ${session.user.evmWallet}:`, error)
+          controller.error('TTS_PROCESSING_ERROR: Failed to process text-to-speech data')
+          return
+        }
+      },
+      flush(controller) {
+        if (!buffer.trim()) {
+          return
+        }
+        try {
+          const audioBuffer = processEventData(buffer)
+          if (audioBuffer) {
+            controller.enqueue(audioBuffer)
+          }
+        }
+        catch (error) {
+          console.warn(`[Speech] Error in flush for user ${session.user.evmWallet}:`, error)
+        }
+      },
+    })
+
+    const decodedStream = response.pipeThrough(new TextDecoderStream())
+    decodedStream.pipeThrough(processStream)
     setHeader(event, 'content-type', 'audio/mpeg')
     setHeader(event, 'cache-control', 'public, max-age=14400')
-    return sendStream(event, stream)
+    return sendStream(event, processStream.readable)
   }
   catch (error) {
     console.error(`[Speech] Failed to convert text for user ${session.user.evmWallet}:`, error)
