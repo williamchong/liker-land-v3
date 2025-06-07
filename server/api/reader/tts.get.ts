@@ -36,7 +36,10 @@ function processEventData(eventData: string) {
   const parsed: TTSChunk = JSON.parse(jsonStr) // this might throw if the JSON is malformed
 
   if (parsed.base_resp?.status_code !== 0) {
-    throw new Error(`TTS_API_ERROR: ${parsed.base_resp?.status_msg || 'Unknown API error'}`)
+    throw createError({
+      name: 'TTS_API_ERROR',
+      message: parsed.base_resp?.status_msg || 'Unknown API error',
+    })
   }
 
   if (parsed.data.status === 1 && parsed.data.audio) {
@@ -134,16 +137,17 @@ export default defineEventHandler(async (event) => {
         }
       },
       flush(controller) {
-        if (buffer.trim()) {
-          try {
-            const audioBuffer = processEventData(buffer)
-            if (audioBuffer) {
-              controller.enqueue(audioBuffer)
-            }
+        if (!buffer.trim()) {
+          return
+        }
+        try {
+          const audioBuffer = processEventData(buffer)
+          if (audioBuffer) {
+            controller.enqueue(audioBuffer)
           }
-          catch (error) {
-            console.warn(`[Speech] Error in flush for user ${session.user.evmWallet}:`, error)
-          }
+        }
+        catch (error) {
+          console.warn(`[Speech] Error in flush for user ${session.user.evmWallet}:`, error)
         }
       },
     })
