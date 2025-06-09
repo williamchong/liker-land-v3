@@ -155,7 +155,7 @@
                     />
                     <span
                       v-else
-                      class="w-[20px] h-[20px] my-0.5 bg-white rounded-full border border-gray-300"
+                      class="shrink-0 w-[20px] h-[20px] my-0.5 bg-white rounded-full border border-gray-300"
                     />
                     <div class="grow">
                       <div class="flex justify-between items-center gap-3 text-green-500">
@@ -176,7 +176,7 @@
                       </div>
                       <p
                         v-if="item.description"
-                        class="mt-2 whitespace-pre"
+                        class="mt-2 break-words whitespace-pre-line"
                         v-text="item.description"
                       />
                     </div>
