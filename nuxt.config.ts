@@ -56,6 +56,7 @@ export default defineNuxtConfig({
       pdfViewerOrigin: process.env.PDF_VIEWER_ORIGIN,
       pdfViewerURL: `${process.env.PDF_VIEWER_ORIGIN}${process.env.PDF_VIEWER_PATH}`,
       sentryDsn: process.env.SENTRY_DSN,
+      baseURL: process.env.BASE_URL,
     },
   },
 
