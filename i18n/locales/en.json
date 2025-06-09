@@ -85,6 +85,8 @@
   "product_page_sticky_purchase_button_label": "Purchase",
   "reader_display_options_button": "Display options",
   "reader_text_to_speech_button": "Listen",
+  "reader_text_to_speech_not_available": "Text-to-speech not available",
+  "reader_text_to_speech_not_available_description": "Upgrade to Plus to unlock AI voice reading feature",
   "reader_text_to_speech_title": "Text to speech",
   "reader_title": "Read \"{name}\" - {author}",
   "reader_toc_button": "Table of contents",
