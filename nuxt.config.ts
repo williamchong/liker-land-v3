@@ -20,6 +20,7 @@ export default defineNuxtConfig({
     'nuxt-security',
     'nuxt-gtag',
     '@sentry/nuxt/module',
+    '@nuxt/scripts',
   ],
 
   devtools: { enabled: true },
@@ -40,6 +41,11 @@ export default defineNuxtConfig({
     minimaxGroupId: process.env.MINIMAX_GROUP_ID,
     minimaxAPIKey: process.env.MINIMAX_API_KEY,
     public: {
+      scripts: {
+        crisp: {
+          id: '',
+        },
+      },
       airtableCMSBaseId: process.env.AIRTABLE_CMS_BASE_ID,
       airtableCMSProductsTableId: process.env.AIRTABLE_CMS_PRODUCTS_TABLE_ID,
       likeCoinAPIEndpoint: process.env.LIKECOIN_API_ENDPOINT,
@@ -87,6 +93,12 @@ export default defineNuxtConfig({
     defaultLocale: 'zh-Hant',
   },
 
+  scripts: {
+    registry: {
+      crisp: true,
+    },
+  },
+
   security: {
     headers: {
       contentSecurityPolicy: {
@@ -96,6 +108,7 @@ export default defineNuxtConfig({
           '\'unsafe-inline\'',
           'https://fonts.googleapis.com',
           'https://fonts.gstatic.com',
+          'https://client.crisp.chat',
         ],
         'frame-src': isDevelopment
           ? ['*']
@@ -110,6 +123,8 @@ export default defineNuxtConfig({
           '\'self\'',
           'data:',
           'blob:',
+          'https://client.crisp.chat',
+          'https://image.crisp.chat',
           ...[
             process.env.LIKECOIN_API_ENDPOINT,
             process.env.LIKECOIN_STATIC_ENDPOINT,
@@ -119,6 +134,7 @@ export default defineNuxtConfig({
         'font-src': [
           '\'self\'',
           'blob:',
+          'https://client.crisp.chat',
         ],
         // NOTE: Resolve Safari force HTTPS in development
         'upgrade-insecure-requests': isDevelopment ? false : true,
