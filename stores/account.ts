@@ -106,6 +106,8 @@ export const useAccountStore = defineStore('account', () => {
             'write:nftbook',
             'read:nftcollection',
             'write:nftcollection',
+            'read:plus',
+            'write:plus',
           ],
         },
         null,
