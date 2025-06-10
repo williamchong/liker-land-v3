@@ -338,3 +338,28 @@ export function getEncryptedArweaveLinkAPIEndpoint() {
   const config = useRuntimeConfig()
   return `${config.public.likeCoinAPIEndpoint}/arweave/v2/link`
 }
+
+export interface FetchLikerPlusCheckoutLinkResponseData {
+  sessionId: string
+  url: string
+}
+
+export function fetchLikerPlusCheckoutLink({ period = 'monthly' }: { period: 'monthly' | 'yearly' }) {
+  const { fetch } = useLikeCoinAPI()
+  return fetch<FetchLikerPlusCheckoutLinkResponseData>(`/plus/new`, {
+    method: 'POST',
+    query: { period },
+  })
+}
+
+export interface FetchLikerPlusBillingPortalLinkResponseData {
+  sessionId: string
+  url: string
+}
+
+export function fetchLikerPlusBillingPortalLink() {
+  const { fetch } = useLikeCoinAPI()
+  return fetch<FetchLikerPlusBillingPortalLinkResponseData>(`/plus/portal`, {
+    method: 'POST',
+  })
+}
