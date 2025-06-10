@@ -109,11 +109,12 @@
 <script setup lang="ts">
 const { t: $t } = useI18n()
 const selectedPlan = ref('yearly')
-const { loggedIn: hasLoggedIn } = useUserSession()
+const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
 const isProcessingSubscription = ref(false)
 const { handleError } = useErrorHandler()
 const localeRoute = useLocaleRoute()
+const toast = useToast()
 
 useHead({
   title: $t('pricing_page_title'),
@@ -125,7 +126,6 @@ async function checkLikerPlusStatus() {
       await accountStore.login()
       if (!hasLoggedIn.value) return
     }
-    const { user } = useUserSession()
     if (user.value?.isLikerPlus) {
       navigateTo(localeRoute({ name: 'account' }))
     }
@@ -151,12 +151,20 @@ async function handleSubscribe() {
         isProcessingSubscription.value = false
         return
       }
-      const { user } = useUserSession()
-      if (user.value?.isLikerPlus) {
-        navigateTo(localeRoute({ name: 'account' }))
-        isProcessingSubscription.value = false
-        return
-      }
+    }
+    if (user.value?.isLikerPlus) {
+      navigateTo(localeRoute({ name: 'account' }))
+      isProcessingSubscription.value = false
+      return
+    }
+    if (!user.value?.likerId) {
+      toast.add({
+        title: $t ('pricing_page_liker_id_required'),
+        description: $t('pricing_page_liker_id_required_description'),
+        color: 'warning',
+      })
+      isProcessingSubscription.value = false
+      return
     }
 
     const { url } = await fetchLikerPlusCheckoutLink({
