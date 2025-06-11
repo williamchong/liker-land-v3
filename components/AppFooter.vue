@@ -21,7 +21,12 @@
     <div
       class="flex justify-between lg:justify-start items-stretch flex-wrap gap-6 gap-y-1 leading-5"
     >
-      <span class="text-(--ui-text-muted)">© {{ new Date().getFullYear() }} 3ook.com </span>
+      <ULink
+        class="border-b leading-5"
+        to="https://github.com/likecoin/3ook-com?tab=GPL-3.0-1-ov-file#readme"
+        target="_blank"
+        v-text="$t('footer_license')"
+      />
 
       <nav>
         <ul class="flex items-center flex-wrap gap-4 gap-y-1">
