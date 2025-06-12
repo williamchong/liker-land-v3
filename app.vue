@@ -14,6 +14,7 @@ const ogTitle = $t('app_title')
 const ogDescription = $t('app_description')
 const ogURL = config.public.baseURL
 const ogImage = `${ogURL}/images/og/default.jpg`
+const isTestnet = !!config.public.isTestnet
 
 const i18nHead = useLocaleHead()
 useHead({
@@ -31,6 +32,14 @@ useHead({
       name: 'description',
       content: ogDescription,
     },
+    ...(isTestnet
+      ? [
+          {
+            name: 'robots',
+            content: 'noindex',
+          },
+        ]
+      : []),
     {
       property: 'og:site_name',
       content: ogTitle,
