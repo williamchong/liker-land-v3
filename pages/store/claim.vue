@@ -126,7 +126,7 @@ const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, 
 // TODO: Handle multiple items in the cart
 const isAutoDeliver = ref(bookInfo.getIsAutoDelivery(cartData.value?.classIdsWithPrice?.[0]?.priceIndex))
 
-const receivedNFTId = computed(() => bookInfo.userOwnedNFTIds.value[0])
+const receivedNFTId = computed(() => bookInfo.firstUserOwnedNFTId.value)
 const canStartReading = computed(() => !!receivedNFTId.value)
 
 async function checkItemsDelivery() {

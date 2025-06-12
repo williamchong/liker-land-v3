@@ -6,7 +6,7 @@ export default function () {
 
   const nftId = computed(() => {
     const id = getRouteQuery('nft_id')
-    return id !== undefined && id !== '' ? id : bookInfo.userOwnedNFTIds.value[0]
+    return id !== undefined && id !== '' ? id : bookInfo.firstUserOwnedNFTId.value
   })
   const fileIndex = computed(() => getRouteQuery('index', '0'))
 
