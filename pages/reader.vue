@@ -24,7 +24,6 @@ const { t: $t } = useI18n()
 const nftClassId = computed(() => getRouteQuery('nft_class_id'))
 const nftId = computed(() => getRouteQuery('nft_id'))
 const bookInfo = useBookInfo({ nftClassId: nftClassId.value })
-const { nftId: readerNftId } = useReader()
 
 if (nftClassId.value !== nftClassId.value.toLowerCase()) {
   await navigateTo(localeRoute({
@@ -36,12 +35,12 @@ if (nftClassId.value !== nftClassId.value.toLowerCase()) {
   }), { replace: true })
 }
 
-if (!nftId.value && readerNftId.value) {
+if (!nftId.value && bookInfo.firstUserOwnedNFTId.value) {
   await navigateTo(localeRoute({
     name: getRouteBaseName(route),
     query: {
       ...route.query,
-      nft_id: readerNftId.value,
+      nft_id: bookInfo.firstUserOwnedNFTId.value,
     },
   }), { replace: true })
 }
