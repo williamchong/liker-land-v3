@@ -26,7 +26,7 @@ export default function useLogEvent(eventName: string, eventParams: EventParams 
         currency,
         items,
       } = eventParams
-      const eventID = paymentId ? `${eventName}_${paymentId}` : undefined
+      const eventId = paymentId ? `${eventName}_${paymentId}` : undefined
       proxy.fbq('track', eventNameMapping[eventName], {
         currency,
         value,
@@ -39,7 +39,7 @@ export default function useLogEvent(eventName: string, eventParams: EventParams 
             }))
           : undefined,
         content_ids: Array.isArray(items) ? items.map(i => i.id) : undefined,
-      }, { eventID })
+      }, { eventID: eventId })
     }
   }
   catch {
