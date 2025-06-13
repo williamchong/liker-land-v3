@@ -157,7 +157,8 @@ export default defineNuxtConfig({
   sentry: {
     sourceMapsUploadOptions: {
       org: 'likerland-team',
-      project: 'liker-land-v3',
+      project: '3ook-com',
+      authToken: process.env.SENTRY_AUTH_TOKEN,
     },
   },
   sitemap: {
