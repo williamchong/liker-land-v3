@@ -14,7 +14,6 @@ export const useAccountStore = defineStore('account', () => {
   const overlay = useOverlay()
   const { errorModal, handleError } = useErrorHandler()
   const { t: $t } = useI18n()
-  const { instance: crisp } = useScriptCrisp()
 
   const loginModal = overlay.create(LoginModal)
 
@@ -45,19 +44,7 @@ export const useAccountStore = defineStore('account', () => {
     () => user.value,
     (user) => {
       isEVMModeActive.value = user?.isEVMModeActive ?? false
-      if (crisp && user) {
-        if (user.email) crisp.set('user:email', user.email)
-        if (user.evmWallet) crisp.set('session:data', ['evm_wallet', `op:${user.evmWallet}`])
-        if (user.likeWallet) crisp.set('session:data', ['like_wallet', user.likeWallet])
-        if (user.loginMethod) crisp.set('session:data', ['login_method', user.loginMethod])
-        if (user.displayName) {
-          crisp.set('user:nickname', user.displayName)
-        }
-        else if (user.evmWallet || user.likeWallet) {
-          crisp.set('user:nickname', user.evmWallet || user.likeWallet)
-        }
-        if (user.avatar) crisp.set('user:avatar', user.avatar)
-      }
+      useSetLogUser(user)
     },
     { immediate: true, deep: true },
   )
@@ -143,6 +130,12 @@ export const useAccountStore = defineStore('account', () => {
       })
 
       await refreshSession()
+
+      if (user.value?.likerId) {
+        useLogEvent('login', {
+          method: connector.id,
+        })
+      }
     }
     catch (error) {
       if (error instanceof UserRejectedRequestError) {
