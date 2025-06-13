@@ -1,5 +1,6 @@
-import { setUser } from '@sentry/nuxt'
+import { setUser as setSentryUser } from '@sentry/nuxt'
 import { sha256 } from 'viem'
+import type { User } from '#auth-utils'
 
 interface EventParams {
   [key: string]: unknown
@@ -64,21 +65,13 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
   }
 }
 
-export function useLogSetUser(user: {
-  email?: string
-  evmWallet?: string
-  likeWallet?: string
-  loginMethod?: string
-  displayName?: string
-  avatar?: string
-  id?: string
-} | null) {
+export function useSetLogUser(user: User | null) {
   // Set user in Sentry
   if (!user) {
-    setUser(null)
+    setSentryUser(null)
   }
   else {
-    setUser({
+    setSentryUser({
       id: user?.evmWallet,
       email: user?.email,
       username: user?.displayName || user?.evmWallet || user?.likeWallet,

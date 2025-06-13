@@ -44,7 +44,7 @@ export const useAccountStore = defineStore('account', () => {
     () => user.value,
     (user) => {
       isEVMModeActive.value = user?.isEVMModeActive ?? false
-      useLogSetUser(user)
+      useSetLogUser(user)
     },
     { immediate: true, deep: true },
   )
