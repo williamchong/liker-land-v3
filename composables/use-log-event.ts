@@ -1,8 +1,11 @@
+import { setUser } from '@sentry/nuxt'
+import { sha256 } from 'viem'
+
 interface EventParams {
   [key: string]: unknown
 }
 
-export default function useLogEvent(eventName: string, eventParams: EventParams = {}) {
+export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
   try {
     useTrackEvent(eventName, eventParams)
   }
@@ -57,6 +60,74 @@ export default function useLogEvent(eventName: string, eventParams: EventParams 
     }
     catch (error) {
       console.error(`Failed to log event to Crisp: ${eventName}`, error)
+    }
+  }
+}
+
+export function useLogSetUser(user: {
+  email?: string
+  evmWallet?: string
+  likeWallet?: string
+  loginMethod?: string
+  displayName?: string
+  avatar?: string
+  id?: string
+} | null) {
+  // Set user in Sentry
+  if (!user) {
+    setUser(null)
+  }
+  else {
+    setUser({
+      id: user?.evmWallet,
+      email: user?.email,
+      username: user?.displayName || user?.evmWallet || user?.likeWallet,
+    })
+  }
+
+  // Set user ID in Google Analytics
+  const { gtag } = useGtag()
+  try {
+    if (!user) {
+      gtag('set', {
+        user_id: null,
+      })
+    }
+    else {
+      gtag('set', {
+        user_id: sha256(user.evmWallet as `0x${string}`),
+        user_data: { email: user.email || undefined },
+      })
+    }
+  }
+  catch (error) {
+    console.error('Failed to set user ID in Google Analytics', error)
+  }
+
+  // Set user info in Crisp
+  const { instance: crisp } = useScriptCrisp()
+  if (crisp) {
+    try {
+      if (!user) {
+        crisp.do('session:reset')
+        return
+      }
+      else {
+        if (user.email) crisp.set('user:email', user.email)
+        if (user.evmWallet) crisp.set('session:data', ['evm_wallet', `op:${user.evmWallet}`])
+        if (user.likeWallet) crisp.set('session:data', ['like_wallet', user.likeWallet])
+        if (user.loginMethod) crisp.set('session:data', ['login_method', user.loginMethod])
+        if (user.displayName) {
+          crisp.set('user:nickname', user.displayName)
+        }
+        else if (user.evmWallet || user.likeWallet) {
+          crisp.set('user:nickname', user.evmWallet || user.likeWallet)
+        }
+        if (user.avatar) crisp.set('user:avatar', user.avatar)
+      }
+    }
+    catch (error) {
+      console.error('Failed to set user data in Crisp', error)
     }
   }
 }
