@@ -50,6 +50,9 @@ export default defineNuxtConfig({
         crisp: {
           id: '',
         },
+        metaPixel: {
+          id: '',
+        },
       },
       airtableCMSBaseId: process.env.AIRTABLE_CMS_BASE_ID,
       airtableCMSProductsTableId: process.env.AIRTABLE_CMS_PRODUCTS_TABLE_ID,
@@ -105,6 +108,7 @@ export default defineNuxtConfig({
   scripts: {
     registry: {
       crisp: true,
+      metaPixel: true,
       stripe: true,
     },
   },
