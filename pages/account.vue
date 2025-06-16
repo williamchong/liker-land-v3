@@ -96,6 +96,26 @@
               v-text="user?.likeWallet"
             />
           </AccountSettingsItem>
+
+          <AccountSettingsItem
+            class="items-start"
+            icon="i-material-symbols-diamond-outline-rounded"
+            :label="$t('account_page_subscription')"
+          >
+            <div class="flex flex-col justify-center items-end gap-2 py-2">
+              <div
+                class="text-sm/5"
+                v-text="user?.isLikerPlus ? $t('account_page_subscription_plus') : $t('account_page_subscription_free')"
+              />
+              <UButton
+                :label="user?.isLikerPlus ? $t('account_page_manage_subscription') : $t('account_page_upgrade_to_plus')"
+                variant="outline"
+                :color="user?.isLikerPlus ? 'neutral' : 'secondary'"
+                size="sm"
+                @click="handleLikerPlusButtonClick"
+              />
+            </div>
+          </AccountSettingsItem>
         </UCard>
       </section>
 
@@ -181,6 +201,8 @@ definePageMeta({ layout: false })
 const { t: $t } = useI18n()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
+const localeRoute = useLocaleRoute()
+const { handleError } = useErrorHandler()
 
 useHead({
   title: $t('account_page_title'),
@@ -197,5 +219,24 @@ async function handleLogout() {
 async function handleMagicButtonClick() {
   useLogEvent('export_private_key')
   await accountStore.exportPrivateKey()
+}
+
+async function handleLikerPlusButtonClick() {
+  useLogEvent('account_liker_plus_button_click')
+
+  if (!user.value?.isLikerPlus) {
+    await navigateTo(localeRoute({ name: 'pricing' }))
+    return
+  }
+
+  try {
+    const { url } = await fetchLikerPlusBillingPortalLink()
+    await navigateTo(url, { external: true, open: { target: '_blank' } })
+  }
+  catch (error) {
+    await handleError(error, {
+      title: $t('error_billing_portal_failed'),
+    })
+  }
 }
 </script>
