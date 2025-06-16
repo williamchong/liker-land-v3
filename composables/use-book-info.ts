@@ -29,7 +29,9 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
   })
 
   const authorDescription = computed(() => {
-    return bookstoreInfo.value?.author?.description || ''
+    const author = bookInfo.author.value
+    if (typeof author === 'object' && 'description' in author) return author.description
+    return ''
   })
 
   const publisherName = computed(() => bookInfo.publisher.value)
