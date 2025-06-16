@@ -194,10 +194,22 @@ async function startClaimingItems() {
     isClaimed.value = true
     useLogEvent('purchase', {
       transaction_id: cartId.value,
-      items: data.classIds.map(classId => ({
-        class_id: classId,
-        nft_id: data.newClaimedNFTs.find(nft => nft.classId === classId)?.nftId || '',
-      })),
+      value: cartData.value?.price,
+      currency: 'USD',
+      items: cartData.value?.classIdsWithPrice.map((item) => {
+        const {
+          classId,
+          priceIndex,
+          quantity,
+          price,
+        } = item
+        return {
+          id: `${classId}-${priceIndex}`,
+          quantity,
+          price,
+          currency: 'USD',
+        }
+      }),
     })
   }
   catch (error) {
