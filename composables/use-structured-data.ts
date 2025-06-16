@@ -1,6 +1,88 @@
 export function useStructuredData({ nftClassId }: { nftClassId: string }) {
   const bookInfo = useBookInfo({ nftClassId })
 
+  function generateOGMetaTags({
+    selectedPricingItemIndex = 0,
+  }) {
+    const authorName = bookInfo.authorName.value
+    const isbn = bookInfo.isbn.value
+    const inLanguage = bookInfo.inLanguage.value
+    const nftClassOwnerWalletAddress = bookInfo.nftClassOwnerWalletAddress.value
+
+    const pricingItems = bookInfo.pricingItems.value
+    const pricingItem = pricingItems[selectedPricingItemIndex]
+    if (!pricingItem) {
+      return []
+    }
+    const meta = [{
+      property: 'og:price:amount',
+      content: pricingItem.price,
+    },
+    {
+      property: 'product:price:amount',
+      content: pricingItem.price,
+    },
+    {
+      property: 'og:price:currency',
+      content: 'USD',
+    },
+    {
+      property: 'product:price:currency',
+      content: 'USD',
+    },
+    {
+      property: 'og:availability',
+      content: pricingItem.isSoldOut ? 'out of stock' : 'in stock',
+    },
+    {
+      property: 'product:brand',
+      content: '3ook',
+    },
+    {
+      property: 'product:catalog_id',
+      content: `${nftClassId}-${pricingItem.index}`,
+    },
+    {
+      property: 'product:retailer_item_id',
+      content: `${nftClassId}-${pricingItem.index}`,
+    },
+    {
+      property: 'product:category',
+      content: 543542, // ebook
+    },
+    {
+      hid: 'product:condition',
+      property: 'product:condition',
+      content: 'new',
+    },
+    {
+      hid: 'product:custom_label_0',
+      property: 'product:custom_label_0',
+      content: nftClassOwnerWalletAddress,
+    }]
+    if (isbn) {
+      meta.push({
+        hid: 'product:isbn',
+        property: 'product:isbn',
+        content: isbn,
+      })
+    }
+    if (authorName) {
+      meta.push({
+        hid: 'product:custom_label_1',
+        property: 'product:custom_label_1',
+        content: authorName,
+      })
+    }
+    if (inLanguage) {
+      meta.push({
+        property: 'product:locale',
+        content: inLanguage,
+      })
+    }
+    return meta
+  }
+
   function generateBookStructuredData({
     canonicalURL,
     image, // TODO: we need image because normalizeURIToHTTP with useRuntimeConfig() is broken in this context
@@ -87,6 +169,7 @@ export function useStructuredData({ nftClassId }: { nftClassId: string }) {
   }
 
   return {
+    generateOGMetaTags,
     generateBookStructuredData,
   }
 }

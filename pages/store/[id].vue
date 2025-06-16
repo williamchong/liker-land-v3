@@ -339,7 +339,10 @@ const nftStore = useNFTStore()
 const { handleError } = useErrorHandler()
 
 const nftClassId = computed(() => getRouteParam('id'))
-const { generateBookStructuredData } = useStructuredData({ nftClassId: nftClassId.value })
+const {
+  generateBookStructuredData,
+  generateOGMetaTags,
+} = useStructuredData({ nftClassId: nftClassId.value })
 
 if (nftClassId.value !== nftClassId.value.toLowerCase()) {
   await navigateTo(localeRoute({
@@ -385,6 +388,8 @@ await callOnce(async () => {
 const bookInfo = useBookInfo({ nftClassId: nftClassId.value })
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 600 }))
 
+const selectedPricingItemIndex = ref(Number(getRouteQuery('price_index') || 0))
+
 const ogTitle = computed(() => {
   const title = bookInfo.name.value
   const author = bookInfo.authorName.value
@@ -414,6 +419,7 @@ useHead(() => ({
     { property: 'og:image', content: bookInfo.coverSrc.value },
     { property: 'og:type', content: 'product' },
     { property: 'og:url', content: canonicalURL.value },
+    ...generateOGMetaTags({ selectedPricingItemIndex: selectedPricingItemIndex.value }),
   ],
   link: [
     { rel: 'canonical', href: canonicalURL.value },
@@ -449,8 +455,6 @@ const infoTabItems = computed(() => {
 
   return items
 })
-
-const selectedPricingItemIndex = ref(Number(getRouteQuery('price_index') || 0))
 
 const pricingItemsElement = useTemplateRef<HTMLLIElement>('pricing')
 const isPricingItemsVisible = useElementVisibility(pricingItemsElement)
