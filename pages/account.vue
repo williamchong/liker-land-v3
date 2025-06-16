@@ -134,8 +134,20 @@
           </AccountSettingsItem>
 
           <UButton
+            v-if="isCrispLoaded"
             :label="$t('account_page_contact_support')"
-            href="https://go.crisp.chat/chat/embed/?website_id=5c009125-5863-4059-ba65-43f177ca33f7"
+            variant="link"
+            leading-icon="i-material-symbols-contact-support"
+            trailing-icon="i-material-symbols-chat-bubble-outline-rounded"
+            color="neutral"
+            size="lg"
+            block
+            @click="handleCustomerServiceChatButtonClick"
+          />
+          <UButton
+            v-else
+            :label="$t('account_page_contact_support')"
+            :to="crispChatURL"
             target="_blank"
             variant="link"
             leading-icon="i-material-symbols-contact-support"
@@ -143,6 +155,7 @@
             color="neutral"
             size="lg"
             block
+            @click="handleCustomerServiceLinkButtonClick"
           />
 
           <UButton
@@ -188,6 +201,7 @@
 // NOTE: Set `layout` to false for injecting props into `<NuxtLayout/>`.
 definePageMeta({ layout: false })
 
+const config = useRuntimeConfig()
 const { t: $t } = useI18n()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
@@ -196,6 +210,23 @@ const { handleError } = useErrorHandler()
 
 useHead({
   title: $t('account_page_title'),
+})
+
+const isCrispLoaded = ref(false)
+// XXX: `id` in `useScriptCrisp()` is broken, it always returns `'crisp'` even `id` is provided and it is also not reactive 💩
+const crispId = computed(() => config.public.scripts.crisp.id)
+const crispChatURL = computed(() => {
+  const url = new URL('https://go.crisp.chat/chat/embed')
+  url.searchParams.set('website_id', crispId.value || '5c009125-5863-4059-ba65-43f177ca33f7')
+  return url.toString()
+})
+
+const { instance: crisp, onLoaded: listenCrispLoaded } = useScriptCrisp({ id: crispId.value })
+
+onMounted(() => {
+  listenCrispLoaded(() => {
+    isCrispLoaded.value = true
+  })
 })
 
 async function handleLogin() {
@@ -228,5 +259,16 @@ async function handleLikerPlusButtonClick() {
       title: $t('error_billing_portal_failed'),
     })
   }
+}
+
+async function handleCustomerServiceChatButtonClick() {
+  useLogEvent('customer_service', { method: 'chat' })
+  if (crisp && isCrispLoaded.value) {
+    crisp.do('chat:open')
+  }
+}
+
+async function handleCustomerServiceLinkButtonClick() {
+  useLogEvent('customer_service', { method: 'link' })
 }
 </script>
