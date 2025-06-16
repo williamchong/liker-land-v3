@@ -61,6 +61,7 @@
           :nft-class-id="item.nftClassId"
           :nft-ids="item.nftIds"
           @open="handleBookshelfItemOpen"
+          @download="handleBookshelfItemDownload"
         />
 
         <li
@@ -145,6 +146,19 @@ function handleBookshelfItemOpen({
   index?: number
 }) {
   useLogEvent('shelf_open_book', {
+    content_type: type,
+    nft_class_id: nftClassId,
+  })
+}
+
+function handleBookshelfItemDownload({
+  nftClassId,
+  type,
+}: {
+  nftClassId?: string
+  type: string
+}) {
+  useLogEvent('shelf_download_book', {
     content_type: type,
     nft_class_id: nftClassId,
   })

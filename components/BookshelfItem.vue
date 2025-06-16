@@ -85,22 +85,27 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['visible', 'open'])
+const emit = defineEmits(['visible', 'open', 'download'])
 
 const { t: $t } = useI18n()
 const accountStore = useAccountStore()
 const nftStore = useNFTStore()
 const metadataStore = useMetadataStore()
 const bookInfo = useBookInfo({ nftClassId: props.nftClassId })
+const { downloadBookFile } = useBookDownload()
+
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 300 }))
 
 const isLargerScreen = useMediaQuery('(min-width: 1024px)')
+const encryptedArweaveLinkEndpoint = getEncryptedArweaveLinkAPIEndpoint()
 
 const menuItems = computed<DropdownMenuItem[]>(() => {
   const sortedContentURLs = [...bookInfo.contentURLs.value].sort(compareContentURL)
+  const readerItems: DropdownMenuItem[] = []
+  const downloadItems: DropdownMenuItem[] = []
 
-  const contentItems: DropdownMenuItem[] = sortedContentURLs.map((contentURL) => {
-    let label: string
+  sortedContentURLs.forEach((contentURL) => {
+    let label = ''
     switch (contentURL.type) {
       case 'epub':
         label = $t('bookshelf_open_in_epub')
@@ -113,24 +118,40 @@ const menuItems = computed<DropdownMenuItem[]>(() => {
         break
     }
 
-    return {
+    readerItems.push({
       label,
       icon: 'i-material-symbols-book-5-outline',
-      onSelect: () => {
-        openContentURL(contentURL)
-      },
+      onSelect: () => openContentURL(contentURL),
+    })
+
+    const isContentURLEncrypted = !!(
+      contentURL.url.startsWith(encryptedArweaveLinkEndpoint)
+      || contentURL.url.includes('?key=')
+    )
+    if (bookInfo.isDownloadable.value && !isContentURLEncrypted) {
+      downloadItems.push({
+        label: $t('bookshelf_download_file', { type: contentURL.type.toUpperCase() }),
+        icon: 'i-material-symbols-download-rounded',
+        onSelect: () =>
+          downloadURL({
+            name: contentURL.name,
+            type: contentURL.type,
+          }),
+      })
     }
   })
 
-  contentItems.push({
+  const productInfoItem: DropdownMenuItem = {
     label: $t('bookshelf_view_book_product_page'),
     icon: 'i-material-symbols-visibility-outline',
-    to: accountStore.isEVMMode ? bookInfo.productPageRoute.value : getLikerLandV2NFTClassPageURL(props.nftClassId),
+    to: accountStore.isEVMMode
+      ? bookInfo.productPageRoute.value
+      : getLikerLandV2NFTClassPageURL(props.nftClassId),
     external: !accountStore.isEVMMode,
     target: accountStore.isEVMMode ? undefined : '_blank',
-  })
+  }
 
-  return contentItems
+  return [...readerItems, ...downloadItems, productInfoItem]
 })
 
 useVisibility('lazyLoadTrigger', (visible) => {
@@ -158,6 +179,20 @@ function openContentURL(contentURL: ContentURL) {
     url: contentURL.url,
     name: contentURL.name,
     index: contentURL.index,
+  })
+}
+
+async function downloadURL({ name, type }: { name: string, type: string }) {
+  await downloadBookFile({
+    nftClassId: props.nftClassId,
+    nftId: props.nftIds?.[0] || bookInfo.firstUserOwnedNFTId.value,
+    isCustomMessageEnabled: bookInfo.isCustomMessageEnabled.value,
+    filename: name,
+    type,
+  })
+  emit('download', {
+    nftClassId: props.nftClassId,
+    type,
   })
 }
 

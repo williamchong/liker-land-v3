@@ -333,3 +333,8 @@ export function fetchLikerPublicInfoByWalletAddress(
   if (options.nocache) query.ts = `${Date.now()}`
   return fetch<LikerInfoResponseData>(`/users/addr/${walletAddress}/min`, { query })
 }
+
+export function getEncryptedArweaveLinkAPIEndpoint() {
+  const config = useRuntimeConfig()
+  return `${config.public.likeCoinAPIEndpoint}/arweave/v2/link`
+}
