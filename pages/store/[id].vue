@@ -425,7 +425,6 @@ useHead(() => ({
     { property: 'og:title', content: ogTitle.value },
     { property: 'og:description', content: ogDescription.value },
     { property: 'og:image', content: bookInfo.coverSrc.value },
-    { property: 'og:type', content: 'product' },
     { property: 'og:url', content: canonicalURL.value },
     ...generateOGMetaTags({ selectedPricingItemIndex: selectedPricingItemIndex.value }),
   ],
