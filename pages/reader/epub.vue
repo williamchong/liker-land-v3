@@ -380,9 +380,34 @@ async function loadEPub() {
     }),
   ])
 
-  // NOTE: https://github.com/futurepress/epub.js/issues/278
-  // Break sections by 1000 chars for calculating percentage
-  book.locations.generate(1000)
+  try {
+    let isLocationLoaded = false
+    const locationCacheKey = `${bookFileCacheKey.value}-locations`
+    if (window.localStorage) {
+      const locationCache = window.localStorage.getItem(locationCacheKey)
+      if (locationCache) {
+        book.locations.load(locationCache)
+        isLocationLoaded = true
+      }
+    }
+    if (!isLocationLoaded) {
+      // NOTE: https://github.com/futurepress/epub.js/issues/278
+      // Break sections by 1000 chars for calculating percentage
+      book.locations.generate(1000).then(() => {
+        try {
+          if (window.localStorage) {
+            window.localStorage.setItem(locationCacheKey, book.locations.save())
+          }
+        }
+        catch (error) {
+          console.warn('Failed to save location cache:', error)
+        }
+      })
+    }
+  }
+  catch (error) {
+    console.warn('Failed to get location cache:', error)
+  }
 
   const sectionHrefByFilename: Record<string, string> = {}
   book.spine.each((section: Section) => {
