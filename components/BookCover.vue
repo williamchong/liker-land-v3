@@ -135,6 +135,9 @@ const coverClass = computed(() => {
   else {
     classes.push('pointer-events-none')
   }
+  if (hasError.value) {
+    classes.push('h-full')
+  }
   return classes
 })
 
