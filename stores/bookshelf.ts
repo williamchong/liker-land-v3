@@ -23,7 +23,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     : legacyNFTClassIds.value.map(nftClassId => ({ nftClassId, nftIds: [] })),
   )
 
-  async function fetchItems({ isRefresh: shouldRefresh = false } = {}) {
+  async function fetchItems({ isRefresh: shouldRefresh = false, limit = 100 } = {}) {
     const isRefresh = shouldRefresh || (!items.value.length && !hasFetched.value)
     if (!hasLoggedIn.value || isFetching.value || (!isRefresh && !nextKey.value)) {
       return
@@ -38,6 +38,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
           nftOwner: user.value?.evmWallet,
           key,
           nocache: isRefresh,
+          limit,
         })
         res.data.forEach((item) => {
           const nftClassId = item.contract_address.toLowerCase() as `0x${string}`
@@ -62,6 +63,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
         res = await fetchLegacyLikeCoinChainNFTClasses({
           nftOwner: user.value?.likeWallet,
           key,
+          limit,
         })
         const newNFTClassIds = nftStore.addLegacyNFTClasses(res.classes.filter((item) => {
           const nftMetaCollectionId = item.metadata?.nft_meta_collection_id
@@ -74,7 +76,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
           legacyNFTClassIds.value.push(...newNFTClassIds)
         }
       }
-      nextKey.value = res.pagination.count < 100 ? undefined : res.pagination.next_key
+      nextKey.value = res.pagination.count < limit ? undefined : res.pagination.next_key
     }
     catch (error) {
       const statusCode = getErrorStatusCode(error)
