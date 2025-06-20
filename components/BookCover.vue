@@ -14,6 +14,7 @@
         'w-full h-full': hasError,
       }"
       :to="props.to"
+      @click="emit('click', $event)"
     >
       <div
         v-if="hasShadow"
@@ -48,7 +49,6 @@
         :alt="props.alt"
         @load="handleImageLoad"
         @error="handleImageError"
-        @click="emit('click', $event)"
       >
     </component>
     <div
@@ -134,9 +134,6 @@ const coverClass = computed(() => {
   }
   else {
     classes.push('pointer-events-none')
-  }
-  if (hasError.value) {
-    classes.push('h-full')
   }
   return classes
 })
