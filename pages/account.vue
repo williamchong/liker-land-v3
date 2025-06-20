@@ -134,24 +134,11 @@
           </AccountSettingsItem>
 
           <UButton
-            v-if="isCrispLoaded"
             :label="$t('account_page_contact_support')"
             variant="link"
+            class="cursor-pointer"
             leading-icon="i-material-symbols-contact-support"
             trailing-icon="i-material-symbols-chat-bubble-outline-rounded"
-            color="neutral"
-            size="lg"
-            block
-            @click="handleCustomerServiceChatButtonClick"
-          />
-          <UButton
-            v-else
-            :label="$t('account_page_contact_support')"
-            :to="crispChatURL"
-            target="_blank"
-            variant="link"
-            leading-icon="i-material-symbols-contact-support"
-            trailing-icon="i-material-symbols-share-windows-rounded"
             color="neutral"
             size="lg"
             block
@@ -201,7 +188,6 @@
 // NOTE: Set `layout` to false for injecting props into `<NuxtLayout/>`.
 definePageMeta({ layout: false })
 
-const config = useRuntimeConfig()
 const { t: $t } = useI18n()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
@@ -212,22 +198,7 @@ useHead({
   title: $t('account_page_title'),
 })
 
-const isCrispLoaded = ref(false)
-// XXX: `id` in `useScriptCrisp()` is broken, it always returns `'crisp'` even `id` is provided and it is also not reactive 💩
-const crispId = computed(() => config.public.scripts.crisp.id)
-const crispChatURL = computed(() => {
-  const url = new URL('https://go.crisp.chat/chat/embed')
-  url.searchParams.set('website_id', crispId.value || '5c009125-5863-4059-ba65-43f177ca33f7')
-  return url.toString()
-})
-
-const { instance: crisp, onLoaded: listenCrispLoaded } = useScriptCrisp({ id: crispId.value })
-
-onMounted(() => {
-  listenCrispLoaded(() => {
-    isCrispLoaded.value = true
-  })
-})
+const { $crispChatURL: crispChatURL, $crisp: crisp } = useNuxtApp()
 
 async function handleLogin() {
   await accountStore.login()
@@ -261,14 +232,18 @@ async function handleLikerPlusButtonClick() {
   }
 }
 
-async function handleCustomerServiceChatButtonClick() {
-  useLogEvent('customer_service', { method: 'chat' })
-  if (crisp && isCrispLoaded.value) {
-    crisp.do('chat:open')
-  }
-}
-
 async function handleCustomerServiceLinkButtonClick() {
-  useLogEvent('customer_service', { method: 'link' })
+  if (!crisp) {
+    await navigateTo(crispChatURL, {
+      external: true,
+      open: { target: '_blank' },
+    })
+    useLogEvent('customer_service', { method: 'link' })
+    return
+  }
+  useLogEvent('customer_service', { method: 'chat' })
+
+  crisp?.do('chat:show')
+  crisp?.do('chat:open')
 }
 </script>
