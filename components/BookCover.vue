@@ -1,7 +1,6 @@
 <template>
   <div
     :class="[
-      { relative: isShowPlaceholder },
       'flex',
       { 'aspect-2/3': !isVerticalCenter || isShowPlaceholder },
       isVerticalCenter ? 'items-center' : 'items-end',
@@ -9,11 +8,16 @@
   >
     <component
       :is="props.to ? NuxtLink : 'div'"
-      :class="{
-        'relative': hasShadow && hasLoaded,
-        'w-full h-full': hasError,
-      }"
+      :class="[
+        'group',
+        {
+          'cursor-pointer': isClickable,
+          'relative': isShowPlaceholder || (hasShadow && hasLoaded),
+          'w-full h-full': isShowPlaceholder,
+        },
+      ]"
       :to="props.to"
+      @click="emit('click', $event)"
     >
       <div
         v-if="hasShadow"
@@ -35,11 +39,12 @@
       <img
         ref="imgElement"
         :class="[
+          coverClass,
           { relative: hasShadow },
           'bg-white',
-          coverClass,
           !isShowPlaceholder ? 'opacity-100' : 'opacity-0',
           { 'blur-xl': !hasLoaded },
+          { 'pointer-events-none': isShowPlaceholder },
           'transition-all',
           'duration-300',
           'ease-out',
@@ -48,30 +53,34 @@
         :alt="props.alt"
         @load="handleImageLoad"
         @error="handleImageError"
-        @click="emit('click', $event)"
       >
+      <div
+        v-show="isShowPlaceholder"
+        :class="[
+          coverClass,
+          'absolute',
+          'flex',
+          'justify-center',
+          'items-center',
+          'inset-0',
+          'bg-[#E2E2E2]/60',
+          'pointer-events-none',
+          { 'animate-pulse': !hasLoaded },
+        ]"
+      >
+        <UIcon
+          :class="[
+            'text-[#9B9B9B]/50',
+            hasError ? 'opacity-100' : 'opacity-0',
+            'transition-opacity',
+            'duration-300',
+            'ease-out',
+          ]"
+          name="i-material-symbols-book-2-outline-rounded"
+          size="100"
+        />
+      </div>
     </component>
-    <div
-      v-if="isShowPlaceholder"
-      :class="[
-        'absolute',
-        'flex',
-        'justify-center',
-        'items-center',
-        'inset-0',
-        'bg-[#E2E2E2]/60',
-        'pointer-events-none',
-        coverClass,
-        { 'animate-pulse': !hasLoaded },
-      ]"
-    >
-      <UIcon
-        v-if="hasError"
-        class="text-[#9B9B9B]/50"
-        name="i-material-symbols-book-2-outline-rounded"
-        size="100"
-      />
-    </div>
   </div>
 </template>
 
@@ -111,6 +120,8 @@ const imgElement = useTemplateRef<HTMLImageElement>('imgElement')
 
 const borderRadiusClass = 'rounded-lg'
 
+const isClickable = computed(() => !!props.to || !!getCurrentInstance()?.vnode.props?.onClick)
+
 const coverClass = computed(() => {
   const classes = [
     'border',
@@ -118,22 +129,15 @@ const coverClass = computed(() => {
     borderRadiusClass,
     { 'shadow-[0_2px_4px_0_rgba(0,0,0,0.10)]': props.hasShadow },
   ]
-  if (hasLoaded.value) {
-    const instance = getCurrentInstance()
-    if (props.to || (instance?.vnode.props?.onClick)) {
-      classes.push(
-        'cursor-pointer',
-        'hover:shadow-xl',
-        'hover:scale-105',
-        'transition-all',
-        'duration-200',
-        'ease-in-out',
-        'origin-bottom',
-      )
-    }
-  }
-  else {
-    classes.push('pointer-events-none')
+  if (isClickable.value) {
+    classes.push(
+      'group-hover:shadow-xl',
+      'group-hover:scale-105',
+      'group-hover:transition-all',
+      'group-hover:duration-200',
+      'group-hover:ease-in-out',
+      'origin-bottom',
+    )
   }
   return classes
 })
