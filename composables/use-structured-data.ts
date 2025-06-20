@@ -11,7 +11,7 @@ export function useStructuredData({ nftClassId }: { nftClassId: string }) {
 
     const pricingItems = bookInfo.pricingItems.value
     const pricingItem = pricingItems[selectedPricingItemIndex]
-    if (!pricingItem) {
+    if (!pricingItem || bookInfo.isHidden.value) {
       return []
     }
     const meta = [{
@@ -94,6 +94,9 @@ export function useStructuredData({ nftClassId }: { nftClassId: string }) {
     canonicalURL: string
     image?: string
   }) {
+    if (bookInfo.isHidden.value) {
+      return []
+    }
     const name = bookInfo.name.value
     const description = bookInfo.description.value
     const authorName = bookInfo.authorName.value
