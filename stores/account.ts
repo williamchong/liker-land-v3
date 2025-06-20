@@ -275,6 +275,9 @@ export const useAccountStore = defineStore('account', () => {
     try {
       isLoggingIn.value = true
 
+      // Disconnect any existing connection
+      await disconnectAsync()
+
       let connectorId: string | undefined = preferredConnectorId
       if (!connectorId || !connectors.some((c: { id: string }) => c.id === connectorId)) {
         connectorId = await loginModal.open()
@@ -285,9 +288,6 @@ export const useAccountStore = defineStore('account', () => {
         (c: { id: string }) => c.id === connectorId,
       )
       if (!connector) return
-
-      // Disconnect any existing connection
-      await disconnectAsync({ connector })
 
       isLoggingIn.value = true
       if (status.value !== 'success') {
@@ -387,6 +387,11 @@ export const useAccountStore = defineStore('account', () => {
       await sleep(1000)
     }
     catch (error) {
+      // Disconnect any existing connection if error occurs
+      await disconnectAsync().catch(() => {
+        // Ignore disconnect errors
+      })
+
       if (error instanceof UserRejectedRequestError) {
         return
       }
