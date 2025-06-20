@@ -17,6 +17,7 @@ export const useAccountStore = defineStore('account', () => {
   const { errorModal, handleError } = useErrorHandler()
   const blockingModal = useBlockingModal()
   const { t: $t } = useI18n()
+  const { getLikeCoinV3BookMigrationSiteURL } = useLikeCoinV3MigrationSite()
 
   const loginModal = overlay.create(LoginModal)
   const registrationFormModal = overlay.create(RegistrationModal)
@@ -71,14 +72,63 @@ export const useAccountStore = defineStore('account', () => {
     return $t('account_register_error_email_already_used', { email })
   }
 
+  function getEmailAlreadyUsedErrorData({
+    email,
+    walletAddress,
+    boundEVMWallet,
+    boundLikeWallet,
+    loginMethod,
+  }: {
+    email: string
+    walletAddress: string
+    boundEVMWallet?: string
+    boundLikeWallet?: string
+    loginMethod: string
+  }) {
+    const shouldMigrate = !boundEVMWallet && !!boundLikeWallet
+    return {
+      statusCode: 401,
+      data: {
+        level: 'warning',
+        title: shouldMigrate
+          ? $t('account_register_error_email_already_used_migrate_title')
+          : $t('account_register_error_email_already_used_by_wallet_title'),
+        description: getEmailAlreadyUsedErrorMessage({
+          email,
+          evmWallet: boundEVMWallet,
+          likeWallet: boundLikeWallet,
+        }),
+        tags: [
+          { label: loginMethod, icon: 'i-material-symbols-login-rounded', class: 'font-mono' },
+          { label: walletAddress, icon: 'i-material-symbols-key-outline-rounded', class: 'font-mono' },
+        ],
+        actions: shouldMigrate
+          ? [{
+              label: $t('account_register_error_contact_support'),
+              color: 'secondary',
+              variant: 'subtle',
+              onClick: async () => {
+                await navigateTo(getLikeCoinV3BookMigrationSiteURL.value({ utmSource: 'login_email_already_used' }), {
+                  external: true,
+                  open: { target: '_blank' },
+                })
+              },
+            }]
+          : [],
+      },
+    }
+  }
+
   async function checkIsRegistered({
     walletAddress,
     email,
     magicDIDToken,
+    loginMethod,
   }: {
     walletAddress: string
     email?: string
     magicDIDToken?: string
+    loginMethod: string
   }) {
     try {
       await fetchUserRegisterCheck({ walletAddress, email, magicDIDToken })
@@ -89,16 +139,13 @@ export const useAccountStore = defineStore('account', () => {
       if (error instanceof FetchError) {
         switch (error.data?.error) {
           case 'EMAIL_ALREADY_USED':
-            throw createError({
-              statusCode: 401,
-              data: {
-                description: getEmailAlreadyUsedErrorMessage({
-                  email: email as string,
-                  evmWallet: error.data?.evmWallet,
-                  likeWallet: error.data?.likeWallet,
-                }),
-              },
-            })
+            throw createError(getEmailAlreadyUsedErrorData({
+              email: email as string,
+              walletAddress,
+              boundEVMWallet: error.data?.evmWallet,
+              boundLikeWallet: error.data?.likeWallet,
+              loginMethod,
+            }))
 
           case 'EVM_WALLET_ALREADY_EXIST':
             // Already registered
@@ -206,13 +253,13 @@ export const useAccountStore = defineStore('account', () => {
               continue
             }
             case 'EMAIL_ALREADY_USED': {
-              await errorModal.open({
-                description: getEmailAlreadyUsedErrorMessage({
-                  email: payload?.email as string,
-                  evmWallet: error.data?.evmWallet,
-                  likeWallet: error.data?.likeWallet,
-                }),
-              })
+              await errorModal.open(getEmailAlreadyUsedErrorData({
+                email: payload?.email as string,
+                walletAddress,
+                boundEVMWallet: error.data?.evmWallet,
+                boundLikeWallet: error.data?.likeWallet,
+                loginMethod,
+              }))
               continue
             }
             default:
@@ -281,7 +328,7 @@ export const useAccountStore = defineStore('account', () => {
       }
 
       // Check if the wallet address or email is already registered
-      let isRegistered = await checkIsRegistered({ walletAddress, email, magicDIDToken })
+      let isRegistered = await checkIsRegistered({ walletAddress, email, magicDIDToken, loginMethod })
       if (!isRegistered) {
         // If not registered, proceed to registration
         isRegistered = await register({ walletAddress, email, loginMethod, magicUserId, magicDIDToken })
@@ -341,6 +388,9 @@ export const useAccountStore = defineStore('account', () => {
     }
     catch (error) {
       if (error instanceof UserRejectedRequestError) {
+        return
+      }
+      if (error instanceof FetchError && error.data?.message === 'EMAIL_ALREADY_USED') {
         return
       }
       if (error instanceof FetchError && error.data?.message === 'LIKECOIN_WALLET_ADDRESS_NOT_FOUND') {

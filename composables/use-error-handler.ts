@@ -79,9 +79,12 @@ export default function () {
     }
 
     await errorModal.open({
-      title: props.title || $t('error_modal_title'),
+      level: parseErrorData(error, 'level') || 'error',
+      title: props.title || parseErrorData<string>(error, 'title') || $t('error_modal_title'),
       description,
       rawMessage: !handler ? `${url ? `${url}\n\n` : ''}${rawErrorMessage}` : undefined,
+      tags: parseErrorData(error, 'tags') || [],
+      actions: parseErrorData(error, 'actions') || [],
       onClose: (typeof handler !== 'string' ? handler?.onClose : undefined) || props.onClose,
     })
     return !!handler
