@@ -17,7 +17,7 @@ const monthlyPrice = ref('6.99')
 const currency = ref('USD')
 
 const structuredData = computed(() => {
-  const currentUrl = `${baseURL}/pricing`
+  const pageURL = `${baseURL}/pricing`
   const currentDate = new Date()
   const oneYearLater = new Date(currentDate)
   oneYearLater.setFullYear(currentDate.getFullYear() + 1)
@@ -28,7 +28,7 @@ const structuredData = computed(() => {
     '@type': 'Product',
     'name': '3ook+',
     'description': $t('pricing_page_subscription_description'),
-    'url': currentUrl,
+    'url': pageURL,
     'offers': [
       {
         '@type': 'Offer',
@@ -36,7 +36,7 @@ const structuredData = computed(() => {
         'priceCurrency': currency.value,
         'availability': 'https://schema.org/InStock',
         'priceValidUntil': priceValidUntil,
-        'url': currentUrl,
+        'url': pageURL,
         'offeredBy': {
           '@type': 'Organization',
           'name': '3ook.com',
@@ -58,7 +58,7 @@ const structuredData = computed(() => {
         'priceCurrency': currency.value,
         'availability': 'https://schema.org/InStock',
         'priceValidUntil': priceValidUntil,
-        'url': currentUrl,
+        'url': pageURL,
         'offeredBy': {
           '@type': 'Organization',
           'name': '3ook.com',
@@ -88,7 +88,7 @@ useHead({
     { name: 'description', content: pageDescription.value },
     { property: 'og:title', content: pageTitle.value },
     { property: 'og:description', content: pageDescription.value },
-    { property: 'og:image', content: `${baseURL}/images/og/plus.png` },
+    { property: 'og:image', content: `${baseURL}/images/og/plus.jpg` },
     { property: 'og:url', content: canonicalURL.value },
     { property: 'og:type', content: 'product' },
   ],
