@@ -76,43 +76,6 @@ declare interface NFT {
   updated_at: string // ISO date string
 }
 
-declare interface LegacyNFTClassMetadata {
-  'url': string
-  'name': string
-  '@type': string
-  'image': string
-  'version': number
-  '@context': string
-  'keywords': string
-  'usageInfo': string
-  'description': string
-  'nft_meta_collection_id': string
-  'nft_meta_collection_name': string
-  'nft_meta_collection_descrption': string // NOTE: Typo
-}
-
-declare interface LegacyNFTClass {
-  id: `likenft${string}`
-  name: string
-  description: string
-  symbol: string
-  uri: string
-  uri_hash: string
-  metadata: LegacyNFTClassMetadata
-  parent: {
-    type: string
-    iscn_id_prefix: string
-    account: string
-  }
-  created_at: string // ISO date string
-  latest_price: number
-  price_updated_at: string // ISO date string
-  owner: string
-  nft_owned_count: number
-  nft_last_owned_at: string // ISO date string
-  last_owned_nft_id: string
-}
-
 declare type NFTId = string
 declare type NFTIdList = NFTId[]
 declare interface NFTOwner {
@@ -127,3 +90,20 @@ declare interface ContentURL {
   type: string
   index: number
 }
+
+declare interface PotentialAction {
+  '@type': string
+}
+
+declare interface ReadActionEntryPoint {
+  '@type': 'EntryPoint'
+  'contentType': string
+  'encodingType': string
+  'url': string
+  'name': string
+}
+
+declare type ReadAction = {
+  '@type': 'ReadAction'
+  'target': ReadActionEntryPoint[]
+} & PotentialAction

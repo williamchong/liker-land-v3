@@ -88,7 +88,6 @@ const props = defineProps({
 const emit = defineEmits(['visible', 'open', 'download'])
 
 const { t: $t } = useI18n()
-const accountStore = useAccountStore()
 const nftStore = useNFTStore()
 const metadataStore = useMetadataStore()
 const bookInfo = useBookInfo({ nftClassId: props.nftClassId })
@@ -144,11 +143,7 @@ const menuItems = computed<DropdownMenuItem[]>(() => {
   const productInfoItem: DropdownMenuItem = {
     label: $t('bookshelf_view_book_product_page'),
     icon: 'i-material-symbols-visibility-outline',
-    to: accountStore.isEVMMode
-      ? bookInfo.productPageRoute.value
-      : getLikerLandV2NFTClassPageURL(props.nftClassId),
-    external: !accountStore.isEVMMode,
-    target: accountStore.isEVMMode ? undefined : '_blank',
+    to: bookInfo.productPageRoute.value,
   }
 
   return [...readerItems, ...downloadItems, productInfoItem]

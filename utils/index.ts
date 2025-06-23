@@ -29,11 +29,6 @@ export function extractFilenameFromContentURL(url: string) {
   return urlObj.searchParams.get('name') || ''
 }
 
-export function getLikerLandV2NFTClassPageURL(nftClassId: string) {
-  const config = useRuntimeConfig()
-  return `${config.public.likerLandV2URL}/nft/class/${nftClassId}`
-}
-
 export function getRouteQuery(key: string, defaultValue = '') {
   const route = useRoute()
   const value = route.query[key]

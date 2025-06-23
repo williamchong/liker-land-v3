@@ -10,7 +10,6 @@ declare module '#auth-utils' {
     avatar?: string
     email?: string
     loginMethod?: string
-    isEVMModeActive?: boolean
     isLikerPlus?: boolean
   }
 }

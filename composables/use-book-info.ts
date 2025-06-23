@@ -6,12 +6,9 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
   const nftStore = useNFTStore()
   const metadataStore = useMetadataStore()
   const bookstoreStore = useBookstoreStore()
-  const evmBookInfo = useEVMBookInfo({ nftClassId })
-  const legacyBookInfo = useLegacyBookInfo({ nftClassId })
+  const bookInfo = useEVMBookInfo({ nftClassId })
   const bookshelfStore = useBookshelfStore()
-  const isEVM = computed(() => checkIsEVMAddress(nftClassId))
 
-  const bookInfo = isEVM.value ? evmBookInfo : legacyBookInfo
   const bookstoreInfo = computed(() => {
     return bookstoreStore.getBookstoreInfoByNFTClassId(nftClassId)
   })
@@ -162,7 +159,7 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
     let nftIds = bookshelfStore.getNFTsByNFTClassId(nftClassId).map(nft => nft.token_id)
     if (!nftIds.length) {
       // Find the NFT Ids owned by the user by the NFT class Id
-      const userWallet = isEVM.value ? user.value?.evmWallet : user.value?.likeWallet
+      const userWallet = user.value?.evmWallet
       nftIds = nftStore.getNFTIdsByNFTClassIdAndOwnerWalletAddress(nftClassId, userWallet || '')
     }
     return nftIds
@@ -180,8 +177,6 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
   }
 
   return {
-    isEVM,
-
     ...bookInfo,
 
     nftClassOwnerWalletAddress,
