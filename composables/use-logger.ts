@@ -9,6 +9,14 @@ interface EventParams {
 export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
   try {
     useTrackEvent(eventName, eventParams)
+    const AD_CONVERSION_ID = useRuntimeConfig().public.AD_CONVERSION_ID as string
+    if (AD_CONVERSION_ID && eventName === 'purchase') {
+      const { gtag } = useGtag()
+      gtag('event', 'conversion', {
+        send_to: AD_CONVERSION_ID,
+        ...eventParams,
+      })
+    }
   }
   catch {
     console.error(`Failed to track event: ${eventName}`, eventParams)

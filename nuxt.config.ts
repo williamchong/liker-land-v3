@@ -2,6 +2,7 @@
 
 const {
   GA_TRACKING_ID,
+  AD_CONVERSION_ID,
   NODE_ENV,
 } = process.env
 
@@ -81,7 +82,12 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
 
   gtag: {
-    id: GA_TRACKING_ID,
+    tags: [
+      GA_TRACKING_ID,
+      AD_CONVERSION_ID,
+    ].filter(Boolean).map(id => ({
+      id: id?.split('/')[0] as string,
+    })),
   },
 
   i18n: {

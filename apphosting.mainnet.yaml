@@ -21,6 +21,8 @@ env:
     value: tblYTTj9AkyKAi8Md
   - variable: AIRTABLE_API_SECRET
     secret: V3_AIRTABLE_API_SECRET
+  - variable: AD_CONVERSION_ID
+    value: AW-16835227339/iIO2CLmDtJoaEMvd1Ns-
   - variable: BASE_URL
     value: https://3ook.com
   - variable: MINIMAX_GROUP_ID
