@@ -57,6 +57,7 @@ export default defineNuxtConfig({
       },
       airtableCMSBaseId: process.env.AIRTABLE_CMS_BASE_ID,
       airtableCMSProductsTableId: process.env.AIRTABLE_CMS_PRODUCTS_TABLE_ID,
+      googleAdConversionId: process.env.AD_CONVERSION_ID,
       likeCoinAPIEndpoint: process.env.LIKECOIN_API_ENDPOINT,
       likeCoinStaticEndpoint: process.env.LIKECOIN_STATIC_ENDPOINT,
       likeCoinEVMChainAPIEndpoint: process.env.LIKECOIN_EVM_CHAIN_API_ENDPOINT,
