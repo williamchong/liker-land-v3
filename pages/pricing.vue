@@ -5,8 +5,100 @@
 <script setup lang="ts">
 const router = useRouter()
 const subscription = useSubscription()
+const { t: $t } = useI18n()
+const config = useRuntimeConfig()
+const baseURL = config.public.baseURL
 
 const hasOpened = ref(false)
+
+// TODO: Don't hardcode prices here
+const yearlyPrice = ref('69.99')
+const monthlyPrice = ref('6.99')
+const currency = ref('USD')
+
+const structuredData = computed(() => {
+  const pageURL = `${baseURL}/pricing`
+  const currentDate = new Date()
+  const oneYearLater = new Date(currentDate)
+  oneYearLater.setFullYear(currentDate.getFullYear() + 1)
+  const priceValidUntil = oneYearLater.toISOString().split('T')[0]
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    'name': '3ook+',
+    'description': $t('pricing_page_subscription_description'),
+    'url': pageURL,
+    'offers': [
+      {
+        '@type': 'Offer',
+        'price': yearlyPrice.value,
+        'priceCurrency': currency.value,
+        'availability': 'https://schema.org/InStock',
+        'priceValidUntil': priceValidUntil,
+        'url': pageURL,
+        'offeredBy': {
+          '@type': 'Organization',
+          'name': '3ook.com',
+          'url': baseURL,
+        },
+        'description': $t('pricing_page_yearly'),
+        'priceSpecification': {
+          '@type': 'PriceSpecification',
+          'price': yearlyPrice.value,
+          'priceCurrency': currency.value,
+          'billingIncrement': 1,
+          'billingDuration': 'P1Y',
+          'unitText': 'year',
+        },
+      },
+      {
+        '@type': 'Offer',
+        'price': monthlyPrice.value,
+        'priceCurrency': currency.value,
+        'availability': 'https://schema.org/InStock',
+        'priceValidUntil': priceValidUntil,
+        'url': pageURL,
+        'offeredBy': {
+          '@type': 'Organization',
+          'name': '3ook.com',
+          'url': baseURL,
+        },
+        'description': $t('pricing_page_monthly'),
+        'priceSpecification': {
+          '@type': 'PriceSpecification',
+          'price': monthlyPrice.value,
+          'priceCurrency': currency.value,
+          'billingIncrement': 1,
+          'billingDuration': 'P1M',
+          'unitText': 'month',
+        },
+      },
+    ],
+  }
+})
+
+const pageTitle = computed(() => $t('pricing_page_title'))
+const pageDescription = computed(() => $t('pricing_page_description'))
+const canonicalURL = computed(() => `${baseURL}/pricing`)
+
+useHead({
+  title: pageTitle.value,
+  meta: [
+    { name: 'description', content: pageDescription.value },
+    { property: 'og:title', content: pageTitle.value },
+    { property: 'og:description', content: pageDescription.value },
+    { property: 'og:image', content: `${baseURL}/images/og/plus.jpg` },
+    { property: 'og:url', content: canonicalURL.value },
+    { property: 'og:type', content: 'product' },
+  ],
+  link: [
+    { rel: 'canonical', href: canonicalURL.value },
+  ],
+  script: [
+    { type: 'application/ld+json', innerHTML: JSON.stringify(structuredData.value) },
+  ],
+})
 
 onMounted(async () => {
   const isSubscribed = await subscription.redirectIfSubscribed()
