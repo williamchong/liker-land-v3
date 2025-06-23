@@ -102,8 +102,21 @@ async function fetchItems({ isRefresh = false } = {}) {
     await bookstoreStore.fetchCMSProductsByTagId(tagId.value, { isRefresh })
   }
   catch (error) {
-    handleError(error, {
+    await handleError(error, {
       title: isRefresh ? $t('store_fetch_items_error') : $t('store_fetch_more_items_error'),
+      customHandlerMap: {
+        500: {
+          level: 'warning',
+          actions: [
+            {
+              label: $t('store_fetch_items_error_retry_button_label'),
+              color: 'secondary',
+              variant: 'subtle',
+              onClick: handleFetchItemsErrorRetryButtonClick,
+            },
+          ],
+        },
+      },
     })
   }
 }
@@ -120,4 +133,10 @@ watch(
     }
   },
 )
+
+async function handleFetchItemsErrorRetryButtonClick() {
+  useLogEvent('store_fetch_items_error_retry', { tag_id: tagId.value })
+  window.scrollTo({ top: 0 })
+  await fetchItems({ isRefresh: true })
+}
 </script>

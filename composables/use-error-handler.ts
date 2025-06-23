@@ -3,7 +3,11 @@ import { ErrorModal } from '#components'
 type ErrorHandler =
   | string
   | {
+    level?: ErrorLevel
+    title?: string
     description?: string
+    tags?: Array<ErrorHandlerTag>
+    actions?: Array<ErrorHandlerAction>
     isLogError?: boolean
     onClose?: () => void
   }
@@ -57,7 +61,8 @@ export default function () {
       }
     }
 
-    if (!handler || (typeof handler !== 'string' && handler.isLogError)) {
+    const handlerProps = typeof handler !== 'string' ? handler : undefined
+    if (!handler || handlerProps?.isLogError) {
       console.error(...(props.logPrefix ? [`[${props.logPrefix}]`, error] : [error]))
     }
 
@@ -79,13 +84,13 @@ export default function () {
     }
 
     await errorModal.open({
-      level: parseErrorData(error, 'level') || 'error',
-      title: props.title || parseErrorData<string>(error, 'title') || $t('error_modal_title'),
+      level: handlerProps?.level || parseErrorData<ErrorLevel>(error, 'level') || 'error',
+      title: props.title || handlerProps?.title || parseErrorData<string>(error, 'title') || $t('error_modal_title'),
       description,
       rawMessage: !handler ? `${url ? `${url}\n\n` : ''}${rawErrorMessage}` : undefined,
-      tags: parseErrorData(error, 'tags') || [],
-      actions: parseErrorData(error, 'actions') || [],
-      onClose: (typeof handler !== 'string' ? handler?.onClose : undefined) || props.onClose,
+      tags: handlerProps?.tags || parseErrorData<Array<ErrorHandlerTag>>(error, 'tags') || [],
+      actions: handlerProps?.actions || parseErrorData<Array<ErrorHandlerAction>>(error, 'actions') || [],
+      onClose: handlerProps?.onClose || props.onClose,
     })
     return !!handler
   }

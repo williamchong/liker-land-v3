@@ -23,7 +23,10 @@
         v-text="title || $t('error_modal_title')"
       />
     </template>
-    <template #body>
+    <template
+      v-if="props.description || props.rawMessage || props.tags?.length"
+      #body
+    >
       <p
         v-if="props.description"
         class="text-(--ui-text-muted) text-sm"
@@ -69,6 +72,7 @@
         v-for="(action, index) in props.actions"
         :key="index"
         v-bind="action"
+        @click="() => emit('close')"
       />
     </template>
   </UModal>
@@ -83,10 +87,10 @@ import type {
 const emit = defineEmits(['close'])
 
 const props = defineProps<{
-  level?: 'error' | 'warning' | 'info'
-  title: string
-  description: string
-  rawMessage: string
+  level?: ErrorLevel
+  title?: string
+  description?: string
+  rawMessage?: string
   tags?: Array<UBadgeProps>
   actions?: Array<UButtonProps>
 }>()
