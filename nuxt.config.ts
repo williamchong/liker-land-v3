@@ -2,6 +2,7 @@
 
 const {
   GA_TRACKING_ID,
+  AD_CONVERSION_ID,
   NODE_ENV,
 } = process.env
 
@@ -56,6 +57,7 @@ export default defineNuxtConfig({
       },
       airtableCMSBaseId: process.env.AIRTABLE_CMS_BASE_ID,
       airtableCMSProductsTableId: process.env.AIRTABLE_CMS_PRODUCTS_TABLE_ID,
+      googleAdConversionId: process.env.AD_CONVERSION_ID,
       likeCoinAPIEndpoint: process.env.LIKECOIN_API_ENDPOINT,
       likeCoinStaticEndpoint: process.env.LIKECOIN_STATIC_ENDPOINT,
       likeCoinEVMChainAPIEndpoint: process.env.LIKECOIN_EVM_CHAIN_API_ENDPOINT,
@@ -82,7 +84,12 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
 
   gtag: {
-    id: GA_TRACKING_ID,
+    tags: [
+      GA_TRACKING_ID,
+      AD_CONVERSION_ID,
+    ].filter(Boolean).map(id => ({
+      id: id?.split('/')[0] as string,
+    })),
   },
 
   i18n: {

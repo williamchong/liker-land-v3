@@ -209,6 +209,7 @@ async function startClaimingItems() {
           price,
           name: bookInfo?.name.value,
           currency: 'USD',
+          google_business_vertical: 'retail',
         }
       }),
     })

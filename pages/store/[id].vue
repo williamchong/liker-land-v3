@@ -513,6 +513,7 @@ const formattedLogPayload = computed(() => {
       price,
       currency,
       quantity: 1,
+      google_business_vertical: 'retail',
     }],
   }
 })
