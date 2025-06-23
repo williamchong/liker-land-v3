@@ -347,6 +347,7 @@ const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
 const nftStore = useNFTStore()
 const { handleError } = useErrorHandler()
+const { gaClientId, gaSessionId } = useGaSessionIds()
 
 const nftClassId = computed(() => getRouteParam('id'))
 const {
@@ -604,6 +605,8 @@ async function handlePurchaseButtonClick() {
       utmCampaign: getRouteQuery('utm_campaign'),
       utmMedium: getRouteQuery('utm_medium'),
       utmSource: getRouteQuery('utm_source'),
+      gaClientId: gaClientId.value,
+      gaSessionId: gaSessionId.value,
       gadClickId: getRouteQuery('gclid'),
       gadSource: getRouteQuery('gad_source'),
       fbClickId: getRouteQuery('fbclid'),
