@@ -347,7 +347,7 @@ const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
 const nftStore = useNFTStore()
 const { handleError } = useErrorHandler()
-const { gaClientId, gaSessionId } = useGaSessionIds()
+const { gaClientId, gaSessionId } = useGoogleAnalytics()
 
 const nftClassId = computed(() => getRouteParam('id'))
 const {

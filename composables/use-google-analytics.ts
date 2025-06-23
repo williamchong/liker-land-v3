@@ -1,6 +1,6 @@
-export function useGaSessionIds() {
+export function useGoogleAnalytics() {
   const { gtag } = useGtag()
-  const googleAnalyticsTrackingId: string | undefined = useRuntimeConfig().public.googleAnalyticsTrackingId as string
+  const googleAnalyticsTrackingId: string | undefined = useRuntimeConfig().public.googleAnalyticsTrackingId
 
   const gaClientId = ref('')
   const gaSessionId = ref('')
