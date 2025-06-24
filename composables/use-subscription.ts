@@ -88,6 +88,7 @@ export function useSubscription() {
 
       const { url } = await fetchLikerPlusCheckoutLink({
         period: selectedPlan.value as 'monthly' | 'yearly',
+        from: getRouteQuery('from'),
         ...getAnalyticsParameters(),
       })
       await navigateTo(url, { external: true })

@@ -22,7 +22,6 @@ export function useAnalytics() {
       gaClientId: gaClientId.value,
       gaSessionId: gaSessionId.value,
       referrer: referrer.value,
-      from: getRouteQuery('from'),
       utmCampaign: getRouteQuery('utm_campaign'),
       utmMedium: getRouteQuery('utm_medium'),
       utmSource: getRouteQuery('utm_source'),

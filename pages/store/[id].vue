@@ -602,6 +602,7 @@ async function handlePurchaseButtonClick() {
       priceIndex: selectedPricingItem.value.index,
       coupon: getRouteQuery('coupon'),
       language: locale.value.split('-')[0],
+      from: getRouteQuery('from'),
       ...getAnalyticsParameters(),
     })
     useLogEvent('begin_checkout', {
