@@ -416,10 +416,12 @@ async function loadEPub() {
     if (!filename) return
     sectionHrefByFilename[filename] = section.href
   })
-  navItems.value = toc.map(item => ({
-    ...item,
-    href: sectionHrefByFilename[item.href] || item.href,
-  }))
+  navItems.value = toc
+    .map((item: NavItem) => {
+      const href = sectionHrefByFilename[item.href]
+      return href ? { ...item, href } : null
+    })
+    .filter((item): item is NavItem => item !== null)
   activeNavItemHref.value = book.spine.first().href
   lastSectionIndex.value = book.spine.last().index
 
