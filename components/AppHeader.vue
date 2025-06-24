@@ -19,7 +19,14 @@
                 { 'border-transparent': !item.isActive },
               ]"
               :to="item.to"
-            >{{ item.label }}</ULink>
+            >
+              <component
+                :is="item.labelGraphic"
+                v-if="item.labelGraphic"
+                style="width: auto; height: 16px;"
+              />
+              <template v-else>{{ item.label }}</template>
+            </ULink>
           </li>
         </ul>
       </div>
@@ -57,13 +64,22 @@ const { loggedIn: hasLoggedIn, user } = useUserSession()
 const localeRoute = useLocaleRoute()
 const route = useRoute()
 const getRouteBaseName = useRouteBaseName()
+const { getLabelGraphic } = useGraphicLabel()
 
-const menuItems = computed(() => [
-  { label: $t('app_header_store'), to: { name: 'store' } },
-  { label: $t('app_header_shelf'), to: { name: 'shelf' } },
-].map(item => ({
-  ...item,
-  to: localeRoute(item.to),
-  isActive: getRouteBaseName(route) === item.to.name,
-})))
+const rawMenuItems = computed(() => [
+  { key: 'store', label: $t('app_header_store') },
+  { key: 'shelf', label: $t('app_header_shelf') },
+])
+
+const menuItems = computed(() =>
+  rawMenuItems.value.map((item) => {
+    const to = localeRoute({ name: item.key })
+    return {
+      ...item,
+      to,
+      isActive: getRouteBaseName(route) === item.key,
+      labelGraphic: getLabelGraphic(item.key),
+    }
+  }),
+)
 </script>

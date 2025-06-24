@@ -16,7 +16,17 @@
           size="xl"
           block
           :ui="{ label: 'text-xs' }"
-        />
+        >
+          <template
+            v-if="item.labelGraphic"
+            #default
+          >
+            <component
+              :is="item.labelGraphic"
+              style="width: auto; height: 12px;"
+            />
+          </template>
+        </UButton>
       </li>
     </ul>
   </nav>
@@ -27,33 +37,40 @@ const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 const route = useRoute()
 const getRouteBaseName = useRouteBaseName()
+const { getLabelGraphic } = useGraphicLabel()
 
-const menuItems = computed(() => [
+const rawMenuItems = computed(() => [
   {
+    key: 'store',
     label: $t('tab_bar_store'),
-    to: { name: 'store' },
-    icon: 'storefront-outline',
-    iconActive: 'storefront',
+    icon: 'i-material-symbols-storefront-outline',
+    iconActive: 'i-material-symbols-storefront',
   },
   {
+    key: 'shelf',
     label: $t('tab_bar_shelf'),
-    to: { name: 'shelf' },
-    icon: 'auto-stories-outline',
-    iconActive: 'auto-stories',
+    icon: 'i-material-symbols-auto-stories-outline',
+    iconActive: 'i-material-symbols-auto-stories',
   },
   {
+    key: 'account',
     label: $t('tab_bar_user'),
-    to: { name: 'account' },
-    icon: 'person-outline-rounded',
-    iconActive: 'person-rounded',
+    icon: 'i-material-symbols-person-outline-rounded',
+    iconActive: 'i-material-symbols-person-rounded',
   },
-].map((tab) => {
-  const isActive = getRouteBaseName(route) === tab.to.name
-  return {
-    ...tab,
-    to: localeRoute(tab.to),
-    icon: `i-material-symbols-${isActive ? tab.iconActive : tab.icon}`,
-    isActive,
-  }
-}))
+])
+
+const menuItems = computed(() =>
+  rawMenuItems.value.map((tab) => {
+    const isActive = getRouteBaseName(route) === tab.key
+    const to = localeRoute({ name: tab.key })
+    return {
+      label: tab.label,
+      to,
+      icon: isActive ? tab.iconActive : tab.icon,
+      isActive,
+      labelGraphic: getLabelGraphic(tab.key),
+    }
+  }),
+)
 </script>
