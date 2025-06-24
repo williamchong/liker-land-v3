@@ -283,11 +283,46 @@ export interface FetchLikerPlusCheckoutLinkResponseData {
   url: string
 }
 
-export function fetchLikerPlusCheckoutLink({ period = 'monthly' }: { period: 'monthly' | 'yearly' }) {
+export function fetchLikerPlusCheckoutLink({
+  period = 'monthly',
+  from,
+  referrer,
+  utmCampaign,
+  utmMedium,
+  utmSource,
+  gaClientId,
+  gaSessionId,
+  gadClickId,
+  gadSource,
+  fbClickId,
+}: {
+  period: 'monthly' | 'yearly'
+  from?: string
+  referrer?: string
+  utmCampaign?: string
+  utmMedium?: string
+  utmSource?: string
+  gaClientId?: string
+  gaSessionId?: string
+  gadClickId?: string
+  gadSource?: string
+  fbClickId?: string
+}) {
   const { fetch } = useLikeCoinAPI()
   return fetch<FetchLikerPlusCheckoutLinkResponseData>(`/plus/new`, {
     method: 'POST',
-    query: { period },
+    query: { period, from },
+    body: {
+      referrer,
+      utmCampaign,
+      utmMedium,
+      utmSource,
+      gaClientId,
+      gaSessionId,
+      gadClickId,
+      gadSource,
+      fbClickId,
+    },
   })
 }
 
