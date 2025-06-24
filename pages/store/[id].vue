@@ -347,7 +347,7 @@ const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
 const nftStore = useNFTStore()
 const { handleError } = useErrorHandler()
-const { gaClientId, gaSessionId } = useGoogleAnalytics()
+const { getAnalyticsParameters } = useAnalytics()
 
 const nftClassId = computed(() => getRouteParam('id'))
 const {
@@ -600,18 +600,10 @@ async function handlePurchaseButtonClick() {
       nftClassId: nftClassId.value,
       price: selectedPricingItem.value.price,
       priceIndex: selectedPricingItem.value.index,
-      from: getRouteQuery('from'),
       coupon: getRouteQuery('coupon'),
       language: locale.value.split('-')[0],
-      referrer: document.referrer,
-      utmCampaign: getRouteQuery('utm_campaign'),
-      utmMedium: getRouteQuery('utm_medium'),
-      utmSource: getRouteQuery('utm_source'),
-      gaClientId: gaClientId.value,
-      gaSessionId: gaSessionId.value,
-      gadClickId: getRouteQuery('gclid'),
-      gadSource: getRouteQuery('gad_source'),
-      fbClickId: getRouteQuery('fbclid'),
+      from: getRouteQuery('from'),
+      ...getAnalyticsParameters(),
     })
     useLogEvent('begin_checkout', {
       ...formattedLogPayload.value,

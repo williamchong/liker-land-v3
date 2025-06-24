@@ -1,11 +1,12 @@
-export function useGoogleAnalytics() {
+export function useAnalytics() {
   const { gtag } = useGtag()
   const googleAnalyticsTrackingId: string | undefined = useRuntimeConfig().public.googleAnalyticsTrackingId
 
   const gaClientId = ref('')
   const gaSessionId = ref('')
-
+  const referrer = ref('')
   onMounted(() => {
+    referrer.value = document.referrer
     if (gtag && googleAnalyticsTrackingId) {
       gtag('get', googleAnalyticsTrackingId, 'client_id', (clientId) => {
         gaClientId.value = clientId as string
@@ -16,8 +17,23 @@ export function useGoogleAnalytics() {
     }
   })
 
+  function getAnalyticsParameters() {
+    return {
+      gaClientId: gaClientId.value,
+      gaSessionId: gaSessionId.value,
+      referrer: referrer.value,
+      utmCampaign: getRouteQuery('utm_campaign'),
+      utmMedium: getRouteQuery('utm_medium'),
+      utmSource: getRouteQuery('utm_source'),
+      gadClickId: getRouteQuery('gclid'),
+      gadSource: getRouteQuery('gad_source'),
+      fbClickId: getRouteQuery('fbclid'),
+    }
+  }
+
   return {
     gaClientId,
     gaSessionId,
+    getAnalyticsParameters,
   }
 }

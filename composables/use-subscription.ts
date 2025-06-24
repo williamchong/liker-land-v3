@@ -2,14 +2,16 @@ import { PaywallModal } from '#components'
 
 export function useSubscription() {
   const { t: $t } = useI18n()
-  const { user } = useUserSession()
-  const selectedPlan = ref('yearly')
-  const { loggedIn: hasLoggedIn } = useUserSession()
   const accountStore = useAccountStore()
-  const isProcessingSubscription = ref(false)
-  const { handleError } = useErrorHandler()
+  const { user, loggedIn: hasLoggedIn } = useUserSession()
   const localeRoute = useLocaleRoute()
   const toast = useToast()
+  const { getAnalyticsParameters } = useAnalytics()
+
+  const selectedPlan = ref('yearly')
+  const isProcessingSubscription = ref(false)
+
+  const { handleError } = useErrorHandler()
 
   // TODO: Don't hardcode prices here
   const yearlyPrice = ref(69.99)
@@ -86,6 +88,8 @@ export function useSubscription() {
 
       const { url } = await fetchLikerPlusCheckoutLink({
         period: selectedPlan.value as 'monthly' | 'yearly',
+        from: getRouteQuery('from'),
+        ...getAnalyticsParameters(),
       })
       await navigateTo(url, { external: true })
     }
