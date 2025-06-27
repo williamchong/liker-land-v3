@@ -61,6 +61,111 @@
       </template>
       <template #trailing>
         <div class="flex items-center gap-2">
+          <template v-if="!isAudioHidden">
+            <UButtonGroup>
+              <template v-if="!isTextToSpeechOn || !isTextToSpeechPlaying">
+                <UButton
+                  class="laptop:hidden"
+                  icon="i-material-symbols-headphones-rounded"
+                  variant="outline"
+                  color="neutral"
+                  @click="startTextToSpeech()"
+                />
+                <UButton
+                  class="max-laptop:hidden"
+                  icon="i-material-symbols-headphones-rounded"
+                  variant="outline"
+                  color="neutral"
+                  :ui="{ base: '!rounded-l-md' }"
+                  @click="startTextToSpeech()"
+                />
+              </template>
+              <template v-else>
+                <UButton
+                  class="laptop:hidden"
+                  icon="i-material-symbols-pause-rounded"
+                  variant="outline"
+                  color="neutral"
+                  @click="pauseTextToSpeech"
+                />
+                <UButton
+                  class="max-laptop:hidden"
+                  icon="i-material-symbols-pause-rounded"
+                  variant="outline"
+                  color="neutral"
+                  :ui="{ base: '!rounded-l-md' }"
+                  @click="pauseTextToSpeech"
+                />
+              </template>
+              <UButton
+                icon="i-material-symbols-discover-tune-rounded"
+                variant="outline"
+                color="neutral"
+                @click="isShowTextToSpeechOptions = !isShowTextToSpeechOptions"
+              />
+            </UButtonGroup>
+
+            <USlideover
+              v-model:open="isShowTextToSpeechOptions"
+              :ui="{ content: 'w-full flex flex-row items-center gap-2 px-4 py-2 min-h-[56px] divide-y-0' }"
+              side="top"
+              :close="false"
+              :overlay="false"
+            >
+              <template #content>
+                <div class="flex items-center justify-center gap-2 flex-1">
+                  <UButtonGroup>
+                    <UButton
+                      icon="i-material-symbols-skip-previous-rounded"
+                      variant="outline"
+                      color="neutral"
+                      :disabled="!isTextToSpeechOn"
+                      @click="skipBackward"
+                    />
+                    <UButton
+                      v-if="!isTextToSpeechOn || !isTextToSpeechPlaying"
+                      icon="i-material-symbols-headphones-rounded"
+                      variant="outline"
+                      color="neutral"
+                      @click="startTextToSpeech()"
+                    />
+                    <UButton
+                      v-else
+                      icon="i-material-symbols-pause-rounded"
+                      variant="outline"
+                      color="neutral"
+                      @click="pauseTextToSpeech"
+                    />
+                    <UButton
+                      icon="i-material-symbols-skip-next-rounded"
+                      variant="outline"
+                      color="neutral"
+                      :disabled="!isTextToSpeechOn"
+                      @click="skipForward"
+                    />
+                  </UButtonGroup>
+                  <USelect
+                    v-model="ttsLanguageVoice"
+                    color="neutral"
+                    :items="ttsLanguageVoiceOptions"
+                  />
+                  <USelect
+                    v-model="ttsPlaybackRate"
+                    icon="i-material-symbols-speed-rounded"
+                    color="neutral"
+                    :items="ttsPlaybackRateOptions"
+                  />
+                </div>
+
+                <UButton
+                  icon="i-material-symbols-close-rounded"
+                  color="neutral"
+                  variant="ghost"
+                  @click="isShowTextToSpeechOptions = false"
+                />
+              </template>
+            </USlideover>
+          </template>
           <USlideover
             :title="$t('reader_display_options_button')"
             :close="{
@@ -156,11 +261,14 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { useStorage } from '@vueuse/core'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
+import type { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api'
 
 interface Props {
   bookName?: string
   pdfBuffer: ArrayBuffer
+  isAudioHidden?: boolean
   bookFileCacheKey?: string
+  nftClassId?: string
 }
 
 const props = defineProps<Props>()
@@ -219,11 +327,37 @@ const pageModeOptions = computed(() => [
 ])
 const isRightToLeft = useStorage(computed(() => `${props.bookFileCacheKey}-right-to-left`), false)
 
+const currentPageText = ref<string>('')
+const isShowTextToSpeechOptions = ref(false)
+
 const emit = defineEmits<{
   error: [error: Error]
 }>()
 
 const isMobile = useMediaQuery('(max-width: 768px)')
+const {
+  ttsLanguageVoiceOptions,
+  ttsLanguageVoice,
+  ttsPlaybackRateOptions,
+  ttsPlaybackRate,
+  isTextToSpeechOn,
+  isTextToSpeechPlaying,
+  pauseTextToSpeech,
+  startTextToSpeech,
+  setTTSSegments,
+  skipForward,
+  skipBackward,
+  restartTextToSpeech,
+} = useTextToSpeech({
+  nftClassId: props.nftClassId,
+  onPageChange: () => {
+    if (currentPage.value < totalPages.value) {
+      nextPage()
+    }
+  },
+  checkIfNeededPageChange: () => false,
+})
+
 const pageDisplayText = computed(() => {
   if (isDualPageMode.value && totalPages.value > 1) {
     const leftPage = currentPage.value
@@ -279,10 +413,22 @@ watch(() => props.pdfBuffer, async () => {
   }
 })
 
-watch([currentPage, scale, isDualPageMode, isRightToLeft], async () => {
+watch([scale, isDualPageMode, isRightToLeft], async () => {
   if (pdfDocument.value) {
     await nextTick()
-    await renderPages()
+    extractCurrentPageText()
+    renderPages()
+  }
+})
+
+watch([currentPage], async () => {
+  if (pdfDocument.value) {
+    await nextTick()
+    await extractCurrentPageText()
+    if (isTextToSpeechOn.value) {
+      restartTextToSpeech()
+    }
+    renderPages()
   }
 })
 
@@ -307,7 +453,8 @@ async function loadPDF() {
     pdfDocument.value = await loadingTask.promise
     totalPages.value = pdfDocument.value.numPages
 
-    await renderPages()
+    extractCurrentPageText()
+    renderPages()
   }
   catch (error) {
     emit('error', error as Error)
@@ -418,6 +565,41 @@ async function renderDualPages() {
   }
 
   await Promise.all(renderTasks)
+}
+
+async function extractCurrentPageText() {
+  if (!pdfDocument.value) return
+
+  try {
+    const pagePromises = [pdfDocument.value.getPage(currentPage.value)]
+    if (isDualPageMode.value && currentPage.value < totalPages.value) {
+      pagePromises.push(pdfDocument.value.getPage(currentPage.value + 1))
+    }
+    const pages = await Promise.all(pagePromises)
+    const textContent = await Promise.all(pages.map(p => p.getTextContent()))
+
+    const pageText = textContent.flatMap(content => content.items)
+      .filter((item: TextItem | TextMarkedContent) => 'str' in item)
+      .map((item: TextItem) => item.str)
+      .join(' ')
+      .trim()
+
+    currentPageText.value = pageText
+
+    if (pageText) {
+      const textSegments = splitTextIntoSegments(pageText)
+      const textElements = textSegments.map((segment: string, index: number) => ({
+        id: `page-${currentPage.value}-segment-${index}`,
+        text: segment,
+      }))
+      setTTSSegments(textElements)
+    }
+  }
+  catch (error) {
+    console.warn('Failed to extract text from PDF page:', error)
+    currentPageText.value = ''
+    setTTSSegments([])
+  }
 }
 
 function nextPage() {

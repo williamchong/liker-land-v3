@@ -1,5 +1,6 @@
 interface TTSOptions {
   nftClassId?: string
+  onPageChange?: (segment: TTSSegment) => void
   onError?: (error: Event) => void
   checkIfNeededPageChange?: (element: TTSSegment) => boolean
   bookName?: string | Ref<string> | ComputedRef<string>
