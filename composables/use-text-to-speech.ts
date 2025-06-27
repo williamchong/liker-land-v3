@@ -154,8 +154,8 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         useLogEvent('tts_resume', {
           nft_class_id: nftClassId,
         })
+        return
       }
-      return
     }
 
     cleanupAudio()
