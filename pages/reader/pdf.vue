@@ -15,6 +15,7 @@
       <PDFReader
         v-if="fileBuffer"
         :pdf-buffer="fileBuffer"
+        :is-audio-hidden="bookInfo.isAudioHidden.value"
         :book-file-cache-key="bookFileCacheKey"
         @error="handlePDFError"
       />

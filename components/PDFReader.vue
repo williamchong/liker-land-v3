@@ -43,6 +43,23 @@
           variant="ghost"
           @click="zoomIn"
         />
+        <div
+          v-if="!isAudioHidden"
+          class="flex items-center gap-2 ml-2"
+        >
+          <UButton
+            :icon="isTextToSpeechOn ? (isTextToSpeechPlaying ? 'i-material-symbols-pause' : 'i-material-symbols-play-arrow') : 'i-material-symbols-headphones'"
+            variant="ghost"
+            @click="toggleTextToSpeech"
+          />
+          <USelect
+            v-if="isShowTextToSpeechOptions"
+            v-model="ttsLanguage"
+            :items="ttsLanguageOptions"
+            class="w-16"
+            size="sm"
+          />
+        </div>
       </div>
     </div>
 
@@ -77,9 +94,11 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core'
 import * as pdfjsLib from 'pdfjs-dist'
+import type { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api'
 
 interface Props {
   pdfBuffer: ArrayBuffer
+  isAudioHidden?: boolean
   bookFileCacheKey?: string
 }
 
@@ -96,10 +115,30 @@ const scale = useStorage(`${props.bookFileCacheKey}-scale`, 1.0)
 const pdfDocument = shallowRef<pdfjsLib.PDFDocumentProxy>()
 const isDualPageMode = useStorage(`${props.bookFileCacheKey}-dual-page-mode`, true)
 const isCanvasOrderSwapped = useStorage(`${props.bookFileCacheKey}-canvas-order-swapped`, false)
+const currentPageText = ref<string>('')
 
 const emit = defineEmits<{
   error: [error: Error]
 }>()
+
+const {
+  ttsLanguageOptions,
+  ttsLanguage,
+  isShowTextToSpeechOptions,
+  isTextToSpeechOn,
+  isTextToSpeechPlaying,
+  pauseTextToSpeech,
+  startTextToSpeech,
+  setTextContentElements,
+  restartTextToSpeech,
+} = useTextToSpeech({
+  onPageChange: () => {
+    if (currentPage.value < totalPages.value) {
+      nextPage()
+    }
+  },
+  checkIfNeedPageChange: () => false,
+})
 
 const { width } = useWindowSize()
 const isMobile = computed(() => width.value < 768)
@@ -143,10 +182,22 @@ watch(() => props.pdfBuffer, async () => {
   }
 })
 
-watch([currentPage, scale, isDualPageMode], async () => {
+watch([scale, isDualPageMode], async () => {
   if (pdfDocument.value) {
     await nextTick()
     await renderPages()
+    await extractCurrentPageText()
+  }
+})
+
+watch([currentPage], async () => {
+  if (pdfDocument.value) {
+    await nextTick()
+    await renderPages()
+    await extractCurrentPageText()
+    if (isTextToSpeechOn.value) {
+      restartTextToSpeech()
+    }
   }
 })
 
@@ -164,6 +215,7 @@ async function loadPDF() {
     totalPages.value = pdfDocument.value.numPages
 
     await renderPages()
+    await extractCurrentPageText()
   }
   catch (error) {
     emit('error', error as Error)
@@ -255,6 +307,50 @@ async function renderDualPages() {
   }
 
   await Promise.all(renderTasks)
+}
+
+async function extractCurrentPageText() {
+  if (!pdfDocument.value) return
+
+  try {
+    const pagePromises = [pdfDocument.value.getPage(currentPage.value)]
+    if (isDualPageMode.value && currentPage.value < totalPages.value) {
+      pagePromises.push(pdfDocument.value.getPage(currentPage.value + 1))
+    }
+    const pages = await Promise.all(pagePromises)
+    const textContent = await Promise.all(pages.map(p => p.getTextContent()))
+
+    const pageText = textContent.flatMap(content => content.items)
+      .filter((item: TextItem | TextMarkedContent) => 'str' in item)
+      .map((item: TextItem) => item.str)
+      .join(' ')
+      .trim()
+
+    currentPageText.value = pageText
+
+    if (pageText) {
+      const textSegments = splitTextIntoSegments(pageText)
+      const textElements = textSegments.map((segment: string, index: number) => ({
+        id: `page-${currentPage.value}-segment-${index}`,
+        text: segment,
+      }))
+      setTextContentElements(textElements)
+    }
+  }
+  catch (error) {
+    console.warn('Failed to extract text from PDF page:', error)
+    currentPageText.value = ''
+    setTextContentElements([])
+  }
+}
+
+function toggleTextToSpeech() {
+  if (isTextToSpeechOn.value && isTextToSpeechPlaying.value) {
+    pauseTextToSpeech()
+  }
+  else {
+    startTextToSpeech()
+  }
 }
 
 function nextPage() {
