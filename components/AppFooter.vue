@@ -31,7 +31,21 @@
           <li>
             <ULink
               class="block border-y border-t-transparent leading-5"
-              href="https://link.liker.land/terms"
+              :to="localeRoute({ name: 'pricing' })"
+            >{{ $t("footer_plus") }}</ULink>
+          </li>
+          <li>
+            <ULink
+              class="block border-y border-t-transparent leading-5"
+              href="https://link.3ook.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+            >{{ $t("footer_privacy") }}</ULink>
+          </li>
+          <li>
+            <ULink
+              class="block border-y border-t-transparent leading-5"
+              href="https://link.3ook.com/terms"
               target="_blank"
               rel="noopener noreferrer"
             >{{ $t("footer_terms") }}</ULink>
@@ -39,7 +53,7 @@
           <li>
             <ULink
               class="block border-y border-t-transparent leading-5"
-              href="https://link.liker.land/cs"
+              href="https://cs.3ook.com"
               target="_blank"
               rel="noopener noreferrer"
             >{{ $t("footer_contact_us") }}</ULink>
@@ -101,4 +115,5 @@
 
 <script setup lang="ts">
 const { t: $t } = useI18n()
+const localeRoute = useLocaleRoute()
 </script>
