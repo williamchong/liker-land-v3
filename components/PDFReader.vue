@@ -100,6 +100,7 @@ interface Props {
   pdfBuffer: ArrayBuffer
   isAudioHidden?: boolean
   bookFileCacheKey?: string
+  nftClassId?: string
 }
 
 const props = defineProps<Props>()
@@ -132,6 +133,7 @@ const {
   setTextContentElements,
   restartTextToSpeech,
 } = useTextToSpeech({
+  nftClassId: props.nftClassId,
   onPageChange: () => {
     if (currentPage.value < totalPages.value) {
       nextPage()

@@ -14,6 +14,7 @@
 
       <PDFReader
         v-if="fileBuffer"
+        :nft-class-id="nftClassId"
         :pdf-buffer="fileBuffer"
         :is-audio-hidden="bookInfo.isAudioHidden.value"
         :book-file-cache-key="bookFileCacheKey"
