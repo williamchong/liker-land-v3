@@ -18,15 +18,15 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
   const nftClassId = options.nftClassId
   const ttsLanguageVoiceOptions = [
-    { label: '粵0', value: { language: 'zh-HK', voiceId: '0' } },
-    { label: '粵1', value: { language: 'zh-HK', voiceId: '1' } },
-    { label: '國0', value: { language: 'zh-TW', voiceId: '0' } },
-    { label: '國1', value: { language: 'zh-TW', voiceId: '1' } },
-    { label: 'En0', value: { language: 'en-US', voiceId: '0' } },
-    { label: 'En1', value: { language: 'en-US', voiceId: '1' } },
+    { label: '粵0', value: 'zh-HK_0' },
+    { label: '粵1', value: 'zh-HK_1' },
+    { label: '國0', value: 'zh-TW_0' },
+    { label: '國1', value: 'zh-TW_1' },
+    { label: 'En0', value: 'en-US_0' },
+    { label: 'En1', value: 'en-US_1' },
   ]
 
-  const ttsLanguageVoice = ref({ language: 'zh-HK', voiceId: '0' })
+  const ttsLanguageVoice = ref('zh-HK_0') // Default voice
   const isShowTextToSpeechOptions = ref(false)
   const isTextToSpeechOn = ref(false)
   const isTextToSpeechPlaying = ref(false)
@@ -59,8 +59,8 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     const audio = new Audio()
     const params = new URLSearchParams({
       text: element.text,
-      language: ttsLanguageVoice.value.language,
-      voice_id: ttsLanguageVoice.value.voiceId,
+      language: ttsLanguageVoice.value.split('_')[0] || 'zh-HK',
+      voice_id: ttsLanguageVoice.value.split('_')[1] || '0',
     })
     audio.src = `/api/reader/tts?${params.toString()}`
 
