@@ -2,9 +2,35 @@
   <div>
     <AppHeader />
 
+    <header
+      v-if="!isMyBookshelf"
+      class="flex gap-2 w-full max-w-[1440px] mx-auto px-4 laptop:px-12 py-4"
+    >
+      <div class="flex items-center gap-2 overflow-hidden">
+        <UAvatar
+          :src="shelfOwner?.avatarSrc"
+          :alt="shelfOwnerDisplayName"
+          icon="i-material-symbols-person-2-rounded"
+          size="3xl"
+        />
+
+        <div class="overflow-hidden">
+          <p
+            class="font-medium text-highlighted text-sm"
+            v-text="shelfOwnerDisplayName"
+          />
+          <p
+            v-if="shelfOwner?.evmWallet"
+            class="text-muted text-xs text-ellipsis overflow-hidden whitespace-nowrap"
+            v-text="shelfOwner?.evmWallet"
+          />
+        </div>
+      </div>
+    </header>
+
     <main class="flex flex-col items-center grow w-full max-w-[1440px] mx-auto px-4 laptop:px-12 pb-16">
       <UCard
-        v-if="!hasLoggedIn"
+        v-if="!walletAddress && !hasLoggedIn"
         class="w-full max-w-sm mt-8"
         :ui="{ footer: 'flex justify-end' }"
       >
@@ -72,18 +98,60 @@
 
 <script setup lang="ts">
 const { t: $t } = useI18n()
-const { loggedIn: hasLoggedIn } = useUserSession()
+const { loggedIn: hasLoggedIn, user } = useUserSession()
 const localeRoute = useLocaleRoute()
 const bookshelfStore = useBookshelfStore()
+const metadataStore = useMetadataStore()
 const infiniteScrollDetectorElement = useTemplateRef<HTMLLIElement>('infiniteScrollDetector')
 const shouldLoadMore = useElementVisibility(infiniteScrollDetectorElement)
 
-useHead({
-  title: $t('shelf_page_title'),
-})
+useHead(() => ({
+  title: isMyBookshelf.value
+    ? $t('shelf_page_title')
+    : $t('shelf_page_title_someone_else', { name: shelfOwnerDisplayName.value }),
+  meta: [
+    {
+      name: 'robots',
+      content: 'noindex',
+    },
+  ],
+}))
 
 const itemsCount = computed(() => bookshelfStore.items.length)
 const hasMoreItems = computed(() => !!bookshelfStore.nextKey)
+
+const walletAddress = computed(() => {
+  return (getRouteParam('walletAddress') || user.value?.evmWallet)?.toLowerCase()
+})
+
+const isMyBookshelf = computed(() => {
+  return walletAddress.value === user.value?.evmWallet?.toLowerCase()
+})
+
+await callOnce(async () => {
+  if (!isMyBookshelf.value && walletAddress.value) {
+    try {
+      await metadataStore.lazyFetchLikerInfoByWalletAddress(walletAddress.value)
+    }
+    catch (error) {
+      const { statusCode } = parseError(error)
+      if (statusCode === 404) {
+        throw createError({
+          statusCode,
+          message: $t('error_page_not_found'),
+        })
+      }
+      throw error
+    }
+  }
+}, { mode: 'navigation' })
+
+const shelfOwner = computed(() => {
+  return metadataStore.getLikerInfoByWalletAddress(walletAddress.value)
+})
+const shelfOwnerDisplayName = computed(() => {
+  return shelfOwner.value?.displayName || shelfOwner.value?.evmWallet
+})
 
 const { gridClasses, getGridItemClassesByIndex } = usePaginatedGrid({
   itemsCount,
@@ -91,30 +159,31 @@ const { gridClasses, getGridItemClassesByIndex } = usePaginatedGrid({
 })
 
 onMounted(async () => {
-  if (hasLoggedIn.value) {
-    await bookshelfStore.fetchItems()
+  if (walletAddress.value) {
+    await bookshelfStore.fetchItems({ walletAddress: walletAddress.value })
   }
 })
 
 watch(
-  () => hasLoggedIn.value,
-  async (hasLoggedIn) => {
-    if (hasLoggedIn) {
-      await bookshelfStore.fetchItems({ isRefresh: true })
+  walletAddress,
+  async (value) => {
+    bookshelfStore.reset()
+    if (value) {
+      await bookshelfStore.fetchItems({ walletAddress: value, isRefresh: true })
     }
   },
 )
 
 watch(
-  () => shouldLoadMore.value,
+  shouldLoadMore,
   async (loadMore) => {
-    if (loadMore) {
+    if (walletAddress.value && loadMore) {
       do {
         // HACK: prevent scrollbar stuck at bottom, causing infinite loading
         window.scrollBy(0, -1)
-        await bookshelfStore.fetchItems()
+        await bookshelfStore.fetchItems({ walletAddress: walletAddress.value })
         await sleep(100)
-      } while (bookshelfStore.nextKey && shouldLoadMore.value)
+      } while (walletAddress.value && bookshelfStore.nextKey && shouldLoadMore.value)
     }
   },
 )
