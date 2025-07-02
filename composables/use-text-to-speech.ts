@@ -60,6 +60,10 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     audioBuffers.value.forEach((audio) => {
       if (audio) {
         audio.playbackRate = newRate
+        useLogEvent('tts_playback_rate_change', {
+          nft_class_id: nftClassId,
+          value: newRate,
+        })
       }
     })
   })
@@ -204,6 +208,9 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
   function skipForward() {
     if (!isTextToSpeechOn.value) return
+    useLogEvent('tts_skip_forward', {
+      nft_class_id: nftClassId,
+    })
     const activeAudio = audioBuffers.value[currentBufferIndex.value]
     activeAudio?.pause()
     if (currentTTSSegment.value) options.onEnd?.(currentTTSSegment.value)
@@ -212,6 +219,9 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
   function skipBackward() {
     if (!isTextToSpeechOn.value) return
+    useLogEvent('tts_skip_backward', {
+      nft_class_id: nftClassId,
+    })
     const activeAudio = audioBuffers.value[currentBufferIndex.value]
     activeAudio?.pause()
     if (currentTTSSegment.value) options.onEnd?.(currentTTSSegment.value)
