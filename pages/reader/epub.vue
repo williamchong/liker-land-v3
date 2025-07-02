@@ -342,7 +342,7 @@ const {
   isTextToSpeechPlaying,
   pauseTextToSpeech,
   startTextToSpeech,
-  setTextContentElements,
+  setTTSSegments,
   skipForward,
   skipBackward,
   restartTextToSpeech,
@@ -533,7 +533,7 @@ async function loadEPub() {
       id: el.id,
       text: el.text,
     }))
-    setTextContentElements(textElements)
+    setTTSSegments(textElements)
     isRightToLeft.value = view.settings.direction === 'rtl'
 
     if (cleanUpClickListener) {
