@@ -32,6 +32,16 @@
             'bg-theme-500',
             'text-theme-50',
             'shadow-[inset_3px_7px_4px_0px_#50E3C2E5]',
+            { 'opacity-75': isFetchingTags },
+          ]"
+        />
+        <span
+          :class="[
+            'absolute',
+            'inset-0',
+            'translate-x-[2px]',
+            'bg-(--app-bg)',
+            'rounded-full',
           ]"
         />
         <USelect
@@ -42,6 +52,8 @@
           variant="outline"
           color="primary"
           size="lg"
+          :loading="isFetchingTags"
+          :disabled="isFetchingTags"
           highlight
           :ui="{
             base: 'rounded-full shadow-lg bg-(--app-bg)',
@@ -111,11 +123,11 @@ const infiniteScrollDetectorElement = useTemplateRef<HTMLLIElement>('infiniteScr
 const shouldLoadMore = useElementVisibility(infiniteScrollDetectorElement)
 const { handleError } = useErrorHandler()
 
-await callOnce(async () => {
-  await bookstoreStore.fetchBookstoreCMSTags()
-})
-
 const TAG_LISTING = 'listing'
+
+function getIsDefaultTagId(id: string) {
+  return id === TAG_LISTING
+}
 
 const tagId = computed({
   get: () => getRouteQuery('tag', TAG_LISTING),
@@ -125,11 +137,12 @@ const tagId = computed({
       query: {
         ...route.query,
         // NOTE: Remove the tag query if it is the listing tag
-        tag: id === TAG_LISTING ? undefined : id,
+        tag: getIsDefaultTagId(id) ? undefined : id,
       },
     }))
   },
 })
+const isDefaultTagId = computed(() => getIsDefaultTagId(tagId.value))
 
 const normalizedLocale = computed(() => locale.value === 'zh-Hant' ? 'zh' : 'en')
 
@@ -153,22 +166,16 @@ const tagItems = computed(() => {
 })
 
 const localizedTagId = computed(() => {
-  // NOTE: Only listing tag is localized
-  return tagId.value === TAG_LISTING ? `${tagId.value}-${normalizedLocale.value}` : tagId.value
+  // NOTE: Only the default tag is localized
+  return isDefaultTagId.value ? `${tagId.value}-${normalizedLocale.value}` : tagId.value
 })
 
 const tag = computed(() => {
   return bookstoreStore.getBookstoreCMSTagById(localizedTagId.value)
 })
-if (!tag.value) {
-  throw createError({
-    statusCode: 404,
-    message: $t('error_page_not_found'),
-  })
-}
 
 const tagName = computed(() => {
-  return tagId.value === TAG_LISTING ? $t('store_tag_listing') : tag.value?.name[normalizedLocale.value] || ''
+  return isDefaultTagId.value ? $t('store_tag_listing') : tag.value?.name[normalizedLocale.value] || ''
 })
 
 const tagDescription = computed(() => {
@@ -211,6 +218,23 @@ const { gridClasses, getGridItemClassesByIndex } = usePaginatedGrid({
   hasMore: hasMoreItems,
 })
 
+const isFetchingTags = ref(true)
+
+async function fetchTags() {
+  try {
+    isFetchingTags.value = true
+    await bookstoreStore.fetchBookstoreCMSTags()
+  }
+  catch (error) {
+    await handleError(error, {
+      title: $t('store_fetch_tags_error'),
+    })
+  }
+  finally {
+    isFetchingTags.value = false
+  }
+}
+
 async function fetchItems({ isRefresh = false } = {}) {
   try {
     await bookstoreStore.fetchCMSProductsByTagId(localizedTagId.value, { isRefresh })
@@ -236,13 +260,38 @@ async function fetchItems({ isRefresh = false } = {}) {
 }
 
 onMounted(async () => {
-  await fetchItems({ isRefresh: true })
+  const fetchTagPromise = fetchTags()
+  if (!isDefaultTagId.value) {
+    // NOTE: Need to fetch all tags if not the default tag
+    await fetchTagPromise
+    if (!tag.value) {
+      throw createError({
+        statusCode: 404,
+        message: $t('error_page_not_found'),
+        fatal: true,
+      })
+    }
+  }
+
+  await Promise.all([
+    fetchTagPromise,
+    fetchItems({ isRefresh: true }),
+  ])
 })
+
+watch(
+  tag,
+  async (tag) => {
+    if (tag) {
+      await fetchItems({ isRefresh: true })
+    }
+  },
+)
 
 watch(
   () => shouldLoadMore.value,
   async (shouldLoadMore) => {
-    if (shouldLoadMore) {
+    if (shouldLoadMore && tag.value) {
       await fetchItems()
     }
   },
