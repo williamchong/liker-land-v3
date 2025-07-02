@@ -90,11 +90,17 @@
                   @click="pauseTextToSpeech"
                 />
               </template>
-              <USelect
-                v-if="isShowTextToSpeechOptions"
-                v-model="ttsLanguageVoice"
-                :items="ttsLanguageVoiceOptions"
-              />
+              <template v-if="isShowTextToSpeechOptions">
+                <USelect
+                  v-model="ttsLanguageVoice"
+                  :items="ttsLanguageVoiceOptions"
+                />
+                <USelect
+                  v-model="ttsPlaybackRate"
+                  icon="i-material-symbols-speed-rounded"
+                  :items="ttsPlaybackRateOptions"
+                />
+              </template>
             </template>
 
             <USlideover
@@ -317,6 +323,8 @@ const textContentElements = ref<{ cfi: string, el: Element, text: string, id: st
 const {
   ttsLanguageVoiceOptions,
   ttsLanguageVoice,
+  ttsPlaybackRateOptions,
+  ttsPlaybackRate,
   isShowTextToSpeechOptions,
   isTextToSpeechOn,
   isTextToSpeechPlaying,

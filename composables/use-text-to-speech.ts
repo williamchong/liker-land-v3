@@ -25,8 +25,13 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     { label: 'En0', value: 'en-US_0' },
     { label: 'En1', value: 'en-US_1' },
   ]
+  const ttsPlaybackRateOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map(rate => ({
+    label: `${rate}x`,
+    value: rate,
+  }))
 
   const ttsLanguageVoice = ref('zh-HK_0') // Default voice
+  const ttsPlaybackRate = ref(1.0)
   const isShowTextToSpeechOptions = ref(false)
   const isTextToSpeechOn = ref(false)
   const isTextToSpeechPlaying = ref(false)
@@ -42,6 +47,14 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         nft_class_id: nftClassId,
       })
     }
+  })
+
+  watch(ttsPlaybackRate, (newRate) => {
+    audioBuffers.value.forEach((audio) => {
+      if (audio) {
+        audio.playbackRate = newRate
+      }
+    })
   })
 
   function pauseTextToSpeech() {
@@ -63,6 +76,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       voice_id: ttsLanguageVoice.value.split('_')[1] || '0',
     })
     audio.src = `/api/reader/tts?${params.toString()}`
+    audio.playbackRate = ttsPlaybackRate.value
 
     audio.onplay = () => {
       options.onPlay?.(element)
@@ -190,6 +204,8 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   return {
     ttsLanguageVoiceOptions,
     ttsLanguageVoice,
+    ttsPlaybackRateOptions,
+    ttsPlaybackRate,
     isShowTextToSpeechOptions,
     isTextToSpeechOn,
     isTextToSpeechPlaying,
