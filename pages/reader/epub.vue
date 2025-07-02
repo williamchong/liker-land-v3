@@ -91,6 +91,12 @@
                 />
               </template>
               <template v-if="isShowTextToSpeechOptions">
+                <UButton
+                  icon="i-material-symbols-skip-previous-rounded"
+                  variant="ghost"
+                  :disabled="!isTextToSpeechOn"
+                  @click="skipBackward"
+                />
                 <USelect
                   v-model="ttsLanguageVoice"
                   :items="ttsLanguageVoiceOptions"
@@ -99,6 +105,12 @@
                   v-model="ttsPlaybackRate"
                   icon="i-material-symbols-speed-rounded"
                   :items="ttsPlaybackRateOptions"
+                />
+                <UButton
+                  icon="i-material-symbols-skip-next-rounded"
+                  variant="ghost"
+                  :disabled="!isTextToSpeechOn"
+                  @click="skipForward"
                 />
               </template>
             </template>
@@ -331,6 +343,8 @@ const {
   pauseTextToSpeech,
   startTextToSpeech,
   setTextContentElements,
+  skipForward,
+  skipBackward,
   restartTextToSpeech,
 } = useTextToSpeech({
   nftClassId: nftClassId.value,
@@ -350,8 +364,13 @@ const {
       rendition.value?.annotations.remove(textElement.cfi, 'highlight')
     }
   },
-  onPageChange: () => {
-    nextPage()
+  onPageChange: (direction) => {
+    if (direction && direction < 0) {
+      prevPage()
+    }
+    else {
+      nextPage()
+    }
   },
   checkIfNeededPageChange: (element) => {
     const textElement = textContentElements.value.find(el => el.id === element.id)

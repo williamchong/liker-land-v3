@@ -8,7 +8,7 @@ interface TTSOptions {
   onPlay?: (element: TextContentElement) => void
   onEnd?: (element: TextContentElement) => void
   onError?: (error: Event) => void
-  onPageChange?: () => void
+  onPageChange?: (direction?: number) => void
   checkIfNeededPageChange?: (element: TextContentElement) => boolean
 }
 
@@ -36,9 +36,16 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   const isTextToSpeechOn = ref(false)
   const isTextToSpeechPlaying = ref(false)
   const audioBuffers = ref<(HTMLAudioElement | null)[]>([null, null])
+  const currentAudioTimeout = ref<NodeJS.Timeout | null>(null)
   const currentBufferIndex = ref<0 | 1>(0)
   const currentElementIndex = ref(0)
   const textContentElements = ref<TextContentElement[]>([])
+  const currentTextElement = computed(() => {
+    return textContentElements.value[currentElementIndex.value]
+  })
+  const currentTextContent = computed(() => {
+    return currentTextElement.value?.text || ''
+  })
 
   watch(ttsLanguageVoice, (newLanguage, oldLanguage) => {
     if (newLanguage !== oldLanguage) {
@@ -121,7 +128,8 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     currentBufferIndex.value = currentBufferIndex.value === 0 ? 1 : 0
     const nextAudio = audioBuffers.value[currentBufferIndex.value]
 
-    setTimeout(() => {
+    if (currentAudioTimeout.value) clearTimeout(currentAudioTimeout.value)
+    currentAudioTimeout.value = setTimeout(() => {
       nextAudio?.play()
     }, 200)
   }
@@ -194,6 +202,35 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     textContentElements.value = elements
   }
 
+  function skipForward() {
+    if (!isTextToSpeechOn.value) return
+    const activeAudio = audioBuffers.value[currentBufferIndex.value]
+    activeAudio?.pause()
+    if (currentTextElement.value) options.onEnd?.(currentTextElement.value)
+    playNextElement()
+  }
+
+  function skipBackward() {
+    if (!isTextToSpeechOn.value) return
+    const activeAudio = audioBuffers.value[currentBufferIndex.value]
+    activeAudio?.pause()
+    if (currentTextElement.value) options.onEnd?.(currentTextElement.value)
+    if (currentElementIndex.value > 0) {
+      currentElementIndex.value -= 1
+      currentBufferIndex.value = currentBufferIndex.value === 0 ? 1 : 0
+      const currentElement = textContentElements.value[currentElementIndex.value]
+      if (currentElement) {
+        createAudio(currentElement, currentBufferIndex.value)
+      }
+      if (isTextToSpeechPlaying.value) {
+        audioBuffers.value[currentBufferIndex.value]?.play()
+      }
+    }
+    else {
+      options.onPageChange?.(-1)
+    }
+  }
+
   function restartTextToSpeech() {
     if (isTextToSpeechOn.value) {
       cleanupAudio()
@@ -209,9 +246,12 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     isShowTextToSpeechOptions,
     isTextToSpeechOn,
     isTextToSpeechPlaying,
+    currentTextContent,
     pauseTextToSpeech,
     startTextToSpeech,
     setTextContentElements,
+    skipForward,
+    skipBackward,
     restartTextToSpeech,
   }
 }
