@@ -1,15 +1,15 @@
-interface TextContentElement {
+interface TTSSegment {
   id: string
   text: string
 }
 
 interface TTSOptions {
   nftClassId?: string
-  onPlay?: (element: TextContentElement) => void
-  onEnd?: (element: TextContentElement) => void
+  onPlay?: (element: TTSSegment) => void
+  onEnd?: (element: TTSSegment) => void
   onError?: (error: Event) => void
-  onPageChange?: () => void
-  checkIfNeededPageChange?: (element: TextContentElement) => boolean
+  onPageChange?: (direction?: number) => void
+  checkIfNeededPageChange?: (element: TTSSegment) => boolean
 }
 
 export function useTextToSpeech(options: TTSOptions = {}) {
@@ -25,15 +25,27 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     { label: 'En0', value: 'en-US_0' },
     { label: 'En1', value: 'en-US_1' },
   ]
+  const ttsPlaybackRateOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map(rate => ({
+    label: `${rate}x`,
+    value: rate,
+  }))
 
   const ttsLanguageVoice = ref('zh-HK_0') // Default voice
+  const ttsPlaybackRate = ref(1.0)
   const isShowTextToSpeechOptions = ref(false)
   const isTextToSpeechOn = ref(false)
   const isTextToSpeechPlaying = ref(false)
   const audioBuffers = ref<(HTMLAudioElement | null)[]>([null, null])
+  const currentAudioTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
   const currentBufferIndex = ref<0 | 1>(0)
-  const currentElementIndex = ref(0)
-  const textContentElements = ref<TextContentElement[]>([])
+  const currentTTSSegmentIndex = ref(0)
+  const ttsSegments = ref<TTSSegment[]>([])
+  const currentTTSSegment = computed(() => {
+    return ttsSegments.value[currentTTSSegmentIndex.value]
+  })
+  const currentTTSSegmentText = computed(() => {
+    return currentTTSSegment.value?.text || ''
+  })
 
   watch(ttsLanguageVoice, (newLanguage, oldLanguage) => {
     if (newLanguage !== oldLanguage) {
@@ -42,6 +54,18 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         nft_class_id: nftClassId,
       })
     }
+  })
+
+  watch(ttsPlaybackRate, (newRate) => {
+    audioBuffers.value.forEach((audio) => {
+      if (audio) {
+        audio.playbackRate = newRate
+        useLogEvent('tts_playback_rate_change', {
+          nft_class_id: nftClassId,
+          value: newRate,
+        })
+      }
+    })
   })
 
   function pauseTextToSpeech() {
@@ -55,7 +79,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     }
   }
 
-  function createAudio(element: TextContentElement, bufferIndex: 0 | 1) {
+  function createAudio(element: TTSSegment, bufferIndex: 0 | 1) {
     const audio = new Audio()
     const params = new URLSearchParams({
       text: element.text,
@@ -63,6 +87,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       voice_id: ttsLanguageVoice.value.split('_')[1] || '0',
     })
     audio.src = `/api/reader/tts?${params.toString()}`
+    audio.playbackRate = ttsPlaybackRate.value
 
     audio.onplay = () => {
       options.onPlay?.(element)
@@ -86,9 +111,9 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   }
 
   function playNextElement() {
-    currentElementIndex.value += 1
+    currentTTSSegmentIndex.value += 1
 
-    const nextElement = textContentElements.value[currentElementIndex.value]
+    const nextElement = ttsSegments.value[currentTTSSegmentIndex.value]
     if (!nextElement) {
       options.onPageChange?.()
       return
@@ -98,7 +123,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       options.onPageChange?.()
     }
 
-    const nextElementForBuffer = textContentElements.value[currentElementIndex.value + 1]
+    const nextElementForBuffer = ttsSegments.value[currentTTSSegmentIndex.value + 1]
 
     if (nextElementForBuffer) {
       createAudio(nextElementForBuffer, currentBufferIndex.value)
@@ -107,7 +132,8 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     currentBufferIndex.value = currentBufferIndex.value === 0 ? 1 : 0
     const nextAudio = audioBuffers.value[currentBufferIndex.value]
 
-    setTimeout(() => {
+    if (currentAudioTimeout.value) clearTimeout(currentAudioTimeout.value)
+    currentAudioTimeout.value = setTimeout(() => {
       nextAudio?.play()
     }, 200)
   }
@@ -133,7 +159,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     }
 
     cleanupAudio()
-    currentElementIndex.value = 0
+    currentTTSSegmentIndex.value = 0
     currentBufferIndex.value = 0
     isTextToSpeechOn.value = true
 
@@ -142,13 +168,13 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     })
 
     try {
-      if (textContentElements.value.length === 0) {
+      if (ttsSegments.value.length === 0) {
         options.onPageChange?.()
         return
       }
 
-      const firstElement = textContentElements.value[0]
-      const secondElement = textContentElements.value[1]
+      const firstElement = ttsSegments.value[0]
+      const secondElement = ttsSegments.value[1]
 
       if (firstElement) {
         createAudio(firstElement, 0)
@@ -176,8 +202,43 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     audioBuffers.value = [null, null]
   }
 
-  function setTextContentElements(elements: TextContentElement[]) {
-    textContentElements.value = elements
+  function setTTSSegments(elements: TTSSegment[]) {
+    ttsSegments.value = elements
+  }
+
+  function skipForward() {
+    if (!isTextToSpeechOn.value) return
+    useLogEvent('tts_skip_forward', {
+      nft_class_id: nftClassId,
+    })
+    const activeAudio = audioBuffers.value[currentBufferIndex.value]
+    activeAudio?.pause()
+    if (currentTTSSegment.value) options.onEnd?.(currentTTSSegment.value)
+    playNextElement()
+  }
+
+  function skipBackward() {
+    if (!isTextToSpeechOn.value) return
+    useLogEvent('tts_skip_backward', {
+      nft_class_id: nftClassId,
+    })
+    const activeAudio = audioBuffers.value[currentBufferIndex.value]
+    activeAudio?.pause()
+    if (currentTTSSegment.value) options.onEnd?.(currentTTSSegment.value)
+    if (currentTTSSegmentIndex.value > 0) {
+      currentTTSSegmentIndex.value -= 1
+      currentBufferIndex.value = currentBufferIndex.value === 0 ? 1 : 0
+      const currentElement = ttsSegments.value[currentTTSSegmentIndex.value]
+      if (currentElement) {
+        createAudio(currentElement, currentBufferIndex.value)
+      }
+      if (isTextToSpeechPlaying.value) {
+        audioBuffers.value[currentBufferIndex.value]?.play()
+      }
+    }
+    else {
+      options.onPageChange?.(-1)
+    }
   }
 
   function restartTextToSpeech() {
@@ -190,12 +251,17 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   return {
     ttsLanguageVoiceOptions,
     ttsLanguageVoice,
+    ttsPlaybackRateOptions,
+    ttsPlaybackRate,
     isShowTextToSpeechOptions,
     isTextToSpeechOn,
     isTextToSpeechPlaying,
+    currentTTSSegmentText,
     pauseTextToSpeech,
     startTextToSpeech,
-    setTextContentElements,
+    setTTSSegments,
+    skipForward,
+    skipBackward,
     restartTextToSpeech,
   }
 }

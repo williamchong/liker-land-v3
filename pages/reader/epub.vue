@@ -90,11 +90,29 @@
                   @click="pauseTextToSpeech"
                 />
               </template>
-              <USelect
-                v-if="isShowTextToSpeechOptions"
-                v-model="ttsLanguageVoice"
-                :items="ttsLanguageVoiceOptions"
-              />
+              <template v-if="isShowTextToSpeechOptions">
+                <UButton
+                  icon="i-material-symbols-skip-previous-rounded"
+                  variant="ghost"
+                  :disabled="!isTextToSpeechOn"
+                  @click="skipBackward"
+                />
+                <USelect
+                  v-model="ttsLanguageVoice"
+                  :items="ttsLanguageVoiceOptions"
+                />
+                <USelect
+                  v-model="ttsPlaybackRate"
+                  icon="i-material-symbols-speed-rounded"
+                  :items="ttsPlaybackRateOptions"
+                />
+                <UButton
+                  icon="i-material-symbols-skip-next-rounded"
+                  variant="ghost"
+                  :disabled="!isTextToSpeechOn"
+                  @click="skipForward"
+                />
+              </template>
             </template>
 
             <USlideover
@@ -317,12 +335,16 @@ const textContentElements = ref<{ cfi: string, el: Element, text: string, id: st
 const {
   ttsLanguageVoiceOptions,
   ttsLanguageVoice,
+  ttsPlaybackRateOptions,
+  ttsPlaybackRate,
   isShowTextToSpeechOptions,
   isTextToSpeechOn,
   isTextToSpeechPlaying,
   pauseTextToSpeech,
   startTextToSpeech,
-  setTextContentElements,
+  setTTSSegments,
+  skipForward,
+  skipBackward,
   restartTextToSpeech,
 } = useTextToSpeech({
   nftClassId: nftClassId.value,
@@ -342,8 +364,13 @@ const {
       rendition.value?.annotations.remove(textElement.cfi, 'highlight')
     }
   },
-  onPageChange: () => {
-    nextPage()
+  onPageChange: (direction) => {
+    if (direction && direction < 0) {
+      prevPage()
+    }
+    else {
+      nextPage()
+    }
   },
   checkIfNeededPageChange: (element) => {
     const textElement = textContentElements.value.find(el => el.id === element.id)
@@ -506,7 +533,7 @@ async function loadEPub() {
       id: el.id,
       text: el.text,
     }))
-    setTextContentElements(textElements)
+    setTTSSegments(textElements)
     isRightToLeft.value = view.settings.direction === 'rtl'
 
     if (cleanUpClickListener) {
