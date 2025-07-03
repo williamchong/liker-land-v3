@@ -144,6 +144,8 @@ export default defineNuxtConfig({
               process.env.PDF_VIEWER_ORIGIN || '',
               'https://auth.magic.link',
               'https://js.stripe.com',
+              'https://td.doubleclick.net',
+              'https://www.googletagmanager.com',
             ],
         'base-uri': [
           '\'self\'',
