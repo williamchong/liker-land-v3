@@ -78,6 +78,9 @@ export default defineNuxtConfig({
       sentryDsn: process.env.SENTRY_DSN,
       baseURL: process.env.BASE_URL,
     },
+    session: {
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+    },
   },
 
   sourcemap: {
