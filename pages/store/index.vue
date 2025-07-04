@@ -97,6 +97,7 @@
           :book-name="item.title"
           :book-cover-src="item.imageUrl"
           :price="item.minPrice"
+          :lazy="index >= COLUMN_MAX"
         />
       </ul>
       <div
@@ -213,7 +214,7 @@ const products = computed(() => bookstoreStore.getBookstoreCMSProductsByTagId(lo
 const itemsCount = computed(() => products.value.items.length)
 const hasMoreItems = computed(() => !!products.value.nextItemsKey || !products.value.hasFetchedItems)
 
-const { gridClasses, getGridItemClassesByIndex } = usePaginatedGrid({
+const { gridClasses, getGridItemClassesByIndex, COLUMN_MAX } = usePaginatedGrid({
   itemsCount,
   hasMore: hasMoreItems,
 })

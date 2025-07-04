@@ -7,6 +7,7 @@
       :src="bookCoverSrc"
       :to="bookInfo.productPageRoute.value"
       :alt="bookName"
+      :lazy="props.lazy"
       @click="onBookCoverClick"
     />
 
@@ -50,6 +51,10 @@ const props = defineProps({
   price: {
     type: Number,
     default: 0,
+  },
+  lazy: {
+    type: Boolean,
+    default: false,
   },
 })
 

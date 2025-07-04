@@ -6,6 +6,7 @@
     <BookCover
       :src="bookCoverSrc"
       :alt="bookInfo.name.value"
+      :lazy="props.lazy"
       @click="handleCoverClick"
     />
 
@@ -82,6 +83,10 @@ const props = defineProps({
   nftIds: {
     type: Array as PropType<string[]>,
     default: () => [],
+  },
+  lazy: {
+    type: Boolean,
+    default: false,
   },
 })
 
