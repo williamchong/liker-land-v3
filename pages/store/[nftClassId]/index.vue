@@ -332,6 +332,9 @@ const formatPrice = useFormatPrice()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
 const nftStore = useNFTStore()
+const { open: openTippingModal } = useTipping()
+
+const metadataStore = useMetadataStore()
 const { handleError } = useErrorHandler()
 const { getAnalyticsParameters } = useAnalytics()
 
@@ -523,6 +526,10 @@ const checkoutButtonProps = computed<{
 
 onMounted(() => {
   useLogEvent('view_item', formattedLogPayload.value)
+  const ownerWalletAddress = bookInfo.nftClassOwnerWalletAddress.value
+  if (ownerWalletAddress) {
+    metadataStore.lazyFetchLikerInfoByWalletAddress(ownerWalletAddress)
+  }
 })
 
 async function handleSocialButtonClick(key: string) {
@@ -582,10 +589,23 @@ async function handlePurchaseButtonClick() {
       await accountStore.login()
       if (!hasLoggedIn.value) return
     }
+
+    let totalPrice = selectedPricingItem.value.price
+
+    if (config.public.isTippingEnabled && selectedPricingItem.value.canTip) {
+      const tippingResult = await openTippingModal({
+        // TODO: Check if classOwner is always the book's publisher
+        avatar: bookInfo.publisherName.value ? bookInfo.nftClassOwnerAvatar.value : '',
+        displayName: bookInfo.publisherName.value || bookInfo.authorName.value,
+      })
+      const tippingAmount = tippingResult?.tippingAmount || 0
+      totalPrice = calculateCustomPrice(tippingAmount, selectedPricingItem.value.price)
+    }
+
     const { url, paymentId } = await createNFTBookPurchase({
       email: user.value?.email,
       nftClassId: nftClassId.value,
-      price: selectedPricingItem.value.price,
+      price: totalPrice,
       priceIndex: selectedPricingItem.value.index,
       coupon: getRouteQuery('coupon'),
       language: locale.value.split('-')[0],
@@ -615,5 +635,11 @@ function handleGiftButtonClick() {
   wipModal.open({
     title: $t('product_page_gift_button_label'),
   })
+}
+
+function calculateCustomPrice(editionPrice: number, tippingAmount: number | undefined): number {
+  const tip = Number(tippingAmount) || 0
+  const base = Number(editionPrice) || 0
+  return Number((tip + base).toFixed(2))
 }
 </script>
