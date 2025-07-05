@@ -71,19 +71,31 @@ const authorName = computed(() => bookInfo.authorName.value)
 
 const formattedPrice = computed(() => formatPrice(props.price))
 
-useVisibility('lazyLoadTrigger', (visible) => {
-  if (visible) {
+if (!props.lazy) {
+  callOnce(`BookstoreItem_${props.nftClassId}`, () => {
     emit('visible', props.nftClassId)
-    nftStore.lazyFetchNFTClassAggregatedMetadataById(props.nftClassId).catch(() => {
-      console.warn(`Failed to fetch aggregated metadata for the NFT class [${props.nftClassId}]`)
-    })
-    if (bookInfo.nftClassOwnerWalletAddress.value) {
-      metadataStore.lazyFetchLikerInfoByWalletAddress(bookInfo.nftClassOwnerWalletAddress.value).catch(() => {
-        console.warn(`Failed to fetch Liker info of the wallet [${bookInfo.nftClassOwnerWalletAddress.value}] for the NFT class [${props.nftClassId}]`)
-      })
+    fetchBookInfo()
+  })
+}
+else {
+  useVisibility('lazyLoadTrigger', (visible) => {
+    if (visible) {
+      emit('visible', props.nftClassId)
+      fetchBookInfo()
     }
+  })
+}
+
+function fetchBookInfo() {
+  nftStore.lazyFetchNFTClassAggregatedMetadataById(props.nftClassId).catch(() => {
+    console.warn(`Failed to fetch aggregated metadata for the NFT class [${props.nftClassId}]`)
+  })
+  if (bookInfo.nftClassOwnerWalletAddress.value) {
+    metadataStore.lazyFetchLikerInfoByWalletAddress(bookInfo.nftClassOwnerWalletAddress.value).catch(() => {
+      console.warn(`Failed to fetch Liker info of the wallet [${bookInfo.nftClassOwnerWalletAddress.value}] for the NFT class [${props.nftClassId}]`)
+    })
   }
-})
+}
 
 function onBookCoverClick() {
   useLogEvent('select_item', {
