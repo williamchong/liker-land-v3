@@ -16,13 +16,21 @@
 
         <div class="overflow-hidden">
           <p
+            v-if="shelfOwnerDisplayName"
             class="font-medium text-highlighted text-sm"
             v-text="shelfOwnerDisplayName"
           />
           <p
-            v-if="shelfOwner?.evmWallet"
-            class="text-muted text-xs text-ellipsis overflow-hidden whitespace-nowrap"
-            v-text="shelfOwner?.evmWallet"
+            v-if="shelfOwnerWalletAddress"
+            :class="[
+              shelfOwnerDisplayName ? 'text-muted' : 'text-highlighted',
+              'text-xs',
+              'text-ellipsis',
+              'font-mono',
+              'overflow-hidden',
+              'whitespace-nowrap',
+            ]"
+            v-text="shelfOwnerWalletAddress"
           />
         </div>
       </div>
@@ -121,15 +129,8 @@ await callOnce(async () => {
     try {
       await metadataStore.lazyFetchLikerInfoByWalletAddress(walletAddress.value)
     }
-    catch (error) {
-      const { statusCode } = parseError(error)
-      if (statusCode === 404) {
-        throw createError({
-          statusCode,
-          message: $t('error_page_not_found'),
-        })
-      }
-      throw error
+    catch {
+      // Ignore error
     }
   }
 }, { mode: 'navigation' })
@@ -140,11 +141,14 @@ const shelfOwner = computed(() => {
 const shelfOwnerDisplayName = computed(() => {
   return shelfOwner.value?.displayName || shelfOwner.value?.evmWallet
 })
+const shelfOwnerWalletAddress = computed(() => {
+  return shelfOwner.value?.evmWallet || walletAddress.value
+})
 
 useHead(() => ({
   title: isMyBookshelf.value
     ? $t('shelf_page_title')
-    : $t('shelf_page_title_someone_else', { name: shelfOwnerDisplayName.value }),
+    : $t('shelf_page_title_someone_else', { name: shelfOwnerDisplayName.value || shelfOwnerWalletAddress.value }),
   meta: [
     {
       name: 'robots',
