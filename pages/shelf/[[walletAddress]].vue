@@ -85,6 +85,7 @@
           :class="getGridItemClassesByIndex(index)"
           :nft-class-id="item.nftClassId"
           :nft-ids="item.nftIds"
+          :lazy="index >= columnMax"
           @open="handleBookshelfItemOpen"
           @download="handleBookshelfItemDownload"
         />
@@ -157,7 +158,7 @@ useHead(() => ({
   ],
 }))
 
-const { gridClasses, getGridItemClassesByIndex } = usePaginatedGrid({
+const { gridClasses, getGridItemClassesByIndex, columnMax } = usePaginatedGrid({
   itemsCount,
   hasMore: hasMoreItems,
 })

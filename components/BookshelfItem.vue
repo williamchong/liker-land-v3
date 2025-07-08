@@ -6,6 +6,7 @@
     <BookCover
       :src="bookCoverSrc"
       :alt="bookInfo.name.value"
+      :lazy="props.lazy"
       @click="handleCoverClick"
     />
 
@@ -83,6 +84,10 @@ const props = defineProps({
     type: Array as PropType<string[]>,
     default: () => [],
   },
+  lazy: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['visible', 'open', 'download'])
@@ -145,19 +150,31 @@ const menuItems = computed<DropdownMenuItem[]>(() => {
   return [...readerItems, ...downloadItems, productInfoItem]
 })
 
-useVisibility('lazyLoadTrigger', (visible) => {
-  if (visible) {
+if (!props.lazy) {
+  callOnce(`BookshelfItem_${props.nftClassId}`, () => {
     emit('visible', props.nftClassId)
-    nftStore.lazyFetchNFTClassAggregatedMetadataById(props.nftClassId).catch(() => {
-      console.warn(`Failed to fetch aggregated metadata for the NFT class [${props.nftClassId}]`)
-    })
-    if (bookInfo.nftClassOwnerWalletAddress.value) {
-      metadataStore.lazyFetchLikerInfoByWalletAddress(bookInfo.nftClassOwnerWalletAddress.value).catch(() => {
-        console.warn(`Failed to fetch Liker info of the wallet [${bookInfo.nftClassOwnerWalletAddress.value}] for the NFT class [${props.nftClassId}]`)
-      })
+    fetchBookInfo()
+  })
+}
+else {
+  useVisibility('lazyLoadTrigger', (visible) => {
+    if (visible) {
+      emit('visible', props.nftClassId)
+      fetchBookInfo()
     }
+  })
+}
+
+function fetchBookInfo() {
+  nftStore.lazyFetchNFTClassAggregatedMetadataById(props.nftClassId).catch(() => {
+    console.warn(`Failed to fetch aggregated metadata for the NFT class [${props.nftClassId}]`)
+  })
+  if (bookInfo.nftClassOwnerWalletAddress.value) {
+    metadataStore.lazyFetchLikerInfoByWalletAddress(bookInfo.nftClassOwnerWalletAddress.value).catch(() => {
+      console.warn(`Failed to fetch Liker info of the wallet [${bookInfo.nftClassOwnerWalletAddress.value}] for the NFT class [${props.nftClassId}]`)
+    })
   }
-})
+}
 
 function openContentURL(contentURL: ContentURL) {
   // TODO: UI to select specific NFT Id

@@ -69,5 +69,6 @@ export default function usePaginatedGrid(props: {
   return {
     gridClasses,
     getGridItemClassesByIndex,
+    columnMax,
   }
 }

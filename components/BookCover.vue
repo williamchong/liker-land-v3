@@ -51,6 +51,7 @@
         ]"
         :src="props.src"
         :alt="props.alt"
+        :loading="props.lazy ? 'lazy' : 'eager'"
         @load="handleImageLoad"
         @error="handleImageError"
       >
@@ -107,6 +108,10 @@ const props = defineProps({
     default: false,
   },
   hasShadow: {
+    type: Boolean,
+    default: false,
+  },
+  lazy: {
     type: Boolean,
     default: false,
   },
