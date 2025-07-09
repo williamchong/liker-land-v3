@@ -56,15 +56,18 @@
             <template #description>
               <ExpandableContent>
                 <div
-                  class="whitespace-pre-line"
-                  v-text="bookInfo.description"
+                  class="markdown"
+                  v-html="bookInfoDescriptionHTML"
                 />
               </ExpandableContent>
             </template>
 
             <template #author>
               <ExpandableContent>
-                <div v-text="bookInfo.authorDescription" />
+                <div
+                  class="markdown"
+                  v-html="authorDescriptionHTML"
+                />
               </ExpandableContent>
             </template>
 
@@ -182,10 +185,10 @@
                           />
                         </span>
                       </div>
-                      <p
-                        v-if="item.description"
-                        class="mt-2 text-left break-words whitespace-pre-line"
-                        v-text="item.description"
+                      <div
+                        v-if="item.renderedDescription"
+                        class="markdown whitespace-normal text-left mt-2"
+                        v-html="item.renderedDescription"
                       />
                     </div>
                   </button>
@@ -318,10 +321,16 @@
 <script setup lang="ts">
 import { FetchError } from 'ofetch'
 import type { TabsItem } from '@nuxt/ui'
+import MarkdownIt from 'markdown-it'
 
 const route = useRoute()
 const config = useRuntimeConfig()
 const baseURL = config.public.baseURL
+const md = new MarkdownIt({
+  html: false, // Disable raw HTML to prevent XSS attacks from untrusted markdown input
+  linkify: true,
+  breaks: true,
+})
 
 const localeRoute = useLocaleRoute()
 const getRouteBaseName = useRouteBaseName()
@@ -437,6 +446,14 @@ useHead(() => ({
     : [],
 }))
 
+const bookInfoDescriptionHTML = computed(() => {
+  return md.render(bookInfo.description?.value || '')
+})
+
+const authorDescriptionHTML = computed(() => {
+  return md.render(bookInfo.authorDescription?.value || '')
+})
+
 const infoTabItems = computed(() => {
   const items: TabsItem[] = []
 
@@ -470,6 +487,7 @@ const pricingItems = computed(() => {
     ...item,
     formattedPrice: formatPrice(item.price),
     isSelected: index === selectedPricingItemIndex.value,
+    renderedDescription: md.render(item.description || ''),
   }))
 })
 
