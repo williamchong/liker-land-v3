@@ -260,9 +260,9 @@ import ePub, {
   type NavItem,
   type Location,
   EpubCFI,
-} from 'epubjs'
+} from '@likecoin/epubjs'
 
-import type Section from 'epubjs/types/section'
+import type Section from '@likecoin/epubjs/types/section'
 
 declare interface EpubView {
   window: Window
