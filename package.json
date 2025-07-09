@@ -30,7 +30,7 @@
     "@unhead/vue": "^2.0.10",
     "@vueuse/nuxt": "^13.0.0",
     "@wagmi/vue": "^0.1.14",
-    "epubjs": "^0.3.93",
+    "@likecoin/epubjs": "^0.3.93",
     "eslint": "^9.22.0",
     "i": "^0.3.7",
     "jwt-decode": "^4.0.0",
