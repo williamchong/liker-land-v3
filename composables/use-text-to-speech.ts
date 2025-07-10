@@ -65,10 +65,10 @@ export function useTextToSpeech(options: TTSOptions = {}) {
           title: toValue(bookName),
           album: toValue(bookChapterName) || toValue(bookName),
           artist: toValue(bookAuthorName),
-          artwork: bookCoverSrc
+          artwork: toValue(bookCoverSrc)
             ? [
                 {
-                  src: toValue(bookCoverSrc),
+                  src: toValue(bookCoverSrc) as string,
                 },
               ]
             : undefined,
