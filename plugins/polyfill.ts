@@ -3,3 +3,5 @@ if (!Object.hasOwn) {
     return Object.prototype.hasOwnProperty.call(obj, prop)
   }
 }
+
+export default defineNuxtPlugin(() => {})
