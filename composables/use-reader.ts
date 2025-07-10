@@ -1,6 +1,8 @@
 export default function (params: {
   nftClassId?: Ref<string> | string
 } = {}) {
+  const config = useRuntimeConfig()
+
   const nftClassId = computed(() =>
     getRouteQuery('nft_class_id') || toValue(params.nftClassId) || '',
   )
@@ -16,7 +18,14 @@ export default function (params: {
   const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 300 }))
 
   const bookFileCacheKey = computed(() =>
-    ['book-file', nftClassId.value, nftId.value || '', fileIndex.value, bookInfo.isCustomMessageEnabled.value ? '1' : '0'].join('-'),
+    [
+      config.public.cacheKeyPrefix,
+      'book-file',
+      nftClassId.value,
+      nftId.value,
+      fileIndex.value,
+      bookInfo.isCustomMessageEnabled.value ? '1' : '0',
+    ].filter(value => value !== undefined).join('-'),
   )
 
   const bookFileURLWithCORS = computed(() =>

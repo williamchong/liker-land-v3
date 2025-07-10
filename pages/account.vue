@@ -172,8 +172,19 @@
       </section>
 
       <UButton
+        :label="$t('account_page_reader_cache_clear')"
+        icon="i-material-symbols-delete-outline-rounded"
+        color="neutral"
+        variant="outline"
+        size="lg"
+        block
+        @click="handleClearReaderCacheButtonClick"
+      />
+
+      <UButton
         v-if="hasLoggedIn"
         :label="$t('account_page_logout')"
+        icon="i-material-symbols-exit-to-app-rounded"
         variant="outline"
         color="error"
         size="lg"
@@ -188,11 +199,13 @@
 // NOTE: Set `layout` to false for injecting props into `<NuxtLayout/>`.
 definePageMeta({ layout: false })
 
+const config = useRuntimeConfig()
 const { t: $t } = useI18n()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
 const localeRoute = useLocaleRoute()
 const { handleError } = useErrorHandler()
+const toast = useToast()
 
 useHead({
   title: $t('account_page_title'),
@@ -245,5 +258,34 @@ async function handleCustomerServiceLinkButtonClick() {
 
   crisp?.do('chat:show')
   crisp?.do('chat:open')
+}
+
+async function handleClearReaderCacheButtonClick() {
+  useLogEvent('clear_reader_cache')
+
+  try {
+    if (window.caches) {
+      const keys = await window.caches.keys()
+      if (keys?.length) {
+        const bookKeys = keys.filter(key => key.startsWith(config.public.cacheKeyPrefix))
+        await Promise.all(bookKeys.map(key => caches.delete(key)))
+
+        if (window.localStorage) {
+          bookKeys.forEach((key) => {
+            // TODO: Refactor locations key
+            window.localStorage.removeItem(`${key}-locations`)
+          })
+        }
+      }
+    }
+
+    toast.add({
+      title: $t('account_page_reader_cache_cleared'),
+      color: 'success',
+    })
+  }
+  catch (error) {
+    await handleError(error, { title: $t('account_page_reader_cache_clear_failed') })
+  }
 }
 </script>

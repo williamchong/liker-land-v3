@@ -15,9 +15,13 @@ export default defineAppConfig({
           class: 'text-theme-50',
         },
         {
+          variant: 'outline',
+          class: 'ring-2 bg-transparent',
+        },
+        {
           color: 'primary',
           variant: 'outline',
-          class: 'ring-2 ring-theme-500',
+          class: 'ring-theme-500',
         },
       ],
     },
