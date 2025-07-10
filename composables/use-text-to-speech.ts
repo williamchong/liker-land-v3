@@ -59,39 +59,44 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   })
 
   function setupMediaSession() {
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: toValue(bookName),
-        album: toValue(bookChapterName) || toValue(bookName),
-        artist: toValue(bookAuthorName),
-        artwork: bookCoverSrc
-          ? [
-              {
-                src: toValue(bookCoverSrc),
-              },
-            ]
-          : undefined,
-      })
+    try {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: toValue(bookName),
+          album: toValue(bookChapterName) || toValue(bookName),
+          artist: toValue(bookAuthorName),
+          artwork: bookCoverSrc
+            ? [
+                {
+                  src: toValue(bookCoverSrc),
+                },
+              ]
+            : undefined,
+        })
 
-      navigator.mediaSession.setActionHandler('play', () => {
-        startTextToSpeech()
-      })
+        navigator.mediaSession.setActionHandler('play', () => {
+          startTextToSpeech()
+        })
 
-      navigator.mediaSession.setActionHandler('pause', () => {
-        pauseTextToSpeech()
-      })
+        navigator.mediaSession.setActionHandler('pause', () => {
+          pauseTextToSpeech()
+        })
 
-      navigator.mediaSession.setActionHandler('previoustrack', () => {
-        skipBackward()
-      })
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+          skipBackward()
+        })
 
-      navigator.mediaSession.setActionHandler('nexttrack', () => {
-        skipForward()
-      })
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+          skipForward()
+        })
 
-      navigator.mediaSession.setActionHandler('stop', () => {
-        stopTextToSpeech()
-      })
+        navigator.mediaSession.setActionHandler('stop', () => {
+          stopTextToSpeech()
+        })
+      }
+    }
+    catch (error) {
+      console.error('Error setting up Media Session:', error)
     }
   }
 
