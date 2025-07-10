@@ -165,14 +165,15 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         useLogEvent('tts_resume', {
           nft_class_id: nftClassId,
         })
+        return
       }
-      return
     }
 
     resetAudio()
     currentTTSSegmentIndex.value = 0
     currentBufferIndex.value = 0
     isTextToSpeechOn.value = true
+    isTextToSpeechPlaying.value = true
 
     useLogEvent('tts_start', {
       nft_class_id: nftClassId,
