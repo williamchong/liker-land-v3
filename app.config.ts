@@ -25,6 +25,9 @@ export default defineAppConfig({
         },
       ],
     },
+    icons: {
+      close: 'i-material-symbols-close-rounded',
+    },
     select: {
       compoundVariants: [
         {

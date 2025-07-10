@@ -14,7 +14,22 @@
       >
         <template #trailing>
           <div class="relative flex justify-end items-center gap-2">
-            <UPopover>
+            <USlideover
+              v-model:open="isMobileTocOpen"
+              :title="$t('reader_toc_title')"
+              side="bottom"
+              :overlay="false"
+              :close="{
+                color: 'neutral',
+                variant: 'soft',
+                class: 'rounded-full',
+              }"
+              :ui="{
+                content: 'bottom-safe mx-5 mb-5 border border-gray-500 divide-gray-500 rounded-2xl overflow-hidden',
+                body: 'relative p-0 sm:p-0 overflow-hidden',
+              }"
+              @update:open="handleMobileTocOpen"
+            >
               <UButton
                 class="laptop:hidden"
                 icon="i-material-symbols-format-list-bulleted"
@@ -22,40 +37,55 @@
                 variant="ghost"
               />
 
-              <template #content>
-                <div class="flex flex-col">
-                  <div
-                    class="px-4 py-2 text-gray-400 text-xs font-semibold"
-                    v-text="$t('reader_toc_title')"
-                  />
-
-                  <ul>
-                    <li
-                      v-for="item in navItems"
-                      :key="item.href"
-                      class="border-t-[0.5px] border-[#11111140]"
-                    >
-                      <UButton
-                        class="w-full"
-                        :label="item.label"
-                        :disabled="item.href === activeNavItemHref"
-                        variant="link"
-                        color="neutral"
-                        :ui="{ label: 'leading-[44px]', base: 'px-4 py-0' }"
-                        @click="setActiveNavItemHref(item.href)"
-                      />
-                    </li>
-                  </ul>
-                </div>
+              <template #body>
+                <ul
+                  ref="mobileNavItemListElement"
+                  class="divide-gray-500 divide-y pb-2 max-h-[40vh] overflow-y-auto"
+                >
+                  <li
+                    v-for="item in navItems"
+                    :key="item.href"
+                    :ref="item.href === activeNavItemHref ? 'mobileActiveNavItemElements' : undefined"
+                  >
+                    <UButton
+                      :label="item.label"
+                      :disabled="item.href === activeNavItemHref"
+                      variant="link"
+                      color="neutral"
+                      block
+                      :ui="{
+                        label: 'text-left leading-[44px]',
+                        base: 'justify-start px-4 py-0',
+                      }"
+                      @click="() => {
+                        isMobileTocOpen = false
+                        setActiveNavItemHref(item.href)
+                      }"
+                    />
+                  </li>
+                </ul>
+                <div
+                  :class="[
+                    'absolute',
+                    'inset-x-0',
+                    'bottom-0',
+                    'h-12',
+                    'bg-gradient-to-t',
+                    'from-white',
+                    'to-transparent',
+                    { 'opacity-0': isMobileNavItemListScrolledToBottom },
+                    'pointer-events-none',
+                  ]"
+                />
               </template>
-            </UPopover>
+            </USlideover>
             <UButton
               class="max-laptop:hidden"
               icon="i-material-symbols-format-list-bulleted"
               :label="$t('reader_toc_button')"
               :disabled="!navItems.length"
               variant="ghost"
-              @click="isDesktopToCOpen = !isDesktopToCOpen"
+              @click="isDesktopTocOpen = !isDesktopTocOpen"
             />
             <template v-if="!bookInfo.isAudioHidden.value">
               <UButtonGroup>
@@ -236,7 +266,7 @@
 
       <div class="relative flex grow gap-6">
         <nav
-          v-if="isDesktopToCOpen"
+          v-if="isDesktopTocOpen"
           class="relative max-laptop:hidden w-[312px]"
         >
           <ul class="absolute inset-0 overflow-y-auto pl-12 pr-6 laptop:pt-6 pb-[64px]">
@@ -348,7 +378,8 @@ const {
 const { handleError } = useErrorHandler()
 
 const isReaderLoading = ref(false)
-const isDesktopToCOpen = ref(false)
+const isDesktopTocOpen = ref(false)
+const isMobileTocOpen = ref(false)
 const isOpenTextToSpeechOptions = ref(false)
 
 const { loadingLabel, loadFileAsBuffer } = useBookFileLoader()
@@ -684,6 +715,23 @@ function increaseFontSize() {
 
 function decreaseFontSize() {
   adjustFontSize(-1)
+}
+
+const mobileNavItemListElement = useTemplateRef<HTMLUListElement>('mobileNavItemListElement')
+const { arrivedState: mobileNavItemListScrollArrivedState } = useScroll(mobileNavItemListElement)
+const { bottom: isMobileNavItemListScrolledToBottom } = toRefs(mobileNavItemListScrollArrivedState)
+const mobileActiveNavItemElements = useTemplateRef<HTMLLIElement[]>('mobileActiveNavItemElements')
+
+async function handleMobileTocOpen(open: boolean) {
+  if (open) {
+    useLogEvent('reader_toc_open', { nft_class_id: nftClassId.value })
+    await nextTick()
+    const element = mobileActiveNavItemElements.value?.[0]
+    if (element) {
+      // Scroll the active nav item to the center of the mobile screen
+      element.scrollIntoView({ block: 'center', inline: 'center' })
+    }
+  }
 }
 
 const isShiftPressed = useKeyModifier('Shift')
