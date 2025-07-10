@@ -7,8 +7,8 @@ export function useEVMBookInfo({ nftClassId = '' }: { nftClassId?: string } = {}
 
   const contentMetadata = computed(() => nftClass.value?.metadata)
 
-  const name = computed(() => contentMetadata.value?.name)
-  const description = computed(() => contentMetadata.value?.description)
+  const name = computed(() => contentMetadata.value?.name || '')
+  const description = computed(() => contentMetadata.value?.description || '')
 
   const author = computed(() => contentMetadata.value?.author)
   const publisher = computed(() => contentMetadata.value?.publisher)

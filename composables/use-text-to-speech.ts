@@ -10,10 +10,22 @@ interface TTSOptions {
   onError?: (error: Event) => void
   onPageChange?: (direction?: number) => void
   checkIfNeededPageChange?: (element: TTSSegment) => boolean
+  bookInfo?: {
+    bookName?: string | Ref<string> | ComputedRef<string>
+    chapterName?: string | Ref<string> | ComputedRef<string>
+    author?: string | Ref<string> | ComputedRef<string>
+    image?: string | Ref<string> | ComputedRef<string>
+  }
 }
 
 export function useTextToSpeech(options: TTSOptions = {}) {
   const { user } = useUserSession()
+  const {
+    bookName,
+    chapterName,
+    author,
+    image,
+  } = options.bookInfo || {}
   const subscription = useSubscription()
 
   const nftClassId = options.nftClassId
@@ -48,6 +60,49 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     return currentTTSSegment.value?.text || ''
   })
 
+  function setupMediaSession() {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: toValue(bookName),
+        album: toValue(chapterName) || toValue(bookName),
+        artist: toValue(author),
+        artwork: image
+          ? [
+              {
+                src: toValue(image),
+              },
+            ]
+          : undefined,
+      })
+
+      navigator.mediaSession.setActionHandler('play', () => {
+        startTextToSpeech()
+      })
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        pauseTextToSpeech()
+      })
+
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        skipBackward()
+      })
+
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        skipForward()
+      })
+
+      navigator.mediaSession.setActionHandler('stop', () => {
+        stopTextToSpeech()
+      })
+    }
+  }
+
+  function updateMediaSessionPlaybackState() {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = isTextToSpeechPlaying.value ? 'playing' : 'paused'
+    }
+  }
+
   watch(ttsLanguageVoice, (newLanguage, oldLanguage) => {
     if (newLanguage !== oldLanguage) {
       restartTextToSpeech()
@@ -74,6 +129,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       const activeAudio = audioBuffers.value[currentBufferIndex.value]
       activeAudio?.pause()
       isTextToSpeechPlaying.value = false
+      updateMediaSessionPlaybackState()
       useLogEvent('tts_pause', {
         nft_class_id: nftClassId,
       })
@@ -92,6 +148,8 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         if (currentElement) {
           options.onPlay?.(currentElement)
         }
+        isTextToSpeechPlaying.value = true
+        updateMediaSessionPlaybackState()
       }
 
       audio.onended = () => {
@@ -159,6 +217,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
     if (isTextToSpeechOn.value && !isTextToSpeechPlaying.value && !isPendingResetOnStart.value) {
       isTextToSpeechPlaying.value = true
+      updateMediaSessionPlaybackState()
       const activeAudio = audioBuffers.value[currentBufferIndex.value]
       if (activeAudio) {
         activeAudio.play()
@@ -174,6 +233,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     currentBufferIndex.value = 0
     isTextToSpeechOn.value = true
     isTextToSpeechPlaying.value = true
+    setupMediaSession()
 
     useLogEvent('tts_start', {
       nft_class_id: nftClassId,
@@ -284,6 +344,10 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     isShowTextToSpeechOptions.value = false
     currentTTSSegmentIndex.value = 0
     currentBufferIndex.value = 0
+
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'none'
+    }
   }
 
   return {

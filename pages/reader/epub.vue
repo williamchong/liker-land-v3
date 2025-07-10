@@ -433,6 +433,12 @@ const {
   stopTextToSpeech,
 } = useTextToSpeech({
   nftClassId: nftClassId.value,
+  bookInfo: {
+    bookName: bookInfo.name,
+    chapterName: computed(() => activeNavItemLabel.value),
+    author: bookInfo.authorName,
+    image: bookCoverSrc,
+  },
   onPlay: (element) => {
     try {
       const textElement = textContentElements.value.find(el => el.id === element.id)
@@ -753,6 +759,6 @@ onBeforeUnmount(() => {
 /* NOTE: In Safari/Brave Browser, .epub-view could be zero width */
 .epub-view,
 .epub-view > iframe {
-  min-width: 100%
+  min-width: 100%;
 }
 </style>
