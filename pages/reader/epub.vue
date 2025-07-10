@@ -433,12 +433,10 @@ const {
   stopTextToSpeech,
 } = useTextToSpeech({
   nftClassId: nftClassId.value,
-  bookInfo: {
-    bookName: bookInfo.name,
-    chapterName: computed(() => activeNavItemLabel.value),
-    author: bookInfo.authorName,
-    image: bookCoverSrc,
-  },
+  bookName: bookInfo.name,
+  bookChapterName: computed(() => activeNavItemLabel.value),
+  bookAuthorName: bookInfo.authorName,
+  bookCoverSrc: bookCoverSrc,
   onPlay: (element) => {
     try {
       const textElement = textContentElements.value.find(el => el.id === element.id)

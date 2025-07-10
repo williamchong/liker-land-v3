@@ -10,22 +10,20 @@ interface TTSOptions {
   onError?: (error: Event) => void
   onPageChange?: (direction?: number) => void
   checkIfNeededPageChange?: (element: TTSSegment) => boolean
-  bookInfo?: {
-    bookName?: string | Ref<string> | ComputedRef<string>
-    chapterName?: string | Ref<string> | ComputedRef<string>
-    author?: string | Ref<string> | ComputedRef<string>
-    image?: string | Ref<string> | ComputedRef<string>
-  }
+  bookName?: string | Ref<string> | ComputedRef<string>
+  bookChapterName?: string | Ref<string> | ComputedRef<string>
+  bookAuthorName?: string | Ref<string> | ComputedRef<string>
+  bookCoverSrc?: string | Ref<string> | ComputedRef<string>
 }
 
 export function useTextToSpeech(options: TTSOptions = {}) {
   const { user } = useUserSession()
   const {
     bookName,
-    chapterName,
-    author,
-    image,
-  } = options.bookInfo || {}
+    bookChapterName,
+    bookAuthorName,
+    bookCoverSrc,
+  } = options || {}
   const subscription = useSubscription()
 
   const nftClassId = options.nftClassId
@@ -64,12 +62,12 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: toValue(bookName),
-        album: toValue(chapterName) || toValue(bookName),
-        artist: toValue(author),
-        artwork: image
+        album: toValue(bookChapterName) || toValue(bookName),
+        artist: toValue(bookAuthorName),
+        artwork: bookCoverSrc
           ? [
               {
-                src: toValue(image),
+                src: toValue(bookCoverSrc),
               },
             ]
           : undefined,
