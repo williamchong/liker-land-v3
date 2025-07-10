@@ -58,8 +58,8 @@
               @click="isDesktopToCOpen = !isDesktopToCOpen"
             />
             <template v-if="!bookInfo.isAudioHidden.value">
-              <template v-if="!isTextToSpeechOn || !isTextToSpeechPlaying">
-                <UButtonGroup>
+              <UButtonGroup>
+                <template v-if="!isTextToSpeechOn || !isTextToSpeechPlaying">
                   <UButton
                     class="laptop:hidden"
                     icon="i-material-symbols-headphones-rounded"
@@ -69,27 +69,17 @@
                     @click="startTextToSpeech"
                   />
                   <UButton
-                    :ui="{
-                      base: '!rounded-l-md',
-                    }"
                     class="max-laptop:hidden"
                     icon="i-material-symbols-headphones-rounded"
                     :label="$t('reader_text_to_speech_button')"
                     variant="outline"
                     color="neutral"
                     :disabled="isReaderLoading"
+                    :ui="{ base: '!rounded-l-md' }"
                     @click="startTextToSpeech"
                   />
-                  <UButton
-                    icon="i-material-symbols-discover-tune-rounded"
-                    variant="outline"
-                    color="neutral"
-                    @click="isOpenTextToSpeechOptions = !isOpenTextToSpeechOptions"
-                  />
-                </UButtonGroup>
-              </template>
-              <template v-else>
-                <UButtonGroup>
+                </template>
+                <template v-else>
                   <UButton
                     class="laptop:hidden"
                     icon="i-material-symbols-pause-rounded"
@@ -98,71 +88,77 @@
                     @click="pauseTextToSpeech"
                   />
                   <UButton
-                    :ui="{
-                      base: '!rounded-l-md',
-                    }"
                     class="max-laptop:hidden"
                     icon="i-material-symbols-pause-rounded"
                     :label="$t('reader_text_to_speech_button')"
                     variant="outline"
                     color="neutral"
+                    :ui="{ base: '!rounded-l-md' }"
                     @click="pauseTextToSpeech"
                   />
-                  <UButton
-                    icon="i-material-symbols-discover-tune-rounded"
-                    variant="outline"
-                    color="neutral"
-                    @click="isOpenTextToSpeechOptions = !isOpenTextToSpeechOptions"
-                  />
-                </UButtonGroup>
-              </template>
+                </template>
+                <UButton
+                  icon="i-material-symbols-discover-tune-rounded"
+                  variant="outline"
+                  color="neutral"
+                  @click="isOpenTextToSpeechOptions = !isOpenTextToSpeechOptions"
+                />
+              </UButtonGroup>
+
               <USlideover
                 v-model:open="isOpenTextToSpeechOptions"
-                :ui="{ body: 'w-full flex items-center gap-2 px-4' }"
+                :ui="{ content: 'w-full flex flex-row items-center gap-2 px-4 py-2 min-h-[56px] divide-y-0' }"
                 side="top"
                 :close="false"
                 :overlay="false"
               >
-                <template #body>
+                <template #content>
                   <div class="flex items-center justify-center gap-2 flex-1">
-                    <UButton
-                      v-if="!isTextToSpeechOn || !isTextToSpeechPlaying"
-                      icon="i-material-symbols-headphones-rounded"
-                      variant="ghost"
-                      :disabled="isReaderLoading"
-                      @click="startTextToSpeech"
-                    />
-                    <UButton
-                      v-else
-                      icon="i-material-symbols-pause-rounded"
-                      variant="ghost"
-                      @click="pauseTextToSpeech"
-                    />
-                    <UButton
-                      icon="i-material-symbols-skip-previous-rounded"
-                      variant="ghost"
-                      :disabled="!isTextToSpeechOn"
-                      @click="skipBackward"
-                    />
+                    <UButtonGroup>
+                      <UButton
+                        icon="i-material-symbols-skip-previous-rounded"
+                        variant="outline"
+                        color="neutral"
+                        :disabled="!isTextToSpeechOn"
+                        @click="skipBackward"
+                      />
+                      <UButton
+                        v-if="!isTextToSpeechOn || !isTextToSpeechPlaying"
+                        icon="i-material-symbols-headphones-rounded"
+                        variant="outline"
+                        color="neutral"
+                        :disabled="isReaderLoading"
+                        @click="startTextToSpeech"
+                      />
+                      <UButton
+                        v-else
+                        icon="i-material-symbols-pause-rounded"
+                        variant="outline"
+                        color="neutral"
+                        @click="pauseTextToSpeech"
+                      />
+                      <UButton
+                        icon="i-material-symbols-skip-next-rounded"
+                        variant="outline"
+                        color="neutral"
+                        :disabled="!isTextToSpeechOn"
+                        @click="skipForward"
+                      />
+                    </UButtonGroup>
                     <USelect
                       v-model="ttsLanguageVoice"
+                      color="neutral"
                       :items="ttsLanguageVoiceOptions"
                     />
                     <USelect
                       v-model="ttsPlaybackRate"
                       icon="i-material-symbols-speed-rounded"
+                      color="neutral"
                       :items="ttsPlaybackRateOptions"
-                    />
-                    <UButton
-                      icon="i-material-symbols-skip-next-rounded"
-                      variant="ghost"
-                      :disabled="!isTextToSpeechOn"
-                      @click="skipForward"
                     />
                   </div>
 
                   <UButton
-                    class="ml-auto"
                     icon="i-material-symbols-close-rounded"
                     color="neutral"
                     variant="ghost"
