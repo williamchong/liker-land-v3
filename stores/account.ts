@@ -111,6 +111,18 @@ export const useAccountStore = defineStore('account', () => {
     loginMethod: string
   }) {
     try {
+      const userInfoRes = await fetchLikerPublicInfoByWalletAddress(walletAddress, { nocache: true })
+      if (userInfoRes?.user) {
+        // If user info is fetched successfully, it means the wallet address is registered
+        return true
+      }
+    }
+    catch (error) {
+      if (!(error instanceof FetchError && error.statusCode === 404)) {
+        console.warn(`Failed to fetch user info for wallet ${walletAddress} in account refresh`, error)
+      }
+    }
+    try {
       await fetchUserRegisterCheck({ walletAddress, email, magicDIDToken })
       // If the request succeeds, it means there is no account associated with the wallet address and email
       return false
