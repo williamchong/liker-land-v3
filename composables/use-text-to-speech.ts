@@ -5,8 +5,6 @@ interface TTSSegment {
 
 interface TTSOptions {
   nftClassId?: string
-  onPlay?: (element: TTSSegment) => void
-  onEnd?: (element: TTSSegment) => void
   onError?: (error: Event) => void
   onPageChange?: (direction?: number) => void
   checkIfNeededPageChange?: (element: TTSSegment) => boolean
@@ -17,14 +15,12 @@ interface TTSOptions {
 }
 
 export function useTextToSpeech(options: TTSOptions = {}) {
-  const { user } = useUserSession()
   const {
     bookName,
     bookChapterName,
     bookAuthorName,
     bookCoverSrc,
   } = options || {}
-  const subscription = useSubscription()
 
   const nftClassId = options.nftClassId
   const ttsLanguageVoiceOptions = [
@@ -147,19 +143,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       audioBuffers.value[bufferIndex] = audio
 
       audio.onplay = () => {
-        const currentElement = ttsSegments.value[currentTTSSegmentIndex.value]
-        if (currentElement) {
-          options.onPlay?.(currentElement)
-        }
         isTextToSpeechPlaying.value = true
         updateMediaSessionPlaybackState()
       }
 
       audio.onended = () => {
-        const currentElement = ttsSegments.value[currentTTSSegmentIndex.value]
-        if (currentElement) {
-          options.onEnd?.(currentElement)
-        }
         playNextElement()
       }
 
@@ -185,16 +173,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   function playNextElement() {
     currentTTSSegmentIndex.value += 1
 
-    const nextElement = ttsSegments.value[currentTTSSegmentIndex.value]
-    if (!nextElement) {
-      options.onPageChange?.()
-      return
-    }
-
-    if (options.checkIfNeededPageChange && options.checkIfNeededPageChange(nextElement)) {
-      options.onPageChange?.()
-    }
-
     const nextElementForBuffer = ttsSegments.value[currentTTSSegmentIndex.value + 1]
 
     if (nextElementForBuffer) {
@@ -211,11 +189,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   }
 
   async function startTextToSpeech() {
-    if (!user.value?.isLikerPlus) {
-      subscription.openPaywallModal()
-      return
-    }
-
     isShowTextToSpeechOptions.value = true
 
     if (isTextToSpeechOn.value && !isTextToSpeechPlaying.value && !isPendingResetOnStart.value) {
@@ -244,7 +217,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
     try {
       if (ttsSegments.value.length === 0) {
-        options.onPageChange?.()
         return
       }
 
@@ -288,7 +260,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     })
     const activeAudio = audioBuffers.value[currentBufferIndex.value]
     activeAudio?.pause()
-    if (currentTTSSegment.value) options.onEnd?.(currentTTSSegment.value)
     playNextElement()
   }
 
@@ -299,7 +270,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     })
     const activeAudio = audioBuffers.value[currentBufferIndex.value]
     activeAudio?.pause()
-    if (currentTTSSegment.value) options.onEnd?.(currentTTSSegment.value)
+
     if (currentTTSSegmentIndex.value > 0) {
       currentTTSSegmentIndex.value -= 1
       currentBufferIndex.value = currentBufferIndex.value === 0 ? 1 : 0
@@ -310,9 +281,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       if (isTextToSpeechPlaying.value) {
         audioBuffers.value[currentBufferIndex.value]?.play()
       }
-    }
-    else {
-      options.onPageChange?.(-1)
     }
   }
 
@@ -362,6 +330,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     isTextToSpeechOn,
     isTextToSpeechPlaying,
     currentTTSSegmentText,
+    currentTTSSegmentIndex,
     pauseTextToSpeech,
     startTextToSpeech,
     setTTSSegments,
