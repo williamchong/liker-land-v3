@@ -14,20 +14,9 @@
       >
         <template #trailing>
           <div class="relative flex justify-end items-center gap-2">
-            <USlideover
+            <BottomSlideover
               v-model:open="isMobileTocOpen"
               :title="$t('reader_toc_title')"
-              side="bottom"
-              :overlay="false"
-              :close="{
-                color: 'neutral',
-                variant: 'soft',
-                class: 'rounded-full',
-              }"
-              :ui="{
-                content: 'bottom-safe mx-5 mb-5 border border-gray-500 divide-gray-500 rounded-2xl overflow-hidden',
-                body: 'relative p-0 sm:p-0 overflow-hidden',
-              }"
               @update:open="handleMobileTocOpen"
             >
               <UButton
@@ -38,10 +27,7 @@
               />
 
               <template #body>
-                <ul
-                  ref="mobileNavItemListElement"
-                  class="divide-gray-500 divide-y pb-2 max-h-[40vh] overflow-y-auto"
-                >
+                <ul class="divide-gray-500 divide-y">
                   <li
                     v-for="item in navItems"
                     :key="item.href"
@@ -64,21 +50,8 @@
                     />
                   </li>
                 </ul>
-                <div
-                  :class="[
-                    'absolute',
-                    'inset-x-0',
-                    'bottom-0',
-                    'h-12',
-                    'bg-gradient-to-t',
-                    'from-white',
-                    'to-transparent',
-                    { 'opacity-0': isMobileNavItemListScrolledToBottom },
-                    'pointer-events-none',
-                  ]"
-                />
               </template>
-            </USlideover>
+            </BottomSlideover>
             <UButton
               class="max-laptop:hidden"
               icon="i-material-symbols-format-list-bulleted"
@@ -198,23 +171,14 @@
               </USlideover>
             </template>
 
-            <USlideover
-              :title="$t('reader_display_options_button')"
-              :close="{
-                color: 'neutral',
-                variant: 'outline',
-                class: 'rounded-full',
-              }"
-              side="bottom"
-            >
+            <BottomSlideover :title="$t('reader_display_options_button')">
               <UButton
-                class="laptop:hidden"
                 icon="i-material-symbols-text-fields"
                 variant="ghost"
               />
 
               <template #body>
-                <div class="flex gap-2 items-center">
+                <div class="flex gap-2 items-center p-6 pt-4">
                   <UButton
                     icon="i-material-symbols-text-decrease-outline-rounded"
                     variant="ghost"
@@ -232,34 +196,7 @@
                   />
                 </div>
               </template>
-            </USlideover>
-            <UPopover>
-              <UButton
-                class="max-laptop:hidden"
-                icon="i-material-symbols-text-fields"
-                :label="$t('reader_display_options_button')"
-                variant="ghost"
-              />
-
-              <template #content>
-                <div class="flex gap-2 items-center p-2">
-                  <UButton
-                    icon="i-material-symbols-text-decrease-outline-rounded"
-                    variant="ghost"
-                    @click="decreaseFontSize"
-                  />
-                  <USelect
-                    v-model="fontSize"
-                    :items="FONT_SIZE_OPTIONS"
-                  />
-                  <UButton
-                    icon="i-material-symbols-text-increase-rounded"
-                    variant="ghost"
-                    @click="increaseFontSize"
-                  />
-                </div>
-              </template>
-            </UPopover>
+            </BottomSlideover>
           </div>
         </template>
       </ReaderHeader>
@@ -721,9 +658,6 @@ function decreaseFontSize() {
   adjustFontSize(-1)
 }
 
-const mobileNavItemListElement = useTemplateRef<HTMLUListElement>('mobileNavItemListElement')
-const { arrivedState: mobileNavItemListScrollArrivedState } = useScroll(mobileNavItemListElement)
-const { bottom: isMobileNavItemListScrolledToBottom } = toRefs(mobileNavItemListScrollArrivedState)
 const mobileActiveNavItemElements = useTemplateRef<HTMLLIElement[]>('mobileActiveNavItemElements')
 
 async function handleMobileTocOpen(open: boolean) {
