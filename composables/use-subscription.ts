@@ -57,14 +57,33 @@ export function useSubscription() {
     props: getPaywallModalProps(),
   })
 
-  async function openPaywallModal(props: PaywallModalProps = {}) {
+  async function openPaywallModal(props: (PaywallModalProps & {
+    utmCampaign?: string
+    utmMedium?: string
+    utmSource?: string
+  }) = {}) {
     if (paywallModal.isOpen) {
       paywallModal.close()
     }
 
+    const utmOverrides: {
+      utmCampaign?: string
+      utmMedium?: string
+      utmSource?: string
+    } = {}
+    if (props.utmCampaign) {
+      utmOverrides.utmCampaign = props.utmCampaign
+    }
+    if (props.utmMedium) {
+      utmOverrides.utmMedium = props.utmMedium
+    }
+    if (props.utmSource) {
+      utmOverrides.utmSource = props.utmSource
+    }
     return paywallModal.open({
       ...getPaywallModalProps(),
       ...props,
+      onSubscribe: () => startSubscription(utmOverrides),
     }).result
   }
 
@@ -76,7 +95,11 @@ export function useSubscription() {
     return false
   }
 
-  async function startSubscription() {
+  async function startSubscription(utmOverrides: {
+    utmCampaign?: string
+    utmMedium?: string
+    utmSource?: string
+  } = {}) {
     useLogEvent('add_to_cart', eventPayload.value)
     useLogEvent('subscription_button_click', { plan: selectedPlan.value })
 
@@ -102,10 +125,12 @@ export function useSubscription() {
       }
       useLogEvent('begin_checkout', eventPayload.value)
 
+      const analyticsParams = getAnalyticsParameters()
       const { url } = await fetchLikerPlusCheckoutLink({
         period: selectedPlan.value,
         from: getRouteQuery('from'),
-        ...getAnalyticsParameters(),
+        ...analyticsParams,
+        ...utmOverrides,
       })
       await navigateTo(url, { external: true })
     }
