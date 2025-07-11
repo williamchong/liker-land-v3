@@ -417,6 +417,13 @@ onMounted(async () => {
 const rendition = ref<Rendition>()
 const textContentElements = ref<{ cfi: string, el: Element, text: string, id: string }[]>([])
 
+const navItems = ref<NavItem[]>([])
+const activeNavItemLabel = computed(() => {
+  const item = navItems.value.find(item => item.href === activeNavItemHref.value)
+  return item?.label || ''
+})
+const activeNavItemHref = ref<string | undefined>()
+
 const {
   ttsLanguageVoiceOptions,
   ttsLanguageVoice,
@@ -433,6 +440,10 @@ const {
   stopTextToSpeech,
 } = useTextToSpeech({
   nftClassId: nftClassId.value,
+  bookName: bookInfo.name,
+  bookChapterName: activeNavItemLabel,
+  bookAuthorName: bookInfo.authorName,
+  bookCoverSrc: bookCoverSrc,
   onPlay: (element) => {
     try {
       const textElement = textContentElements.value.find(el => el.id === element.id)
@@ -476,13 +487,6 @@ const {
     return false
   },
 })
-
-const navItems = ref<NavItem[]>([])
-const activeNavItemLabel = computed(() => {
-  const item = navItems.value.find(item => item.href === activeNavItemHref.value)
-  return item?.label || ''
-})
-const activeNavItemHref = ref<string | undefined>()
 
 const currentSectionIndex = ref(0)
 const lastSectionIndex = ref(0)
@@ -753,6 +757,6 @@ onBeforeUnmount(() => {
 /* NOTE: In Safari/Brave Browser, .epub-view could be zero width */
 .epub-view,
 .epub-view > iframe {
-  min-width: 100%
+  min-width: 100%;
 }
 </style>
