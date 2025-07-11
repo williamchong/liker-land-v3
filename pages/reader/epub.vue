@@ -254,7 +254,6 @@ import ePub, {
   type Rendition as RenditionBase,
   type NavItem,
   type Location,
-  EpubCFI,
 } from '@likecoin/epubjs'
 
 import type Section from '@likecoin/epubjs/types/section'
@@ -292,7 +291,6 @@ const { handleError } = useErrorHandler()
 const isReaderLoading = ref(false)
 const isDesktopTocOpen = ref(false)
 const isMobileTocOpen = ref(false)
-const isOpenTextToSpeechOptions = ref(false)
 
 const { loadingLabel, loadFileAsBuffer } = useBookFileLoader()
 
@@ -327,8 +325,6 @@ onMounted(async () => {
 })
 
 const rendition = ref<Rendition>()
-const textContentElements = ref<{ cfi: string, el: Element, text: string, id: string }[]>([])
-
 const navItems = ref<NavItem[]>([])
 const activeNavItemLabel = computed(() => {
   const item = navItems.value.find(item => item.href === activeNavItemHref.value)
@@ -336,68 +332,8 @@ const activeNavItemLabel = computed(() => {
 })
 const activeNavItemHref = ref<string | undefined>()
 
-const {
-  ttsLanguageVoiceOptions,
-  ttsLanguageVoice,
-  ttsPlaybackRateOptions,
-  ttsPlaybackRate,
-  isTextToSpeechOn,
-  isTextToSpeechPlaying,
-  pauseTextToSpeech,
-  startTextToSpeech,
-  setTTSSegments,
-  skipForward,
-  skipBackward,
-  restartTextToSpeech,
-  stopTextToSpeech,
-} = useTextToSpeech({
+const { setTTSSegments, openPlayer } = useTTSPlayerModal({
   nftClassId: nftClassId.value,
-  bookName: bookInfo.name,
-  bookChapterName: activeNavItemLabel,
-  bookAuthorName: bookInfo.authorName,
-  bookCoverSrc: bookCoverSrc,
-  onPlay: (element) => {
-    try {
-      const textElement = textContentElements.value.find(el => el.id === element.id)
-      if (textElement) {
-        rendition.value?.display(textElement.cfi)
-        rendition.value?.annotations.remove(textElement.cfi, 'highlight')
-        rendition.value?.annotations.highlight(textElement.cfi, {}, () => {}, '', {
-          fill: '#FFEB3B',
-        })
-      }
-    }
-    catch (error) {
-      console.warn('Failed to highlight text element:', error)
-    }
-  },
-  onEnd: (element) => {
-    try {
-      const textElement = textContentElements.value.find(el => el.id === element.id)
-      if (textElement) {
-        rendition.value?.annotations.remove(textElement.cfi, 'highlight')
-      }
-    }
-    catch (error) {
-      console.warn('Failed to remove highlight from text element:', error)
-    }
-  },
-  onPageChange: (direction) => {
-    if (direction && direction < 0) {
-      prevPage()
-    }
-    else {
-      nextPage()
-    }
-  },
-  checkIfNeededPageChange: (element) => {
-    const textElement = textContentElements.value.find(el => el.id === element.id)
-    if (textElement) {
-      const epubCfi = new EpubCFI(textElement.cfi)
-      return epubCfi.compare(epubCfi, currentPageEndCfi.value) >= 0
-    }
-    return false
-  },
 })
 
 const currentSectionIndex = ref(0)
@@ -520,33 +456,6 @@ async function loadEPub() {
 
   rendition.value.on('rendered', (section: Section, view: EpubView) => {
     currentSectionIndex.value = section.index
-    const elements = Array.from(section.contents?.querySelectorAll('p, h1, h2, h3, h4, h5, h6') || [])
-      .filter(element => !!element.textContent?.trim())
-      .map((el) => {
-        const range = new Range()
-        range.selectNodeContents(el)
-        const cfi = section.cfiFromRange(range)
-        const text = el.textContent?.trim() || ''
-        const segments = splitTextIntoSegments(text)
-        return { cfi, el, text, segments }
-      })
-
-    textContentElements.value = elements.reduce((acc, element) => {
-      return acc.concat(element.segments.map((text, index) => {
-        return ({
-          cfi: element.cfi,
-          el: element.el,
-          text,
-          id: `${element.cfi}-${index}`,
-        })
-      }))
-    }, [] as { cfi: string, el: Element, text: string, id: string }[])
-
-    const textElements = textContentElements.value.map(el => ({
-      id: el.id,
-      text: el.text,
-    }))
-    setTTSSegments(textElements)
     isRightToLeft.value = view.settings.direction === 'rtl'
 
     if (cleanUpClickListener) {
@@ -572,10 +481,6 @@ async function loadEPub() {
         }
       }
     })
-
-    if (isTextToSpeechOn.value) {
-      restartTextToSpeech()
-    }
   })
 
   rendition.value.on('relocated', (location: Location) => {
@@ -587,6 +492,52 @@ async function loadEPub() {
     percentage.value = book.locations.percentageFromCfi(location.start.cfi)
     currentCfi.value = location.start.cfi
   })
+
+  const allSegments = await collectAllSegments(book)
+  setTTSSegments(allSegments)
+}
+
+async function collectAllSegments(book: ePub.Book) {
+  const allSegments: { text: string, id: string, index: number }[] = []
+  const sections: Section[] = []
+  let globalIndex = 0
+
+  book.spine.each((section: Section) => {
+    sections.push(section)
+  })
+
+  for (const section of sections) {
+    try {
+      await section.load(book.load.bind(book))
+
+      const doc = section.document
+      if (!doc) {
+        console.warn(`No document found for section ${section.href}`)
+        continue
+      }
+
+      const elements = Array.from(doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6'))
+        .filter(el => !!el.textContent?.trim())
+
+      elements.forEach((el, elIndex) => {
+        const text = el.textContent?.trim() || ''
+        const segments = splitTextIntoSegments(text)
+
+        segments.forEach((segment, segIndex) => {
+          allSegments.push({
+            text: segment,
+            id: `${section.index}-${elIndex}-${segIndex}`,
+            index: globalIndex++,
+          })
+        })
+      })
+    }
+    catch (err) {
+      console.warn(`Failed to load section ${section.href}`, err)
+    }
+  }
+
+  return allSegments
 }
 
 function setActiveNavItemHref(href: string) {
@@ -656,13 +607,6 @@ onKeyStroke('ArrowLeft', handleLeftArrowButtonClick)
 onKeyStroke('ArrowDown', nextPage)
 onKeyStroke('ArrowUp', prevPage)
 onKeyStroke('Space', () => isShiftPressed.value ? prevPage() : nextPage())
-
-onBeforeUnmount(() => {
-  stopTextToSpeech()
-  if (cleanUpClickListener) {
-    cleanUpClickListener()
-  }
-})
 </script>
 
 <style>
