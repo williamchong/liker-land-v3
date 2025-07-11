@@ -88,114 +88,26 @@
               @click="isDesktopTocOpen = !isDesktopTocOpen"
             />
             <template v-if="!bookInfo.isAudioHidden.value">
-              <UButtonGroup>
-                <template v-if="!isTextToSpeechOn || !isTextToSpeechPlaying">
-                  <UButton
-                    class="laptop:hidden"
-                    icon="i-material-symbols-headphones-rounded"
-                    variant="outline"
-                    color="neutral"
-                    :disabled="isReaderLoading"
-                    @click="startTextToSpeech"
-                  />
-                  <UButton
-                    class="max-laptop:hidden"
-                    icon="i-material-symbols-headphones-rounded"
-                    :label="$t('reader_text_to_speech_button')"
-                    variant="outline"
-                    color="neutral"
-                    :disabled="isReaderLoading"
-                    :ui="{ base: '!rounded-l-md' }"
-                    @click="startTextToSpeech"
-                  />
-                </template>
-                <template v-else>
-                  <UButton
-                    class="laptop:hidden"
-                    icon="i-material-symbols-pause-rounded"
-                    variant="outline"
-                    color="neutral"
-                    @click="pauseTextToSpeech"
-                  />
-                  <UButton
-                    class="max-laptop:hidden"
-                    icon="i-material-symbols-pause-rounded"
-                    :label="$t('reader_text_to_speech_button')"
-                    variant="outline"
-                    color="neutral"
-                    :ui="{ base: '!rounded-l-md' }"
-                    @click="pauseTextToSpeech"
-                  />
-                </template>
-                <UButton
-                  icon="i-material-symbols-discover-tune-rounded"
-                  variant="outline"
-                  color="neutral"
-                  @click="isOpenTextToSpeechOptions = !isOpenTextToSpeechOptions"
-                />
-              </UButtonGroup>
-
-              <USlideover
-                v-model:open="isOpenTextToSpeechOptions"
-                :ui="{ content: 'w-full flex flex-row items-center gap-2 px-4 py-2 min-h-[56px] divide-y-0' }"
-                side="top"
-                :close="false"
-                :overlay="false"
-              >
-                <template #content>
-                  <div class="flex items-center justify-center gap-2 flex-1">
-                    <UButtonGroup>
-                      <UButton
-                        icon="i-material-symbols-skip-previous-rounded"
-                        variant="outline"
-                        color="neutral"
-                        :disabled="!isTextToSpeechOn"
-                        @click="skipBackward"
-                      />
-                      <UButton
-                        v-if="!isTextToSpeechOn || !isTextToSpeechPlaying"
-                        icon="i-material-symbols-headphones-rounded"
-                        variant="outline"
-                        color="neutral"
-                        :disabled="isReaderLoading"
-                        @click="startTextToSpeech"
-                      />
-                      <UButton
-                        v-else
-                        icon="i-material-symbols-pause-rounded"
-                        variant="outline"
-                        color="neutral"
-                        @click="pauseTextToSpeech"
-                      />
-                      <UButton
-                        icon="i-material-symbols-skip-next-rounded"
-                        variant="outline"
-                        color="neutral"
-                        :disabled="!isTextToSpeechOn"
-                        @click="skipForward"
-                      />
-                    </UButtonGroup>
-                    <USelect
-                      v-model="ttsLanguageVoice"
-                      color="neutral"
-                      :items="ttsLanguageVoiceOptions"
-                    />
-                    <USelect
-                      v-model="ttsPlaybackRate"
-                      icon="i-material-symbols-speed-rounded"
-                      color="neutral"
-                      :items="ttsPlaybackRateOptions"
-                    />
-                  </div>
-
-                  <UButton
-                    icon="i-material-symbols-close-rounded"
-                    color="neutral"
-                    variant="ghost"
-                    @click="isOpenTextToSpeechOptions = false"
-                  />
-                </template>
-              </USlideover>
+              <UButton
+                class="laptop:hidden"
+                icon="i-material-symbols-play-arrow-rounded"
+                variant="ghost"
+                color="neutral"
+                :disabled="isReaderLoading"
+                @click="openPlayer"
+              />
+              <UButton
+                :ui="{
+                  base: '!rounded-l-md',
+                }"
+                class="max-laptop:hidden"
+                icon="i-material-symbols-play-arrow-rounded"
+                :label="$t('reader_text_to_speech_button')"
+                variant="ghost"
+                color="neutral"
+                :disabled="isReaderLoading"
+                @click="openPlayer"
+              />
             </template>
 
             <USlideover
