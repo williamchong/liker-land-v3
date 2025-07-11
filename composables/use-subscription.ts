@@ -105,6 +105,8 @@ export function useSubscription() {
       const { url } = await fetchLikerPlusCheckoutLink({
         period: selectedPlan.value,
         from: getRouteQuery('from'),
+        hasFreeTrial: true,
+        mustCollectPaymentMethod: false,
         ...getAnalyticsParameters(),
       })
       await navigateTo(url, { external: true })
