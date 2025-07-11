@@ -417,6 +417,13 @@ onMounted(async () => {
 const rendition = ref<Rendition>()
 const textContentElements = ref<{ cfi: string, el: Element, text: string, id: string }[]>([])
 
+const navItems = ref<NavItem[]>([])
+const activeNavItemLabel = computed(() => {
+  const item = navItems.value.find(item => item.href === activeNavItemHref.value)
+  return item?.label || ''
+})
+const activeNavItemHref = ref<string | undefined>()
+
 const {
   ttsLanguageVoiceOptions,
   ttsLanguageVoice,
@@ -434,7 +441,7 @@ const {
 } = useTextToSpeech({
   nftClassId: nftClassId.value,
   bookName: bookInfo.name,
-  bookChapterName: computed(() => activeNavItemLabel.value),
+  bookChapterName: activeNavItemLabel,
   bookAuthorName: bookInfo.authorName,
   bookCoverSrc: bookCoverSrc,
   onPlay: (element) => {
@@ -480,13 +487,6 @@ const {
     return false
   },
 })
-
-const navItems = ref<NavItem[]>([])
-const activeNavItemLabel = computed(() => {
-  const item = navItems.value.find(item => item.href === activeNavItemHref.value)
-  return item?.label || ''
-})
-const activeNavItemHref = ref<string | undefined>()
 
 const currentSectionIndex = ref(0)
 const lastSectionIndex = ref(0)
