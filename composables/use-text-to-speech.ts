@@ -1,8 +1,3 @@
-interface TTSSegment {
-  id: string
-  text: string
-}
-
 interface TTSOptions {
   nftClassId?: string
   onError?: (error: Event) => void

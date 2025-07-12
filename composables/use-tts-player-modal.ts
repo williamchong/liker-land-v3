@@ -1,12 +1,6 @@
 import { TTSPlayerModal } from '#components'
 import type { TTSPlayerModalProps } from '~/components/TTSPlayerModal.props'
 
-interface TTSSegment {
-  id: string
-  text: string
-  index: number
-}
-
 interface TTSPlayerOptions {
   nftClassId?: string
 }

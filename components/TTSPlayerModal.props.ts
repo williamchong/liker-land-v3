@@ -1,9 +1,3 @@
-interface TTSSegment {
-  id: string
-  text: string
-  index: number
-}
-
 export interface TTSPlayerModalProps {
   bookTitle?: string
   sectionTitle?: string
