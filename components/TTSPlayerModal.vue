@@ -1,7 +1,6 @@
 <template>
   <UModal
     :fullscreen="true"
-    :model="isModalityOn"
     :ui="{ content: 'bg-white divide-none' }"
     @close="handleModalClose"
   >
@@ -130,7 +129,6 @@ const emit = defineEmits<{
 const props = withDefaults(
   defineProps<TTSPlayerModalProps>(),
   {
-    isModalityOn: false,
     bookTitle: '',
     bookCoverSrc: '',
     bookAuthorName: '',
@@ -188,17 +186,19 @@ onMounted(() => {
   setTTSSegments(props.segments)
 })
 
-const setSegmentRef = (
+function setSegmentRef(
   el: Element | ComponentPublicInstance | null,
   index: number,
-) => {
-  const htmlEl = el as ComponentPublicInstance
-  if (htmlEl instanceof HTMLElement) {
-    segmentElements.value[index] = htmlEl
+) {
+  {
+    const htmlEl = el as ComponentPublicInstance
+    if (htmlEl instanceof HTMLElement) {
+      segmentElements.value[index] = htmlEl
+    }
   }
 }
 
-const getSegmentClass = (index: number) => {
+function getSegmentClass(index: number) {
   const baseClasses = 'inline-block text-sm laptop:text-lg transition-opacity duration-300'
   const activeClasses = 'text-gray-700 opacity-100 font-bold'
   const inactiveClasses = 'opacity-40 text-gray-500'
@@ -206,7 +206,7 @@ const getSegmentClass = (index: number) => {
   return `${baseClasses} ${index === currentTTSSegmentIndex.value ? activeClasses : inactiveClasses}`
 }
 
-const handleModalClose = () => {
+function handleModalClose() {
   stopTextToSpeech()
   emit('close')
 }

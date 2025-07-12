@@ -5,7 +5,6 @@ interface TTSSegment {
 }
 
 export interface TTSPlayerModalProps {
-  isModalityOn?: boolean
   bookTitle?: string
   sectionTitle?: string
   segments?: TTSSegment[] | []
