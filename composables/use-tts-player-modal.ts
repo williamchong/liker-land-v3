@@ -25,7 +25,7 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
     bookCoverSrc: bookCoverSrc.value,
     bookAuthorName: bookInfo.authorName.value,
     nftClassId: options.nftClassId,
-    segment: ttsSegments.value,
+    segments: ttsSegments.value,
   }))
 
   const overlay = useOverlay()

@@ -8,26 +8,26 @@
       <div class="flex flex-col h-full w-full max-w-[670px] mx-auto py-6 px-8 laptop:px-4">
         <!-- Header -->
         <div class="flex items-center justify-between">
-          <div class="flex-1 overflow-hidden">
-            <p class="text-center text-sm font-semibold text-gray-500 truncate">
-              {{ bookTitle }}
-            </p>
+          <div class="grow overflow-hidden">
+            <h1
+              class="text-center text-sm font-semibold text-gray-500 truncate"
+              v-text="bookTitle"
+            />
           </div>
 
           <UButton
-            class="flex-shrink-0"
-            icon="i-heroicons-x-mark"
+            class="shrink-0"
+            icon="i-material-symbols-close-rounded"
             size="md"
             variant="ghost"
             @click="handleModalClose"
           />
         </div>
-        <p
+        <h2
           v-if="sectionTitle"
           class="text-lg font-semibold text-gray-700 truncate text-center laptop:my-4"
-        >
-          {{ sectionTitle }}
-        </p>
+          v-text="sectionTitle"
+        />
 
         <!-- Book Cover -->
         <div class="flex justify-center mt-4 laptop:mt-8 laptop:mb-10 z-20">
@@ -42,10 +42,9 @@
 
         <!-- Content -->
         <div class="relative flex-1 min-h-0">
-          <div class="pointer-events-none absolute top-0 left-0 w-full h-12 bg-gradient-to-b from-white to-transparent z-10" />
           <div
             ref="scrollContainer"
-            class="overflow-y-auto hide-scrollbar h-full relative z-0"
+            class="overflow-y-auto hide-scrollbar h-full relative"
             style="scroll-behavior: smooth;"
           >
             <ul class="flex flex-col gap-4 items-start py-6">
@@ -60,11 +59,12 @@
               </li>
             </ul>
           </div>
-          <div class="pointer-events-none absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-white to-transparent z-10" />
+          <div class="pointer-events-none absolute top-0 left-0 w-full h-12 bg-gradient-to-b from-white to-transparent" />
+          <div class="pointer-events-none absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-white to-transparent" />
         </div>
 
         <!-- Controls -->
-        <div class="px-4 py-2">
+        <div class="px-4 py-2 pb-safe">
           <div class="flex items-center justify-center gap-6">
             <UButton
               :ui="{ leadingIcon: 'size-10' }"
