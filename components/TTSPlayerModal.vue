@@ -54,7 +54,7 @@
                 v-for="item in visibleSegments"
                 :key="item.id"
                 :ref="(el) => setSegmentRef(el, item.index)"
-                v-memo="[currentIndex === item.index]"
+                v-memo="[currentTTSSegmentIndex === item.index]"
                 :class="getSegmentClass(item.index)"
               >
                 {{ item.text }}
@@ -136,13 +136,13 @@ const props = withDefaults(
     bookAuthorName: '',
     sectionTitle: '',
     nftClassId: '',
-    segment: () => [],
+    segments: () => [],
   },
 )
 
 const BUFFER_SIZE = 10
 
-const segmentRefs = ref<HTMLElement[]>([])
+const segmentElements = ref<HTMLElement[]>([])
 const scrollContainer = ref<HTMLElement>()
 
 const {
@@ -158,7 +158,7 @@ const {
   skipForward,
   skipBackward,
   stopTextToSpeech,
-  currentTTSSegmentIndex: currentIndex,
+  currentTTSSegmentIndex,
 } = useTextToSpeech({
   nftClassId: props.nftClassId,
   bookName: props.bookTitle,
@@ -170,14 +170,14 @@ const {
 })
 
 const visibleSegments = computed(() => {
-  const start = Math.max(currentIndex.value - BUFFER_SIZE, 0)
-  const end = Math.min(currentIndex.value + BUFFER_SIZE, props.segment.length)
-  return props.segment.slice(start, end)
+  const start = Math.max(currentTTSSegmentIndex.value - BUFFER_SIZE, 0)
+  const end = Math.min(currentTTSSegmentIndex.value + BUFFER_SIZE, props.segments.length)
+  return props.segments.slice(start, end)
 })
 
-watch(currentIndex, async (newIndex: number) => {
+watch(currentTTSSegmentIndex, async (newIndex: number) => {
   await nextTick()
-  const el = segmentRefs.value[newIndex]
+  const el = segmentElements.value[newIndex]
   el?.scrollIntoView({
     behavior: 'smooth',
     block: 'center',
@@ -185,7 +185,7 @@ watch(currentIndex, async (newIndex: number) => {
 })
 
 onMounted(() => {
-  setTTSSegments(props.segment)
+  setTTSSegments(props.segments)
 })
 
 const setSegmentRef = (
@@ -194,7 +194,7 @@ const setSegmentRef = (
 ) => {
   const htmlEl = el as ComponentPublicInstance
   if (htmlEl instanceof HTMLElement) {
-    segmentRefs.value[index] = htmlEl
+    segmentElements.value[index] = htmlEl
   }
 }
 
@@ -203,7 +203,7 @@ const getSegmentClass = (index: number) => {
   const activeClasses = 'text-gray-700 opacity-100 font-bold'
   const inactiveClasses = 'opacity-40 text-gray-500'
 
-  return `${baseClasses} ${index === currentIndex.value ? activeClasses : inactiveClasses}`
+  return `${baseClasses} ${index === currentTTSSegmentIndex.value ? activeClasses : inactiveClasses}`
 }
 
 const handleModalClose = () => {

@@ -493,12 +493,12 @@ async function loadEPub() {
     currentCfi.value = location.start.cfi
   })
 
-  const allSegments = await collectAllSegments(book)
-  setTTSSegments(allSegments)
+  const ttsSegments = await extractTTSSegments(book)
+  setTTSSegments(ttsSegments)
 }
 
-async function collectAllSegments(book: ePub.Book) {
-  const allSegments: { text: string, id: string, index: number }[] = []
+async function extractTTSSegments(book: ePub.Book) {
+  const ttsSegments: { text: string, id: string, index: number }[] = []
   const sections: Section[] = []
   let globalIndex = 0
 
@@ -524,7 +524,7 @@ async function collectAllSegments(book: ePub.Book) {
         const segments = splitTextIntoSegments(text)
 
         segments.forEach((segment, segIndex) => {
-          allSegments.push({
+          ttsSegments.push({
             text: segment,
             id: `${section.index}-${elIndex}-${segIndex}`,
             index: globalIndex++,
@@ -537,7 +537,7 @@ async function collectAllSegments(book: ePub.Book) {
     }
   }
 
-  return allSegments
+  return ttsSegments
 }
 
 function setActiveNavItemHref(href: string) {

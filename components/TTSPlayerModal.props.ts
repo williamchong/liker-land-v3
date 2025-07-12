@@ -8,8 +8,7 @@ export interface TTSPlayerModalProps {
   isModalityOn?: boolean
   bookTitle?: string
   sectionTitle?: string
-  coverImage?: string
-  segment?: TTSSegment[] | []
+  segments?: TTSSegment[] | []
   bookCoverSrc?: string
   bookAuthorName?: string | undefined
   nftClassId?: string
