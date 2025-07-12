@@ -498,7 +498,7 @@ async function loadEPub() {
 }
 
 async function extractTTSSegments(book: ePub.Book) {
-  const ttsSegments: { text: string, id: string, index: number }[] = []
+  const ttsSegments: TTSSegment[] = []
   const sections: Section[] = []
   let globalIndex = 0
 
@@ -521,15 +521,13 @@ async function extractTTSSegments(book: ePub.Book) {
 
       elements.forEach((el, elIndex) => {
         const text = el.textContent?.trim() || ''
-        const segments = splitTextIntoSegments(text)
-
-        segments.forEach((segment, segIndex) => {
-          ttsSegments.push({
+        ttsSegments.push(
+          ...splitTextIntoSegments(text).map((segment, segIndex) => ({
             text: segment,
             id: `${section.index}-${elIndex}-${segIndex}`,
             index: globalIndex++,
-          })
-        })
+          })),
+        )
       })
     }
     catch (err) {
