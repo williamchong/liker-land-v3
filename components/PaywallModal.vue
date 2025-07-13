@@ -238,7 +238,12 @@ const isModalityOn = false
 const emit = defineEmits<{
   'open': []
   'close': []
-  'subscribe': [plan: SubscriptionPlan]
+  'subscribe': [payload: {
+    selectedPlan: SubscriptionPlan
+    utmCampaign?: string
+    utmMedium?: string
+    utmSource?: string
+  }]
   'update:modelValue': [value: SubscriptionPlan]
 }>()
 const { t: $t } = useI18n()
@@ -327,6 +332,11 @@ const handleCloseButtonClick = () => {
 }
 
 function handleSubscribeButtonClick() {
-  emit('subscribe', selectedPlan.value)
+  emit('subscribe', {
+    selectedPlan: selectedPlan.value,
+    utmCampaign: props.utmCampaign,
+    utmMedium: props.utmMedium,
+    utmSource: props.utmSource,
+  })
 }
 </script>

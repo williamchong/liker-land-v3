@@ -212,7 +212,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
   async function startTextToSpeech() {
     if (!user.value?.isLikerPlus) {
-      subscription.openPaywallModal()
+      subscription.openPaywallModal({
+        utmSource: 'epub_reader',
+        utmCampaign: nftClassId,
+        utmMedium: 'tts',
+      })
       return
     }
 

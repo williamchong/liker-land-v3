@@ -76,7 +76,15 @@ export function useSubscription() {
     return false
   }
 
-  async function startSubscription() {
+  async function startSubscription({
+    utmCampaign,
+    utmMedium,
+    utmSource,
+  }: {
+    utmCampaign?: string
+    utmMedium?: string
+    utmSource?: string
+  } = {}) {
     useLogEvent('add_to_cart', eventPayload.value)
     useLogEvent('subscription_button_click', { plan: selectedPlan.value })
 
@@ -102,10 +110,14 @@ export function useSubscription() {
       }
       useLogEvent('begin_checkout', eventPayload.value)
 
+      const analyticsParams = getAnalyticsParameters()
       const { url } = await fetchLikerPlusCheckoutLink({
         period: selectedPlan.value,
         from: getRouteQuery('from'),
-        ...getAnalyticsParameters(),
+        ...analyticsParams,
+        utmCampaign: utmCampaign || analyticsParams.utmCampaign,
+        utmMedium: utmMedium || analyticsParams.utmMedium,
+        utmSource: utmSource || analyticsParams.utmSource,
       })
       await navigateTo(url, { external: true })
     }
