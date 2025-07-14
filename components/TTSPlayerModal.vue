@@ -102,7 +102,7 @@
 
           <!-- Player Options -->
           <div class="mt-4 flex justify-center items-center gap-4">
-            <BottomSlideover :title="$t('reader_vioce_options_button')">
+            <BottomSlideover :title="$t('reader_voice_options_button')">
               <UButton
                 icon="i-material-symbols-account-circle-outline"
                 :label="getTTSLanguageVoiceLabel"
