@@ -271,8 +271,8 @@ watch(currentTTSSegmentIndex, async (newIndex: number) => {
 })
 
 onMounted(() => {
-  startTextToSpeech(props.startIndex || 0)
   setTTSSegments(props.segments)
+  startTextToSpeech(props.startIndex || 0)
 })
 
 function setSegmentRef(
