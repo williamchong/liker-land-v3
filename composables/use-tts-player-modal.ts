@@ -33,7 +33,11 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
 
   function openPlayer() {
     if (!user.value?.isLikerPlus) {
-      subscription.openPaywallModal()
+      subscription.openPaywallModal({
+        utmSource: 'epub_reader',
+        utmCampaign: options.nftClassId,
+        utmMedium: 'tts',
+      })
       return
     }
     modal.open(ttsPlayerModalProps.value)
