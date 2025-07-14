@@ -102,15 +102,53 @@
 
           <!-- Player Options -->
           <div class="mt-4 flex justify-center items-center gap-4">
-            <USelect
-              v-model="ttsLanguageVoice"
-              :items="ttsLanguageVoiceOptions"
-            />
-            <USelect
-              v-model="ttsPlaybackRate"
-              icon="i-material-symbols-speed-rounded"
-              :items="ttsPlaybackRateOptions"
-            />
+            <BottomSlideover :title="$t('reader_vioce_options_button')">
+              <UButton
+                icon="i-material-symbols-account-circle-outline"
+                :label="getTTSLanguageVoiceLabel"
+                class="rounded-full"
+                size="lg"
+                variant="soft"
+              />
+
+              <template #body>
+                <div class="flex gap-2 items-center w-full">
+                  <URadioGroup
+                    v-model="ttsLanguageVoice"
+                    class="w-full"
+                    color="primary"
+                    variant="table"
+                    :default-value="ttsLanguageVoice"
+                    :items="ttsLanguageVoiceOptions"
+                    indicator="end"
+                  />
+                </div>
+              </template>
+            </BottomSlideover>
+
+            <BottomSlideover :title="$t('reader_rate_options_button')">
+              <UButton
+                icon="i-material-symbols-fast-forward-outline"
+                :label="getTTSPlaybackRateLabel"
+                class="rounded-full"
+                size="lg"
+                variant="soft"
+              />
+
+              <template #body>
+                <div class="flex gap-2 items-center w-full">
+                  <URadioGroup
+                    v-model="ttsPlaybackRate"
+                    class="w-full"
+                    color="primary"
+                    variant="table"
+                    :default-value="ttsPlaybackRate"
+                    :items="ttsPlaybackRateOptions"
+                    indicator="end"
+                  />
+                </div>
+              </template>
+            </BottomSlideover>
           </div>
         </div>
       </div>
@@ -179,6 +217,16 @@ const visibleTTSSegmentsStartIndex = computed(() =>
 const visibleTTSSegmentElementIndex = computed(() =>
   currentTTSSegmentIndex.value - visibleTTSSegmentsStartIndex.value,
 )
+
+const getTTSLanguageVoiceLabel = computed(() => {
+  const voice = ttsLanguageVoice.value
+  return ttsLanguageVoiceOptions.find(option => option.value === voice)?.label || voice
+})
+
+const getTTSPlaybackRateLabel = computed(() => {
+  const rate = ttsPlaybackRate.value
+  return ttsPlaybackRateOptions.find(option => option.value === rate)?.label || ''
+})
 
 watch(currentTTSSegmentIndex, async () => {
   await nextTick()
