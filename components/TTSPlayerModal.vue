@@ -51,7 +51,8 @@
               <li
                 v-for="item in visibleSegments"
                 :key="item.id"
-                ref="visibleSegmentElements"
+                :ref="(el) => setSegmentRef(el, item.index)"
+
                 v-memo="[currentTTSSegmentIndex === item.index]"
                 :class="getSegmentClass(item.index)"
               >
@@ -214,14 +215,6 @@ const visibleSegments = computed(() => {
   }))
 })
 
-const visibleTTSSegmentsStartIndex = computed(() =>
-  Math.max(currentTTSSegmentIndex.value - BUFFER_SIZE, 0),
-)
-
-const visibleTTSSegmentElementIndex = computed(() =>
-  currentTTSSegmentIndex.value - visibleTTSSegmentsStartIndex.value,
-)
-
 const getTTSLanguageVoiceLabel = computed(() => {
   const voice = ttsLanguageVoice.value
   return ttsLanguageVoiceOptions.find(option => option.value === voice)?.label || voice
@@ -236,10 +229,10 @@ const getTTSPlaybackRateLabel = computed(() => {
   return ttsPlaybackRateOptions.find(option => option.value === rate)?.label || ''
 })
 
-watch(currentTTSSegmentIndex, async () => {
+watch(currentTTSSegmentIndex, async (newIndex: number) => {
   await nextTick()
-  const targetElement = visibleSegmentElements.value[visibleTTSSegmentElementIndex.value]
-  targetElement?.scrollIntoView({
+  const el = visibleSegmentElements.value[newIndex]
+  el?.scrollIntoView({
     behavior: 'smooth',
     block: 'center',
   })
@@ -249,6 +242,18 @@ onMounted(() => {
   startTextToSpeech(props.startIndex || 0)
   setTTSSegments(props.segments)
 })
+
+function setSegmentRef(
+  el: Element | ComponentPublicInstance | null,
+  index: number,
+) {
+  {
+    const htmlEl = el as ComponentPublicInstance
+    if (htmlEl instanceof HTMLElement) {
+      visibleSegmentElements.value[index] = htmlEl
+    }
+  }
+}
 
 function getSegmentClass(index: number) {
   const baseClasses = 'inline-block text-sm laptop:text-lg transition-opacity duration-300'
