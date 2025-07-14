@@ -207,7 +207,10 @@ const {
 const visibleSegments = computed(() => {
   const start = Math.max(currentTTSSegmentIndex.value - BUFFER_SIZE, 0)
   const end = Math.min(currentTTSSegmentIndex.value + BUFFER_SIZE, props.segments.length)
-  return props.segments.slice(start, end)
+  return props.segments.slice(start, end).map((segment, index) => ({
+    ...segment,
+    index: start + index,
+  }))
 })
 
 const visibleTTSSegmentsStartIndex = computed(() =>
@@ -221,6 +224,10 @@ const visibleTTSSegmentElementIndex = computed(() =>
 const getTTSLanguageVoiceLabel = computed(() => {
   const voice = ttsLanguageVoice.value
   return ttsLanguageVoiceOptions.find(option => option.value === voice)?.label || voice
+})
+
+const sectionTitle = computed(() => {
+  return props.segments[currentTTSSegmentIndex.value]?.chapterTitle || ''
 })
 
 const getTTSPlaybackRateLabel = computed(() => {

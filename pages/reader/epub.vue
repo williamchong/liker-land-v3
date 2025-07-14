@@ -435,43 +435,49 @@ async function loadEPub() {
 }
 
 async function extractTTSSegments(book: ePub.Book) {
-  const ttsSegments: TTSSegment[] = []
-  const sections: Section[] = []
-  let globalIndex = 0
+  const sectionPromises: Promise<TTSSegment[]>[] = []
 
   book.spine.each((section: Section) => {
-    sections.push(section)
+    const sectionPromise = (async () => {
+      try {
+        const chapter = await book.load(section.href)
+
+        if (!(chapter instanceof Document)) {
+          console.warn(`No document found for section ${section.href}`)
+          return []
+        }
+
+        const chapterTitle = chapter.querySelector('title')?.textContent?.trim() || ''
+
+        const elements = Array.from(
+          chapter.querySelectorAll('p, h1, h2, h3, h4, h5, h6'),
+        ).filter(el => !!el.textContent?.trim())
+
+        const segments: TTSSegment[] = []
+        elements.forEach((el, elIndex) => {
+          const text = el.textContent?.trim() || ''
+          segments.push(
+            ...splitTextIntoSegments(text).map((segment, segIndex) => ({
+              text: segment,
+              id: `${section.index}-${elIndex}-${segIndex}`,
+              href: section.href,
+              chapterTitle,
+            })),
+          )
+        })
+
+        return segments
+      }
+      catch (err) {
+        console.warn(`Failed to load section ${section.href}`, err)
+        return []
+      }
+    })()
+
+    sectionPromises.push(sectionPromise)
   })
 
-  for (const section of sections) {
-    try {
-      await section.load(book.load.bind(book))
-
-      const doc = section.document
-      if (!doc) {
-        console.warn(`No document found for section ${section.href}`)
-        continue
-      }
-
-      const elements = Array.from(doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6'))
-        .filter(el => !!el.textContent?.trim())
-
-      elements.forEach((el, elIndex) => {
-        const text = el.textContent?.trim() || ''
-        ttsSegments.push(
-          ...splitTextIntoSegments(text).map((segment, segIndex) => ({
-            text: segment,
-            id: `${section.index}-${elIndex}-${segIndex}`,
-            index: globalIndex++,
-          })),
-        )
-      })
-    }
-    catch (err) {
-      console.warn(`Failed to load section ${section.href}`, err)
-    }
-  }
-
+  const ttsSegments = (await Promise.all(sectionPromises)).flat()
   return ttsSegments
 }
 
