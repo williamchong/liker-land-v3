@@ -51,7 +51,7 @@
               <li
                 v-for="item in visibleSegments"
                 :key="item.id"
-                :ref="(el) => setSegmentRef(el, item.index)"
+                ref="visibleSegmentElements"
                 v-memo="[currentTTSSegmentIndex === item.index]"
                 :class="getSegmentClass(item.index)"
               >
@@ -139,8 +139,7 @@ const props = withDefaults(
 )
 
 const BUFFER_SIZE = 10
-
-const segmentElements = ref<HTMLElement[]>([])
+const visibleSegmentElements = ref<HTMLElement[]>([])
 const scrollContainer = ref<HTMLElement>()
 
 const {
@@ -173,10 +172,18 @@ const visibleSegments = computed(() => {
   return props.segments.slice(start, end)
 })
 
-watch(currentTTSSegmentIndex, async (newIndex: number) => {
+const visibleTTSSegmentsStartIndex = computed(() =>
+  Math.max(currentTTSSegmentIndex.value - BUFFER_SIZE, 0),
+)
+
+const visibleTTSSegmentElementIndex = computed(() =>
+  currentTTSSegmentIndex.value - visibleTTSSegmentsStartIndex.value,
+)
+
+watch(currentTTSSegmentIndex, async () => {
   await nextTick()
-  const el = segmentElements.value[newIndex]
-  el?.scrollIntoView({
+  const targetElement = visibleSegmentElements.value[visibleTTSSegmentElementIndex.value]
+  targetElement?.scrollIntoView({
     behavior: 'smooth',
     block: 'center',
   })
@@ -185,18 +192,6 @@ watch(currentTTSSegmentIndex, async (newIndex: number) => {
 onMounted(() => {
   setTTSSegments(props.segments)
 })
-
-function setSegmentRef(
-  el: Element | ComponentPublicInstance | null,
-  index: number,
-) {
-  {
-    const htmlEl = el as ComponentPublicInstance
-    if (htmlEl instanceof HTMLElement) {
-      segmentElements.value[index] = htmlEl
-    }
-  }
-}
 
 function getSegmentClass(index: number) {
   const baseClasses = 'inline-block text-sm laptop:text-lg transition-opacity duration-300'
