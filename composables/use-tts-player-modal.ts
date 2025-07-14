@@ -9,6 +9,7 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
   const { user } = useUserSession()
   const subscription = useSubscription()
   const ttsSegments = ref<TTSSegment[]>([])
+  const startIndex = ref(0)
   const bookInfo = useBookInfo({ nftClassId: options.nftClassId })
   const bookCoverSrc = computed(() =>
     getResizedImageURL(bookInfo.coverSrc.value, { size: 300 }),
@@ -20,6 +21,7 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
     bookAuthorName: bookInfo.authorName.value,
     nftClassId: options.nftClassId,
     segments: ttsSegments.value,
+    startIndex: startIndex.value,
   }))
 
   const overlay = useOverlay()

@@ -183,8 +183,12 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     }, 200)
   }
 
-  async function startTextToSpeech() {
+  async function startTextToSpeech(index: number | null = null) {
     isShowTextToSpeechOptions.value = true
+    if (index !== null) {
+      currentTTSSegmentIndex.value = index
+      currentBufferIndex.value = 0
+    }
 
     if (isTextToSpeechOn.value && !isTextToSpeechPlaying.value && !isPendingResetOnStart.value) {
       isTextToSpeechPlaying.value = true
@@ -200,8 +204,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     }
 
     resetAudio()
-    currentTTSSegmentIndex.value = 0
-    currentBufferIndex.value = 0
     isTextToSpeechOn.value = true
     isTextToSpeechPlaying.value = true
     setupMediaSession()

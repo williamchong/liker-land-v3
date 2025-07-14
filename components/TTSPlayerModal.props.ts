@@ -5,6 +5,7 @@ export interface TTSPlayerModalProps {
   bookCoverSrc?: string
   bookAuthorName?: string | undefined
   nftClassId?: string
+  startIndex?: number
   onOpen?: () => void
   onClose?: () => void
 }

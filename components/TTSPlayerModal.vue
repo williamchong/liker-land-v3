@@ -88,7 +88,7 @@
               icon="i-material-symbols-play-arrow-rounded"
               variant="ghost"
               color="neutral"
-              @click="startTextToSpeech"
+              @click="startTextToSpeech(currentTTSSegmentIndex)"
             />
             <UButton
               :ui="{ leadingIcon: 'size-10' }"
@@ -173,6 +173,7 @@ const props = withDefaults(
     sectionTitle: '',
     nftClassId: '',
     segments: () => [],
+    startIndex: 0,
   },
 )
 
@@ -245,6 +246,7 @@ watch(currentTTSSegmentIndex, async () => {
 })
 
 onMounted(() => {
+  startTextToSpeech(props.startIndex || 0)
   setTTSSegments(props.segments)
 })
 
