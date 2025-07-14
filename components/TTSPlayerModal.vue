@@ -60,8 +60,22 @@
               </li>
             </ul>
           </div>
-          <div class="pointer-events-none absolute top-0 left-0 w-full h-12 bg-gradient-to-b from-white to-transparent" />
-          <div class="pointer-events-none absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-white to-transparent" />
+          <div
+            :class="[
+              ...scrollIndicatorClasses,
+              'top-0',
+              'bg-gradient-to-b',
+              { 'opacity-0': currentTTSSegmentIndex === 0 },
+            ]"
+          />
+          <div
+            :class="[
+              ...scrollIndicatorClasses,
+              'bottom-0',
+              'bg-gradient-to-t',
+              { 'opacity-0': currentTTSSegmentIndex === segments.length - 1 },
+            ]"
+          />
         </div>
 
         <!-- Controls -->
@@ -116,6 +130,9 @@
                 <div class="flex gap-2 items-center w-full">
                   <URadioGroup
                     v-model="ttsLanguageVoice"
+                    :ui="{
+                      item: '!rounded-none',
+                    }"
                     class="w-full"
                     color="primary"
                     variant="table"
@@ -140,6 +157,9 @@
                 <div class="flex gap-2 items-center w-full">
                   <URadioGroup
                     v-model="ttsPlaybackRate"
+                    :ui="{
+                      item: '!rounded-none',
+                    }"
                     class="w-full"
                     color="primary"
                     variant="table"
@@ -177,6 +197,18 @@ const props = withDefaults(
     startIndex: 0,
   },
 )
+
+const scrollIndicatorClasses = [
+  'absolute',
+
+  'inset-x-0',
+
+  'h-12',
+
+  'from-white',
+  'to-transparent',
+  'pointer-events-none',
+]
 
 const BUFFER_SIZE = 10
 const visibleSegmentElements = ref<HTMLElement[]>([])
