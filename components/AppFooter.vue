@@ -27,7 +27,7 @@
         target="_blank"
       >{{ $t('footer_license') }}</ULink>
       <nav>
-        <ul class="flex items-center flex-wrap gap-4 gap-y-1">
+        <ul class="flex justify-center items-center flex-wrap gap-4 gap-y-1">
           <li>
             <ULink
               class="block border-y border-t-transparent leading-5"
@@ -49,6 +49,14 @@
               target="_blank"
               rel="noopener noreferrer"
             >{{ $t("footer_terms") }}</ULink>
+          </li>
+          <li>
+            <ULink
+              class="block border-y border-t-transparent leading-5"
+              href="https://link.3ook.com/shipping-return-refund"
+              target="_blank"
+              rel="noopener noreferrer"
+            >{{ $t("footer_shipping_return") }}</ULink>
           </li>
           <li>
             <ULink
