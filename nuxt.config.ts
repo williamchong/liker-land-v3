@@ -162,7 +162,9 @@ export default defineNuxtConfig({
           'data:',
           'blob:',
           'https://www.facebook.com',
+          'https://www.google.com',
           'https://js.intercomcdn.com',
+          'https://downloads.intercomcdn.com',
           ...[
             process.env.LIKECOIN_API_ENDPOINT,
             process.env.LIKECOIN_STATIC_ENDPOINT,
