@@ -109,6 +109,7 @@ onMounted(async () => {
     await subscription.openPaywallModal({
       isFullscreen: true,
       isBackdropDismissible: false,
+      hasFreeTrial: getRouteQuery('trial') !== '0',
     })
     router.back()
   }

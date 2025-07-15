@@ -77,10 +77,14 @@ export function useSubscription() {
   }
 
   async function startSubscription({
+    hasFreeTrial = true,
+    mustCollectPaymentMethod = false,
     utmCampaign,
     utmMedium,
     utmSource,
   }: {
+    hasFreeTrial?: boolean
+    mustCollectPaymentMethod?: boolean
     utmCampaign?: string
     utmMedium?: string
     utmSource?: string
@@ -114,8 +118,8 @@ export function useSubscription() {
       const { url } = await fetchLikerPlusCheckoutLink({
         period: selectedPlan.value,
         from: getRouteQuery('from'),
-        hasFreeTrial: true,
-        mustCollectPaymentMethod: false,
+        hasFreeTrial,
+        mustCollectPaymentMethod,
         ...analyticsParams,
         utmCampaign: utmCampaign || analyticsParams.utmCampaign,
         utmMedium: utmMedium || analyticsParams.utmMedium,
