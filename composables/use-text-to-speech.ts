@@ -1,7 +1,6 @@
 interface TTSOptions {
   nftClassId?: string
   onError?: (error: Event) => void
-  onPageChange?: (direction?: number) => void
   checkIfNeededPageChange?: (element: TTSSegment) => boolean
   bookName?: string | Ref<string> | ComputedRef<string>
   bookChapterName?: string | Ref<string> | ComputedRef<string>
@@ -187,7 +186,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     isShowTextToSpeechOptions.value = true
     if (index !== null) {
       currentTTSSegmentIndex.value = index
-      currentBufferIndex.value = 0
     }
 
     if (isTextToSpeechOn.value && !isTextToSpeechPlaying.value && !isPendingResetOnStart.value) {
@@ -203,7 +201,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       }
     }
 
+    if (!index) {
+      currentTTSSegmentIndex.value = 0
+    }
     resetAudio()
+
     isTextToSpeechOn.value = true
     isTextToSpeechPlaying.value = true
     setupMediaSession()
@@ -237,13 +239,22 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   }
 
   function resetAudio() {
+    if (currentAudioTimeout.value) {
+      clearTimeout(currentAudioTimeout.value)
+      currentAudioTimeout.value = null
+    }
+    currentBufferIndex.value = 0
     audioBuffers.value.forEach((audio) => {
       if (audio) {
         audio.pause()
-        audio.currentTime = 0
         audio.src = ''
+        audio.load()
+        audio.onplay = null
+        audio.onended = null
+        audio.onerror = null
       }
     })
+    audioBuffers.value = [null, null]
   }
 
   function setTTSSegments(elements: TTSSegment[]) {
@@ -292,26 +303,10 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   }
 
   function stopTextToSpeech() {
-    if (currentAudioTimeout.value) {
-      clearTimeout(currentAudioTimeout.value)
-      currentAudioTimeout.value = null
-    }
-    audioBuffers.value.forEach((audio) => {
-      if (audio) {
-        audio.pause()
-        audio.src = ''
-        audio.load()
-        audio.onplay = null
-        audio.onended = null
-        audio.onerror = null
-      }
-    })
-    audioBuffers.value = [null, null]
+    resetAudio()
     isTextToSpeechOn.value = false
     isTextToSpeechPlaying.value = false
     isShowTextToSpeechOptions.value = false
-    currentTTSSegmentIndex.value = 0
-    currentBufferIndex.value = 0
 
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'none'
@@ -326,6 +321,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     isShowTextToSpeechOptions,
     isTextToSpeechOn,
     isTextToSpeechPlaying,
+    currentTTSSegment,
     currentTTSSegmentText,
     currentTTSSegmentIndex,
     pauseTextToSpeech,
