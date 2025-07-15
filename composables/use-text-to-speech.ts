@@ -1,14 +1,6 @@
-interface TTSSegment {
-  id: string
-  text: string
-}
-
 interface TTSOptions {
   nftClassId?: string
-  onPlay?: (element: TTSSegment) => void
-  onEnd?: (element: TTSSegment) => void
   onError?: (error: Event) => void
-  onPageChange?: (direction?: number) => void
   checkIfNeededPageChange?: (element: TTSSegment) => boolean
   bookName?: string | Ref<string> | ComputedRef<string>
   bookChapterName?: string | Ref<string> | ComputedRef<string>
@@ -17,14 +9,12 @@ interface TTSOptions {
 }
 
 export function useTextToSpeech(options: TTSOptions = {}) {
-  const { user } = useUserSession()
   const {
     bookName,
     bookChapterName,
     bookAuthorName,
     bookCoverSrc,
   } = options || {}
-  const subscription = useSubscription()
 
   const nftClassId = options.nftClassId
   const ttsLanguageVoiceOptions = [
@@ -147,19 +137,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       audioBuffers.value[bufferIndex] = audio
 
       audio.onplay = () => {
-        const currentElement = ttsSegments.value[currentTTSSegmentIndex.value]
-        if (currentElement) {
-          options.onPlay?.(currentElement)
-        }
         isTextToSpeechPlaying.value = true
         updateMediaSessionPlaybackState()
       }
 
       audio.onended = () => {
-        const currentElement = ttsSegments.value[currentTTSSegmentIndex.value]
-        if (currentElement) {
-          options.onEnd?.(currentElement)
-        }
         playNextElement()
       }
 
@@ -185,16 +167,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   function playNextElement() {
     currentTTSSegmentIndex.value += 1
 
-    const nextElement = ttsSegments.value[currentTTSSegmentIndex.value]
-    if (!nextElement) {
-      options.onPageChange?.()
-      return
-    }
-
-    if (options.checkIfNeededPageChange && options.checkIfNeededPageChange(nextElement)) {
-      options.onPageChange?.()
-    }
-
     const nextElementForBuffer = ttsSegments.value[currentTTSSegmentIndex.value + 1]
 
     if (nextElementForBuffer) {
@@ -210,17 +182,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     }, 200)
   }
 
-  async function startTextToSpeech() {
-    if (!user.value?.isLikerPlus) {
-      subscription.openPaywallModal({
-        utmSource: 'epub_reader',
-        utmCampaign: nftClassId,
-        utmMedium: 'tts',
-      })
-      return
-    }
-
+  async function startTextToSpeech(index: number | null = null) {
     isShowTextToSpeechOptions.value = true
+    if (index !== null) {
+      currentTTSSegmentIndex.value = index
+    }
 
     if (isTextToSpeechOn.value && !isTextToSpeechPlaying.value && !isPendingResetOnStart.value) {
       isTextToSpeechPlaying.value = true
@@ -235,9 +201,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       }
     }
 
+    if (index == null) {
+      currentTTSSegmentIndex.value = 0
+    }
     resetAudio()
-    currentTTSSegmentIndex.value = 0
-    currentBufferIndex.value = 0
+
     isTextToSpeechOn.value = true
     isTextToSpeechPlaying.value = true
     setupMediaSession()
@@ -248,12 +216,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
     try {
       if (ttsSegments.value.length === 0) {
-        options.onPageChange?.()
         return
       }
 
-      const firstElement = ttsSegments.value[0]
-      const secondElement = ttsSegments.value[1]
+      const firstElement = ttsSegments.value[currentTTSSegmentIndex.value]
+      const secondElement = ttsSegments.value[currentTTSSegmentIndex.value + 1]
 
       if (firstElement) {
         createAudio(firstElement, 0)
@@ -272,13 +239,22 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   }
 
   function resetAudio() {
+    if (currentAudioTimeout.value) {
+      clearTimeout(currentAudioTimeout.value)
+      currentAudioTimeout.value = null
+    }
+    currentBufferIndex.value = 0
     audioBuffers.value.forEach((audio) => {
       if (audio) {
         audio.pause()
-        audio.currentTime = 0
         audio.src = ''
+        audio.load()
+        audio.onplay = null
+        audio.onended = null
+        audio.onerror = null
       }
     })
+    audioBuffers.value = [null, null]
   }
 
   function setTTSSegments(elements: TTSSegment[]) {
@@ -292,7 +268,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     })
     const activeAudio = audioBuffers.value[currentBufferIndex.value]
     activeAudio?.pause()
-    if (currentTTSSegment.value) options.onEnd?.(currentTTSSegment.value)
     playNextElement()
   }
 
@@ -303,7 +278,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     })
     const activeAudio = audioBuffers.value[currentBufferIndex.value]
     activeAudio?.pause()
-    if (currentTTSSegment.value) options.onEnd?.(currentTTSSegment.value)
+
     if (currentTTSSegmentIndex.value > 0) {
       currentTTSSegmentIndex.value -= 1
       currentBufferIndex.value = currentBufferIndex.value === 0 ? 1 : 0
@@ -314,9 +289,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       if (isTextToSpeechPlaying.value) {
         audioBuffers.value[currentBufferIndex.value]?.play()
       }
-    }
-    else {
-      options.onPageChange?.(-1)
     }
   }
 
@@ -331,26 +303,10 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   }
 
   function stopTextToSpeech() {
-    if (currentAudioTimeout.value) {
-      clearTimeout(currentAudioTimeout.value)
-      currentAudioTimeout.value = null
-    }
-    audioBuffers.value.forEach((audio) => {
-      if (audio) {
-        audio.pause()
-        audio.src = ''
-        audio.load()
-        audio.onplay = null
-        audio.onended = null
-        audio.onerror = null
-      }
-    })
-    audioBuffers.value = [null, null]
+    resetAudio()
     isTextToSpeechOn.value = false
     isTextToSpeechPlaying.value = false
     isShowTextToSpeechOptions.value = false
-    currentTTSSegmentIndex.value = 0
-    currentBufferIndex.value = 0
 
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'none'
@@ -365,7 +321,9 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     isShowTextToSpeechOptions,
     isTextToSpeechOn,
     isTextToSpeechPlaying,
+    currentTTSSegment,
     currentTTSSegmentText,
+    currentTTSSegmentIndex,
     pauseTextToSpeech,
     startTextToSpeech,
     setTTSSegments,

@@ -61,114 +61,26 @@
               @click="isDesktopTocOpen = !isDesktopTocOpen"
             />
             <template v-if="!bookInfo.isAudioHidden.value">
-              <UButtonGroup>
-                <template v-if="!isTextToSpeechOn || !isTextToSpeechPlaying">
-                  <UButton
-                    class="laptop:hidden"
-                    icon="i-material-symbols-headphones-rounded"
-                    variant="outline"
-                    color="neutral"
-                    :disabled="isReaderLoading"
-                    @click="startTextToSpeech"
-                  />
-                  <UButton
-                    class="max-laptop:hidden"
-                    icon="i-material-symbols-headphones-rounded"
-                    :label="$t('reader_text_to_speech_button')"
-                    variant="outline"
-                    color="neutral"
-                    :disabled="isReaderLoading"
-                    :ui="{ base: '!rounded-l-md' }"
-                    @click="startTextToSpeech"
-                  />
-                </template>
-                <template v-else>
-                  <UButton
-                    class="laptop:hidden"
-                    icon="i-material-symbols-pause-rounded"
-                    variant="outline"
-                    color="neutral"
-                    @click="pauseTextToSpeech"
-                  />
-                  <UButton
-                    class="max-laptop:hidden"
-                    icon="i-material-symbols-pause-rounded"
-                    :label="$t('reader_text_to_speech_button')"
-                    variant="outline"
-                    color="neutral"
-                    :ui="{ base: '!rounded-l-md' }"
-                    @click="pauseTextToSpeech"
-                  />
-                </template>
-                <UButton
-                  icon="i-material-symbols-discover-tune-rounded"
-                  variant="outline"
-                  color="neutral"
-                  @click="isOpenTextToSpeechOptions = !isOpenTextToSpeechOptions"
-                />
-              </UButtonGroup>
-
-              <USlideover
-                v-model:open="isOpenTextToSpeechOptions"
-                :ui="{ content: 'w-full flex flex-row items-center gap-2 px-4 py-2 min-h-[56px] divide-y-0' }"
-                side="top"
-                :close="false"
-                :overlay="false"
-              >
-                <template #content>
-                  <div class="flex items-center justify-center gap-2 flex-1">
-                    <UButtonGroup>
-                      <UButton
-                        icon="i-material-symbols-skip-previous-rounded"
-                        variant="outline"
-                        color="neutral"
-                        :disabled="!isTextToSpeechOn"
-                        @click="skipBackward"
-                      />
-                      <UButton
-                        v-if="!isTextToSpeechOn || !isTextToSpeechPlaying"
-                        icon="i-material-symbols-headphones-rounded"
-                        variant="outline"
-                        color="neutral"
-                        :disabled="isReaderLoading"
-                        @click="startTextToSpeech"
-                      />
-                      <UButton
-                        v-else
-                        icon="i-material-symbols-pause-rounded"
-                        variant="outline"
-                        color="neutral"
-                        @click="pauseTextToSpeech"
-                      />
-                      <UButton
-                        icon="i-material-symbols-skip-next-rounded"
-                        variant="outline"
-                        color="neutral"
-                        :disabled="!isTextToSpeechOn"
-                        @click="skipForward"
-                      />
-                    </UButtonGroup>
-                    <USelect
-                      v-model="ttsLanguageVoice"
-                      color="neutral"
-                      :items="ttsLanguageVoiceOptions"
-                    />
-                    <USelect
-                      v-model="ttsPlaybackRate"
-                      icon="i-material-symbols-speed-rounded"
-                      color="neutral"
-                      :items="ttsPlaybackRateOptions"
-                    />
-                  </div>
-
-                  <UButton
-                    icon="i-material-symbols-close-rounded"
-                    color="neutral"
-                    variant="ghost"
-                    @click="isOpenTextToSpeechOptions = false"
-                  />
-                </template>
-              </USlideover>
+              <UButton
+                class="laptop:hidden"
+                icon="i-material-symbols-play-arrow-rounded"
+                variant="ghost"
+                color="neutral"
+                :disabled="isReaderLoading"
+                @click="onClickTTSPlay"
+              />
+              <UButton
+                :ui="{
+                  base: '!rounded-l-md',
+                }"
+                class="max-laptop:hidden"
+                icon="i-material-symbols-play-arrow-rounded"
+                :label="$t('reader_text_to_speech_button')"
+                variant="ghost"
+                color="neutral"
+                :disabled="isReaderLoading"
+                @click="onClickTTSPlay"
+              />
             </template>
 
             <BottomSlideover :title="$t('reader_display_options_button')">
@@ -279,7 +191,6 @@ import ePub, {
   type Rendition as RenditionBase,
   type NavItem,
   type Location,
-  EpubCFI,
 } from '@likecoin/epubjs'
 
 import type Section from '@likecoin/epubjs/types/section'
@@ -317,7 +228,6 @@ const { handleError } = useErrorHandler()
 const isReaderLoading = ref(true)
 const isDesktopTocOpen = ref(false)
 const isMobileTocOpen = ref(false)
-const isOpenTextToSpeechOptions = ref(false)
 
 const { loadingLabel, loadFileAsBuffer } = useBookFileLoader()
 
@@ -352,76 +262,22 @@ onMounted(async () => {
 })
 
 const rendition = ref<Rendition>()
-const textContentElements = ref<{ cfi: string, el: Element, text: string, id: string }[]>([])
-
 const navItems = ref<NavItem[]>([])
 const activeNavItemLabel = computed(() => {
   const item = navItems.value.find(item => item.href === activeNavItemHref.value)
   return item?.label || ''
 })
 const activeNavItemHref = ref<string | undefined>()
+// TODO: Should hide this index into TTS (player?) composable?
+const activeTTSElementIndex = useStorage(`${bookFileCacheKey.value}-tts-index`, undefined) as Ref<number | undefined>
 
-const {
-  ttsLanguageVoiceOptions,
-  ttsLanguageVoice,
-  ttsPlaybackRateOptions,
-  ttsPlaybackRate,
-  isTextToSpeechOn,
-  isTextToSpeechPlaying,
-  pauseTextToSpeech,
-  startTextToSpeech,
-  setTTSSegments,
-  skipForward,
-  skipBackward,
-  restartTextToSpeech,
-  stopTextToSpeech,
-} = useTextToSpeech({
+const { setTTSSegments, openPlayer } = useTTSPlayerModal({
   nftClassId: nftClassId.value,
-  bookName: bookInfo.name,
-  bookChapterName: activeNavItemLabel,
-  bookAuthorName: bookInfo.authorName,
-  bookCoverSrc: bookCoverSrc,
-  onPlay: (element) => {
-    try {
-      const textElement = textContentElements.value.find(el => el.id === element.id)
-      if (textElement) {
-        rendition.value?.display(textElement.cfi)
-        rendition.value?.annotations.remove(textElement.cfi, 'highlight')
-        rendition.value?.annotations.highlight(textElement.cfi, {}, () => {}, '', {
-          fill: '#FFEB3B',
-        })
-      }
+  onSegmentChange: (segment) => {
+    if (segment?.href) {
+      rendition.value?.display(segment.href)
+      activeTTSElementIndex.value = segment.index
     }
-    catch (error) {
-      console.warn('Failed to highlight text element:', error)
-    }
-  },
-  onEnd: (element) => {
-    try {
-      const textElement = textContentElements.value.find(el => el.id === element.id)
-      if (textElement) {
-        rendition.value?.annotations.remove(textElement.cfi, 'highlight')
-      }
-    }
-    catch (error) {
-      console.warn('Failed to remove highlight from text element:', error)
-    }
-  },
-  onPageChange: (direction) => {
-    if (direction && direction < 0) {
-      prevPage()
-    }
-    else {
-      nextPage()
-    }
-  },
-  checkIfNeededPageChange: (element) => {
-    const textElement = textContentElements.value.find(el => el.id === element.id)
-    if (textElement) {
-      const epubCfi = new EpubCFI(textElement.cfi)
-      return epubCfi.compare(epubCfi, currentPageEndCfi.value) >= 0
-    }
-    return false
   },
 })
 
@@ -545,33 +401,6 @@ async function loadEPub() {
 
   rendition.value.on('rendered', (section: Section, view: EpubView) => {
     currentSectionIndex.value = section.index
-    const elements = Array.from(section.contents?.querySelectorAll('p, h1, h2, h3, h4, h5, h6') || [])
-      .filter(element => !!element.textContent?.trim())
-      .map((el) => {
-        const range = new Range()
-        range.selectNodeContents(el)
-        const cfi = section.cfiFromRange(range)
-        const text = el.textContent?.trim() || ''
-        const segments = splitTextIntoSegments(text)
-        return { cfi, el, text, segments }
-      })
-
-    textContentElements.value = elements.reduce((acc, element) => {
-      return acc.concat(element.segments.map((text, index) => {
-        return ({
-          cfi: element.cfi,
-          el: element.el,
-          text,
-          id: `${element.cfi}-${index}`,
-        })
-      }))
-    }, [] as { cfi: string, el: Element, text: string, id: string }[])
-
-    const textElements = textContentElements.value.map(el => ({
-      id: el.id,
-      text: el.text,
-    }))
-    setTTSSegments(textElements)
     isRightToLeft.value = view.settings.direction === 'rtl'
 
     if (cleanUpClickListener) {
@@ -597,10 +426,6 @@ async function loadEPub() {
         }
       }
     })
-
-    if (isTextToSpeechOn.value) {
-      restartTextToSpeech()
-    }
   })
 
   rendition.value.on('relocated', (location: Location) => {
@@ -612,6 +437,56 @@ async function loadEPub() {
     percentage.value = book.locations.percentageFromCfi(location.start.cfi)
     currentCfi.value = location.start.cfi
   })
+
+  const ttsSegments = await extractTTSSegments(book)
+  setTTSSegments(ttsSegments)
+}
+
+async function extractTTSSegments(book: ePub.Book) {
+  const sectionPromises: Promise<TTSSegment[]>[] = []
+
+  book.spine.each((section: Section) => {
+    const sectionPromise = (async () => {
+      try {
+        const chapter = await book.load(section.href)
+
+        if (!(chapter instanceof Document)) {
+          console.warn(`No document found for section ${section.href}`)
+          return []
+        }
+
+        const chapterTitle = chapter.querySelector('title')?.textContent?.trim() || ''
+
+        const elements = Array.from(
+          chapter.querySelectorAll('p, h1, h2, h3, h4, h5, h6'),
+        ).filter(el => !!el.textContent?.trim())
+
+        const segments: TTSSegment[] = []
+        elements.forEach((el, elIndex) => {
+          const text = el.textContent?.trim() || ''
+          segments.push(
+            ...splitTextIntoSegments(text).map((segment, segIndex) => ({
+              text: segment,
+              id: `${section.index}-${elIndex}-${segIndex}`,
+              href: section.href,
+              chapterTitle,
+            })),
+          )
+        })
+
+        return segments
+      }
+      catch (err) {
+        console.warn(`Failed to load section ${section.href}`, err)
+        return []
+      }
+    })()
+
+    sectionPromises.push(sectionPromise)
+  })
+
+  const ttsSegments = (await Promise.all(sectionPromises)).flat()
+  return ttsSegments
 }
 
 function setActiveNavItemHref(href: string) {
@@ -620,10 +495,12 @@ function setActiveNavItemHref(href: string) {
 }
 
 function nextPage() {
+  activeTTSElementIndex.value = undefined
   rendition.value?.next()
 }
 
 function prevPage() {
+  activeTTSElementIndex.value = undefined
   rendition.value?.prev()
 }
 
@@ -672,19 +549,19 @@ async function handleMobileTocOpen(open: boolean) {
   }
 }
 
+function onClickTTSPlay() {
+  openPlayer({
+    index: activeTTSElementIndex.value,
+    href: activeNavItemHref.value,
+  })
+}
+
 const isShiftPressed = useKeyModifier('Shift')
 onKeyStroke('ArrowRight', handleRightArrowButtonClick)
 onKeyStroke('ArrowLeft', handleLeftArrowButtonClick)
 onKeyStroke('ArrowDown', nextPage)
 onKeyStroke('ArrowUp', prevPage)
 onKeyStroke('Space', () => isShiftPressed.value ? prevPage() : nextPage())
-
-onBeforeUnmount(() => {
-  stopTextToSpeech()
-  if (cleanUpClickListener) {
-    cleanUpClickListener()
-  }
-})
 </script>
 
 <style>
