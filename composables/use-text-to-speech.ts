@@ -201,7 +201,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       }
     }
 
-    if (!index) {
+    if (index == null) {
       currentTTSSegmentIndex.value = 0
     }
     resetAudio()
@@ -219,8 +219,8 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         return
       }
 
-      const firstElement = ttsSegments.value[0]
-      const secondElement = ttsSegments.value[1]
+      const firstElement = ttsSegments.value[currentTTSSegmentIndex.value]
+      const secondElement = ttsSegments.value[currentTTSSegmentIndex.value + 1]
 
       if (firstElement) {
         createAudio(firstElement, 0)
