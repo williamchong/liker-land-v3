@@ -247,10 +247,7 @@ async function handleLikerPlusButtonClick() {
 
 async function handleCustomerServiceLinkButtonClick() {
   if (!intercomProxy) {
-    await navigateTo('https://cs.3ook.com', {
-      external: true,
-      open: { target: '_blank' },
-    })
+    window.open('mailto:cs@3ook.com', '_blank')
     useLogEvent('customer_service', { method: 'link' })
     return
   }

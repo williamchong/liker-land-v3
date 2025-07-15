@@ -61,9 +61,10 @@
           <li>
             <ULink
               class="block border-y border-t-transparent leading-5"
-              href="https://cs.3ook.com"
+              href="mailto:cs@3ook.com"
               target="_blank"
               rel="noopener noreferrer"
+              @click="onClickContactUs"
             >{{ $t("footer_contact_us") }}</ULink>
           </li>
         </ul>
@@ -124,4 +125,12 @@
 <script setup lang="ts">
 const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
+const { proxy: intercomProxy } = useScriptIntercom()
+
+function onClickContactUs(event: MouseEvent) {
+  if (intercomProxy) {
+    intercomProxy.Intercom('show')
+    event.preventDefault()
+  }
+}
 </script>
