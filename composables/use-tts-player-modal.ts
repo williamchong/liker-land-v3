@@ -3,7 +3,7 @@ import type { TTSPlayerModalProps } from '~/components/TTSPlayerModal.props'
 
 interface TTSPlayerOptions {
   nftClassId?: string
-  onSegmentChange?: (segment: { id?: string, text?: string, href?: string } | undefined) => void
+  onSegmentChange?: (segment: { id?: string, text?: string, href?: string, index?: number } | undefined) => void
 }
 
 export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
@@ -35,7 +35,7 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
     ttsSegments.value = elements
   }
 
-  function openPlayer({ href }: { href?: string } = {}) {
+  function openPlayer({ index, href }: { index?: number, href?: string } = {}) {
     if (!user.value?.isLikerPlus) {
       subscription.openPaywallModal({
         utmSource: 'epub_reader',
@@ -44,9 +44,16 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
       })
       return
     }
-    ttsPlayerModalProps.value.startIndex = href
-      ? ttsSegments.value.findIndex(segment => segment.href === href)
-      : 0
+    if (index !== undefined) {
+      ttsPlayerModalProps.value.startIndex = index
+    }
+    else if (href) {
+      const segmentIndex = ttsSegments.value.findIndex(segment => segment.href === href)
+      ttsPlayerModalProps.value.startIndex = segmentIndex >= 0 ? segmentIndex : 0
+    }
+    else {
+      ttsPlayerModalProps.value.startIndex = 0
+    }
     modal.open(ttsPlayerModalProps.value)
   }
 

@@ -298,7 +298,7 @@ function getSegmentClass(index: number) {
 
 watch(currentTTSSegment, (newSegment) => {
   if (props.onSegmentChange) {
-    props.onSegmentChange(newSegment)
+    props.onSegmentChange({ index: currentTTSSegmentIndex.value, ...newSegment })
   }
 })
 

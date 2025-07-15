@@ -67,7 +67,7 @@
                 variant="ghost"
                 color="neutral"
                 :disabled="isReaderLoading"
-                @click="openPlayer({ href: activeNavItemHref })"
+                @click="onClickTTSPlay"
               />
               <UButton
                 :ui="{
@@ -79,7 +79,7 @@
                 variant="ghost"
                 color="neutral"
                 :disabled="isReaderLoading"
-                @click="openPlayer({ href: activeNavItemHref })"
+                @click="onClickTTSPlay"
               />
             </template>
 
@@ -268,12 +268,15 @@ const activeNavItemLabel = computed(() => {
   return item?.label || ''
 })
 const activeNavItemHref = ref<string | undefined>()
+// TODO: Should hide this index into TTS (player?) composable?
+const activeTTSElementIndex = useStorage(`${bookFileCacheKey.value}-tts-index`, undefined) as Ref<number | undefined>
 
 const { setTTSSegments, openPlayer } = useTTSPlayerModal({
   nftClassId: nftClassId.value,
   onSegmentChange: (segment) => {
     if (segment?.href) {
       rendition.value?.display(segment.href)
+      activeTTSElementIndex.value = segment.index
     }
   },
 })
@@ -492,10 +495,12 @@ function setActiveNavItemHref(href: string) {
 }
 
 function nextPage() {
+  activeTTSElementIndex.value = undefined
   rendition.value?.next()
 }
 
 function prevPage() {
+  activeTTSElementIndex.value = undefined
   rendition.value?.prev()
 }
 
@@ -542,6 +547,13 @@ async function handleMobileTocOpen(open: boolean) {
       element.scrollIntoView({ block: 'center', inline: 'center' })
     }
   }
+}
+
+function onClickTTSPlay() {
+  openPlayer({
+    index: activeTTSElementIndex.value,
+    href: activeNavItemHref.value,
+  })
 }
 
 const isShiftPressed = useKeyModifier('Shift')
