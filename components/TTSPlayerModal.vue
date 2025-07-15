@@ -221,6 +221,7 @@ const {
   ttsPlaybackRate,
   isTextToSpeechOn,
   isTextToSpeechPlaying,
+  currentTTSSegment,
   pauseTextToSpeech,
   startTextToSpeech,
   setTTSSegments,
@@ -294,6 +295,12 @@ function getSegmentClass(index: number) {
 
   return `${baseClasses} ${index === currentTTSSegmentIndex.value ? activeClasses : inactiveClasses}`
 }
+
+watch(currentTTSSegment, (newSegment) => {
+  if (props.onSegmentChange) {
+    props.onSegmentChange(newSegment)
+  }
+})
 
 function handleModalClose() {
   stopTextToSpeech()

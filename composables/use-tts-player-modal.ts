@@ -3,6 +3,7 @@ import type { TTSPlayerModalProps } from '~/components/TTSPlayerModal.props'
 
 interface TTSPlayerOptions {
   nftClassId?: string
+  onSegmentChange?: (segment: { id?: string, text?: string, href?: string } | undefined) => void
 }
 
 export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
@@ -22,6 +23,7 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
     nftClassId: options.nftClassId,
     segments: ttsSegments.value,
     startIndex: startIndex.value,
+    onSegmentChange: options.onSegmentChange,
   }))
 
   const overlay = useOverlay()
@@ -33,7 +35,7 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
     ttsSegments.value = elements
   }
 
-  function openPlayer() {
+  function openPlayer({ href }: { href?: string } = {}) {
     if (!user.value?.isLikerPlus) {
       subscription.openPaywallModal({
         utmSource: 'epub_reader',
@@ -42,6 +44,9 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
       })
       return
     }
+    ttsPlayerModalProps.value.startIndex = href
+      ? ttsSegments.value.findIndex(segment => segment.href === href)
+      : 0
     modal.open(ttsPlayerModalProps.value)
   }
 

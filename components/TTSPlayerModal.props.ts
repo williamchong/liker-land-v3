@@ -8,4 +8,5 @@ export interface TTSPlayerModalProps {
   startIndex?: number
   onOpen?: () => void
   onClose?: () => void
+  onSegmentChange?: (segment: { id?: string, text?: string, href?: string } | undefined) => void
 }

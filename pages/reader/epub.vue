@@ -67,7 +67,7 @@
                 variant="ghost"
                 color="neutral"
                 :disabled="isReaderLoading"
-                @click="openPlayer"
+                @click="openPlayer({ href: activeNavItemHref })"
               />
               <UButton
                 :ui="{
@@ -79,7 +79,7 @@
                 variant="ghost"
                 color="neutral"
                 :disabled="isReaderLoading"
-                @click="openPlayer"
+                @click="openPlayer({ href: activeNavItemHref })"
               />
             </template>
 
@@ -271,6 +271,11 @@ const activeNavItemHref = ref<string | undefined>()
 
 const { setTTSSegments, openPlayer } = useTTSPlayerModal({
   nftClassId: nftClassId.value,
+  onSegmentChange: (segment) => {
+    if (segment?.href) {
+      rendition.value?.display(segment.href)
+    }
+  },
 })
 
 const currentSectionIndex = ref(0)
