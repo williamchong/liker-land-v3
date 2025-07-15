@@ -58,14 +58,13 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
     console.error(`Failed to track event with Meta Pixel: ${eventName}`, eventParams)
   }
 
-  const { proxy: intercomProxy } = useScriptIntercom()
-  if (intercomProxy) {
+  if (window?.Intercom) {
     try {
       const { items, ...params } = eventParams
       if (items) {
         params.items = JSON.stringify(items)
       }
-      intercomProxy.Intercom('trackEvent', eventName, params)
+      window.Intercom('trackEvent', eventName, params)
     }
     catch (error) {
       console.error(`Failed to log event to Intercom: ${eventName}`, error)
@@ -106,10 +105,9 @@ export function useSetLogUser(user: User | null) {
   }
 
   // Set user info in Intercom
-  const { proxy: intercomProxy } = useScriptIntercom()
-  if (intercomProxy) {
+  if (window?.Intercom) {
     try {
-      const intercom = intercomProxy?.Intercom
+      const intercom = window.Intercom
       if (!user) {
         intercom('shutdown')
         return

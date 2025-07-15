@@ -211,8 +211,6 @@ useHead({
   title: $t('account_page_title'),
 })
 
-const { proxy: intercomProxy } = useScriptIntercom()
-
 async function handleLogin() {
   await accountStore.login()
 }
@@ -246,17 +244,13 @@ async function handleLikerPlusButtonClick() {
 }
 
 async function handleCustomerServiceLinkButtonClick() {
-  if (!intercomProxy) {
-    await navigateTo('https://cs.3ook.com', {
-      external: true,
-      open: { target: '_blank' },
-    })
+  if (!window?.Intercom) {
+    window.open('mailto:cs@3ook.com', '_blank')
     useLogEvent('customer_service', { method: 'link' })
     return
   }
+  window.Intercom('show')
   useLogEvent('customer_service', { method: 'chat' })
-
-  intercomProxy.Intercom('show')
 }
 
 async function handleClearReaderCacheButtonClick() {
