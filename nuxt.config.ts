@@ -95,6 +95,10 @@ export default defineNuxtConfig({
     compatibilityVersion: 4,
   },
 
+  experimental: {
+    clientNodeCompat: true,
+  },
+
   compatibilityDate: '2024-11-01',
 
   gtag: {

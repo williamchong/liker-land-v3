@@ -78,7 +78,15 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
     return contentURLs.value.find(url => url.type === 'epub') || contentURLs.value[0]
   })
 
-  const getReaderRoute = computed(() => ({ nftId, contentURL: inputContentURL }: { nftId?: string, contentURL?: ContentURL }) => {
+  const getReaderRoute = computed(() => ({
+    nftId,
+    contentURL: inputContentURL,
+    shouldCustomMessageDisabled = false,
+  }: {
+    nftId?: string
+    contentURL?: ContentURL
+    shouldCustomMessageDisabled?: boolean
+  }) => {
     const contentURL = inputContentURL || defaultContentURL.value
     if (!contentURL) return undefined
 
@@ -90,6 +98,9 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
     if (nftId !== undefined) {
       // NOTE: Reader will fetch nftId from the current user if not provided
       query.nft_id = nftId
+    }
+    if (shouldCustomMessageDisabled) {
+      query.custom_message = '0'
     }
     return localeRoute({
       name: `reader-${type}`,

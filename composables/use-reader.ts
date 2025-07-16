@@ -14,6 +14,7 @@ export default function (params: {
     return id || bookInfo.firstUserOwnedNFTId.value
   })
   const fileIndex = computed(() => getRouteQuery('index', '0'))
+  const shouldCustomMessageDisabled = computed(() => getRouteQuery('custom_message') === '0')
 
   const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 300 }))
 
@@ -33,7 +34,7 @@ export default function (params: {
       nftClassId: nftClassId.value,
       nftId: nftId.value,
       fileIndex: fileIndex.value,
-      isCustomMessageEnabled: bookInfo.isCustomMessageEnabled.value,
+      isCustomMessageEnabled: !shouldCustomMessageDisabled.value && bookInfo.isCustomMessageEnabled.value,
     }),
   )
 

@@ -1,5 +1,6 @@
 export const useBookshelfStore = defineStore('bookshelf', () => {
   const nftStore = useNFTStore()
+  const likeNFTClassContract = useLikeNFTClassContract()
 
   const nftByNFTClassIds = ref<Record<string, Record<string, NFT>>>({})
   const isFetching = ref(false)
@@ -67,6 +68,26 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     }
   }
 
+  async function fetchNFTByNFTClassIdAndOwnerWalletAddressThroughContract(nftClassId: string, ownerWalletAddress: string) {
+    const nftClassMetadataPromise = likeNFTClassContract.fetchNFTClassMetadataById(nftClassId)
+    const nftId = await likeNFTClassContract.fetchNFTIdByNFTClassIdAndWalletAddressAndIndex(nftClassId, ownerWalletAddress, 0)
+    const [nftClassMetadata, nftMetadata] = await Promise.all([
+      nftClassMetadataPromise,
+      likeNFTClassContract.fetchNFTMetadataByNFTClassIdAndNFTId(nftClassId, nftId),
+    ])
+    if (nftClassMetadata) {
+      nftStore.addNFTClassMetadata(nftClassId, nftClassMetadata)
+    }
+    if (nftId && nftMetadata) {
+      if (!nftByNFTClassIds.value[nftClassId]) {
+        nftByNFTClassIds.value[nftClassId] = {}
+      }
+      // NOTE: Mimic the structure of the NFT metadata from indexer
+      nftMetadata.token_id = nftId
+      nftByNFTClassIds.value[nftClassId][nftId] = nftMetadata
+    }
+  }
+
   function reset() {
     isFetching.value = false
     hasFetched.value = false
@@ -83,6 +104,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
 
     fetchItems,
     getNFTsByNFTClassId,
+    fetchNFTByNFTClassIdAndOwnerWalletAddressThroughContract,
     reset,
   }
 })

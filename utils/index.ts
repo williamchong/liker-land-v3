@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer'
+
 export function normalizeURIToHTTP(url?: string) {
   if (!url) return ''
   const config = useRuntimeConfig()
@@ -94,4 +96,25 @@ export function getBookFileURLWithCORS({
   url.searchParams.set('index', String(fileIndex))
   url.searchParams.set('custom_message', isCustomMessageEnabled && nftId ? '1' : '0')
   return url.toString()
+}
+
+const DATA_URI_REGEX = /^data:application\/json(?:; ?charset=utf-8|; ?utf8)?(;base64)?,/i
+
+export function parseURIString<T>(uri: string): T | undefined {
+  let dataString = uri
+  const match = dataString?.match(DATA_URI_REGEX)
+  if (!match) return undefined
+
+  const isBase64 = !!match[1]
+  dataString = dataString.replace(DATA_URI_REGEX, '')
+  if (isBase64) {
+    dataString = Buffer.from(dataString, 'base64').toString('utf-8')
+  }
+  try {
+    const data = JSON.parse(dataString)
+    return data
+  }
+  catch {
+    return undefined
+  }
 }

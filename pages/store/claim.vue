@@ -129,15 +129,34 @@ const isAutoDeliver = ref(bookInfo.getIsAutoDelivery(cartData.value?.classIdsWit
 const receivedNFTId = computed(() => bookInfo.firstUserOwnedNFTId.value)
 const canStartReading = computed(() => !!receivedNFTId.value)
 
-async function checkItemsDelivery() {
+async function checkItemsDeliveryThroughIndexer() {
   // TODO: Handle multiple items
+  await Promise.all([
+    // Check if the NFT class is already on the bookshelf
+    bookshelfStore.fetchItems({ isRefresh: true }),
+    // Check if the NFT class owners include the user
+    nftStore.fetchNFTClassAggregatedMetadataById(nftClassId.value as string, { include: ['owner'], nocache: true }),
+  ])
+}
+
+const isCheckingItemsDelivery = ref(false)
+const hasBypassedIndexer = ref(false)
+
+async function waitForItemsDelivery({ timeout = 30000, interval = 3000 } = {}) {
+  if (isCheckingItemsDelivery.value || !isAutoDeliver.value) return
   try {
-    await Promise.all([
-      // Check if the NFT class is already on the bookshelf
-      bookshelfStore.fetchItems({ isRefresh: true }),
-      // Check if the NFT class owners include the user
-      nftStore.fetchNFTClassAggregatedMetadataById(nftClassId.value as string, { include: ['owner'], nocache: true }),
-    ])
+    isCheckingItemsDelivery.value = true
+    const start = Date.now()
+    while (!canStartReading.value && (Date.now() - start) < timeout) {
+      await checkItemsDeliveryThroughIndexer()
+      if (canStartReading.value) break
+      await sleep(interval)
+    }
+    // If indexer is not available or the items are not delivered yet, fallback to calling contract functions
+    if (!canStartReading.value) {
+      await bookshelfStore.fetchNFTByNFTClassIdAndOwnerWalletAddressThroughContract(nftClassId.value as string, user.value?.evmWallet as string)
+      hasBypassedIndexer.value = true
+    }
   }
   catch (error) {
     await handleError(error, {
@@ -147,20 +166,9 @@ async function checkItemsDelivery() {
       },
     })
   }
-}
-
-const isCheckingItemsDelivery = ref(false)
-
-async function waitForItemsDelivery({ timeout = 60000, interval = 3000 } = {}) {
-  if (isCheckingItemsDelivery.value || !isAutoDeliver.value) return
-  isCheckingItemsDelivery.value = true
-  const start = Date.now()
-  while (!canStartReading.value && (Date.now() - start) < timeout) {
-    await checkItemsDelivery()
-    if (canStartReading.value) break
-    await sleep(interval)
+  finally {
+    isCheckingItemsDelivery.value = false
   }
-  isCheckingItemsDelivery.value = false
 }
 
 const isClaiming = ref(false)
@@ -275,7 +283,10 @@ async function handleLogin(connectorId: string) {
   await accountStore.login(connectorId)
 }
 
-const readerRoute = computed(() => bookInfo.getReaderRoute.value({ nftId: receivedNFTId.value }))
+const readerRoute = computed(() => bookInfo.getReaderRoute.value({
+  nftId: receivedNFTId.value,
+  shouldCustomMessageDisabled: hasBypassedIndexer.value,
+}))
 
 function handleStartReadingButtonClick() {
   if (!readerRoute.value) {
