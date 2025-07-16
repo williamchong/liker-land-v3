@@ -116,7 +116,7 @@ export function useSubscription() {
         period: selectedPlan.value,
         from: getRouteQuery('from'),
         hasFreeTrial: true,
-        mustCollectPaymentMethod: false,
+        mustCollectPaymentMethod: true,
         ...analyticsParams,
         utmCampaign: utmCampaign || analyticsParams.utmCampaign,
         utmMedium: utmMedium || analyticsParams.utmMedium,
