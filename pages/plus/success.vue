@@ -44,6 +44,7 @@ const { currency, yearlyPrice, monthlyPrice } = useSubscription()
 const { user } = useUserSession()
 
 const route = useRoute()
+const getRouteQuery = useRouteQuery()
 const getRouteBaseName = useRouteBaseName()
 
 const isRedirected = computed(() => !!getRouteQuery('redirect'))

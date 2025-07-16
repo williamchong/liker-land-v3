@@ -31,18 +31,6 @@ export function extractFilenameFromContentURL(url: string) {
   return urlObj.searchParams.get('name') || ''
 }
 
-export function getRouteQuery(key: string, defaultValue = '') {
-  const route = useRoute()
-  const value = route.query[key]
-  return (Array.isArray(value) ? value[0] : value) || defaultValue
-}
-
-export function getRouteParam(key: string, defaultValue = '') {
-  const route = useRoute()
-  const value = route.params[key]
-  return (Array.isArray(value) ? value[0] : value) || defaultValue
-}
-
 export function checkIsEVMAddress(address: string) {
   return /^0x[a-fA-F0-9]{40}$/.test(address)
 }

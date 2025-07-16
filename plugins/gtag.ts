@@ -1,4 +1,5 @@
 export default defineNuxtPlugin(() => {
+  const getRouteQuery = useRouteQuery()
   const { gtag } = useGtag()
   const googleAnalyticsTrackingId = useRuntimeConfig().public.googleAnalyticsTrackingId as string
   if (gtag && googleAnalyticsTrackingId) {

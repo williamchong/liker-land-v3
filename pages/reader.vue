@@ -17,6 +17,7 @@ definePageMeta({
 })
 
 const route = useRoute()
+const getRouteQuery = useRouteQuery()
 const localeRoute = useLocaleRoute()
 const getRouteBaseName = useRouteBaseName()
 const { t: $t } = useI18n()

@@ -1,4 +1,5 @@
 export function useAnalytics() {
+  const getRouteQuery = useRouteQuery()
   const { gtag } = useGtag()
   const googleAnalyticsTrackingId: string | undefined = useRuntimeConfig().public.googleAnalyticsTrackingId
 

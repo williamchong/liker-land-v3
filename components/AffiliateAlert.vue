@@ -20,6 +20,7 @@
 <script setup lang="ts">
 const metadataStore = useMetadataStore()
 const { t: $t } = useI18n()
+const getRouteQuery = useRouteQuery()
 
 const from = computed(() => getRouteQuery('from'))
 

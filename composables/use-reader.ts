@@ -2,6 +2,7 @@ export default function (params: {
   nftClassId?: Ref<string> | string
 } = {}) {
   const config = useRuntimeConfig()
+  const getRouteQuery = useRouteQuery()
 
   const nftClassId = computed(() =>
     getRouteQuery('nft_class_id') || toValue(params.nftClassId) || '',

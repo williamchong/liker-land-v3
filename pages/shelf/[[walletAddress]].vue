@@ -109,6 +109,7 @@
 const { t: $t } = useI18n()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const localeRoute = useLocaleRoute()
+const getRouteParam = useRouteParam()
 const bookshelfStore = useBookshelfStore()
 const metadataStore = useMetadataStore()
 const infiniteScrollDetectorElement = useTemplateRef<HTMLLIElement>('infiniteScrollDetector')

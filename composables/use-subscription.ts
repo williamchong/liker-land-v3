@@ -6,6 +6,7 @@ export function useSubscription() {
   const accountStore = useAccountStore()
   const { user, loggedIn: hasLoggedIn } = useUserSession()
   const localeRoute = useLocaleRoute()
+  const getRouteQuery = useRouteQuery()
   const toast = useToast()
   const { getAnalyticsParameters } = useAnalytics()
 

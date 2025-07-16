@@ -119,6 +119,7 @@
 const { t: $t, locale } = useI18n()
 const localeRoute = useLocaleRoute()
 const route = useRoute()
+const getRouteQuery = useRouteQuery()
 const bookstoreStore = useBookstoreStore()
 const infiniteScrollDetectorElement = useTemplateRef<HTMLLIElement>('infiniteScrollDetector')
 const shouldLoadMore = useElementVisibility(infiniteScrollDetectorElement)

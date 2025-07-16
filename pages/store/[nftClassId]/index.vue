@@ -334,6 +334,8 @@ const md = new MarkdownIt({
 
 const localeRoute = useLocaleRoute()
 const getRouteBaseName = useRouteBaseName()
+const getRouteParam = useRouteParam()
+const getRouteQuery = useRouteQuery()
 const { t: $t, locale } = useI18n()
 const toast = useToast()
 const wipModal = useWIPModal()

@@ -57,6 +57,7 @@ definePageMeta({ name: 'claim-page', layout: false })
 
 const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
+const getRouteQuery = useRouteQuery()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
 const nftStore = useNFTStore()
