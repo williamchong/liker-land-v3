@@ -6,6 +6,7 @@ import defaultAvatar from '@/assets/images/voice-avatars/default.jpg'
 
 interface TTSOptions {
   nftClassId?: string
+  onPageChange?: (segment: TTSSegment) => void
   onError?: (error: string | Event | MediaError) => void
   checkIfNeededPageChange?: (element: TTSSegment) => boolean
   bookName?: string | Ref<string> | ComputedRef<string>
