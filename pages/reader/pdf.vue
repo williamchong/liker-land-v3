@@ -10,7 +10,9 @@
       <PDFReader
         class="grow w-full"
         :book-name="bookInfo.name.value"
+        :nft-class-id="nftClassId"
         :pdf-buffer="fileBuffer"
+        :is-audio-hidden="bookInfo.isAudioHidden.value"
         :book-file-cache-key="bookFileCacheKey"
         @error="handlePDFError"
       />
