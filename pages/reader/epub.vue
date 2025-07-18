@@ -490,6 +490,7 @@ async function extractTTSSegments(book: ePub.Book) {
 }
 
 function setActiveNavItemHref(href: string) {
+  activeTTSElementIndex.value = undefined
   activeNavItemHref.value = href
   rendition.value?.display(href)
 }
