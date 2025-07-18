@@ -300,6 +300,7 @@ async function loadPDF() {
   try {
     const loadingTask = pdfjsLib.value.getDocument({
       data: props.pdfBuffer,
+      wasmUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.value.version}/wasm/`,
       cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.value.version}/cmaps/`,
       cMapPacked: true,
     })
