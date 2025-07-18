@@ -39,7 +39,10 @@
             variant="link"
           />
           <template #content>
-            <UCard :ui="{ header: 'text-center font-bold' }">
+            <UCard
+              class="pb-safe"
+              :ui="{ header: 'text-center font-bold' }"
+            >
               <template #header>
                 {{ $t('bookshelf_more_menu_title') }}
               </template>
@@ -50,8 +53,7 @@
                 :icon="item.icon"
                 :label="item.label"
                 :href="item.href"
-                :target="item.target"
-                :rel="item.rel"
+                :to="item.to"
                 variant="link"
                 color="neutral"
                 size="xl"
