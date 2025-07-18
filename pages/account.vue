@@ -110,8 +110,9 @@
               <UButton
                 :label="user?.isLikerPlus ? $t('account_page_manage_subscription') : $t('account_page_upgrade_to_plus')"
                 variant="outline"
-                :color="user?.isLikerPlus ? 'neutral' : 'secondary'"
+                :color="user?.isLikerPlus ? 'primary' : 'secondary'"
                 size="sm"
+                :loading="isOpeningBillingPortal"
                 @click="handleLikerPlusButtonClick"
               />
             </div>
@@ -206,6 +207,7 @@ const accountStore = useAccountStore()
 const localeRoute = useLocaleRoute()
 const { handleError } = useErrorHandler()
 const toast = useToast()
+const isWindowFocused = useDocumentVisibility()
 
 useHead({
   title: $t('account_page_title'),
@@ -224,6 +226,8 @@ async function handleMagicButtonClick() {
   await accountStore.exportPrivateKey()
 }
 
+const isOpeningBillingPortal = ref(false)
+
 async function handleLikerPlusButtonClick() {
   useLogEvent('account_liker_plus_button_click')
 
@@ -232,11 +236,20 @@ async function handleLikerPlusButtonClick() {
     return
   }
 
+  if (isOpeningBillingPortal.value) return
   try {
+    isOpeningBillingPortal.value = true
     const { url } = await fetchLikerPlusBillingPortalLink()
-    await navigateTo(url, { external: true, open: { target: '_blank' } })
+    // NOTE: Not using _blank here as some browsers block popups
+    await navigateTo(url, { external: true })
+    // NOTE: Keep `isOpeningBillingPortal` true while navigating to the billing portal
+    do {
+      await sleep(3000)
+    } while (!isWindowFocused.value)
+    isOpeningBillingPortal.value = false
   }
   catch (error) {
+    isOpeningBillingPortal.value = false
     await handleError(error, {
       title: $t('error_billing_portal_failed'),
     })
