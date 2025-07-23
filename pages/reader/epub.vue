@@ -293,6 +293,7 @@ const isAtFirstPage = computed(() => {
 })
 const isRightToLeft = ref(false)
 const currentPageEndCfi = ref<string>('')
+const currentPageHref = ref<string>('')
 const currentCfi = useStorage(`${bookFileCacheKey.value}-cfi`, '')
 
 const FONT_SIZE_OPTIONS = [
@@ -370,6 +371,7 @@ async function loadEPub() {
     })
     .filter((item): item is NavItem => item !== null)
   activeNavItemHref.value = book.spine.first().href
+  currentPageHref.value = activeNavItemHref.value
   lastSectionIndex.value = book.spine.last().index
 
   if (!renditionElement.value) {
@@ -431,6 +433,7 @@ async function loadEPub() {
   rendition.value.on('relocated', (location: Location) => {
     currentPageEndCfi.value = location.end.cfi
     const href = location.start.href
+    currentPageHref.value = href
     if (navItems.value.some(item => item.href === href)) {
       activeNavItemHref.value = href
     }
@@ -553,7 +556,7 @@ async function handleMobileTocOpen(open: boolean) {
 function onClickTTSPlay() {
   openPlayer({
     index: activeTTSElementIndex.value,
-    href: activeNavItemHref.value,
+    href: currentPageHref.value,
   })
 }
 
