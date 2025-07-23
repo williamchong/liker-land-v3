@@ -409,7 +409,7 @@ async function loadEPub() {
 
       if (view.window && window.innerWidth < 1024) {
         const width = rendition.value?.manager?.container.clientWidth || 0
-        const range = width * (1 / 3)
+        const range = width * 0.45
         const x = event.clientX % width // Normalize x to be within the window
         if (x < range) {
           handleLeftArrowButtonClick()
