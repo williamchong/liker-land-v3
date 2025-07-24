@@ -131,6 +131,22 @@ export const useAccountStore = defineStore('account', () => {
       if (error instanceof FetchError) {
         switch (error.data?.error) {
           case 'EMAIL_ALREADY_USED':
+            if (!error.data?.evmWallet && error.data?.likeWallet) {
+              const message = JSON.stringify({
+                action: 'migrate',
+                evmWallet: walletAddress,
+                email,
+                magicDIDToken,
+                ts: Date.now(),
+              }, null, 2)
+              const signature = await signMessageAsync({ message })
+              await postMigrateMagicEmailUser({
+                wallet: walletAddress,
+                signature,
+                message,
+              })
+              return true
+            }
             throw createError(getEmailAlreadyUsedErrorData({
               email: email as string,
               walletAddress,
@@ -241,7 +257,7 @@ export const useAccountStore = defineStore('account', () => {
         if (error instanceof FetchError) {
           switch (error.data?.message) {
             case 'INVALID_USER_ID': {
-              await errorModal.open({ description: $t('account_register_error_invalid_account_id', { id: payload?.accountId }) })
+              await errorModal.open({ description: $t('account_register_error_invalid_account_id', { id: payload?.accountId }) }).result
               continue
             }
             case 'EMAIL_ALREADY_USED': {
@@ -251,7 +267,7 @@ export const useAccountStore = defineStore('account', () => {
                 boundEVMWallet: error.data?.evmWallet,
                 boundLikeWallet: error.data?.likeWallet,
                 loginMethod,
-              }))
+              })).result
               continue
             }
             default:
@@ -394,7 +410,7 @@ export const useAccountStore = defineStore('account', () => {
         return
       }
       if (error instanceof FetchError && error.data?.message === 'LIKECOIN_WALLET_ADDRESS_NOT_FOUND') {
-        await errorModal.open({ description: $t('error_likecoin_wallet_address_not_found', { address: address.value }) })
+        await errorModal.open({ description: $t('error_likecoin_wallet_address_not_found', { address: address.value }) }).result
       }
       await handleError(error)
       return login()
