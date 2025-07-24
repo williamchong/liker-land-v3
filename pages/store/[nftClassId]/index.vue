@@ -319,7 +319,6 @@
 </template>
 
 <script setup lang="ts">
-import { FetchError } from 'ofetch'
 import type { TabsItem } from '@nuxt/ui'
 import MarkdownIt from 'markdown-it'
 
@@ -368,30 +367,17 @@ await callOnce(async () => {
     await nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value)
   }
   catch (error) {
-    let message = $t('error_unknown')
-    let statusCode = 400
-    let isKnownError = false
-    if (error instanceof FetchError) {
-      message = error.message
-      statusCode = error.statusCode ?? statusCode
-      switch (statusCode) {
-        case 404:
-          message = $t('product_page_not_found_error')
-          isKnownError = true
-          break
-        case 500:
-          message = $t('product_page_fetch_metadata_failed_error')
-          break
-        default:
-      }
-    }
-    if (!isKnownError) {
-      console.error(error)
-    }
-    throw createError({
-      statusCode,
-      message,
-      fatal: true,
+    await handleError(error, {
+      isFatal: true,
+      customHandlerMap: {
+        404: {
+          description: $t('product_page_not_found_error'),
+        },
+        500: {
+          description: $t('product_page_fetch_metadata_failed_error'),
+        },
+      },
+      logPrefix: 'Product Page',
     })
   }
 })
