@@ -358,3 +358,23 @@ export function fetchLikerPlusBillingPortalLink() {
     method: 'POST',
   })
 }
+
+export function postMigrateMagicEmailUser({
+  wallet,
+  signature,
+  message,
+}: {
+  wallet: string
+  signature: string
+  message: string
+}) {
+  const { fetch } = useLikeCoinAPI()
+  return fetch(`/wallet/evm/migrate/email/magic`, {
+    method: 'POST',
+    body: {
+      wallet,
+      signature,
+      message,
+    },
+  })
+}
