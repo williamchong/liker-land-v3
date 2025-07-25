@@ -191,6 +191,7 @@ const props = withDefaults(
     bookTitle: '',
     bookCoverSrc: '',
     bookAuthorName: '',
+    bookLanguage: '',
     sectionTitle: '',
     nftClassId: '',
     segments: () => [],
@@ -234,6 +235,7 @@ const {
   bookName: props.bookTitle,
   bookAuthorName: props.bookAuthorName,
   bookCoverSrc: props.bookCoverSrc,
+  bookLanguage: props.bookLanguage,
   onError: (error: Event) => {
     console.error('TTS Error:', error)
   },
@@ -250,7 +252,7 @@ const visibleSegments = computed(() => {
 
 const getTTSLanguageVoiceLabel = computed(() => {
   const voice = ttsLanguageVoice.value
-  return ttsLanguageVoiceOptions.find(option => option.value === voice)?.label || voice
+  return ttsLanguageVoiceOptions.value.find(option => option.value === voice)?.label || voice
 })
 
 const sectionTitle = computed(() => {

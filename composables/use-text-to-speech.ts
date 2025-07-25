@@ -6,6 +6,7 @@ interface TTSOptions {
   bookChapterName?: string | Ref<string> | ComputedRef<string>
   bookAuthorName?: string | Ref<string> | ComputedRef<string>
   bookCoverSrc?: string | Ref<string> | ComputedRef<string>
+  bookLanguage?: string | Ref<string> | ComputedRef<string>
 }
 
 export function useTextToSpeech(options: TTSOptions = {}) {
@@ -14,6 +15,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     bookChapterName,
     bookAuthorName,
     bookCoverSrc,
+    bookLanguage,
   } = options || {}
 
   const nftClassId = options.nftClassId
@@ -26,6 +28,20 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     { label: 'English female', value: 'en-US_0' },
     { label: 'English male', value: 'en-US_1' },
   ]
+
+  const availableTTSLanguageVoiceOptions = computed(() => {
+    const language = toValue(bookLanguage)
+    if (language) {
+      if (language.toLowerCase().startsWith('zh')) {
+        return ttsLanguageVoiceOptions.filter(option => option.value.startsWith('zh'))
+      }
+      if (language.toLowerCase().startsWith('en')) {
+        return ttsLanguageVoiceOptions.filter(option => option.value.startsWith('en'))
+      }
+    }
+    return ttsLanguageVoiceOptions
+  })
+
   const ttsPlaybackRateOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map(rate => ({
     label: `${rate}x`,
     value: rate,
@@ -315,7 +331,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   }
 
   return {
-    ttsLanguageVoiceOptions,
+    ttsLanguageVoiceOptions: availableTTSLanguageVoiceOptions,
     ttsLanguageVoice,
     ttsPlaybackRateOptions,
     ttsPlaybackRate,
