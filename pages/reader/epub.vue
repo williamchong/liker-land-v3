@@ -186,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core'
+import { useStorage, type UseSwipeDirection } from '@vueuse/core'
 import ePub, {
   type Rendition as RenditionBase,
   type NavItem,
@@ -311,6 +311,7 @@ watch(fontSize, (size) => {
 
 let cleanUpClickListener: (() => void) | undefined
 const renditionElement = useTemplateRef<HTMLDivElement>('reader')
+const renditionViewWindow = ref<Window | undefined>(undefined)
 
 async function loadEPub() {
   const buffer = await loadFileAsBuffer(bookFileURLWithCORS.value, bookFileCacheKey.value)
@@ -399,6 +400,7 @@ async function loadEPub() {
   rendition.value.on('rendered', (section: Section, view: EpubView) => {
     currentSectionIndex.value = section.index
     isRightToLeft.value = view.settings.direction === 'rtl'
+    renditionViewWindow.value = view.window
 
     if (cleanUpClickListener) {
       cleanUpClickListener()
@@ -416,10 +418,12 @@ async function loadEPub() {
         const range = width * 0.45
         const x = event.clientX % width // Normalize x to be within the window
         if (x < range) {
-          handleLeftArrowButtonClick()
+          turnPageLeft()
+          useLogEvent('reader_navigate_button_arrow_mobile')
         }
         else if (width - x < range) {
-          handleRightArrowButtonClick()
+          turnPageRight()
+          useLogEvent('reader_navigate_button_arrow_mobile')
         }
       }
     })
@@ -503,7 +507,7 @@ function prevPage() {
   rendition.value?.prev()
 }
 
-function handleLeftArrowButtonClick() {
+function turnPageLeft() {
   if (isRightToLeft.value) {
     nextPage()
   }
@@ -512,7 +516,7 @@ function handleLeftArrowButtonClick() {
   }
 }
 
-function handleRightArrowButtonClick() {
+function turnPageRight() {
   if (isRightToLeft.value) {
     prevPage()
   }
@@ -555,12 +559,76 @@ function onClickTTSPlay() {
   })
 }
 
+function handleLeftArrowButtonClick() {
+  turnPageLeft()
+  useLogEvent('reader_navigate_button_arrow')
+}
+
+function handleRightArrowButtonClick() {
+  turnPageRight()
+  useLogEvent('reader_navigate_button_arrow')
+}
+
 const isShiftPressed = useKeyModifier('Shift')
-onKeyStroke('ArrowRight', handleRightArrowButtonClick)
-onKeyStroke('ArrowLeft', handleLeftArrowButtonClick)
-onKeyStroke('ArrowDown', nextPage)
-onKeyStroke('ArrowUp', prevPage)
-onKeyStroke('Space', () => isShiftPressed.value ? prevPage() : nextPage())
+onKeyStroke('ArrowRight', () => {
+  turnPageRight()
+  useLogEvent('reader_navigate_key_arrow_horizontal')
+})
+onKeyStroke('ArrowLeft', () => {
+  turnPageLeft()
+  useLogEvent('reader_navigate_key_arrow_horizontal')
+})
+onKeyStroke('ArrowDown', () => {
+  nextPage()
+  useLogEvent('reader_navigate_key_arrow_vertical')
+})
+onKeyStroke('ArrowUp', () => {
+  prevPage()
+  useLogEvent('reader_navigate_key_arrow_vertical')
+})
+onKeyStroke('Space', () => {
+  if (isShiftPressed.value) {
+    prevPage()
+  }
+  else {
+    nextPage()
+  }
+  useLogEvent('reader_navigate_key_space')
+})
+
+useSwipe(
+  renditionViewWindow,
+  {
+    onSwipeEnd: (_: TouchEvent, direction: UseSwipeDirection) => {
+      const selection = renditionViewWindow.value?.getSelection()
+      if (selection && selection.rangeCount > 0) {
+        // Do not navigate when selecting text
+        return
+      }
+
+      switch (direction) {
+        case 'left':
+          turnPageRight()
+          useLogEvent('reader_navigate_swipe_horizontal')
+          break
+        case 'right':
+          turnPageLeft()
+          useLogEvent('reader_navigate_swipe_horizontal')
+          break
+        case 'up':
+          nextPage()
+          useLogEvent('reader_navigate_swipe_vertical')
+          break
+        case 'down':
+          prevPage()
+          useLogEvent('reader_navigate_swipe_vertical')
+          break
+        default:
+          break
+      }
+    },
+  },
+)
 </script>
 
 <style>
