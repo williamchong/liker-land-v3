@@ -17,6 +17,7 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
+    "@likecoin/epubjs": "^0.3.93",
     "@likecoin/wagmi-connector": "2.2.4",
     "@nuxt/eslint": "^1.2.0",
     "@nuxt/icon": "^1.11.0",
@@ -30,8 +31,8 @@
     "@unhead/vue": "^2.0.10",
     "@vueuse/nuxt": "^13.0.0",
     "@wagmi/vue": "^0.1.14",
-    "@likecoin/epubjs": "^0.3.93",
     "eslint": "^9.22.0",
+    "firebase-admin": "^13.4.0",
     "i": "^0.3.7",
     "jwt-decode": "^4.0.0",
     "markdown-it": "^14.1.0",

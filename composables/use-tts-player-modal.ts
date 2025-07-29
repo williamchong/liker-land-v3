@@ -7,8 +7,6 @@ interface TTSPlayerOptions {
 }
 
 export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
-  const { user } = useUserSession()
-  const subscription = useSubscription()
   const ttsSegments = ref<TTSSegment[]>([])
   const startIndex = ref(0)
   const bookInfo = useBookInfo({ nftClassId: options.nftClassId })
@@ -37,14 +35,6 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
   }
 
   function openPlayer({ index, href }: { index?: number, href?: string } = {}) {
-    if (!user.value?.isLikerPlus) {
-      subscription.openPaywallModal({
-        utmSource: 'epub_reader',
-        utmCampaign: options.nftClassId,
-        utmMedium: 'tts',
-      })
-      return
-    }
     if (index !== undefined) {
       ttsPlayerModalProps.value.startIndex = index
     }

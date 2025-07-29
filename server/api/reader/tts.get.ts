@@ -1,3 +1,6 @@
+import { isTTSAvailable } from '~/server/utils/api/tts'
+import { getUserDoc } from '~/server/utils/api/user'
+
 interface TTSChunk {
   data: {
     audio: string
@@ -64,12 +67,6 @@ export default defineEventHandler(async (event) => {
       message: 'UNAUTHORIZED',
     })
   }
-  if (!session.user?.isLikerPlus) {
-    throw createError({
-      status: 402,
-      message: 'UPGRADE_REQUIRED',
-    })
-  }
   const config = useRuntimeConfig()
   const {
     minimaxGroupId,
@@ -98,6 +95,14 @@ export default defineEventHandler(async (event) => {
   const language = rawLanguage as keyof typeof LANG_MAPPING
   const logText = text.replace(/(\r\n|\n|\r)/gm, ' ')
   console.log(`[Speech] User ${session.user.evmWallet} requested conversion. Language: ${language}, Text: "${logText.substring(0, 50)}${logText.length > 50 ? '...' : ''}"`)
+
+  const userDoc = await getUserDoc(session.user.evmWallet)
+  if (!isTTSAvailable(session, userDoc)) {
+    throw createError({
+      status: 402,
+      message: 'REQUIRE_LIKER_PLUS',
+    })
+  }
 
   try {
     const command = {
@@ -178,6 +183,7 @@ export default defineEventHandler(async (event) => {
     decodedStream.pipeThrough(processStream)
     setHeader(event, 'content-type', 'audio/mpeg')
     setHeader(event, 'cache-control', 'public, max-age=604800')
+    await updateUserTTSCharacterUsage(session.user.evmWallet, text.length)
     return sendStream(event, processStream.readable)
   }
   catch (error) {
