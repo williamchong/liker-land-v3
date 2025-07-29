@@ -235,21 +235,33 @@ async function startClaimingItems() {
     })
   }
   catch (error) {
-    await handleError(error, {
-      title: $t('claim_page_claim_error'),
-      customHandlerMap: {
-        CART_ALREADY_CLAIMED: {
-          description: $t('claim_page_cart_already_claimed'),
-          onClose: () => {
-            isClaimed.value = true
+    // If error is CART_ALREADY_CLAIMED_BY_WALLET, just skip and set isClaimed as if nothing happened
+    if (getErrorMessage(error) === 'CART_ALREADY_CLAIMED_BY_WALLET') {
+      isClaimed.value = true
+    }
+    else {
+      await handleError(error, {
+        title: $t('claim_page_claim_error'),
+        customHandlerMap: {
+          CART_ALREADY_CLAIMED_BY_OTHER: {
+            description: $t('claim_page_cart_already_claimed'),
+            onClose: () => {
+              isClaimed.value = true
+            },
+          },
+          CART_ALREADY_CLAIMED: {
+            description: $t('claim_page_cart_already_claimed'),
+            onClose: () => {
+              isClaimed.value = true
+            },
           },
         },
-      },
-      logPrefix: 'Claim Items',
-      onClose: () => {
-        navigateTo(localeRoute({ name: 'store' }))
-      },
-    })
+        logPrefix: 'Claim Items',
+        onClose: () => {
+          navigateTo(localeRoute({ name: 'store' }))
+        },
+      })
+    }
   }
   finally {
     isClaiming.value = false
