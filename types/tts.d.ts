@@ -1,6 +1,6 @@
 declare interface TTSSegment {
   id: string
   text: string
-  href?: string
+  sectionIndex: number
   chapterTitle?: string
 }

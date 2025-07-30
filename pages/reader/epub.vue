@@ -470,7 +470,7 @@ async function extractTTSSegments(book: ePub.Book) {
             ...splitTextIntoSegments(text).map((segment, segIndex) => ({
               text: segment,
               id: `${section.index}-${elIndex}-${segIndex}`,
-              href: section.href,
+              sectionIndex: section.index,
               chapterTitle,
             })),
           )
@@ -554,8 +554,8 @@ async function handleMobileTocOpen(open: boolean) {
 
 function onClickTTSPlay() {
   openPlayer({
-    index: activeTTSElementIndex.value,
-    href: currentPageHref.value,
+    ttsIndex: activeTTSElementIndex.value,
+    sectionIndex: currentSectionIndex.value,
   })
 }
 
