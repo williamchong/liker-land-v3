@@ -1,5 +1,4 @@
 import { FieldValue } from 'firebase-admin/firestore'
-import { getUserCollection } from '../firestore'
 
 export interface UserDocData {
   ttsCharactersUsed?: number

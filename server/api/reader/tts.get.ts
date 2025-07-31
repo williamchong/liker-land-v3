@@ -1,6 +1,3 @@
-import { isTTSAvailable } from '~/server/utils/api/tts'
-import { getUserDoc } from '~/server/utils/api/user'
-
 interface TTSChunk {
   data: {
     audio: string
@@ -96,8 +93,7 @@ export default defineEventHandler(async (event) => {
   const logText = text.replace(/(\r\n|\n|\r)/gm, ' ')
   console.log(`[Speech] User ${session.user.evmWallet} requested conversion. Language: ${language}, Text: "${logText.substring(0, 50)}${logText.length > 50 ? '...' : ''}"`)
 
-  const userDoc = await getUserDoc(session.user.evmWallet)
-  if (!isTTSAvailable(session, userDoc)) {
+  if (!await getUserTTSAvailable(event)) {
     throw createError({
       status: 402,
       message: 'REQUIRE_LIKER_PLUS',
