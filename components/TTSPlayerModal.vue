@@ -195,7 +195,7 @@ import type { TTSPlayerModalProps } from './TTSPlayerModal.props'
 
 const { user } = useUserSession()
 const subscription = useSubscription()
-const toast = useToast()
+const { handleError } = useErrorHandler()
 
 const emit = defineEmits<{
   open: []
@@ -267,12 +267,7 @@ const {
         }
       }
     }
-    toast.add({
-      title: 'Error',
-      description: error.toString(),
-      duration: 5000,
-    })
-    console.error('TTS Error:', error)
+    handleError(error)
   },
 })
 

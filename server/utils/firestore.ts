@@ -15,7 +15,7 @@ function initializeFirebase() {
   }
 
   if (!app) {
-    throw new Error('Failed to initialize Firebase app')
+    throw createError({ statusMessage: 'Failed to initialize Firebase app' })
   }
 
   db = getFirestore(app)
