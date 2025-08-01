@@ -49,6 +49,9 @@ export default defineNuxtConfig({
     minimaxAPIKey: process.env.MINIMAX_API_KEY,
     public: {
       scripts: {
+        hotjar: {
+          id: '',
+        },
         intercom: {
           app_id: '',
         },
@@ -132,6 +135,7 @@ export default defineNuxtConfig({
 
   scripts: {
     registry: {
+      hotjar: true,
       intercom: true,
       metaPixel: true,
       stripe: true,

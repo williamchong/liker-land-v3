@@ -34,12 +34,14 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
     ttsSegments.value = elements
   }
 
-  function openPlayer({ index, href }: { index?: number, href?: string } = {}) {
-    if (index !== undefined) {
-      ttsPlayerModalProps.value.startIndex = index
+  function openPlayer({ ttsIndex, sectionIndex }: { ttsIndex?: number, sectionIndex?: number } = {}) {
+    if (ttsIndex !== undefined) {
+      ttsPlayerModalProps.value.startIndex = ttsIndex
     }
-    else if (href) {
-      const segmentIndex = ttsSegments.value.findIndex(segment => segment.href === href)
+    else if (sectionIndex !== undefined) {
+      const segmentIndex = ttsSegments.value.findIndex(
+        segment => segment.sectionIndex >= sectionIndex,
+      )
       ttsPlayerModalProps.value.startIndex = segmentIndex >= 0 ? segmentIndex : 0
     }
     else {

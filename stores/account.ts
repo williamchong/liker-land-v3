@@ -419,9 +419,6 @@ export const useAccountStore = defineStore('account', () => {
       if (error instanceof FetchError && error.data?.message === 'EMAIL_ALREADY_USED') {
         return
       }
-      if (error instanceof FetchError && error.data?.message === 'LIKECOIN_WALLET_ADDRESS_NOT_FOUND') {
-        await errorModal.open({ description: $t('error_likecoin_wallet_address_not_found', { address: address.value }) }).result
-      }
       await handleError(error)
       return login()
     }

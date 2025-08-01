@@ -72,7 +72,6 @@
   "error_connect_wallet_failed": "Failed to connect wallet",
   "error_download_book_failed": "Failed to download book",
   "error_internal_server_error": "Internal server error.",
-  "error_likecoin_wallet_address_not_found": "The LikeCoin wallet address linked to EVM wallet address {address} cannot be found",
   "error_modal_footer_cancel": "Cancel",
   "error_modal_title": "Error",
   "error_network_error": "Network error, please try again.",
