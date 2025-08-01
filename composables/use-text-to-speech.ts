@@ -237,6 +237,8 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
     if (currentAudioTimeout.value) clearTimeout(currentAudioTimeout.value)
     currentAudioTimeout.value = setTimeout(() => {
+      nextAudio?.pause()
+      nextAudio?.load()
       nextAudio?.play()
     }, 200)
   }
@@ -349,6 +351,8 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         createAudio(currentElement, currentBufferIndex.value)
       }
       if (isTextToSpeechPlaying.value) {
+        audioBuffers.value[currentBufferIndex.value]?.pause()
+        audioBuffers.value[currentBufferIndex.value]?.load()
         audioBuffers.value[currentBufferIndex.value]?.play()
       }
     }
