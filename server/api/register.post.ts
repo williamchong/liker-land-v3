@@ -1,7 +1,5 @@
 import { FetchError } from 'ofetch'
 
-import { checkIsEVMAddress } from '~/utils'
-
 export default defineEventHandler(async (event) => {
   let body: {
     walletAddress: string
@@ -12,33 +10,9 @@ export default defineEventHandler(async (event) => {
     loginMethod: string
     magicUserId?: string
     magicDIDToken?: string
-  }
+  } | undefined
   try {
     body = await readBody(event)
-    if (!body.walletAddress) {
-      throw createError({
-        status: 400,
-        message: 'REGISTER_MISSING_ADDRESS',
-      })
-    }
-    if (!checkIsEVMAddress(body.walletAddress)) {
-      throw createError({
-        status: 400,
-        message: 'REGISTER_INVALID_ADDRESS',
-      })
-    }
-    if (!body.message) {
-      throw createError({
-        status: 400,
-        message: 'REGISTER_MISSING_MESSAGE',
-      })
-    }
-    if (!body.signature) {
-      throw createError({
-        status: 400,
-        message: 'REGISTER_MISSING_SIGNATURE',
-      })
-    }
   }
   catch (error) {
     console.error(error)
@@ -47,10 +21,39 @@ export default defineEventHandler(async (event) => {
       message: 'REGISTER_INVALID_BODY',
     })
   }
+  if (!body) {
+    throw createError({
+      status: 400,
+      message: 'REGISTER_MISSING_BODY',
+    })
+  }
+  if (!body.walletAddress) {
+    throw createError({
+      status: 400,
+      message: 'REGISTER_MISSING_ADDRESS',
+    })
+  }
+  if (!checkIsEVMAddress(body.walletAddress)) {
+    throw createError({
+      status: 400,
+      message: 'REGISTER_INVALID_ADDRESS',
+    })
+  }
+  if (!body.message) {
+    throw createError({
+      status: 400,
+      message: 'REGISTER_MISSING_MESSAGE',
+    })
+  }
+  if (!body.signature) {
+    throw createError({
+      status: 400,
+      message: 'REGISTER_MISSING_SIGNATURE',
+    })
+  }
 
-  const config = useRuntimeConfig()
   try {
-    await $fetch(`${config.public.likeCoinAPIEndpoint}/users/new`, {
+    await getLikeCoinAPIFetch()('/users/new', {
       method: 'POST',
       body: {
         from: body.walletAddress,
