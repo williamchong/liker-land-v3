@@ -81,7 +81,7 @@ export function useSubscription() {
   }
 
   async function startSubscription({
-    hasFreeTrial = true,
+    hasFreeTrial = false,
     mustCollectPaymentMethod = true,
     utmCampaign,
     utmMedium,

@@ -6,7 +6,7 @@ import defaultAvatar from '@/assets/images/voice-avatars/default.jpg'
 
 interface TTSOptions {
   nftClassId?: string
-  onError?: (error: Event) => void
+  onError?: (error: string | Event | MediaError) => void
   checkIfNeededPageChange?: (element: TTSSegment) => boolean
   bookName?: string | Ref<string> | ComputedRef<string>
   bookChapterName?: string | Ref<string> | ComputedRef<string>
@@ -206,10 +206,9 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       }
 
       audio.onerror = (e) => {
-        console.warn('Audio playback error:', e)
-        if (e instanceof Event) {
-          options.onError?.(e)
-        }
+        const error = audio?.error || e
+        console.warn('Audio playback error:', error)
+        options.onError?.(error)
       }
     }
 

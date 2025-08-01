@@ -193,6 +193,10 @@
 <script setup lang="ts">
 import type { TTSPlayerModalProps } from './TTSPlayerModal.props'
 
+const { user } = useUserSession()
+const subscription = useSubscription()
+const { handleError } = useErrorHandler()
+
 const emit = defineEmits<{
   open: []
   close: []
@@ -250,8 +254,18 @@ const {
   bookAuthorName: props.bookAuthorName,
   bookCoverSrc: props.bookCoverSrc,
   bookLanguage: props.bookLanguage,
-  onError: (error: Event) => {
-    console.error('TTS Error:', error)
+  onError: (error: string | Event | MediaError) => {
+    if (error instanceof MediaError
+      && error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
+      && !user.value?.isLikerPlus) {
+      subscription.openPaywallModal({
+        utmSource: 'epub_reader',
+        utmCampaign: props.nftClassId,
+        utmMedium: 'tts',
+      })
+      return
+    }
+    handleError(error)
   },
 })
 
