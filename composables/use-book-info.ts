@@ -157,19 +157,21 @@ export default function ({ nftClassId = '' }: { nftClassId?: string } = {}) {
   })
 
   const pricingItems = computed(() => {
-    return (bookstoreInfo.value?.prices || []).filter(item => !item.isUnlisted).map((item) => {
-      return {
-        index: item.index,
-        name: localeString(item.name),
-        description: localeString(item.description),
-        price: item.price,
-        currency: item.price > 0 ? 'US' : '',
-        isSoldOut: item.isSoldOut,
-        canTip: item.isAllowCustomPrice,
-        isPhysicalOnly: item.isPhysicalOnly,
-        isAutoDeliver: item.isAutoDeliver,
-      }
-    })
+    return (bookstoreInfo.value?.prices || [])
+      .filter(item => !item.isUnlisted)
+      .map((item) => {
+        return {
+          index: item.index,
+          name: localeString(item.name),
+          description: localeString(item.description),
+          price: item.price,
+          currency: item.price > 0 ? 'US' : '',
+          isSoldOut: item.isSoldOut,
+          canTip: item.isAllowCustomPrice,
+          isPhysicalOnly: item.isPhysicalOnly,
+          isAutoDeliver: item.isAutoDeliver,
+        }
+      })
   })
 
   const userOwnedNFTIds = computed(() => {

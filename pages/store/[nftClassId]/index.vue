@@ -133,7 +133,7 @@
                   <button
                     :class="[
                       'flex',
-                      'items-start',
+                      'items-center',
                       'gap-3',
                       item.isSelected ? 'bg-green-100' : 'bg-gray-100',
                       item.isSelected ? 'hover:bg-green-200/60' : 'hover:bg-gray-200',
@@ -178,15 +178,42 @@
                           class="text-sm font-semibold"
                           v-text="$t('product_page_sold_out_button_label')"
                         />
-                        <span v-else>
-                          <span
-                            class="text-xs mr-0.5"
-                            v-text="item.currency"
-                          />
-                          <span
-                            class="font-semibold"
-                            v-text="item.formattedPrice"
-                          />
+                        <span
+                          v-else
+                          class="flex flex-col items-end text-right"
+                        >
+                          <template v-if="item?.discountedPrice">
+                            <span class="flex flex-nowrap items-center text-green-600 font-semibold">
+                              <span
+                                class="mx-0.5"
+                                v-text="item.currency"
+                              />
+                              <span v-text="item.discountedPrice" />
+                              <PlusBadge
+                                v-if="isLikerPlus"
+                                class="ml-1"
+                              />
+                            </span>
+                            <span class="text-xs text-gray-400 line-through">
+                              <span
+                                class="mr-0.5"
+                                v-text="item.currency"
+                              />
+                              <span v-text="item.originalPrice" />
+                            </span>
+                          </template>
+                          <template v-else>
+                            <span class="flex flex-row items-center">
+                              <span
+                                class="text-xs mr-0.5"
+                                v-text="item.currency"
+                              />
+                              <span
+                                class="font-semibold"
+                                v-text="item.originalPrice"
+                              />
+                            </span>
+                          </template>
                         </span>
                       </div>
                       <div
@@ -302,11 +329,20 @@
             v-text="selectedPricingItem?.currency"
           />
           <span
+            v-if="selectedPricingItem?.discountedPrice"
             class="text-2xl font-semibold"
-            v-text="selectedPricingItem?.formattedPrice"
+            v-text="selectedPricingItem?.discountedPrice"
+          />
+          <PlusBadge
+            v-if="selectedPricingItem?.discountedPrice"
+            class="ml-1"
+          />
+          <span
+            v-else
+            class="text-2xl font-semibold"
+            v-text="selectedPricingItem?.originalPrice"
           />
         </span>
-
         <UButton
           v-bind="checkoutButtonProps"
           class="cursor-pointer max-w-[248px]"
@@ -348,6 +384,7 @@ const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
 const nftStore = useNFTStore()
 const { open: openTippingModal } = useTipping()
+const { isLikerPlus, getPlusDiscountPrice } = useSubscription()
 
 const metadataStore = useMetadataStore()
 const { handleError } = useErrorHandler()
@@ -476,12 +513,16 @@ const pricingItemsElement = useTemplateRef<HTMLLIElement>('pricing')
 const isPricingItemsVisible = useElementVisibility(pricingItemsElement)
 
 const pricingItems = computed(() => {
-  return bookInfo.pricingItems.value.map((item, index) => ({
-    ...item,
-    formattedPrice: formatPrice(item.price),
-    isSelected: index === selectedPricingItemIndex.value,
-    renderedDescription: md.render(item.description || ''),
-  }))
+  return bookInfo.pricingItems.value.map((item, index) => {
+    const discountPrice = getPlusDiscountPrice(item.price)
+    return {
+      ...item,
+      originalPrice: formatPrice(item.price),
+      discountedPrice: discountPrice ? formatPrice(discountPrice) : null,
+      isSelected: index === selectedPricingItemIndex.value,
+      renderedDescription: md.render(item.description || ''),
+    }
+  })
 })
 
 const selectedPricingItem = computed(() => {

@@ -21,6 +21,7 @@ export function useSubscription() {
   const yearlyPrice = ref(69.99)
   const monthlyPrice = ref(6.99)
   const currency = ref('USD')
+  const PLUS_DISCOUNT_PERCENTAGE = 0.2 // 20% discount
   const isLikerPlus = computed(() => {
     if (!hasLoggedIn.value) return false
     return user.value?.isLikerPlus
@@ -139,6 +140,13 @@ export function useSubscription() {
     }
   }
 
+  function getPlusDiscountPrice(price: number): number | null {
+    if (isLikerPlus.value && price > 0) {
+      return Math.round(price * (1 - PLUS_DISCOUNT_PERCENTAGE))
+    }
+    return null
+  }
+
   watch(isProcessingSubscription, (newValue) => {
     paywallModal.patch({
       ...modalProps.value,
@@ -152,6 +160,7 @@ export function useSubscription() {
     currency,
 
     isLikerPlus,
+    getPlusDiscountPrice,
     isProcessingSubscription,
 
     openPaywallModal,

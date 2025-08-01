@@ -24,12 +24,16 @@
     </div>
 
     <div class="h-5 mt-3 text-sm text-[#1A1A1A] line-clamp-1">
-      <span
-        v-if="price > 0"
-        class="text-xs mr-0.5"
-        v-text="'US'"
-      />
-      <span v-text="formattedPrice" />
+      <template v-if="formattedDiscountPrice">
+        <span v-text="`US ${formattedDiscountPrice}`" />
+        <span
+          class="text-xs text-gray-400 ml-1 line-through"
+          v-text="formattedPrice"
+        />
+      </template>
+      <template v-else>
+        <span v-text="`${price > 0 ? `US ${formattedPrice}` : formattedPrice}`" />
+      </template>
     </div>
   </li>
 </template>
@@ -65,11 +69,17 @@ const nftStore = useNFTStore()
 const metadataStore = useMetadataStore()
 const bookInfo = useBookInfo({ nftClassId: props.nftClassId })
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value || props.bookCoverSrc, { size: 300 }))
+const { getPlusDiscountPrice } = useSubscription()
 
 const bookName = computed(() => bookInfo.name.value || props.bookName)
 const authorName = computed(() => bookInfo.authorName.value)
 
 const formattedPrice = computed(() => formatPrice(props.price))
+
+const formattedDiscountPrice = computed(() => {
+  const plusPrice = getPlusDiscountPrice(props.price)
+  return plusPrice ? formatPrice(plusPrice) : null
+})
 
 if (!props.lazy) {
   callOnce(`BookstoreItem_${props.nftClassId}`, () => {
