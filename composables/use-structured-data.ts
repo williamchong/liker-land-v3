@@ -1,5 +1,6 @@
 export function useStructuredData({ nftClassId }: { nftClassId: string }) {
   const bookInfo = useBookInfo({ nftClassId })
+  const config = useRuntimeConfig()
 
   function generateOGMetaTags({
     selectedPricingItemIndex = 0,
@@ -142,10 +143,16 @@ export function useStructuredData({ nftClassId }: { nftClassId: string }) {
             '@type': 'Person',
             'identifier': bookInfo.nftClassOwnerWalletAddress.value,
           },
+          'url': `${canonicalURL}?price_index=${pricing.index}`,
           'price': pricing?.price || 0,
           'priceCurrency': 'USD',
           'availability': pricing?.isSoldOut ? 'https://schema.org/SoldOut' : 'https://schema.org/LimitedAvailability',
           'itemCondition': 'https://schema.org/NewCondition',
+          'checkoutPageURLTemplate': `${config.public.apiBaseURL}/likernft/book/purchase/${nftClassId}/new?price_index=${pricing.index}&utm_medium=structured-data`,
+          'hasMerchantReturnPolicy': {
+            '@type': 'MerchantReturnPolicy',
+            'returnPolicyCategory': 'https://schema.org/MerchantReturnNotPermitted',
+          },
         },
         productId,
         'inProductGroupWithID': nftClassId,
