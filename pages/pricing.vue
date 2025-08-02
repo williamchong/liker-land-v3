@@ -30,6 +30,7 @@ const structuredData = computed(() => {
     'name': $t('pricing_page_title'),
     'description': $t('pricing_page_subscription_description'),
     'url': pageURL,
+    'image': `${baseURL}/images/og/plus.jpg`,
     'offers': [
       {
         '@type': 'Offer',
