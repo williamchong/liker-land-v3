@@ -112,6 +112,9 @@ onMounted(async () => {
       isFullscreen: true,
       isBackdropDismissible: false,
       hasFreeTrial: getRouteQuery('trial') !== '0',
+      utmCampaign: 'pricing_page',
+      utmSource: 'website',
+      utmMedium: 'web',
     })
     router.back()
   }
