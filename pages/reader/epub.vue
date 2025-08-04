@@ -141,6 +141,19 @@
               ref="reader"
               class="absolute inset-0"
             />
+
+            <!-- Page navigation loading indicator -->
+            <div
+              class="absolute inset-0 flex items-center justify-center z-10 transition-opacity duration-300 opacity-0"
+              :class="{ 'opacity-100': isPageLoading }"
+              style="animation-delay: 200ms;"
+            >
+              <div
+                class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"
+                role="status"
+                aria-label="Loading page"
+              />
+            </div>
           </div>
 
           <div
@@ -232,6 +245,7 @@ function getCacheKeyWithSuffix(suffix: ReaderCacheKeySuffix) {
 const isReaderLoading = ref(true)
 const isDesktopTocOpen = ref(false)
 const isMobileTocOpen = ref(false)
+const isPageLoading = ref(false)
 
 const { loadingLabel, loadFileAsBuffer } = useBookFileLoader()
 
@@ -279,6 +293,7 @@ const { setTTSSegments, openPlayer } = useTTSPlayerModal({
   nftClassId: nftClassId.value,
   onSegmentChange: (segment) => {
     if (segment?.href) {
+      isPageLoading.value = true
       rendition.value?.display(segment.href)
       activeTTSElementIndex.value = segment.index
     }
@@ -395,12 +410,14 @@ async function loadEPub() {
   }
   rendition.value.themes.default({ body: bodyCSS })
   rendition.value.themes.fontSize(`${fontSize.value}px`)
+  isPageLoading.value = true
   rendition.value.display(currentCfi.value || undefined)
 
   rendition.value.on('rendered', (section: Section, view: EpubView) => {
     currentSectionIndex.value = section.index
     isRightToLeft.value = view.settings.direction === 'rtl'
     renditionViewWindow.value = view.window
+    isPageLoading.value = false
 
     if (cleanUpClickListener) {
       cleanUpClickListener()
@@ -430,6 +447,7 @@ async function loadEPub() {
   })
 
   rendition.value.on('relocated', (location: Location) => {
+    isPageLoading.value = false
     currentPageEndCfi.value = location.end.cfi
     const href = location.start.href
     currentPageHref.value = href
@@ -494,16 +512,19 @@ async function extractTTSSegments(book: ePub.Book) {
 function setActiveNavItemHref(href: string) {
   activeTTSElementIndex.value = undefined
   activeNavItemHref.value = href
+  isPageLoading.value = true
   rendition.value?.display(href)
 }
 
 function nextPage() {
   activeTTSElementIndex.value = undefined
+  isPageLoading.value = true
   rendition.value?.next()
 }
 
 function prevPage() {
   activeTTSElementIndex.value = undefined
+  isPageLoading.value = true
   rendition.value?.prev()
 }
 
