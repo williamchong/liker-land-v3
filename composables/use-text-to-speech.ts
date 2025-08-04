@@ -209,6 +209,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         const error = audio?.error || e
         console.warn('Audio playback error:', error)
         options.onError?.(error)
+        setTimeout(() => {
+          if (isTextToSpeechOn.value && isTextToSpeechPlaying.value) {
+            playNextElement()
+          }
+        }, 500)
       }
     }
 
