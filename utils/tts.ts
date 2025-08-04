@@ -1,6 +1,6 @@
 export function splitTextIntoSegments(text: string): string[] {
   if (!text) return []
-  const punctuationRegex = /([.!?;。！？；：，、][\s\u200B]*)/
+  const punctuationRegex = /([.!?;*。！？；：，、＊][\s\u200B]*)/
   const segments = text.split(punctuationRegex)
   const result: string[] = []
 
