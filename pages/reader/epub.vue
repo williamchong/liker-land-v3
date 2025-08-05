@@ -296,6 +296,7 @@ const isAtFirstPage = computed(() => {
   return currentSectionIndex.value === 0 && percentage.value === 0
 })
 const isRightToLeft = ref(false)
+const currentPageStartCfi = ref<string>('')
 const currentPageEndCfi = ref<string>('')
 const currentPageHref = ref<string>('')
 const currentCfi = useStorage(getCacheKeyWithSuffix('cfi'), '')
@@ -430,6 +431,7 @@ async function loadEPub() {
   })
 
   rendition.value.on('relocated', (location: Location) => {
+    currentPageStartCfi.value = location.start.cfi
     currentPageEndCfi.value = location.end.cfi
     const href = location.start.href
     currentPageHref.value = href
@@ -466,10 +468,12 @@ async function extractTTSSegments(book: ePub.Book) {
         const segments: TTSSegment[] = []
         elements.forEach((el, elIndex) => {
           const text = el.textContent?.trim() || ''
+          const cfi = section.cfiFromElement(el)
           segments.push(
             ...splitTextIntoSegments(text).map((segment, segIndex) => ({
               text: segment,
               id: `${section.index}-${elIndex}-${segIndex}`,
+              cfi,
               sectionIndex: section.index,
               chapterTitle,
             })),
@@ -556,6 +560,7 @@ function onClickTTSPlay() {
   openPlayer({
     ttsIndex: activeTTSElementIndex.value,
     sectionIndex: currentSectionIndex.value,
+    cfi: currentPageStartCfi.value,
   })
 }
 
