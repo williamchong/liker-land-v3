@@ -198,6 +198,7 @@
         </div>
 
         <span
+          v-if="!isReaderLoading"
           class="absolute bottom-6 right-12 text-xs"
           v-text="percentageLabel"
         />
