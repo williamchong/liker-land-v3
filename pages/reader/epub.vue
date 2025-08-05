@@ -141,19 +141,27 @@
               ref="reader"
               class="absolute inset-0"
             />
+          </div>
 
-            <!-- Page navigation loading indicator -->
-            <div
-              class="absolute inset-0 flex items-center justify-center z-10 transition-opacity duration-300 opacity-0"
-              :class="{ 'opacity-100': isPageLoading }"
-              style="animation-delay: 200ms;"
-            >
-              <div
-                class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"
-                role="status"
-                aria-label="Loading page"
-              />
-            </div>
+          <div
+            v-if="!isReaderLoading"
+            :class="[
+              'absolute',
+              'inset-0',
+              'flex',
+              'items-center',
+              'justify-center',
+              'bg-white/75',
+              isPageLoading ? 'opacity-100' : 'opacity-0',
+              'pointer-events-none',
+              'transition-opacity',
+              'duration-300',
+            ]"
+          >
+            <UIcon
+              class="animate-spin size-12"
+              name="i-material-symbols-refresh-rounded"
+            />
           </div>
 
           <div
