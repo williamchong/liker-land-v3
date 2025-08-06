@@ -8,3 +8,7 @@ export interface LikerInfoResponseData {
   description: string
   isLikerPlus?: boolean
 }
+
+export interface LikerProfileResponseData extends LikerInfoResponseData {
+  email?: string
+}
