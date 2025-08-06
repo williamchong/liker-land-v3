@@ -1,6 +1,5 @@
 import { createHash } from 'crypto'
 import { getStorage as getFirebaseStorage } from 'firebase-admin/storage'
-import { getFirebaseApp } from './firebase'
 
 export function generateTTSCacheKey(language: string, voiceId: string, text: string): string {
   const config = useRuntimeConfig()

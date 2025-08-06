@@ -105,8 +105,8 @@ export default defineEventHandler(async (event) => {
   await updateUserTTSCharacterUsage(session.user.evmWallet, text.length)
 
   const bucket = getTTSCacheBucket()
-  const cacheEnabled = !!bucket
-  if (cacheEnabled) {
+  const isCacheEnabled = !!bucket
+  if (isCacheEnabled) {
     const cacheKey = generateTTSCacheKey(language, validVoiceId, text)
     const file = bucket.file(cacheKey)
 
@@ -152,7 +152,7 @@ export default defineEventHandler(async (event) => {
     let cacheWriteStream: Writable | null = null
     let cacheKey: string | null = null
 
-    if (cacheEnabled) {
+    if (isCacheEnabled) {
       cacheKey = generateTTSCacheKey(language, validVoiceId, text)
       const cacheFile = bucket.file(cacheKey)
       // Firebase Storage metadata has a 2KB limit per key
@@ -176,7 +176,7 @@ export default defineEventHandler(async (event) => {
     const audioChunks: Buffer[] = []
 
     function handleCacheWrite() {
-      if (cacheEnabled && cacheWriteStream) {
+      if (isCacheEnabled && cacheWriteStream) {
         if (!hasError && audioChunks.length > 0) {
           const combinedBuffer = Buffer.concat(audioChunks)
           cacheWriteStream.end(combinedBuffer)
@@ -202,7 +202,7 @@ export default defineEventHandler(async (event) => {
               try {
                 const audioBuffer = processEventData(event)
                 if (audioBuffer) {
-                  if (cacheEnabled) {
+                  if (isCacheEnabled) {
                     audioChunks.push(audioBuffer)
                   }
                   controller.enqueue(audioBuffer)
@@ -233,7 +233,7 @@ export default defineEventHandler(async (event) => {
         try {
           const audioBuffer = processEventData(buffer)
           if (audioBuffer) {
-            if (cacheEnabled) {
+            if (isCacheEnabled) {
               audioChunks.push(audioBuffer)
             }
             controller.enqueue(audioBuffer)
@@ -243,7 +243,7 @@ export default defineEventHandler(async (event) => {
         catch (error) {
           hasError = true
           console.warn(`[Speech] Error in flush for user ${session.user.evmWallet}:`, error)
-          if (cacheEnabled && cacheWriteStream) {
+          if (isCacheEnabled && cacheWriteStream) {
             cacheWriteStream.destroy()
           }
         }
