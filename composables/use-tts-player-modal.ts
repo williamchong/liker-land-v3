@@ -56,11 +56,12 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
         segmentIndex = Math.max(segmentIndex, 0)
       }
       if (cfi) {
-        const CFI = new EpubCFI()
+        const epubCFI = new EpubCFI()
         const cfiIndex = ttsSegments.value
           .slice(segmentIndex)
-          .findIndex(segment => segment.cfi && CFI.compare(segment.cfi, cfi) >= 0)
-        if (cfiIndex >= 1) { // get -1 segment for better UX, since found segment might be cross page
+          .findIndex(segment => segment.cfi && epubCFI.compare(segment.cfi, cfi) >= 0)
+        if (cfiIndex >= 1) {
+          // Retrieve the previous segment for better UX, as the segment might span multiple pages
           segmentIndex += cfiIndex - 1
         }
       }
