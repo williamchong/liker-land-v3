@@ -320,6 +320,7 @@ const isAtFirstPage = computed(() => {
   return currentSectionIndex.value === 0 && percentage.value === 0
 })
 const isRightToLeft = ref(false)
+const currentPageStartCfi = ref<string>('')
 const currentPageEndCfi = ref<string>('')
 const currentPageHref = ref<string>('')
 const currentCfi = useStorage(getCacheKeyWithSuffix('cfi'), '')
@@ -334,6 +335,7 @@ watch(fontSize, (size) => {
 })
 
 let cleanUpClickListener: (() => void) | undefined
+let removeSwipeListener: (() => void) | undefined
 const renditionElement = useTemplateRef<HTMLDivElement>('reader')
 const renditionViewWindow = ref<Window | undefined>(undefined)
 
@@ -453,10 +455,47 @@ async function loadEPub() {
         }
       }
     })
+
+    if (removeSwipeListener) {
+      removeSwipeListener()
+    }
+    ({ stop: removeSwipeListener } = useSwipe(
+      view.window,
+      {
+        onSwipeEnd: (_: TouchEvent, direction: UseSwipeDirection) => {
+          if (checkIsSelectingText()) {
+            // Do not navigate when selecting text
+            return
+          }
+
+          switch (direction) {
+            case 'left':
+              turnPageRight()
+              useLogEvent('reader_navigate_swipe_horizontal')
+              break
+            case 'right':
+              turnPageLeft()
+              useLogEvent('reader_navigate_swipe_horizontal')
+              break
+            case 'up':
+              nextPage()
+              useLogEvent('reader_navigate_swipe_vertical')
+              break
+            case 'down':
+              prevPage()
+              useLogEvent('reader_navigate_swipe_vertical')
+              break
+            default:
+              break
+          }
+        },
+      },
+    ))
   })
 
   rendition.value.on('relocated', (location: Location) => {
     isPageLoading.value = false
+    currentPageStartCfi.value = location.start.cfi
     currentPageEndCfi.value = location.end.cfi
     const href = location.start.href
     currentPageHref.value = href
@@ -493,10 +532,12 @@ async function extractTTSSegments(book: ePub.Book) {
         const segments: TTSSegment[] = []
         elements.forEach((el, elIndex) => {
           const text = el.textContent?.trim() || ''
+          const cfi = section.cfiFromElement(el)
           segments.push(
             ...splitTextIntoSegments(text).map((segment, segIndex) => ({
               text: segment,
               id: `${section.index}-${elIndex}-${segIndex}`,
+              cfi,
               sectionIndex: section.index,
               chapterTitle,
             })),
@@ -586,6 +627,7 @@ function onClickTTSPlay() {
   openPlayer({
     ttsIndex: activeTTSElementIndex.value,
     sectionIndex: currentSectionIndex.value,
+    cfi: currentPageStartCfi.value,
   })
 }
 
@@ -630,39 +672,6 @@ onKeyStroke('Space', () => {
   }
   useLogEvent('reader_navigate_key_space')
 })
-
-useSwipe(
-  renditionViewWindow,
-  {
-    onSwipeEnd: (_: TouchEvent, direction: UseSwipeDirection) => {
-      if (checkIsSelectingText()) {
-        // Do not navigate when selecting text
-        return
-      }
-
-      switch (direction) {
-        case 'left':
-          turnPageRight()
-          useLogEvent('reader_navigate_swipe_horizontal')
-          break
-        case 'right':
-          turnPageLeft()
-          useLogEvent('reader_navigate_swipe_horizontal')
-          break
-        case 'up':
-          nextPage()
-          useLogEvent('reader_navigate_swipe_vertical')
-          break
-        case 'down':
-          prevPage()
-          useLogEvent('reader_navigate_swipe_vertical')
-          break
-        default:
-          break
-      }
-    },
-  },
-)
 </script>
 
 <style>
