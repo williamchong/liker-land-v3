@@ -227,6 +227,8 @@ const emit = defineEmits<{
   error: [error: Error]
 }>()
 
+const { pixelRatio } = useDevicePixelRatio()
+
 const isMobile = useMediaQuery('(max-width: 768px)')
 const pageDisplayText = computed(() => {
   if (isDualPageMode.value && totalPages.value > 1) {
@@ -363,11 +365,16 @@ async function renderSinglePage() {
   const context = singleCanvas.value.getContext('2d')
   if (!context) return
 
-  singleCanvas.value.height = viewport.height
-  singleCanvas.value.width = viewport.width
+  singleCanvas.value.height = viewport.height * pixelRatio.value
+  singleCanvas.value.width = viewport.width * pixelRatio.value
+  singleCanvas.value.style.width = `${viewport.width}px`
+  singleCanvas.value.style.height = `${viewport.height}px`
 
   const renderContext = {
     canvasContext: context,
+    transform: pixelRatio.value !== 1
+      ? [pixelRatio.value, 0, 0, pixelRatio.value, 0, 0]
+      : undefined,
     viewport: viewport,
   }
 
@@ -392,11 +399,16 @@ async function renderDualPages() {
   const leftPageTask = pdfDocument.value.getPage(actualLeftPageNum).then(async (leftPage) => {
     const leftViewport = leftPage.getViewport({ scale: scale.value })
     if (leftCanvas.value) {
-      leftCanvas.value.height = leftViewport.height
-      leftCanvas.value.width = leftViewport.width
+      leftCanvas.value.height = leftViewport.height * pixelRatio.value
+      leftCanvas.value.width = leftViewport.width * pixelRatio.value
+      leftCanvas.value.style.width = `${leftViewport.width}px`
+      leftCanvas.value.style.height = `${leftViewport.height}px`
     }
     return leftPage.render({
       canvasContext: leftContext,
+      transform: pixelRatio.value !== 1
+        ? [pixelRatio.value, 0, 0, pixelRatio.value, 0, 0]
+        : undefined,
       viewport: leftViewport,
     }).promise
   })
@@ -406,11 +418,16 @@ async function renderDualPages() {
     const rightPageTask = pdfDocument.value.getPage(actualRightPageNum).then(async (rightPage) => {
       const rightViewport = rightPage.getViewport({ scale: scale.value })
       if (rightCanvas.value) {
-        rightCanvas.value.height = rightViewport.height
-        rightCanvas.value.width = rightViewport.width
+        rightCanvas.value.height = rightViewport.height * pixelRatio.value
+        rightCanvas.value.width = rightViewport.width * pixelRatio.value
+        rightCanvas.value.style.width = `${rightViewport.width}px`
+        rightCanvas.value.style.height = `${rightViewport.height}px`
       }
       return rightPage.render({
         canvasContext: rightContext,
+        transform: pixelRatio.value !== 1
+          ? [pixelRatio.value, 0, 0, pixelRatio.value, 0, 0]
+          : undefined,
         viewport: rightViewport,
       }).promise
     })
