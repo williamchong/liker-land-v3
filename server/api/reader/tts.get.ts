@@ -131,7 +131,7 @@ export default defineEventHandler(async (event) => {
       stream_options: {
         exclude_aggregated_audio: false,
       },
-      model: 'speech-02-hd',
+      model: 'speech-2.5-hd-preview',
       voice_setting: {
         voice_id: VOICE_MAPPING[validVoiceId],
         speed: 0.95,
