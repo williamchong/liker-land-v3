@@ -112,7 +112,7 @@
             size="xs"
             target="_blank"
             icon="i-simple-icons-substack"
-            href="https://3ookcom.substack.com"
+            href="https://review.3ook.com"
           />
         </li>
       </ul>
