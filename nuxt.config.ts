@@ -50,9 +50,6 @@ export default defineNuxtConfig({
     ttsCacheBucketPrefix: process.env.TTS_CACHE_BUCKET_PREFIX,
     public: {
       scripts: {
-        hotjar: {
-          id: '',
-        },
         intercom: {
           app_id: '',
         },
@@ -136,7 +133,6 @@ export default defineNuxtConfig({
 
   scripts: {
     registry: {
-      hotjar: true,
       intercom: true,
       metaPixel: true,
       stripe: true,

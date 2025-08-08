@@ -22,7 +22,7 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
     console.error(`Failed to track event: ${eventName}`, eventParams)
   }
 
-  const { proxy: fbq } = useScriptMetaPixel()
+  const { proxy } = useScriptMetaPixel()
   try {
     const eventNameMapping: { [key: string]: string } = {
       view_item: 'ViewContent',
@@ -39,7 +39,7 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
         items,
       } = eventParams
       const eventId = paymentId ? `${eventName}_${paymentId}` : undefined
-      fbq.fbq('track', eventNameMapping[eventName], {
+      proxy.fbq('track', eventNameMapping[eventName], {
         currency,
         value,
         order_id: paymentId,
@@ -69,14 +69,6 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
     catch (error) {
       console.error(`Failed to log event to Intercom: ${eventName}`, error)
     }
-  }
-
-  const { proxy: hotjar } = useScriptHotjar()
-  try {
-    hotjar.hj('event', eventName)
-  }
-  catch (error) {
-    console.error(`Failed to log event to Hotjar: ${eventName}`, error)
   }
 }
 
@@ -140,21 +132,6 @@ export function useSetLogUser(user: User | null) {
     }
     catch (error) {
       console.error('Failed to set user data in Intercom', error)
-    }
-  }
-
-  const { proxy: hotjar } = useScriptHotjar()
-  if (user) {
-    try {
-      hotjar.hj('identify', user.evmWallet || user.likeWallet, {
-        email: user.email,
-        name: user.displayName || user.evmWallet || user.likeWallet,
-        evm_wallet: user.evmWallet,
-        login_method: user.loginMethod,
-      })
-    }
-    catch (error) {
-      console.error('Failed to set user data in Hotjar', error)
     }
   }
 }
