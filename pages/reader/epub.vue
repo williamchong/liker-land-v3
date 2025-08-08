@@ -299,7 +299,7 @@ const activeNavItemHref = ref<string | undefined>()
 // TODO: Should hide this index into TTS (player?) composable?
 const activeTTSElementIndex = useStorage(getCacheKeyWithSuffix('tts-index'), undefined) as Ref<number | undefined>
 
-const { setTTSSegments, openPlayer } = useTTSPlayerModal({
+const { setTTSSegments, setChapterTitles, openPlayer } = useTTSPlayerModal({
   nftClassId: nftClassId.value,
   onSegmentChange: (segment) => {
     if (segment?.href) {
@@ -507,12 +507,13 @@ async function loadEPub() {
     currentCfi.value = location.start.cfi
   })
 
-  const ttsSegments = await extractTTSSegments(book)
+  const { segments: ttsSegments, chapterTitles } = await extractTTSSegments(book)
   setTTSSegments(ttsSegments)
+  setChapterTitles(chapterTitles)
 }
 
 async function extractTTSSegments(book: ePub.Book) {
-  const sectionPromises: Promise<TTSSegment[]>[] = []
+  const sectionPromises: Promise<{ segments: TTSSegment[], chapterTitle: string, sectionIndex: number }>[] = []
 
   book.spine.each((section: Section) => {
     const sectionPromise = (async () => {
@@ -521,7 +522,7 @@ async function extractTTSSegments(book: ePub.Book) {
 
         if (!(chapter instanceof Document)) {
           console.warn(`No document found for section ${section.href}`)
-          return []
+          return { segments: [], chapterTitle: '', sectionIndex: section.index }
         }
 
         const chapterTitle = chapter.querySelector('title')?.textContent?.trim() || ''
@@ -540,24 +541,29 @@ async function extractTTSSegments(book: ePub.Book) {
               id: `${section.index}-${elIndex}-${segIndex}`,
               cfi,
               sectionIndex: section.index,
-              chapterTitle,
             })),
           )
         })
 
-        return segments
+        return { segments, chapterTitle, sectionIndex: section.index }
       }
       catch (err) {
         console.warn(`Failed to load section ${section.href}`, err)
-        return []
+        return { segments: [], chapterTitle: '', sectionIndex: section.index }
       }
     })()
 
     sectionPromises.push(sectionPromise)
   })
 
-  const ttsSegments = (await Promise.all(sectionPromises)).flat()
-  return ttsSegments
+  const sectionResults = await Promise.all(sectionPromises)
+  const segments = sectionResults.flatMap(result => result.segments)
+  const chapterTitles = sectionResults.reduce<Record<number, string>>((acc, result) => {
+    acc[result.sectionIndex] = result.chapterTitle
+    return acc
+  }, {})
+
+  return { segments, chapterTitles }
 }
 
 function setActiveNavItemHref(href: string) {
