@@ -212,6 +212,7 @@ const props = withDefaults(
     sectionTitle: '',
     nftClassId: '',
     segments: () => [],
+    chapterTitlesBySection: () => ({}),
     startIndex: 0,
   },
 )
@@ -289,7 +290,11 @@ const activeTTSLanguageVoiceLabel = computed(() => {
 })
 
 const sectionTitle = computed(() => {
-  return props.segments[currentTTSSegmentIndex.value]?.chapterTitle || ''
+  const currentSegment = props.segments[currentTTSSegmentIndex.value]
+  if (currentSegment && props.chapterTitlesBySection) {
+    return props.chapterTitlesBySection[currentSegment.sectionIndex] || ''
+  }
+  return ''
 })
 
 const getTTSPlaybackRateLabel = computed(() => {

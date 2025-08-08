@@ -9,6 +9,7 @@ interface TTSPlayerOptions {
 
 export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
   const ttsSegments = ref<TTSSegment[]>([])
+  const chapterTitlesBySection = ref<Record<number, string>>({})
   const startIndex = ref(0)
   const bookInfo = useBookInfo({ nftClassId: options.nftClassId })
   const bookCoverSrc = computed(() =>
@@ -22,6 +23,7 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
     bookLanguage: bookInfo.inLanguage.value,
     nftClassId: options.nftClassId,
     segments: ttsSegments.value,
+    chapterTitlesBySection: chapterTitlesBySection.value,
     startIndex: startIndex.value,
     onSegmentChange: options.onSegmentChange,
   }))
@@ -33,6 +35,10 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
 
   function setTTSSegments(elements: TTSSegment[]) {
     ttsSegments.value = elements
+  }
+
+  function setChapterTitles(titles: Record<number, string>) {
+    chapterTitlesBySection.value = titles
   }
 
   function openPlayer({
@@ -88,5 +94,6 @@ export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
 
     ttsSegments,
     setTTSSegments,
+    setChapterTitles,
   }
 }
