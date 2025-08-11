@@ -1,24 +1,24 @@
 interface LikerInfo {
-  likerId: string
-  displayName: string
-  avatarSrc: string
-  cosmosWallet: string
-  likeWallet: string
-  evmWallet: string
-  description: string
-  isLikerPlus: boolean
+  likerId?: string
+  displayName?: string
+  avatarSrc?: string
+  cosmosWallet?: string
+  likeWallet?: string
+  evmWallet?: string
+  description?: string
+  isLikerPlus?: boolean
 }
 
-function normalizeLikerInfoFromResponseData(data: LikerInfoResponseData): LikerInfo {
+function normalizeLikerInfoFromResponseData(data?: LikerInfoResponseData): LikerInfo {
   return {
-    likerId: data.user,
-    displayName: data.displayName,
-    avatarSrc: data.avatar,
-    cosmosWallet: data.cosmosWallet,
-    likeWallet: data.likeWallet,
-    evmWallet: data.evmWallet,
-    description: data.description,
-    isLikerPlus: data.isLikerPlus || false,
+    likerId: data?.user,
+    displayName: data?.displayName,
+    avatarSrc: data?.avatar,
+    cosmosWallet: data?.cosmosWallet,
+    likeWallet: data?.likeWallet,
+    evmWallet: data?.evmWallet,
+    description: data?.description,
+    isLikerPlus: data?.isLikerPlus || false,
   }
 }
 

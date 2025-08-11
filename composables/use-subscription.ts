@@ -1,5 +1,6 @@
-import { PaywallModal } from '#components'
+import { PaywallModal, UpsellPlusModal } from '#components'
 import type { PaywallModalProps } from '~/components/PaywallModal.props'
+import type { UpsellPlusModalProps } from '~/components/UpsellPlusModal.props'
 
 export function useSubscription() {
   const likeCoinSessionAPI = useLikeCoinSessionAPI()
@@ -25,6 +26,11 @@ export function useSubscription() {
   const isLikerPlus = computed(() => {
     if (!hasLoggedIn.value) return false
     return user.value?.isLikerPlus
+  })
+
+  const likerPlusPeriod = computed(() => {
+    if (!hasLoggedIn.value || !isLikerPlus.value) return undefined
+    return user.value?.likerPlusPeriod || undefined
   })
 
   const eventPayload = computed(() => ({
@@ -56,9 +62,18 @@ export function useSubscription() {
     }
   }
 
+  function getUpsellPlusModalProps(): UpsellPlusModalProps {
+    return {
+      onSubscribe: startSubscription,
+    }
+  }
+
   const overlay = useOverlay()
   const paywallModal = overlay.create(PaywallModal, {
     props: getPaywallModalProps(),
+  })
+  const upsellPlusModal = overlay.create(UpsellPlusModal, {
+    props: getUpsellPlusModalProps(),
   })
 
   async function openPaywallModal(props: PaywallModalProps = {}) {
@@ -71,6 +86,18 @@ export function useSubscription() {
       ...props,
     }
     return paywallModal.open(modalProps.value).result
+  }
+
+  async function openUpsellPlusModal(props: UpsellPlusModalProps = {}) {
+    if (upsellPlusModal.isOpen) {
+      upsellPlusModal.close()
+    }
+    const upsellModalProps: UpsellPlusModalProps = {
+      ...props,
+      ...getUpsellPlusModalProps(),
+    }
+
+    return upsellPlusModal.open(upsellModalProps).result
   }
 
   async function redirectIfSubscribed() {
@@ -87,15 +114,25 @@ export function useSubscription() {
     utmCampaign,
     utmMedium,
     utmSource,
+    plan,
+    redirectRoute,
   }: {
     hasFreeTrial?: boolean
     mustCollectPaymentMethod?: boolean
     utmCampaign?: string
     utmMedium?: string
     utmSource?: string
+    plan?: SubscriptionPlan
+    redirectRoute?: {
+      name: string
+      params: Record<string, string>
+      query: Record<string, string>
+      hash: string
+    }
   } = {}) {
+    const subscribePlan = plan || selectedPlan.value
     useLogEvent('add_to_cart', eventPayload.value)
-    useLogEvent('subscription_button_click', { plan: selectedPlan.value })
+    useLogEvent('subscription_button_click', { plan: subscribePlan })
 
     const isSubscribed = await redirectIfSubscribed()
     if (isSubscribed) return
@@ -121,7 +158,7 @@ export function useSubscription() {
 
       const analyticsParams = getAnalyticsParameters()
       const { url } = await likeCoinSessionAPI.fetchLikerPlusCheckoutLink({
-        period: selectedPlan.value,
+        period: subscribePlan,
         from: getRouteQuery('from'),
         hasFreeTrial,
         mustCollectPaymentMethod,
@@ -130,6 +167,9 @@ export function useSubscription() {
         utmMedium: utmMedium || analyticsParams.utmMedium,
         utmSource: utmSource || analyticsParams.utmSource,
       })
+      if (redirectRoute && redirectRoute?.name) {
+        accountStore.savePlusRedirectRoute(redirectRoute)
+      }
       await navigateTo(url, { external: true })
     }
     catch (error) {
@@ -160,10 +200,12 @@ export function useSubscription() {
     currency,
 
     isLikerPlus,
+    likerPlusPeriod,
     getPlusDiscountPrice,
     isProcessingSubscription,
 
     openPaywallModal,
+    openUpsellPlusModal,
     redirectIfSubscribed,
     startSubscription,
   }

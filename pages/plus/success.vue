@@ -66,7 +66,6 @@ onMounted(async () => {
       await sleep(5000)
       await accountStore.refreshSessionInfo()
     }
-    isRefreshing.value = false
     if (isRedirected.value) {
       const isTrial = getRouteQuery('trial') !== '0'
       const price = isTrial
@@ -91,7 +90,14 @@ onMounted(async () => {
         },
       }), { replace: true })
     }
+    const redirectRoute = accountStore.getPlusRedirectRoute()
 
+    if (redirectRoute && redirectRoute.name) {
+      accountStore.clearPlusRedirectRoute()
+      await navigateTo(localeRoute(redirectRoute), { replace: true })
+      return
+    }
+    isRefreshing.value = false
     setTimeout(redirectToShelf, 1000)
   }
   catch (error) {

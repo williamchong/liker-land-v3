@@ -384,7 +384,12 @@ const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
 const nftStore = useNFTStore()
 const { open: openTippingModal } = useTipping()
-const { isLikerPlus, getPlusDiscountPrice } = useSubscription()
+const {
+  isLikerPlus,
+
+  getPlusDiscountPrice,
+  openUpsellPlusModal,
+} = useSubscription()
 
 const metadataStore = useMetadataStore()
 const { handleError } = useErrorHandler()
@@ -582,6 +587,10 @@ onMounted(() => {
   if (ownerWalletAddress) {
     metadataStore.lazyFetchLikerInfoByWalletAddress(ownerWalletAddress)
   }
+  const selectedPricingItemIndex = getRouteQuery('edition')
+  if (selectedPricingItemIndex) {
+    handlePurchaseButtonClick()
+  }
 })
 
 async function handleSocialButtonClick(key: string) {
@@ -640,6 +649,16 @@ async function handlePurchaseButtonClick() {
     if (!hasLoggedIn.value) {
       await accountStore.login()
       if (!hasLoggedIn.value) return
+    }
+    if (!isLikerPlus.value) {
+      const isStartSubscription = await openUpsellPlusModal({
+        isLikerPlus: false,
+        utmSource: 'product_page',
+        utmCampaign: 'upsell_plus',
+        utmMedium: 'product_page',
+        selectedPricingItemIndex: selectedPricingItemIndex.value,
+      })
+      if (isStartSubscription) return
     }
 
     let customPrice: number | undefined = undefined
