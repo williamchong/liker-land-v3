@@ -231,9 +231,10 @@ declare interface Rendition extends RenditionBase {
 }
 
 const { loggedIn: hasLoggedIn } = useUserSession()
+const route = useRoute()
 const localeRoute = useLocaleRoute()
 if (!hasLoggedIn.value) {
-  await navigateTo(localeRoute({ name: 'account' }))
+  await navigateTo(localeRoute({ name: 'account', query: route.query }))
 }
 
 const { t: $t } = useI18n()

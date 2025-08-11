@@ -138,6 +138,7 @@ const tagId = computed({
       name: 'store',
       query: {
         ...route.query,
+        ll_medium: `tag-${id}`,
         // NOTE: Remove the tag query if it is the listing tag
         tag: getIsDefaultTagId(id) ? undefined : id,
       },

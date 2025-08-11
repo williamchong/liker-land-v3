@@ -27,7 +27,7 @@ const nftId = computed(() => getRouteQuery('nft_id'))
 const bookInfo = useBookInfo({ nftClassId: nftClassId.value })
 
 if (!nftClassId.value) {
-  await navigateTo(localeRoute({ name: 'shelf' }))
+  await navigateTo(localeRoute({ name: 'shelf', query: route.query }))
 }
 
 if (nftClassId.value !== nftClassId.value.toLowerCase()) {
