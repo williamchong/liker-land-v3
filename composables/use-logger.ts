@@ -104,6 +104,19 @@ export function useSetLogUser(user: User | null) {
     console.error('Failed to set user ID in Google Analytics', error)
   }
 
+  const { proxy } = useScriptMetaPixel()
+  if (useRuntimeConfig().public.scripts.metaPixel.id && user?.evmWallet) {
+    try {
+      proxy.fbq('init', useRuntimeConfig().public.scripts.metaPixel.id, {
+        em: user?.email,
+        external_id: sha256(user?.evmWallet as `0x${string}`),
+      })
+    }
+    catch (error) {
+      console.error('Failed to initialize Meta Pixel with user data', error)
+    }
+  }
+
   // Set user info in Intercom
   if (window?.Intercom) {
     try {
