@@ -127,7 +127,21 @@ async function extractTTSSegmentsFromPDF(pdfDocument: PDFDocumentProxy) {
     try {
       const page = await pdfDocument.getPage(pageNum)
       const textContent = await page.getTextContent()
-      const pageText = textContent.items
+      const viewport = page.getViewport({ scale: 1.0 })
+      const pageHeight = viewport.height
+
+      const headerThreshold = pageHeight * 0.8
+      const footerThreshold = pageHeight * 0.2
+
+      const mainContentItems = textContent.items
+        .filter((item: TextItem | TextMarkedContent) => {
+          if (!('str' in item) || !item.transform) return false
+          // item.transform[5] is the Y coordinate (from bottom of page)
+          const yPosition = item.transform[5]
+          return yPosition < headerThreshold && yPosition > footerThreshold
+        })
+
+      const pageText = mainContentItems
         .filter((item: (TextItem | TextMarkedContent)) => 'str' in item)
         .map((item: TextItem) => item.str)
         .join(' ')
