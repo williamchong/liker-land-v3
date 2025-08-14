@@ -653,8 +653,9 @@ async function handlePurchaseButtonClick() {
     if (!isLikerPlus.value) {
       const isStartSubscription = await openUpsellPlusModal({
         isLikerPlus: false,
-        utmSource: 'product_page',
-        utmCampaign: 'upsell_plus',
+        classId: nftClassId.value,
+        utmSource: 'upsell_plus',
+        utmCampaign: `upsell_plus_${nftClassId.value}`,
         utmMedium: 'product_page',
         selectedPricingItemIndex: selectedPricingItemIndex.value,
       })

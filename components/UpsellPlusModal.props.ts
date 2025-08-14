@@ -4,6 +4,7 @@ export interface UpsellPlusModalProps {
   isProcessingSubscription?: boolean
   hasFreeTrial?: boolean
   mustCollectPaymentMethod?: boolean
+  classId?: string
   utmCampaign?: string
   utmMedium?: string
   utmSource?: string
@@ -15,6 +16,7 @@ export interface UpsellPlusModalProps {
     utmMedium?: string
     utmSource?: string
     plan?: SubscriptionPlan
+    classId?: string
   }) => void
   onOpen?: () => void
   onClose?: () => void

@@ -115,6 +115,7 @@ export function useSubscription() {
     utmMedium,
     utmSource,
     plan,
+    classId,
     redirectRoute,
   }: {
     hasFreeTrial?: boolean
@@ -123,6 +124,7 @@ export function useSubscription() {
     utmMedium?: string
     utmSource?: string
     plan?: SubscriptionPlan
+    classId?: string
     redirectRoute?: {
       name: string
       params: Record<string, string>
@@ -131,6 +133,7 @@ export function useSubscription() {
     }
   } = {}) {
     const subscribePlan = plan || selectedPlan.value
+    const isYearly = subscribePlan === 'yearly'
     useLogEvent('add_to_cart', eventPayload.value)
     useLogEvent('subscription_button_click', { plan: subscribePlan })
 
@@ -162,6 +165,7 @@ export function useSubscription() {
         from: getRouteQuery('from'),
         hasFreeTrial,
         mustCollectPaymentMethod,
+        giftClassId: isYearly ? classId : undefined,
         ...analyticsParams,
         utmCampaign: utmCampaign || analyticsParams.utmCampaign,
         utmMedium: utmMedium || analyticsParams.utmMedium,
