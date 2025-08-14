@@ -31,6 +31,12 @@
           <li>
             <ULink
               class="block border-y border-t-transparent leading-5"
+              :to="localeRoute({ name: 'about' })"
+            >{{ $t("footer_about") }}</ULink>
+          </li>
+          <li>
+            <ULink
+              class="block border-y border-t-transparent leading-5"
               :to="localeRoute({ name: 'pricing' })"
             >{{ $t("footer_plus") }}</ULink>
           </li>
