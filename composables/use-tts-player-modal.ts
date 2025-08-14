@@ -4,7 +4,7 @@ import type { TTSPlayerModalProps } from '~/components/TTSPlayerModal.props'
 
 interface TTSPlayerOptions {
   nftClassId?: string
-  onSegmentChange?: (segment: { id?: string, text?: string, href?: string, index?: number } | undefined) => void
+  onSegmentChange?: (segment: TTSSegment & { index?: number } | undefined) => void
 }
 
 export function useTTSPlayerModal(options: TTSPlayerOptions = {}) {
