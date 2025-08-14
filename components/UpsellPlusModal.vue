@@ -175,6 +175,7 @@ const emit = defineEmits<{
   close: []
   subscribe: [payload: {
     plan: SubscriptionPlan
+    classId?: string
     utmCampaign?: string
     utmMedium?: string
     utmSource?: string
@@ -189,7 +190,7 @@ const emit = defineEmits<{
 
 const { t: $t } = useI18n()
 const route = useRoute()
-const showYearlyPlan = ref(false)
+const showYearlyPlan = ref(true)
 const showMonthlyPlan = computed(() => !props.isLikerPlus)
 
 function handleSubscribe(plan: SubscriptionPlan) {
@@ -198,6 +199,7 @@ function handleSubscribe(plan: SubscriptionPlan) {
     utmCampaign: props.utmCampaign,
     utmMedium: props.utmMedium,
     utmSource: props.utmSource,
+    classId: plan === 'yearly' ? props.classId : undefined,
     redirectRoute: {
       name: route.name as string,
       params: route.params,
