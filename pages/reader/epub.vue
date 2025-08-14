@@ -344,9 +344,9 @@ const activeTTSElementIndex = useStorage(getCacheKeyWithSuffix('tts-index'), und
 const { setTTSSegments, setChapterTitles, openPlayer } = useTTSPlayerModal({
   nftClassId: nftClassId.value,
   onSegmentChange: (segment) => {
-    if (segment?.href) {
+    if (segment?.cfi) {
       isPageLoading.value = true
-      rendition.value?.display(segment.href)
+      rendition.value?.display(segment.cfi)
       activeTTSElementIndex.value = segment.index
     }
   },
