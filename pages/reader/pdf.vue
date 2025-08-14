@@ -8,6 +8,7 @@
     />
     <ClientOnly v-else-if="fileBuffer">
       <PDFReader
+        ref="pdfReaderRef"
         class="grow w-full"
         :book-name="bookInfo.name.value"
         :nft-class-id="nftClassId"
@@ -17,6 +18,7 @@
         @error="handlePDFError"
         @pdf-loaded="handlePDFLoaded"
         @tts-play="onClickTTSPlay"
+        @page-changed="handlePageChanged"
       />
     </ClientOnly>
   </main>
@@ -47,13 +49,20 @@ const { handleError } = useErrorHandler()
 const fileBuffer = ref<ArrayBuffer | null>(null)
 const activeTTSElementIndex = ref<number | undefined>()
 const currentPageIndex = ref(1)
+const pdfReaderRef = ref()
 
 const { setTTSSegments, setChapterTitles, openPlayer } = useTTSPlayerModal({
   nftClassId: nftClassId.value,
   onSegmentChange: (segment) => {
-    if (segment && typeof segment.sectionIndex === 'number') {
-      currentPageIndex.value = segment.sectionIndex
-      activeTTSElementIndex.value = segment.index
+    if (segment) {
+      const newPageIndex = segment.sectionIndex
+      if (newPageIndex !== currentPageIndex.value) {
+        currentPageIndex.value = newPageIndex
+        activeTTSElementIndex.value = segment.index
+        if (pdfReaderRef.value && pdfReaderRef.value.goToPage) {
+          pdfReaderRef.value.goToPage(newPageIndex)
+        }
+      }
     }
   },
 })
@@ -103,6 +112,7 @@ async function handlePDFLoaded(pdfDocument: PDFDocumentProxy) {
     const { segments, chapterTitles } = await extractTTSSegmentsFromPDF(pdfDocument)
     setTTSSegments(segments)
     setChapterTitles(chapterTitles)
+    currentPageIndex.value = pdfReaderRef.value?.currentPage || 1
   }
   catch (error) {
     console.warn('Failed to extract TTS segments from PDF:', error)
@@ -142,6 +152,11 @@ async function extractTTSSegmentsFromPDF(pdfDocument: PDFDocumentProxy) {
   }
 
   return { segments, chapterTitles }
+}
+
+function handlePageChanged(pageNumber: number) {
+  currentPageIndex.value = pageNumber
+  activeTTSElementIndex.value = undefined
 }
 
 function onClickTTSPlay() {

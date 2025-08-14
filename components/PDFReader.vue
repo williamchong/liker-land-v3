@@ -249,6 +249,7 @@ const emit = defineEmits<{
   error: [error: Error]
   pdfLoaded: [pdfDocument: PDFDocumentProxy]
   ttsPlay: []
+  pageChanged: [pageNumber: number]
 }>()
 
 const { pixelRatio } = useDevicePixelRatio()
@@ -321,6 +322,7 @@ watch([currentPage], async () => {
   if (pdfDocument.value) {
     await nextTick()
     renderPages()
+    emit('pageChanged', currentPage.value)
   }
 })
 
@@ -511,6 +513,12 @@ function zoomOut() {
   }
 }
 
+function goToPage(pageNumber: number) {
+  if (pageNumber >= 1 && pageNumber <= totalPages.value) {
+    currentPage.value = pageNumber
+  }
+}
+
 function handleKeydown(event: KeyboardEvent) {
   switch (event.key) {
     case 'ArrowLeft':
@@ -541,5 +549,11 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
+})
+
+defineExpose({
+  goToPage,
+  currentPage: readonly(currentPage),
+  totalPages: readonly(totalPages),
 })
 </script>
