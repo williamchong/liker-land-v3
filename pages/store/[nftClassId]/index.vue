@@ -650,7 +650,7 @@ async function handlePurchaseButtonClick() {
       await accountStore.login()
       if (!hasLoggedIn.value) return
     }
-    if (!isLikerPlus.value) {
+    if (!isLikerPlus.value && selectedPricingItem.value.price) {
       const isStartSubscription = await openUpsellPlusModal({
         isLikerPlus: false,
         utmSource: 'product_page',
