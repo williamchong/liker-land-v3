@@ -105,9 +105,10 @@ export function useSetLogUser(user: User | null) {
   }
 
   const { proxy } = useScriptMetaPixel()
-  if (useRuntimeConfig().public.scripts.metaPixel.id && user?.evmWallet) {
+  const metaPixelId = useRuntimeConfig().public.scripts.metaPixel.id
+  if (metaPixelId && user?.evmWallet) {
     try {
-      proxy.fbq('init', useRuntimeConfig().public.scripts.metaPixel.id, {
+      proxy.fbq('init', metaPixelId, {
         em: user?.email,
         external_id: sha256(user?.evmWallet as `0x${string}`),
       })
