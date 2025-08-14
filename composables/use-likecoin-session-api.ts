@@ -43,6 +43,13 @@ export interface FetchLikerPlusBillingPortalLinkResponseData {
   url: string
 }
 
+export interface FetchLikerPlusGiftStatusResponseData {
+  giftClassId?: string
+  giftCartId?: string
+  giftPaymentId?: string
+  giftClaimToken?: string
+}
+
 export interface MigrateMagicEmailUserResponseData {
   isMigratedBookUser: boolean
   isMigratedBookOwner: boolean
@@ -255,6 +262,10 @@ export function useLikeCoinSessionAPI() {
     })
   }
 
+  function fetchLikerPlusGiftStatus() {
+    return fetch.value<FetchLikerPlusGiftStatusResponseData>(`/plus/gift`)
+  }
+
   function fetchLikerPlusBillingPortalLink() {
     return fetch.value<FetchLikerPlusBillingPortalLinkResponseData>(`/plus/portal`, { method: 'POST' })
   }
@@ -284,6 +295,7 @@ export function useLikeCoinSessionAPI() {
     fetchCartStatusById,
     claimCartById,
     fetchLikerPlusCheckoutLink,
+    fetchLikerPlusGiftStatus,
     fetchLikerPlusBillingPortalLink,
     migrateMagicEmailUser,
   }
