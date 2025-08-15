@@ -65,6 +65,8 @@ export function useSubscription() {
   function getUpsellPlusModalProps(): UpsellPlusModalProps {
     return {
       onSubscribe: startSubscription,
+      isLikerPlus: isLikerPlus.value,
+      likerPlusPeriod: likerPlusPeriod.value,
     }
   }
 
@@ -88,16 +90,18 @@ export function useSubscription() {
     return paywallModal.open(modalProps.value).result
   }
 
-  async function openUpsellPlusModal(props: UpsellPlusModalProps = {}) {
+  async function checkAndOpenUpsellPlusModal(props: UpsellPlusModalProps = {}) {
     if (upsellPlusModal.isOpen) {
       upsellPlusModal.close()
     }
-    const upsellModalProps: UpsellPlusModalProps = {
-      ...props,
-      ...getUpsellPlusModalProps(),
-    }
 
-    return upsellPlusModal.open(upsellModalProps).result
+    if ((isLikerPlus.value && likerPlusPeriod.value === 'month') || !likerPlusPeriod.value) {
+      const upsellModalProps: UpsellPlusModalProps = {
+        ...props,
+        ...getUpsellPlusModalProps(),
+      }
+      return upsellPlusModal.open(upsellModalProps).result
+    }
   }
 
   async function redirectIfSubscribed() {
@@ -115,6 +119,7 @@ export function useSubscription() {
     utmMedium,
     utmSource,
     plan,
+    classId,
     redirectRoute,
   }: {
     hasFreeTrial?: boolean
@@ -123,6 +128,7 @@ export function useSubscription() {
     utmMedium?: string
     utmSource?: string
     plan?: SubscriptionPlan
+    classId?: string
     redirectRoute?: {
       name: string
       params: Record<string, string>
@@ -131,6 +137,7 @@ export function useSubscription() {
     }
   } = {}) {
     const subscribePlan = plan || selectedPlan.value
+    const isYearly = subscribePlan === 'yearly'
     useLogEvent('add_to_cart', eventPayload.value)
     useLogEvent('subscription_button_click', { plan: subscribePlan })
 
@@ -162,6 +169,7 @@ export function useSubscription() {
         from: getRouteQuery('from'),
         hasFreeTrial,
         mustCollectPaymentMethod,
+        giftClassId: isYearly ? classId : undefined,
         ...analyticsParams,
         utmCampaign: analyticsParams.utmCampaign || utmCampaign,
         utmMedium: analyticsParams.utmMedium || utmMedium,
@@ -205,7 +213,7 @@ export function useSubscription() {
     isProcessingSubscription,
 
     openPaywallModal,
-    openUpsellPlusModal,
+    checkAndOpenUpsellPlusModal,
     redirectIfSubscribed,
     startSubscription,
   }
