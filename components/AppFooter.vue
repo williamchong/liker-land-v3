@@ -2,7 +2,7 @@
   <footer
     :class="[
       'flex',
-      'max-sm:flex-col',
+      'max-laptop:flex-col',
       'items-stretch',
       'justify-between',
       'gap-4',
