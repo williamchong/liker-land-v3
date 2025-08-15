@@ -150,11 +150,21 @@ async function waitForItemsDelivery({ timeout = 30000, interval = 3000 } = {}) {
     isCheckingItemsDelivery.value = true
     const start = Date.now()
     while (!canStartReading.value) {
-      await checkItemsDeliveryThroughIndexer()
+      try {
+        await checkItemsDeliveryThroughIndexer()
+      }
+      catch (error) {
+        console.error('Error checking items delivery through indexer:', error)
+      }
       if (canStartReading.value) break
       await sleep(interval)
       if ((Date.now() - start) > timeout) {
-        await bookshelfStore.fetchNFTByNFTClassIdAndOwnerWalletAddressThroughContract(nftClassId.value as string, user.value?.evmWallet as string)
+        try {
+          await bookshelfStore.fetchNFTByNFTClassIdAndOwnerWalletAddressThroughContract(nftClassId.value as string, user.value?.evmWallet as string)
+        }
+        catch (error) {
+          console.error('Error fetching NFT by class ID and owner wallet address:', error)
+        }
         if (canStartReading.value) {
           hasBypassedIndexer.value = true
           break
