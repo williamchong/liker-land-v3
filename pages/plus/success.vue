@@ -87,16 +87,18 @@ onMounted(async () => {
   try {
     isRefreshing.value = true
     await accountStore.refreshSessionInfo()
+    let retry = 0
+    while (!isLikerPlus.value && retry < 4) {
+      await sleep(5000)
+      await accountStore.refreshSessionInfo()
+      retry++
+    }
     const {
       giftNFTClassId,
       giftCartId,
       giftPaymentId,
       giftClaimToken,
     } = await fetchPlusGiftStatus()
-    if (!isLikerPlus.value) {
-      await sleep(5000)
-      await accountStore.refreshSessionInfo()
-    }
     if (isRedirected.value) {
       const isTrial = getRouteQuery('trial') !== '0'
       const price = isTrial
