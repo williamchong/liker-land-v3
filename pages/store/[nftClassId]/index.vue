@@ -589,7 +589,7 @@ onMounted(() => {
       metadataStore.lazyFetchLikerInfoByWalletAddress(ownerWalletAddress)
     }
     catch (error) {
-      console.error('Failed to fetch owner liker info:', error)
+      console.error(`Failed to fetch owner liker info for wallet address ${ownerWalletAddress}:`, error)
     }
   }
   const selectedPricingItemIndex = getRouteQuery('edition')
