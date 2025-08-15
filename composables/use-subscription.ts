@@ -163,9 +163,9 @@ export function useSubscription() {
         hasFreeTrial,
         mustCollectPaymentMethod,
         ...analyticsParams,
-        utmCampaign: utmCampaign || analyticsParams.utmCampaign,
-        utmMedium: utmMedium || analyticsParams.utmMedium,
-        utmSource: utmSource || analyticsParams.utmSource,
+        utmCampaign: analyticsParams.utmCampaign || utmCampaign,
+        utmMedium: analyticsParams.utmMedium || utmMedium,
+        utmSource: analyticsParams.utmSource || utmSource,
       })
       if (redirectRoute && redirectRoute?.name) {
         accountStore.savePlusRedirectRoute(redirectRoute)
