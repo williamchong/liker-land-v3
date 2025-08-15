@@ -65,6 +65,8 @@ export function useSubscription() {
   function getUpsellPlusModalProps(): UpsellPlusModalProps {
     return {
       onSubscribe: startSubscription,
+      isLikerPlus: isLikerPlus.value,
+      likerPlusPeriod: likerPlusPeriod.value,
     }
   }
 
@@ -88,16 +90,18 @@ export function useSubscription() {
     return paywallModal.open(modalProps.value).result
   }
 
-  async function openUpsellPlusModal(props: UpsellPlusModalProps = {}) {
+  async function checkAndOpenUpsellPlusModal(props: UpsellPlusModalProps = {}) {
     if (upsellPlusModal.isOpen) {
       upsellPlusModal.close()
     }
-    const upsellModalProps: UpsellPlusModalProps = {
-      ...props,
-      ...getUpsellPlusModalProps(),
-    }
 
-    return upsellPlusModal.open(upsellModalProps).result
+    if ((isLikerPlus.value && likerPlusPeriod.value === 'month') || !likerPlusPeriod.value) {
+      const upsellModalProps: UpsellPlusModalProps = {
+        ...props,
+        ...getUpsellPlusModalProps(),
+      }
+      return upsellPlusModal.open(upsellModalProps).result
+    }
   }
 
   async function redirectIfSubscribed() {
@@ -209,7 +213,7 @@ export function useSubscription() {
     isProcessingSubscription,
 
     openPaywallModal,
-    openUpsellPlusModal,
+    checkAndOpenUpsellPlusModal,
     redirectIfSubscribed,
     startSubscription,
   }

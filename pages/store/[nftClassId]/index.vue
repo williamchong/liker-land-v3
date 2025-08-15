@@ -388,7 +388,7 @@ const {
   isLikerPlus,
 
   getPlusDiscountPrice,
-  openUpsellPlusModal,
+  checkAndOpenUpsellPlusModal,
 } = useSubscription()
 
 const metadataStore = useMetadataStore()
@@ -650,14 +650,13 @@ async function handlePurchaseButtonClick() {
       await accountStore.login()
       if (!hasLoggedIn.value) return
     }
-    if (!isLikerPlus.value && selectedPricingItem.value.price) {
-      const isStartSubscription = await openUpsellPlusModal({
-        isLikerPlus: false,
+    if (selectedPricingItem.value.price) {
+      const isStartSubscription = await checkAndOpenUpsellPlusModal({
         classId: nftClassId.value,
+        selectedPricingItemIndex: selectedPricingItemIndex.value,
         utmSource: 'upsell_plus',
         utmCampaign: `upsell_plus_${nftClassId.value}`,
         utmMedium: 'product_page',
-        selectedPricingItemIndex: selectedPricingItemIndex.value,
       })
       if (isStartSubscription) return
     }
