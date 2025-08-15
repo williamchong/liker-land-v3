@@ -585,7 +585,12 @@ onMounted(() => {
   useLogEvent('view_item', formattedLogPayload.value)
   const ownerWalletAddress = bookInfo.nftClassOwnerWalletAddress.value
   if (ownerWalletAddress) {
-    metadataStore.lazyFetchLikerInfoByWalletAddress(ownerWalletAddress)
+    try {
+      metadataStore.lazyFetchLikerInfoByWalletAddress(ownerWalletAddress)
+    }
+    catch (error) {
+      console.error(`Failed to fetch owner liker info for wallet address ${ownerWalletAddress}:`, error)
+    }
   }
   const selectedPricingItemIndex = getRouteQuery('edition')
   if (selectedPricingItemIndex) {
