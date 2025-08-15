@@ -62,13 +62,13 @@ useHead({
 async function fetchPlusGiftStatus() {
   try {
     const {
-      giftClassId,
+      giftClassId: giftNFTClassId,
       giftCartId,
       giftPaymentId,
       giftClaimToken,
     } = await likeCoinSessionAPI.fetchLikerPlusGiftStatus()
     return {
-      giftClassId,
+      giftNFTClassId,
       giftCartId,
       giftPaymentId,
       giftClaimToken,
@@ -88,7 +88,7 @@ onMounted(async () => {
     isRefreshing.value = true
     await accountStore.refreshSessionInfo()
     const {
-      giftClassId,
+      giftNFTClassId,
       giftCartId,
       giftPaymentId,
       giftClaimToken,
@@ -122,7 +122,7 @@ onMounted(async () => {
       }), { replace: true })
     }
 
-    if (giftClassId && giftCartId && giftPaymentId && giftClaimToken) {
+    if (giftNFTClassId && giftCartId && giftPaymentId && giftClaimToken) {
       accountStore.clearPlusRedirectRoute()
       await navigateTo(localeRoute({
         name: 'claim-page',
@@ -130,7 +130,7 @@ onMounted(async () => {
           payment_id: giftPaymentId,
           claiming_token: giftClaimToken,
           cart_id: giftCartId,
-          giftClassId,
+          class_id: giftNFTClassId,
         },
       }), { replace: true })
     }
