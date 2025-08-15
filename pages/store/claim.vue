@@ -33,7 +33,7 @@
         />
       </template>
       <template
-        v-else-if="!isAutoDeliver"
+        v-else-if="!isLoading && !isAutoDeliver"
         #footer
       >
         <span
@@ -68,6 +68,7 @@ const { errorModal, handleError } = useErrorHandler()
 const cartId = computed(() => getRouteQuery('cart_id'))
 const claimingToken = computed(() => getRouteQuery('claiming_token'))
 const paymentId = computed(() => getRouteQuery('payment_id'))
+const isLoading = ref(true)
 
 const baseLoadingLabels = computed(() => [
   $t('claim_page_loading_step_1'),
@@ -130,28 +131,39 @@ if (!cartId.value || !claimingToken.value || !paymentId.value) {
   })
 }
 
-const { data: cartData, error: cartDataError } = await useAsyncData(cartId.value, async () => {
-  const data = await likeCoinSessionAPI.fetchCartStatusById({
-    cartId: cartId.value,
-    token: claimingToken.value,
-  })
-  return data
-})
-if (cartDataError.value) {
-  console.error('Error fetching cart data:', cartDataError.value)
-  const { statusCode, message } = parseError(cartDataError.value)
-  throw createError({
-    statusCode,
-    message,
-    fatal: true,
-  })
-}
+const cartData = ref<FetchCartStatusByIdResponseData | null>(null)
 
-// TODO: Handle multiple items in the cart
-const nftClassId = computed(() => cartData.value?.classIds[0] || '')
+onMounted(async () => {
+  isLoading.value = true
+  let retries = 0
+  const maxRetries = 3
+  while (retries < maxRetries) {
+    try {
+      const data = await likeCoinSessionAPI.fetchCartStatusById({
+        cartId: cartId.value,
+        token: claimingToken.value,
+      })
+      cartData.value = data
+      break
+    }
+    catch (error) {
+      const { statusCode, message } = parseError(error)
+      if (statusCode === 404 && retries < maxRetries - 1) {
+        retries++
+        await sleep(3000)
+        continue
+      }
+      console.error('Error fetching cart data:', error)
+      throw createError({
+        statusCode,
+        message,
+        fatal: true,
+      })
+    }
+  }
 
-await callOnce(nftClassId.value, async () => {
-  if (!nftClassId.value) {
+  // TODO: Handle multiple items in the cart
+  if (!cartData.value?.classIds?.[0]) {
     throw createError({
       message: $t('error_reader_fetch_metadata_failed'),
       fatal: true,
@@ -159,7 +171,7 @@ await callOnce(nftClassId.value, async () => {
   }
 
   try {
-    await nftStore.fetchNFTClassAggregatedMetadataById(nftClassId.value)
+    await nftStore.fetchNFTClassAggregatedMetadataById(cartData.value.classIds[0])
   }
   catch (error) {
     console.error('Error fetching NFT class metadata:', error)
@@ -170,7 +182,11 @@ await callOnce(nftClassId.value, async () => {
       fatal: true,
     })
   }
+  isLoading.value = false
+  startClaimFlow()
 })
+
+const nftClassId = computed(() => cartData.value?.classIds[0] || '')
 
 const status = computed(() => cartData.value?.status)
 const isClaimed = ref(!!status.value && ['completed', 'done', 'pending', 'pendingNFT'].includes(status.value))
@@ -179,7 +195,9 @@ const bookInfo = useBookInfo({ nftClassId })
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 400 }))
 
 // TODO: Handle multiple items in the cart
-const isAutoDeliver = ref(bookInfo.getIsAutoDelivery(cartData.value?.classIdsWithPrice?.[0]?.priceIndex))
+const isAutoDeliver = computed(() => isItemAutoDeliver.value || allItemsDelivered.value)
+const isItemAutoDeliver = computed(() => bookInfo.getIsAutoDelivery(cartData.value?.classIdsWithPrice?.[0]?.priceIndex))
+const allItemsDelivered = ref(false)
 
 const receivedNFTId = computed(() => bookInfo.firstUserOwnedNFTId.value)
 const canStartReading = computed(() => !!receivedNFTId.value)
@@ -273,7 +291,7 @@ async function startClaimingItems() {
       wallet: claimingWallet,
     })
     if (data.allItemsAutoClaimed) {
-      isAutoDeliver.value = true
+      allItemsDelivered.value = true
     }
     else if (
       data.newClaimedNFTs
@@ -357,12 +375,6 @@ function startClaimFlow() {
     startClaimingItems()
   }
 }
-
-onMounted(() => {
-  if (hasLoggedIn.value) {
-    startClaimFlow()
-  }
-})
 
 watch(hasLoggedIn, (value) => {
   if (value) {
