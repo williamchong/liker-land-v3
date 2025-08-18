@@ -16,7 +16,7 @@
       :book-cover-src="bookCoverSrc"
       icon="i-material-symbols-check-circle-rounded"
       :icon-label="$t('claim_page_purchase_successful_label')"
-      :loading-label="$t('claim_page_loading_label')"
+      :loading-label="currentLoadingLabel"
     >
       <template
         v-if="canStartReading"
@@ -68,6 +68,59 @@ const { errorModal, handleError } = useErrorHandler()
 const cartId = computed(() => getRouteQuery('cart_id'))
 const claimingToken = computed(() => getRouteQuery('claiming_token'))
 const paymentId = computed(() => getRouteQuery('payment_id'))
+
+const baseLoadingLabels = computed(() => [
+  $t('claim_page_loading_step_1'),
+  $t('claim_page_loading_step_2'),
+])
+
+const finalLoadingLabelVariants = computed(() => [
+  $t('claim_page_loading_step_3'),
+  $t('claim_page_loading_step_3_alt_1'),
+  $t('claim_page_loading_step_3_alt_2'),
+  $t('claim_page_loading_step_3_alt_3'),
+  $t('claim_page_loading_step_3_alt_4'),
+  $t('claim_page_loading_step_3_alt_5'),
+  $t('claim_page_loading_step_3_alt_6'),
+  $t('claim_page_loading_step_3_alt_7'),
+  $t('claim_page_loading_step_3_alt_8'),
+  $t('claim_page_loading_step_3_alt_9'),
+])
+
+const loadingLabelIndex = ref(0)
+const randomVariantIndex = ref(0)
+
+const currentLoadingLabel = computed(() => {
+  if (loadingLabelIndex.value < baseLoadingLabels.value.length - 1) {
+    return baseLoadingLabels.value[loadingLabelIndex.value] || $t('claim_page_loading_label')
+  }
+  else {
+    return finalLoadingLabelVariants.value[randomVariantIndex.value] || $t('claim_page_loading_label')
+  }
+})
+
+const {
+  pause: pauseLoadingLabelAnimation,
+  resume: resumeLoadingLabelAnimation,
+  isActive: isLoadingLabelAnimationActive,
+} = useIntervalFn(() => {
+  if (loadingLabelIndex.value < baseLoadingLabels.value.length - 1) {
+    loadingLabelIndex.value++
+  }
+  else {
+    randomVariantIndex.value = Math.floor(Math.random() * finalLoadingLabelVariants.value.length)
+  }
+}, 3000, { immediate: false })
+
+function startLoadingLabelAnimation() {
+  loadingLabelIndex.value = 0
+  randomVariantIndex.value = 0
+  resumeLoadingLabelAnimation()
+}
+
+function stopLoadingLabelAnimation() {
+  pauseLoadingLabelAnimation()
+}
 
 if (!cartId.value || !claimingToken.value || !paymentId.value) {
   throw createError({
@@ -148,6 +201,11 @@ async function waitForItemsDelivery({ timeout = 30000, interval = 3000 } = {}) {
   if (isCheckingItemsDelivery.value || !isAutoDeliver.value) return
   try {
     isCheckingItemsDelivery.value = true
+
+    if (!isLoadingLabelAnimationActive.value) {
+      startLoadingLabelAnimation()
+    }
+
     const start = Date.now()
     while (!canStartReading.value) {
       try {
@@ -182,6 +240,10 @@ async function waitForItemsDelivery({ timeout = 30000, interval = 3000 } = {}) {
   }
   finally {
     isCheckingItemsDelivery.value = false
+
+    if (canStartReading.value) {
+      stopLoadingLabelAnimation()
+    }
   }
 }
 
@@ -192,6 +254,9 @@ async function startClaimingItems() {
 
   try {
     isClaiming.value = true
+
+    startLoadingLabelAnimation()
+
     const claimingWallet = user.value?.evmWallet
     if (!claimingWallet) {
       throw createError({
@@ -275,6 +340,7 @@ async function startClaimingItems() {
   }
   finally {
     isClaiming.value = false
+    stopLoadingLabelAnimation()
   }
 
   if (isClaimed.value) {
