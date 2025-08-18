@@ -399,7 +399,7 @@ const nftClassId = computed(() => getRouteParam('nftClassId'))
 const {
   generateBookStructuredData,
   generateOGMetaTags,
-} = useStructuredData({ nftClassId: nftClassId.value })
+} = useStructuredData({ nftClassId })
 
 if (nftClassId.value !== nftClassId.value.toLowerCase()) {
   await navigateTo(localeRoute({
@@ -429,7 +429,7 @@ await callOnce(async () => {
   }
 })
 
-const bookInfo = useBookInfo({ nftClassId: nftClassId.value })
+const bookInfo = useBookInfo({ nftClassId })
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 600 }))
 
 const selectedPricingItemIndex = ref(Number(getRouteQuery('price_index') || 0))
