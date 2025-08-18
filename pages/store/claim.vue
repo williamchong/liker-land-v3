@@ -183,7 +183,9 @@ onMounted(async () => {
     })
   }
   isLoading.value = false
-  startClaimFlow()
+  if (hasLoggedIn.value) {
+    startClaimFlow()
+  }
 })
 
 const nftClassId = computed(() => cartData.value?.classIds[0] || '')
