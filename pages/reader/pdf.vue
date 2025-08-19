@@ -17,7 +17,7 @@
         :book-file-cache-key="bookFileCacheKey"
         @error="handlePDFError"
         @pdf-loaded="handlePDFLoaded"
-        @tts-play="onClickTTSPlay"
+        @tts-play="handleTTSPlay"
         @page-changed="handlePageChanged"
       />
     </ClientOnly>
@@ -59,7 +59,7 @@ const { setTTSSegments, setChapterTitles, openPlayer } = useTTSPlayerModal({
       if (newPageIndex !== currentPageIndex.value) {
         currentPageIndex.value = newPageIndex
         activeTTSElementIndex.value = segment.index
-        if (pdfReaderRef.value && pdfReaderRef.value.goToPage) {
+        if (pdfReaderRef.value?.goToPage) {
           pdfReaderRef.value.goToPage(newPageIndex)
         }
       }
@@ -173,7 +173,7 @@ function handlePageChanged(pageNumber: number) {
   activeTTSElementIndex.value = undefined
 }
 
-function onClickTTSPlay() {
+function handleTTSPlay() {
   openPlayer({
     ttsIndex: activeTTSElementIndex.value,
     sectionIndex: currentPageIndex.value,

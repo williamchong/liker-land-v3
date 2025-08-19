@@ -61,14 +61,20 @@
       </template>
       <template #trailing>
         <div class="flex items-center gap-2">
-          <template v-if="!isAudioHidden">
-            <UButton
-              class="laptop:hidden"
-              icon="i-material-symbols-play-arrow-rounded"
-              variant="ghost"
-              color="neutral"
-              @click="$emit('ttsPlay')"
-            />
+          <UButton
+            :class="[
+              'laptop:hidden',
+              { 'opacity-50 cursor-not-allowed': isAudioHidden },
+            ]"
+            icon="i-material-symbols-play-arrow-rounded"
+            variant="ghost"
+            color="neutral"
+            @click="handleMobileTTSClick"
+          />
+          <UTooltip
+            :disabled="!isAudioHidden"
+            :text="$t('reader_text_to_speech_button_disabled_tooltip')"
+          >
             <UButton
               :ui="{
                 base: '!rounded-l-md',
@@ -78,9 +84,10 @@
               :label="$t('reader_text_to_speech_button')"
               variant="ghost"
               color="neutral"
-              @click="$emit('ttsPlay')"
+              :disabled="isAudioHidden"
+              @click="onClickTTSPlay"
             />
-          </template>
+          </UTooltip>
           <USlideover
             :title="$t('reader_display_options_button')"
             :close="{
@@ -187,6 +194,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const toast = useToast()
 const { t: $t } = useI18n()
 
 const pdfjsLib = ref<typeof import('pdfjs-dist') | undefined>(undefined)
@@ -550,6 +558,23 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
 })
+
+function handleMobileTTSClick() {
+  if (props.isAudioHidden) {
+    toast.add({
+      title: $t('reader_text_to_speech_button_disabled_tooltip'),
+      duration: 3000,
+      progress: false,
+    })
+    useLogEvent('reader_tts_button_disabled', { nft_class_id: props.nftClassId })
+    return
+  }
+  onClickTTSPlay()
+}
+
+function onClickTTSPlay() {
+  emit('ttsPlay')
+}
 
 defineExpose({
   goToPage,
