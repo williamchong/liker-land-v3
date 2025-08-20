@@ -61,6 +61,33 @@
       </template>
       <template #trailing>
         <div class="flex items-center gap-2">
+          <UButton
+            :class="[
+              'laptop:hidden',
+              { 'opacity-50 cursor-not-allowed': isAudioHidden },
+            ]"
+            icon="i-material-symbols-play-arrow-rounded"
+            variant="ghost"
+            color="neutral"
+            @click="handleMobileTTSClick"
+          />
+          <UTooltip
+            :disabled="!isAudioHidden"
+            :text="$t('reader_text_to_speech_button_disabled_tooltip')"
+          >
+            <UButton
+              :ui="{
+                base: '!rounded-l-md',
+              }"
+              class="max-laptop:hidden"
+              icon="i-material-symbols-play-arrow-rounded"
+              :label="$t('reader_text_to_speech_button')"
+              variant="ghost"
+              color="neutral"
+              :disabled="isAudioHidden"
+              @click="onClickTTSPlay"
+            />
+          </UTooltip>
           <USlideover
             :title="$t('reader_display_options_button')"
             :close="{
@@ -160,11 +187,14 @@ import type { PDFDocumentProxy } from 'pdfjs-dist'
 interface Props {
   bookName?: string
   pdfBuffer: ArrayBuffer
+  isAudioHidden?: boolean
   bookFileCacheKey: string
+  nftClassId?: string
 }
 
 const props = defineProps<Props>()
 
+const toast = useToast()
 const { t: $t } = useI18n()
 
 const pdfjsLib = ref<typeof import('pdfjs-dist') | undefined>(undefined)
@@ -225,11 +255,15 @@ const isRightToLeft = useStorage(computed(() => getCacheKeyWithSuffix('right-to-
 
 const emit = defineEmits<{
   error: [error: Error]
+  pdfLoaded: [pdfDocument: PDFDocumentProxy]
+  ttsPlay: []
+  pageChanged: [pageNumber: number]
 }>()
 
 const { pixelRatio } = useDevicePixelRatio()
 
 const isMobile = useMediaQuery('(max-width: 768px)')
+
 const pageDisplayText = computed(() => {
   if (isDualPageMode.value && totalPages.value > 1) {
     const leftPage = currentPage.value
@@ -285,10 +319,18 @@ watch(() => props.pdfBuffer, async () => {
   }
 })
 
-watch([currentPage, scale, isDualPageMode, isRightToLeft], async () => {
+watch([scale, isDualPageMode, isRightToLeft], async () => {
   if (pdfDocument.value) {
     await nextTick()
-    await renderPages()
+    renderPages()
+  }
+})
+
+watch([currentPage], async () => {
+  if (pdfDocument.value) {
+    await nextTick()
+    renderPages()
+    emit('pageChanged', currentPage.value)
   }
 })
 
@@ -314,7 +356,9 @@ async function loadPDF() {
     pdfDocument.value = await loadingTask.promise
     totalPages.value = pdfDocument.value.numPages
 
-    await renderPages()
+    emit('pdfLoaded', pdfDocument.value)
+
+    renderPages()
   }
   catch (error) {
     emit('error', error as Error)
@@ -477,6 +521,12 @@ function zoomOut() {
   }
 }
 
+function goToPage(pageNumber: number) {
+  if (pageNumber >= 1 && pageNumber <= totalPages.value) {
+    currentPage.value = pageNumber
+  }
+}
+
 function handleKeydown(event: KeyboardEvent) {
   switch (event.key) {
     case 'ArrowLeft':
@@ -507,5 +557,28 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
+})
+
+function handleMobileTTSClick() {
+  if (props.isAudioHidden) {
+    toast.add({
+      title: $t('reader_text_to_speech_button_disabled_tooltip'),
+      duration: 3000,
+      progress: false,
+    })
+    useLogEvent('reader_tts_button_disabled', { nft_class_id: props.nftClassId })
+    return
+  }
+  onClickTTSPlay()
+}
+
+function onClickTTSPlay() {
+  emit('ttsPlay')
+}
+
+defineExpose({
+  goToPage,
+  currentPage: readonly(currentPage),
+  totalPages: readonly(totalPages),
 })
 </script>

@@ -8,17 +8,26 @@
     />
     <ClientOnly v-else-if="fileBuffer">
       <PDFReader
+        ref="pdfReaderRef"
         class="grow w-full"
         :book-name="bookInfo.name.value"
+        :nft-class-id="nftClassId"
         :pdf-buffer="fileBuffer"
+        :is-audio-hidden="bookInfo.isAudioHidden.value"
         :book-file-cache-key="bookFileCacheKey"
         @error="handlePDFError"
+        @pdf-loaded="handlePDFLoaded"
+        @tts-play="handleTTSPlay"
+        @page-changed="handlePageChanged"
       />
     </ClientOnly>
   </main>
 </template>
 
 <script setup lang="ts">
+import type { PDFDocumentProxy } from 'pdfjs-dist'
+import type { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api'
+
 const { loggedIn: hasLoggedIn } = useUserSession()
 const route = useRoute()
 const localeRoute = useLocaleRoute()
@@ -38,6 +47,25 @@ const {
 const { handleError } = useErrorHandler()
 
 const fileBuffer = ref<ArrayBuffer | null>(null)
+const activeTTSElementIndex = ref<number | undefined>()
+const currentPageIndex = ref(1)
+const pdfReaderRef = ref()
+
+const { setTTSSegments, setChapterTitles, openPlayer } = useTTSPlayerModal({
+  nftClassId: nftClassId.value,
+  onSegmentChange: (segment) => {
+    if (segment) {
+      const newPageIndex = segment.sectionIndex
+      if (newPageIndex !== currentPageIndex.value) {
+        currentPageIndex.value = newPageIndex
+        activeTTSElementIndex.value = segment.index
+        if (pdfReaderRef.value?.goToPage) {
+          pdfReaderRef.value.goToPage(newPageIndex)
+        }
+      }
+    }
+  },
+})
 const isReaderLoading = ref(true)
 
 const { loadingLabel, loadFileAsBuffer } = useBookFileLoader()
@@ -77,6 +105,79 @@ async function loadPDF() {
     return
   }
   fileBuffer.value = buffer
+}
+
+async function handlePDFLoaded(pdfDocument: PDFDocumentProxy) {
+  try {
+    const { segments, chapterTitles } = await extractTTSSegmentsFromPDF(pdfDocument)
+    setTTSSegments(segments)
+    setChapterTitles(chapterTitles)
+    currentPageIndex.value = pdfReaderRef.value?.currentPage || 1
+  }
+  catch (error) {
+    console.warn('Failed to extract TTS segments from PDF:', error)
+  }
+}
+
+async function extractTTSSegmentsFromPDF(pdfDocument: PDFDocumentProxy) {
+  const segments: TTSSegment[] = []
+  const chapterTitles: Record<number, string> = {}
+
+  for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
+    try {
+      const page = await pdfDocument.getPage(pageNum)
+      const textContent = await page.getTextContent()
+      const viewport = page.getViewport({ scale: 1.0 })
+      const pageHeight = viewport.height
+
+      const headerThreshold = pageHeight * 0.8
+      const footerThreshold = pageHeight * 0.2
+
+      const mainContentItems = textContent.items
+        .filter((item: TextItem | TextMarkedContent) => {
+          if (!('str' in item) || !item.transform) return false
+          // item.transform[5] is the Y coordinate (from bottom of page)
+          const yPosition = item.transform[5]
+          return yPosition < headerThreshold && yPosition > footerThreshold
+        })
+
+      const pageText = mainContentItems
+        .filter((item: (TextItem | TextMarkedContent)) => 'str' in item)
+        .map((item: TextItem) => item.str)
+        .join(' ')
+        .trim()
+
+      if (pageText) {
+        const textSegments = splitTextIntoSegments(pageText)
+        const pageSegments = textSegments.map((segment: string, index: number) => ({
+          id: `page-${pageNum}-segment-${index}`,
+          text: segment,
+          sectionIndex: pageNum,
+        }))
+        segments.push(...pageSegments)
+
+        // Use page number as chapter title for PDFs
+        chapterTitles[pageNum] = `Page ${pageNum}`
+      }
+    }
+    catch (error) {
+      console.warn(`Failed to extract text from PDF page ${pageNum}:`, error)
+    }
+  }
+
+  return { segments, chapterTitles }
+}
+
+function handlePageChanged(pageNumber: number) {
+  currentPageIndex.value = pageNumber
+  activeTTSElementIndex.value = undefined
+}
+
+function handleTTSPlay() {
+  openPlayer({
+    ttsIndex: activeTTSElementIndex.value,
+    sectionIndex: currentPageIndex.value,
+  })
 }
 
 function handlePDFError(error: Error) {
