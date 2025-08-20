@@ -1,6 +1,6 @@
 import { http, createConfig } from '@wagmi/vue'
 import { optimism, optimismSepolia } from '@wagmi/vue/chains'
-import { injected, metaMask } from '@wagmi/vue/connectors'
+import { injected, walletConnect } from '@wagmi/vue/connectors'
 import { dedicatedWalletConnector } from '@likecoin/wagmi-connector'
 
 export function createWagmiConfig({
@@ -8,19 +8,31 @@ export function createWagmiConfig({
   rpcURL = '',
   chainId,
   customLogoURL,
+  walletConnectProjectId,
   isServer = false,
 }: {
   apiKey: string
   rpcURL?: string
   chainId?: number
   customLogoURL?: string
+  walletConnectProjectId?: string
   isServer?: boolean
 }) {
   return createConfig({
     chains: [optimismSepolia, optimism],
     connectors: [
       injected(),
-      metaMask(),
+      ...(walletConnectProjectId
+        ? [walletConnect({
+            projectId: walletConnectProjectId,
+            metadata: {
+              name: '3ook.com',
+              description: '3ook.com is an AI reading companion coupled with a decentralized bookstore on web3',
+              url: 'https://3ook.com',
+              icons: [customLogoURL || 'https://3ook.com/favicon-32x32.png'],
+            },
+          })]
+        : []),
       // NOTE: @magiclabs/wagmi-connector is not compatible with SSR
       // https://github.com/magiclabs/wagmi-magic-connector/issues/42#issuecomment-2771613002
       ...(isServer

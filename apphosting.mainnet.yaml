@@ -53,6 +53,8 @@ env:
     value: https://3ook.com/android-chrome-512x512.png
   - variable: MAGIC_LINK_RPC_URL
     value: https://mainnet.optimism.io
+  - variable: WALLET_CONNECT_PROJECT_ID
+    value: 526a2e1c9bf37fb75a7e0a4b11d6008e
   - variable: NUXT_PUBLIC_SCRIPTS_INTERCOM_APP_ID
     value: eupcse57
   - variable: NUXT_PUBLIC_SCRIPTS_META_PIXEL_ID

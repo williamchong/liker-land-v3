@@ -71,6 +71,7 @@ export default defineNuxtConfig({
       magicLinkChainId: Number(process.env.MAGIC_LINK_CHAIN_ID) || 0,
       magicLinkCustomLogoURL: process.env.MAGIC_LINK_CUSTOM_LOGO_URL,
       magicLinkRPCURL: process.env.MAGIC_LINK_RPC_URL,
+      walletConnectProjectId: process.env.WALLET_CONNECT_PROJECT_ID,
       arweaveEndpoint: process.env.ARWEAVE_ENDPOINT,
       ipfsEndpoint: process.env.IPFS_ENDPOINT,
       isTestnet: process.env.IS_TESTNET,
@@ -157,6 +158,7 @@ export default defineNuxtConfig({
               'https://js.stripe.com',
               'https://td.doubleclick.net',
               'https://www.googletagmanager.com',
+              'https://verify.walletconnect.org',
             ],
         'base-uri': [
           '\'self\'',
@@ -169,6 +171,7 @@ export default defineNuxtConfig({
           'https://www.google.com',
           'https://js.intercomcdn.com',
           'https://downloads.intercomcdn.com',
+          'https://explorer-api.walletconnect.com',
           ...[
             process.env.LIKECOIN_API_ENDPOINT,
             process.env.LIKECOIN_STATIC_ENDPOINT,
