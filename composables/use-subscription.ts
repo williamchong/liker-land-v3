@@ -96,7 +96,7 @@ export function useSubscription() {
       upsellPlusModal.close()
     }
 
-    if (!isLikerPlus.value || likerPlusPeriod.value === 'month') {
+    if (!isLikerPlus.value) {
       const upsellModalProps: UpsellPlusModalProps = {
         ...props,
         ...getUpsellPlusModalProps(),
@@ -105,8 +105,8 @@ export function useSubscription() {
     }
   }
 
-  async function redirectIfSubscribed() {
-    if (isLikerPlus.value) {
+  async function redirectIfSubscribed(plan?: string) {
+    if (isLikerPlus.value && (!plan || likerPlusPeriod.value !== 'month' || plan !== 'yearly')) {
       await navigateTo(localeRoute({ name: 'account' }))
       return true
     }
@@ -128,7 +128,7 @@ export function useSubscription() {
     useLogEvent('add_to_cart', eventPayload.value)
     useLogEvent(`subscription_button_click_${subscribePlan}`)
 
-    const isSubscribed = await redirectIfSubscribed()
+    const isSubscribed = await redirectIfSubscribed(subscribePlan)
     if (isSubscribed) return
     if (!hasLoggedIn.value) {
       await accountStore.login()

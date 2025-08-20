@@ -8,9 +8,15 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  let userInfoRes: LikerInfoResponseData | undefined = undefined
+  if (!session.user.token) {
+    throw createError({
+      statusCode: 401,
+      message: 'TOKEN_NOT_FOUND',
+    })
+  }
+  let userInfoRes: LikerProfileResponseData | undefined = undefined
   try {
-    userInfoRes = await fetchLikerPublicInfoByWalletAddress(walletAddress, { nocache: true })
+    userInfoRes = await fetchLikerProfileInfo(session.user.token)
   }
   catch (error) {
     console.warn(`Failed to fetch user info for wallet ${walletAddress} in account refresh`, error)
@@ -25,6 +31,7 @@ export default defineEventHandler(async (event) => {
       description: userInfoRes.description,
       avatar: userInfoRes.avatar,
       isLikerPlus: userInfoRes.isLikerPlus || false,
+      likerPlusPeriod: userInfoRes.likerPlusPeriod,
     },
   })
 })
