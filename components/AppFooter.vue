@@ -2,7 +2,7 @@
   <footer
     :class="[
       'flex',
-      'max-laptop:flex-col',
+      'flex-col',
       'items-stretch',
       'justify-between',
       'gap-4',
@@ -10,8 +10,8 @@
       'w-full',
       'max-w-[1440px]',
       'mx-auto',
-      'px-5 2xl:px-14',
-      'pt-3',
+      'px-5',
+      'pt-5',
       'py-10',
 
       'text-xs',
@@ -19,8 +19,14 @@
     ]"
   >
     <div
-      class="flex flex-col phone:flex-row justify-center items-center flex-wrap gap-6 gap-y-4 leading-5"
+      class="flex flex-col justify-center items-center flex-wrap gap-6 gap-y-4 leading-5"
     >
+      <ULink
+        class="flex justify-center"
+        :to="localeRoute({ name: 'about' })"
+      >
+        <AppLogo :height="16" />
+      </ULink>
       <ULink
         class="border-b leading-5"
         to="https://github.com/likecoin/3ook-com?tab=GPL-3.0-1-ov-file#readme"
@@ -77,7 +83,7 @@
       </nav>
     </div>
 
-    <div class="flex justify-center lg:justify-end gap-6">
+    <div class="flex justify-center gap-6">
       <ul
         class="flex justify-center flex-wrap items-center gap-1.5"
       >
@@ -122,8 +128,6 @@
           />
         </li>
       </ul>
-
-      <LocaleSwitcher class="max-laptop:hidden" />
     </div>
   </footer>
 </template>
