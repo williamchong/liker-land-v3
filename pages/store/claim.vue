@@ -1,5 +1,7 @@
 <template>
-  <main class="flex flex-col justify-center items-center min-h-svh mb-safe py-[56px]">
+  <main
+    class="flex flex-col justify-center items-center min-h-svh mb-safe py-[48px] px-[24px]"
+  >
     <template v-if="!hasLoggedIn">
       <p
         class="text-center text-gray-500 mb-4"
@@ -15,7 +17,7 @@
       :book-name="bookInfo?.name.value"
       :book-cover-src="bookCoverSrc"
       icon="i-material-symbols-check-circle-rounded"
-      :icon-label="$t('claim_page_purchase_successful_label')"
+      :icon-label="claimTitle"
       :loading-label="currentLoadingLabel"
     >
       <template
@@ -24,12 +26,18 @@
       >
         <UButton
           v-if="canStartReading"
-          class="max-w-[348px]"
           :to="readerRoute"
           :label="$t('claim_page_start_reading_button_label')"
           size="xl"
           block
           @click="handleStartReadingButtonClick"
+        />
+        <UButton
+          :label="$t('claim_page_back_to_bookstore_button_label')"
+          size="xl"
+          variant="ghost"
+          block
+          :to="localeRoute({ name: 'store' })"
         />
       </template>
       <template
@@ -49,6 +57,15 @@
         />
       </template>
     </BookLoadingScreen>
+    <CollectorMessageModal
+      v-model:open="isOpenCollectorMessageModal"
+      :book-cover-src="bookCoverSrc"
+      :book-name="bookInfo.name.value"
+      :book-author="bookInfo.authorName.value"
+      :payment-id="paymentId"
+      :claiming-token="claimingToken"
+      :nft-class-id="nftClassId"
+    />
   </main>
 </template>
 
@@ -68,7 +85,9 @@ const { errorModal, handleError } = useErrorHandler()
 const cartId = computed(() => getRouteQuery('cart_id'))
 const claimingToken = computed(() => getRouteQuery('claiming_token'))
 const paymentId = computed(() => getRouteQuery('payment_id'))
+
 const isLoading = ref(true)
+const isOpenCollectorMessageModal = ref(false)
 
 const baseLoadingLabels = computed(() => [
   $t('claim_page_loading_step_1'),
@@ -202,6 +221,19 @@ const isAutoDeliver = computed(() => isItemAutoDeliver.value || allItemsDelivere
 const isItemAutoDeliver = computed(() => bookInfo.getIsAutoDelivery(cartData.value?.classIdsWithPrice?.[0]?.priceIndex))
 const allItemsDelivered = ref(false)
 
+const claimTitle = computed(() => {
+  if (isLoading.value) {
+    return $t('claim_page_title')
+  }
+  if (canStartReading.value) {
+    return $t('claim_page_start_reading_footer_label')
+  }
+  if (!isAutoDeliver.value) {
+    return $t('claim_page_wait_for_delivery')
+  }
+  return $t('claim_page_title')
+})
+
 const receivedNFTId = computed(() => bookInfo.firstUserOwnedNFTId.value)
 const canStartReading = computed(() => !!receivedNFTId.value)
 
@@ -217,6 +249,28 @@ async function checkItemsDeliveryThroughIndexer() {
 
 const isCheckingItemsDelivery = ref(false)
 const hasBypassedIndexer = ref(false)
+let stopCollectorMessageModalTimer: (() => void) | null = null
+
+watch([hasLoggedIn, canStartReading], () => {
+  if (!hasLoggedIn.value || isOpenCollectorMessageModal.value) return
+
+  if (canStartReading.value) {
+    openCollectorModal()
+  }
+  else {
+    stopCollectorMessageModalTimer = useTimeoutFn(openCollectorModal, 3000).stop
+  }
+}, { immediate: true })
+
+watch(hasLoggedIn, (value) => {
+  if (value) startClaimFlow()
+}, { immediate: true })
+
+function openCollectorModal() {
+  if (isOpenCollectorMessageModal.value) return
+  stopCollectorMessageModalTimer?.()
+  isOpenCollectorMessageModal.value = true
+}
 
 async function waitForItemsDelivery({ timeout = 30000, interval = 3000 } = {}) {
   if (isCheckingItemsDelivery.value || !isAutoDeliver.value) return
