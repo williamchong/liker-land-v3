@@ -22,7 +22,7 @@ const src = computed(() => {
       return cosmostation
     case 'app.keplr':
       return keplr
-    case 'io.metamask':
+    case 'metaMaskSDK':
       return metamask
     case 'io.rabby':
       return rabby

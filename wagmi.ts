@@ -1,6 +1,6 @@
 import { http, createConfig } from '@wagmi/vue'
 import { optimism, optimismSepolia } from '@wagmi/vue/chains'
-import { injected, walletConnect } from '@wagmi/vue/connectors'
+import { injected, metaMask, walletConnect } from '@wagmi/vue/connectors'
 import { dedicatedWalletConnector } from '@likecoin/wagmi-connector'
 
 export function createWagmiConfig({
@@ -22,6 +22,7 @@ export function createWagmiConfig({
     chains: [optimismSepolia, optimism],
     connectors: [
       injected(),
+      metaMask(),
       ...(walletConnectProjectId
         ? [walletConnect({
             projectId: walletConnectProjectId,
