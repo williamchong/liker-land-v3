@@ -12,6 +12,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     rpcURL: config.public.magicLinkRPCURL,
     chainId: config.public.magicLinkChainId,
     customLogoURL: config.public.magicLinkCustomLogoURL,
+    walletConnectProjectId: config.public.walletConnectProjectId,
     isServer: !!nuxtApp.ssrContext,
   })
   nuxtApp.vueApp

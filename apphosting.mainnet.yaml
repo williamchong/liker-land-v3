@@ -69,6 +69,8 @@ env:
     secret: SENTRY_AUTH_TOKEN
   - variable: SENTRY_DSN
     value: https://07b4bd03c1d828f7e241ccc9e47a2f80@o149940.ingest.us.sentry.io/4509350693240832
+  - variable: WALLET_CONNECT_PROJECT_ID
+    value: 526a2e1c9bf37fb75a7e0a4b11d6008e
   # Grant access to secrets in Cloud Secret Manager.
   # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
   # - variable: MY_SECRET
