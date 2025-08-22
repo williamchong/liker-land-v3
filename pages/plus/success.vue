@@ -48,6 +48,7 @@ const getRouteBaseName = useRouteBaseName()
 
 const isRedirected = computed(() => !!getRouteQuery('redirect'))
 const isYearly = computed(() => getRouteQuery('period') === 'yearly')
+const paymentId = computed(() => getRouteQuery('payment_id'))
 
 const isRefreshing = ref(true)
 const isRedirecting = ref(false)
@@ -103,6 +104,7 @@ onMounted(async () => {
         ? 0
         : isYearly.value ? yearlyPrice.value : monthlyPrice.value
       useLogEvent('purchase', {
+        transaction_id: paymentId.value,
         currency: currency.value,
         value: price,
         items: [{

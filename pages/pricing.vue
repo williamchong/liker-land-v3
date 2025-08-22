@@ -17,8 +17,8 @@ const {
   currency,
 } = subscription
 
-const productGroup = '3ook-plus'
-const productId = '3ook-plus-beta'
+const productGroup = 'plus-beta'
+const monthlyProductId = 'plus-beta-monthly'
 
 const structuredData = computed(() => {
   return {
@@ -34,7 +34,7 @@ const structuredData = computed(() => {
     'description': $t('pricing_page_subscription_description'),
     'url': canonicalURL.value,
     'image': `${baseURL}/images/og/plus.jpg`,
-    'productID': productId,
+    'productID': productGroup,
     'offers': [
       {
         '@type': 'Offer',
@@ -104,8 +104,8 @@ useHead({
     { property: 'product:brand', content: '3ook plus' },
     { property: 'product:availability', content: 'in stock' },
     { property: 'product:condition', content: 'new' },
-    { property: 'product:catalog_id', content: productId },
-    { property: 'product:retailer_item_id', content: productId },
+    { property: 'product:catalog_id', content: monthlyProductId },
+    { property: 'product:retailer_item_id', content: monthlyProductId },
     { property: 'product:item_group_id', content: productGroup },
     { property: 'product:category', content: 6028 }, // Media Viewing Software
   ],
