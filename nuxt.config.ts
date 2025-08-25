@@ -191,6 +191,7 @@ export default defineNuxtConfig({
       // NOTE: Allow Magic Link/PDF.js iframes
       crossOriginEmbedderPolicy: 'unsafe-none',
     },
+    rateLimiter: false,
   },
 
   sentry: {
