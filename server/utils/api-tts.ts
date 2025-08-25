@@ -1,6 +1,7 @@
 import type { H3Event } from 'h3'
 
 export enum TTSProvider {
+  COZY = 'cozy',
   MINIMAX = 'minimax',
 }
 export interface TTSRequestParams {
