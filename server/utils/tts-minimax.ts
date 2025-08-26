@@ -35,6 +35,29 @@ const VOICE_MAPPING: Record<string, string> = {
   phoebe: 'phoebe_v1',
 }
 
+export function getTTSPronunciationDictionary(language: string) {
+  switch (language) {
+    case 'zh-TW':
+      return {
+        tone: [
+          '乾/(gan1)',
+        ],
+      }
+    case 'zh-HK':
+      return {
+        tone: [
+          '掬/(谷)',
+          '驥/(冀)',
+          '頰/(甲)',
+        ],
+      }
+    case 'en-US':
+      return undefined
+    default:
+      return undefined
+  }
+}
+
 export class MinimaxTTSProvider implements BaseTTSProvider {
   provider = TTSProvider.MINIMAX
   format = 'audio/mpeg'

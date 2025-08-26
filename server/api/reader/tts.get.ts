@@ -126,7 +126,7 @@ export default defineEventHandler(async (event) => {
           customMetadata: {
             language,
             voiceId: validVoiceId,
-            provider: getTTSProvider(validVoiceId).provider,
+            provider: provider.provider,
             text: truncatedText,
             textLength: text.length.toString(),
             createdAt: new Date().toISOString(),
