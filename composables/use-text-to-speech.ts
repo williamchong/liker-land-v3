@@ -237,10 +237,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       }
     }
 
+    const [language, ...voiceIdParts] = ttsLanguageVoice.value.split('_')
     const params = new URLSearchParams({
       text: element.text,
-      language: ttsLanguageVoice.value.split('_')[0] || 'zh-HK',
-      voice_id: ttsLanguageVoice.value.split('_')[1] || '0',
+      language: language || 'zh-HK',
+      voice_id: voiceIdParts.join('_') || '0',
     })
     audio.src = `/api/reader/tts?${params.toString()}`
     audio.playbackRate = ttsPlaybackRate.value
