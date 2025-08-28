@@ -310,7 +310,7 @@
       </section>
 
       <section
-        v-if="recommendedClassIds.length"
+        v-if="filteredRecommendedClassIds.length"
         class="w-full max-w-[1200px] mx-auto mt-16 laptop:mt-20"
       >
         <h2
@@ -329,7 +329,7 @@
           ]"
         >
           <BookstoreItem
-            v-for="(classId, index) in recommendedClassIds"
+            v-for="(classId, index) in filteredRecommendedClassIds"
             :id="classId"
             :key="classId"
             :class="getGridItemClassesByIndex(index)"
@@ -420,6 +420,7 @@ const formatPrice = useFormatPrice()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
 const nftStore = useNFTStore()
+const bookstoreStore = useBookstoreStore()
 const { open: openTippingModal } = useTipping()
 const {
   isLikerPlus,
@@ -628,8 +629,20 @@ const recommendedClassIds = computed(() => {
   return items.concat(ownedClassIds).filter(id => id !== nftClassId.value).slice(0, 10)
 })
 
+const filteredRecommendedClassIds = computed(() => {
+  return recommendedClassIds.value
+    .map(classId => bookstoreStore.getBookstoreInfoByNFTClassId(classId))
+    .filter(item => item && item?.prices.length && !item.isHidden)
+    .map(item => item?.id)
+})
+
+watch(recommendedClassIds, (newIds, oldIds) => {
+  const addedIds = newIds.filter(id => !oldIds.includes(id))
+  addedIds.forEach(id => nftStore.lazyFetchNFTClassAggregatedMetadataById(id))
+})
+
 const { gridClasses, getGridItemClassesByIndex } = usePaginatedGrid({
-  itemsCount: computed(() => recommendedClassIds.value.length),
+  itemsCount: computed(() => filteredRecommendedClassIds.value.length),
   hasMore: false,
 })
 
