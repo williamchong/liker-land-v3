@@ -18,51 +18,56 @@
         'bg-linear-to-b from-(--app-bg)/90 to-(--app-bg)/0',
       ]"
     >
-      <div
-        class="relative col-span-3 tablet:col-span-2"
-      >
-        <span
-          :class="[
-            'absolute',
-            'inset-0',
-            'translate-y-[3px]',
-            'rounded-full',
-            'bg-theme-500',
-            'text-theme-50',
-            'shadow-[inset_3px_7px_4px_0px_#50E3C2E5]',
-            { 'opacity-75': isFetchingTags },
-          ]"
+      <div class="flex items-center max-phone:gap-1 gap-2 w-full">
+        <UButton
+          v-if="!isDefaultTagId"
+          icon="i-material-symbols-close-rounded"
+          variant="outline"
+          rounded-full
+          :ui="{ base: 'rounded-full bg-(--app-bg)' }"
+          @click="handleCloseClick"
         />
-        <span
-          :class="[
-            'absolute',
-            'inset-0',
-            'translate-x-[2px]',
-            'bg-(--app-bg)',
-            'rounded-full',
-          ]"
+
+        <UButton
+          v-for="fixedTag in fixedTags"
+          v-else
+          :key="fixedTag.value"
+          :label="fixedTag.label"
+          variant="outline"
+          :ui="{ base: 'rounded-full bg-(--app-bg) !ring-gray-600 max-phone:px-[10px] px-4',
+                 label: 'text-sm laptop:text-base',
+          }"
+          @click="handleTagClick(fixedTag.value)"
         />
+
         <USelect
           v-model="tagId"
-          class="relative w-full ml-[2px]"
-          :items="tagItems"
-          icon="i-material-symbols-format-list-bulleted-rounded"
-          variant="outline"
-          color="primary"
-          size="lg"
-          :loading="isFetchingTags"
-          :disabled="isFetchingTags"
-          highlight
-          :ui="{
-            base: 'rounded-full shadow-lg bg-(--app-bg)',
-            content: 'rounded-lg ring-primary ring-2',
+          :placeholder="isDefaultTagId ? $t('store_tag_more_categories') : undefined"
+          :items="isDefaultTagId ? selectorTagItems : allTagItems"
+          :content="{
+            align: 'center',
+            side: 'bottom',
+            sideOffset: 8,
           }"
-          @update:model-value="handleTagSelectChange"
+          arrow
+          size="md"
+          :ui="{
+            base: [
+              'rounded-full !ring-gray-600 justify-center text-sm laptop:text-base font-medium  max-phone:!pl-[10px] !pl-[16px]',
+              isDefaultTagId
+                ? 'bg-(--app-bg) hover:bg-[#d0cec8]'
+                : 'bg-black text-white hover:bg-[#d0cec8] hover:text-black',
+            ],
+            content: 'rounded-lg',
+            placeholder: isDefaultTagId ? '!text-black text-sm laptop:text-base' : undefined,
+          }"
         />
       </div>
     </header>
 
-    <main class="flex flex-col items-center grow w-full max-w-[1440px] mx-auto pt-4 px-4 laptop:px-12 pb-16">
+    <main
+      class="flex flex-col items-center grow w-full max-w-[1440px] mx-auto pt-4 px-4 laptop:px-12 pb-16"
+    >
       <div
         v-if="itemsCount === 0 && !products.isFetchingItems && products.hasFetchedItems"
         class="flex flex-col items-center m-auto"
@@ -122,6 +127,7 @@ const bookstoreStore = useBookstoreStore()
 const infiniteScrollDetectorElement = useTemplateRef<HTMLLIElement>('infiniteScrollDetector')
 const shouldLoadMore = useElementVisibility(infiniteScrollDetectorElement)
 const { handleError } = useErrorHandler()
+const isMobile = useMediaQuery('(max-width: 768px)')
 
 const TAG_LISTING = 'listing'
 
@@ -147,23 +153,30 @@ const isDefaultTagId = computed(() => getIsDefaultTagId(tagId.value))
 
 const normalizedLocale = computed(() => locale.value === 'zh-Hant' ? 'zh' : 'en')
 
-const tagItems = computed(() => {
-  return [
-    // NOTE: Inject the listing tag at first
-    {
-      label: $t('store_tag_listing'),
-      value: TAG_LISTING,
-    },
-    ...bookstoreStore.bookstoreCMSTags
-      .filter((tag) => {
-        // NOTE: Filter out the unlisted tag if it is not selected
-        return !!tag.isPublic || tag.id === tagId.value
-      })
-      .map(tag => ({
-        label: tag.name[normalizedLocale.value],
-        value: tag.id,
-      })),
-  ]
+const allTagItems = computed(() => {
+  return bookstoreStore.bookstoreCMSTags
+    .filter((tag) => {
+      return !!tag.isPublic || tag.id === tagId.value
+    })
+    .map(tag => ({
+      label: tag.name[normalizedLocale.value],
+      value: tag.id,
+    }))
+})
+
+const tagsSliceIndex = computed(() => {
+  if (locale.value === 'zh-Hant') {
+    return isMobile.value ? 3 : 4
+  }
+  return isMobile.value ? 2 : 3
+})
+
+const fixedTags = computed(() => {
+  return allTagItems.value.slice(0, tagsSliceIndex.value)
+})
+
+const selectorTagItems = computed(() => {
+  return allTagItems.value.slice(tagsSliceIndex.value)
 })
 
 const localizedTagId = computed(() => {
@@ -319,7 +332,16 @@ async function handleFetchItemsErrorRetryButtonClick() {
   await fetchItems({ isRefresh: true })
 }
 
-function handleTagSelectChange(value?: string) {
-  useLogEvent('store_tag_select', { tag_id: value })
+async function handleTagClick(tagValue?: string) {
+  if (!tagValue || tagValue === tagId.value) {
+    return
+  }
+  useLogEvent('store_tag_click', { tag_id: tagValue })
+  tagId.value = tagValue
+}
+
+async function handleCloseClick() {
+  useLogEvent('store_tag_close_click', { tag_id: tagId.value })
+  tagId.value = TAG_LISTING
 }
 </script>
