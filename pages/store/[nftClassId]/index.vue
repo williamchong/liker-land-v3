@@ -309,6 +309,37 @@
         </ul>
       </section>
 
+      <section
+        v-if="recommendedClassIds.length"
+        class="w-full max-w-[1200px] mx-auto mt-16 laptop:mt-20"
+      >
+        <h2
+          class="text-green-500 text-lg font-bold"
+          v-text="$t('product_page_related_books_title')"
+        />
+
+        <ul
+          :class="[
+            ...gridClasses,
+            'flex-wrap',
+            'flex',
+            'gap-x-6',
+            'gap-y-10',
+            'mt-6',
+          ]"
+        >
+          <BookstoreItem
+            v-for="(classId, index) in recommendedClassIds"
+            :id="classId"
+            :key="classId"
+            :class="getGridItemClassesByIndex(index)"
+            :nft-class-id="classId"
+            :lazy="true"
+            @open="handleRecommendedBookCoverClick"
+          />
+        </ul>
+      </section>
+
       <aside
         v-if="pricingItems.length"
         :class="[
@@ -436,6 +467,7 @@ await callOnce(async () => {
 })
 
 const bookInfo = useBookInfo({ nftClassId })
+const authorStore = useAuthorStore()
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 600 }))
 
 const selectedPricingItemIndex = ref(Number(getRouteQuery('price_index') || 0))
@@ -587,16 +619,30 @@ const checkoutButtonProps = computed<{
   }
 })
 
+const recommendedClassIds = computed(() => {
+  let items: string[] = []
+  if (bookInfo.bookstoreInfo.value?.recommendedClassIds) {
+    items = items.concat(bookInfo.bookstoreInfo.value.recommendedClassIds)
+  }
+  const ownedClassIds = authorStore.getOwnedBookClassIds(bookInfo.nftClassOwnerWalletAddress.value)
+  return items.concat(ownedClassIds).filter(id => id !== nftClassId.value).slice(0, 10)
+})
+
+const { gridClasses, getGridItemClassesByIndex } = usePaginatedGrid({
+  itemsCount: computed(() => recommendedClassIds.value.length),
+  hasMore: false,
+})
+
 onMounted(() => {
   useLogEvent('view_item', formattedLogPayload.value)
   const ownerWalletAddress = bookInfo.nftClassOwnerWalletAddress.value
   if (ownerWalletAddress) {
-    try {
-      metadataStore.lazyFetchLikerInfoByWalletAddress(ownerWalletAddress)
-    }
-    catch (error) {
+    metadataStore.lazyFetchLikerInfoByWalletAddress(ownerWalletAddress).catch((error) => {
       console.error(`Failed to fetch owner liker info for wallet address ${ownerWalletAddress}:`, error)
-    }
+    })
+    authorStore.lazyFetchBookClassByOwnerWallet(ownerWalletAddress).catch((error) => {
+      console.error(`Failed to fetch author owned class for wallet address ${ownerWalletAddress}:`, error)
+    })
   }
   const selectedPricingItemIndex = getRouteQuery('edition')
   if (selectedPricingItemIndex) {
@@ -721,6 +767,12 @@ function handleGiftButtonClick() {
   // TODO: Implement gift functionality
   wipModal.open({
     title: $t('product_page_gift_button_label'),
+  })
+}
+
+function handleRecommendedBookCoverClick(classId: string) {
+  useLogEvent('recommend_book_click', {
+    nft_class_id: classId,
   })
 }
 
