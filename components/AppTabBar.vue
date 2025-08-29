@@ -8,14 +8,13 @@
       >
         <NuxtLink
           v-if="item.key === 'account' && hasLoggedIn"
-          class="flex items-center"
+          class="flex justify-center items-center"
           :to="item.to"
         >
           <UAvatar
             :class="[
               'bg-white',
-              item.isActive ? 'border-2' : 'border',
-              item.isActive ? 'bg-theme-500' : 'border-muted',
+              item.isActive ? 'border-2 border-theme-500' : 'border border-muted',
             ]"
             :src="user?.avatar"
             :alt="user?.displayName"
