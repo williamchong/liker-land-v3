@@ -1,4 +1,5 @@
 import type { Writable } from 'node:stream'
+import { AzureTTSProvider } from '~/server/utils/tts-azure'
 
 const LANG_MAPPING = {
   'en-US': 'English',
@@ -16,6 +17,12 @@ const VOICE_PROVIDER_MAPPING: Record<string, TTSProvider> = {
   cozy_m: TTSProvider.COZY,
   cozy_f: TTSProvider.COZY,
   cozy_pazu: TTSProvider.COZY,
+  // Azure voices
+  azure_hiuman: TTSProvider.AZURE,
+  azure_xiaochen: TTSProvider.AZURE,
+  azure_xiaoxiao: TTSProvider.AZURE,
+  azure_xiaoxiao_flash: TTSProvider.AZURE,
+  azure_xiaoxiao_flash2: TTSProvider.AZURE,
 }
 
 // Provider factory
@@ -33,6 +40,8 @@ function getTTSProvider(voiceId: string): BaseTTSProvider {
       return new MinimaxTTSProvider()
     case TTSProvider.COZY:
       return new CozyTTSProvider()
+    case TTSProvider.AZURE:
+      return new AzureTTSProvider()
     default:
       throw createError({
         status: 500,

@@ -42,6 +42,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     { label: 'Cozy Pazu - 粵語', value: 'zh-HK_cozy_pazu' },
     { label: 'Cozy M - 粵語', value: 'zh-HK_cozy_m' },
     { label: 'Cozy F - 粵語', value: 'zh-HK_cozy_f' },
+    { label: '書面女聲 - 粵語', value: 'zh-HK_azure_xiaochen' },
     { label: '雷庭音 - 國語', value: 'zh-TW_0' },
     { label: '國語男聲', value: 'zh-TW_1' },
     { label: 'English female', value: 'en-US_0' },
