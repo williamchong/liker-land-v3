@@ -130,8 +130,8 @@ async function extractTTSSegmentsFromPDF(pdfDocument: PDFDocumentProxy) {
       const viewport = page.getViewport({ scale: 1.0 })
       const pageHeight = viewport.height
 
-      const headerThreshold = pageHeight * 0.8
-      const footerThreshold = pageHeight * 0.2
+      const headerThreshold = pageHeight * 0.9
+      const footerThreshold = pageHeight * 0.1
 
       const mainContentItems = textContent.items
         .filter((item: TextItem | TextMarkedContent) => {
