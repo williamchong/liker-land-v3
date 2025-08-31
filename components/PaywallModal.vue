@@ -101,17 +101,7 @@
               </li>
               <li>
                 <UIcon name="i-material-symbols-check" />
-                <i18n-t
-                  keypath="pricing_page_feature_5"
-                  tag="p"
-                >
-                  <template #highlight>
-                    <strong
-                      class="font-bold"
-                      v-text="$t('pricing_page_feature_5_highlight')"
-                    />
-                  </template>
-                </i18n-t>
+                <span v-text="$t('pricing_page_feature_5')" />
               </li>
             </ul>
           </div>
@@ -127,6 +117,7 @@
                 ]"
               >
                 <div
+                  v-if="discountPercent"
                   class="absolute -top-3 left-1/6 -translate-x-1/2 bg-black text-[#A6F5EA] text-xs font-semibold px-3 py-1 rounded-lg"
                   v-text="$t('pricing_page_yearly_discount', { discount: discountPercent })"
                 />
@@ -153,8 +144,13 @@
                   />
                 </div>
                 <div class="text-right">
-                  <div class="flex justify-end items-center gap-2 text-sm text-gray-400">
-                    <p v-text=" $t('pricing_page_original_price')" />
+                  <div
+                    v-if="props.discountedYearlyPrice"
+                    class="flex justify-end items-center gap-2 text-sm text-gray-400"
+                  >
+                    <p
+                      v-text=" $t('pricing_page_original_price')"
+                    />
                     <span
                       class="line-through text-gray-400"
                       v-text="`US$${props.originalYearlyPrice}`"
@@ -168,7 +164,7 @@
                     <template #price>
                       <p
                         class="text-2xl font-bold px-1"
-                        v-text="`$${props.discountedYearlyPrice}`"
+                        v-text="`$${actualYearlyPrice}`"
                       />
                     </template>
                   </i18n-t>
@@ -210,7 +206,10 @@
                 </div>
 
                 <div class="text-right">
-                  <div class="flex justify-end items-center gap-2 text-sm text-gray-400">
+                  <div
+                    v-if="props.discountedMonthlyPrice"
+                    class="flex justify-end items-center gap-2 text-sm text-gray-400"
+                  >
                     <p v-text=" $t('pricing_page_original_price')" />
                     <span
                       class="line-through text-gray-400"
@@ -225,7 +224,7 @@
                     <template #price>
                       <p
                         class="text-2xl font-bold px-1"
-                        v-text="`$${props.discountedMonthlyPrice}`"
+                        v-text="`$${actualMonthlyPrice}`"
                       />
                     </template>
                   </i18n-t>
@@ -292,8 +291,6 @@ const props = withDefaults(
     isCloseButtonHidden: false,
     originalYearlyPrice: '99.99',
     originalMonthlyPrice: '9.99',
-    discountedYearlyPrice: '69.99',
-    discountedMonthlyPrice: '6.99',
     isProcessingSubscription: false,
   },
 )
@@ -343,9 +340,19 @@ const planLabelBaseClass = [
   'hover:border-gray-400',
 ]
 
+const actualMonthlyPrice = computed(() => {
+  return Number(props.discountedMonthlyPrice || props.originalMonthlyPrice)
+})
+const actualYearlyPrice = computed(() => {
+  return Number(props.discountedYearlyPrice || props.originalYearlyPrice)
+})
+
 const discountPercent = computed(() => {
-  const originalYearlyCost = Number(props.discountedMonthlyPrice) * 12
-  const discountedAmount = originalYearlyCost - Number(props.discountedYearlyPrice)
+  const originalYearlyCost = actualMonthlyPrice.value * 12
+  const discountedAmount = originalYearlyCost - actualYearlyPrice.value
+  if (discountedAmount <= 0) {
+    return 0
+  }
   return Math.round((discountedAmount / originalYearlyCost) * 100)
 })
 

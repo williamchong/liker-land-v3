@@ -19,8 +19,8 @@ export function useSubscription() {
 
   const modalProps = ref<PaywallModalProps>({})
   // TODO: Don't hardcode prices here
-  const yearlyPrice = ref(69.99)
-  const monthlyPrice = ref(6.99)
+  const yearlyPrice = ref(99.99)
+  const monthlyPrice = ref(9.99)
   const currency = ref('USD')
   const PLUS_DISCOUNT_PERCENTAGE = 0.2 // 20% discount
   const isLikerPlus = computed(() => {
@@ -48,8 +48,8 @@ export function useSubscription() {
   function getPaywallModalProps(): PaywallModalProps {
     return {
       'modelValue': selectedPlan.value,
-      'discountedYearlyPrice': yearlyPrice.value,
-      'discountedMonthlyPrice': monthlyPrice.value,
+      'originalYearlyPrice': yearlyPrice.value,
+      'originalMonthlyPrice': monthlyPrice.value,
       'isProcessingSubscription': isProcessingSubscription.value,
       'onUpdate:modelValue': (value: SubscriptionPlan) => {
         selectedPlan.value = value

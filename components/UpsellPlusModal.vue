@@ -143,10 +143,6 @@
               class="text-gray-500 line-through"
               v-text="`$${subscriptionPrices.yearly.originalPrice}`"
             />
-            <span
-              class="text-theme-50 font-bold"
-              v-text="`$${subscriptionPrices.yearly.discountedPrice}`"
-            />
           </div>
         </UButton>
         <UButton
@@ -168,10 +164,6 @@
             <span
               class="text-gray-500 line-through"
               v-text="`$${subscriptionPrices.monthly.originalPrice}`"
-            />
-            <span
-              class="text-theme-500"
-              v-text="`$${subscriptionPrices.monthly.discountedPrice}`"
             />
           </div>
         </UButton>
@@ -210,11 +202,9 @@ const props = withDefaults(defineProps<UpsellPlusModalProps>(), {
 const subscriptionPrices = {
   yearly: {
     originalPrice: 99.99,
-    discountedPrice: 69.99,
   },
   monthly: {
     originalPrice: 9.99,
-    discountedPrice: 6.99,
   },
 }
 
