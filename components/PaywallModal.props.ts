@@ -3,10 +3,6 @@ export interface PaywallModalProps {
   'isFullscreen'?: boolean
   'isBackdropDismissible'?: boolean
   'isCloseButtonHidden'?: boolean
-  'originalYearlyPrice'?: string | number
-  'originalMonthlyPrice'?: string | number
-  'discountedYearlyPrice'?: string | number
-  'discountedMonthlyPrice'?: string | number
   'isProcessingSubscription'?: boolean
   'hasFreeTrial'?: boolean
   'mustCollectPaymentMethod'?: boolean

@@ -101,7 +101,12 @@
               </li>
               <li>
                 <UIcon name="i-material-symbols-check" />
-                <span v-text="$t('pricing_page_feature_5')" />
+                <span
+                  v-text="$t('pricing_page_feature_5', {
+                    monthlyPrice,
+                    yearlyPrice,
+                  })"
+                />
               </li>
             </ul>
           </div>
@@ -117,9 +122,9 @@
                 ]"
               >
                 <div
-                  v-if="discountPercent"
+                  v-if="yearlyDiscountPercent"
                   class="absolute -top-3 left-1/6 -translate-x-1/2 bg-black text-[#A6F5EA] text-xs font-semibold px-3 py-1 rounded-lg"
-                  v-text="$t('pricing_page_yearly_discount', { discount: discountPercent })"
+                  v-text="$t('pricing_page_yearly_discount', { discount: yearlyDiscountPercent })"
                 />
 
                 <div class="flex items-center">
@@ -145,7 +150,7 @@
                 </div>
                 <div class="text-right">
                   <div
-                    v-if="props.discountedYearlyPrice"
+                    v-if="hasYearlyDiscount"
                     class="flex justify-end items-center gap-2 text-sm text-gray-400"
                   >
                     <p
@@ -153,7 +158,7 @@
                     />
                     <span
                       class="line-through text-gray-400"
-                      v-text="`US$${props.originalYearlyPrice}`"
+                      v-text="`US$${originalYearlyPrice}`"
                     />
                   </div>
                   <i18n-t
@@ -164,7 +169,7 @@
                     <template #price>
                       <p
                         class="text-2xl font-bold px-1"
-                        v-text="`$${actualYearlyPrice}`"
+                        v-text="`$${yearlyPrice}`"
                       />
                     </template>
                   </i18n-t>
@@ -207,13 +212,13 @@
 
                 <div class="text-right">
                   <div
-                    v-if="props.discountedMonthlyPrice"
+                    v-if="hasMonthlyDiscount"
                     class="flex justify-end items-center gap-2 text-sm text-gray-400"
                   >
                     <p v-text=" $t('pricing_page_original_price')" />
                     <span
                       class="line-through text-gray-400"
-                      v-text="`US$${props.originalMonthlyPrice}`"
+                      v-text="`US$${originalMonthlyPrice}`"
                     />
                   </div>
                   <i18n-t
@@ -224,7 +229,7 @@
                     <template #price>
                       <p
                         class="text-2xl font-bold px-1"
-                        v-text="`$${actualMonthlyPrice}`"
+                        v-text="`$${monthlyPrice}`"
                       />
                     </template>
                   </i18n-t>
@@ -280,8 +285,6 @@ const emit = defineEmits<{
   }]
   'update:modelValue': [value: SubscriptionPlan]
 }>()
-const { t: $t } = useI18n()
-const isScreenSmall = useMediaQuery('(max-width: 1023px)')
 
 const props = withDefaults(
   defineProps<PaywallModalProps>(),
@@ -289,11 +292,21 @@ const props = withDefaults(
     isFullscreen: false,
     isBackdropDismissible: true,
     isCloseButtonHidden: false,
-    originalYearlyPrice: '99.99',
-    originalMonthlyPrice: '9.99',
     isProcessingSubscription: false,
   },
 )
+
+const { t: $t } = useI18n()
+const isScreenSmall = useMediaQuery('(max-width: 1023px)')
+const {
+  monthlyPrice,
+  yearlyPrice,
+  originalMonthlyPrice,
+  originalYearlyPrice,
+  yearlyDiscountPercent,
+  hasMonthlyDiscount,
+  hasYearlyDiscount,
+} = useSubscriptionPricing()
 
 const isFullscreenModal = computed(() => props.isFullscreen || isScreenSmall.value)
 
@@ -339,22 +352,6 @@ const planLabelBaseClass = [
   'hover:shadow-lg',
   'hover:border-gray-400',
 ]
-
-const actualMonthlyPrice = computed(() => {
-  return Number(props.discountedMonthlyPrice || props.originalMonthlyPrice)
-})
-const actualYearlyPrice = computed(() => {
-  return Number(props.discountedYearlyPrice || props.originalYearlyPrice)
-})
-
-const discountPercent = computed(() => {
-  const originalYearlyCost = actualMonthlyPrice.value * 12
-  const discountedAmount = originalYearlyCost - actualYearlyPrice.value
-  if (discountedAmount <= 0) {
-    return 0
-  }
-  return Math.round((discountedAmount / originalYearlyCost) * 100)
-})
 
 onMounted(() => {
   emit('open')
