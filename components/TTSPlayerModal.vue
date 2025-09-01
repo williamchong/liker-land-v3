@@ -55,6 +55,7 @@
 
                 v-memo="[currentTTSSegmentIndex === item.index]"
                 :class="getSegmentClass(item.index)"
+                @click="startTextToSpeech(item.index)"
               >
                 {{ item.text }}
               </li>
