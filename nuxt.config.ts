@@ -81,6 +81,18 @@ export default defineNuxtConfig({
       pdfViewerOrigin: process.env.PDF_VIEWER_ORIGIN,
       pdfViewerURL: `${process.env.PDF_VIEWER_ORIGIN}${process.env.PDF_VIEWER_PATH}`,
       sentryDsn: process.env.SENTRY_DSN,
+      subscription: {
+        pricing: {
+          monthly: {
+            original: 9.99,
+            actual: 9.99,
+          },
+          yearly: {
+            original: 99.99,
+            actual: 99.99,
+          },
+        },
+      },
       baseURL: process.env.BASE_URL,
     },
     session: {

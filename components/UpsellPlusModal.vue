@@ -115,7 +115,12 @@
         </li>
         <li>
           <UIcon name="i-material-symbols-check" />
-          <span v-text="$t('pricing_page_feature_5')" />
+          <span
+            v-text="$t('pricing_page_feature_5', {
+              monthlyPrice,
+              yearlyPrice,
+            })"
+          />
         </li>
       </ul>
     </template>
@@ -140,12 +145,13 @@
           />
           <div class="flex items-center justify-center gap-1">
             <span
+              v-if="hasYearlyDiscount"
               class="text-gray-500 line-through"
-              v-text="`$${subscriptionPrices.yearly.originalPrice}`"
+              v-text="`$${originalYearlyPrice}`"
             />
             <span
               class="text-theme-50 font-bold"
-              v-text="`$${subscriptionPrices.yearly.discountedPrice}`"
+              v-text="`$${yearlyPrice}`"
             />
           </div>
         </UButton>
@@ -166,12 +172,13 @@
           />
           <div class="flex items-center justify-center gap-1">
             <span
+              v-if="hasMonthlyDiscount"
               class="text-gray-500 line-through"
-              v-text="`$${subscriptionPrices.monthly.originalPrice}`"
+              v-text="`$${originalMonthlyPrice}`"
             />
             <span
               class="text-theme-500"
-              v-text="`$${subscriptionPrices.monthly.discountedPrice}`"
+              v-text="`$${monthlyPrice}`"
             />
           </div>
         </UButton>
@@ -207,17 +214,6 @@ const props = withDefaults(defineProps<UpsellPlusModalProps>(), {
   utmSource: undefined,
 })
 
-const subscriptionPrices = {
-  yearly: {
-    originalPrice: 99.99,
-    discountedPrice: 69.99,
-  },
-  monthly: {
-    originalPrice: 9.99,
-    discountedPrice: 6.99,
-  },
-}
-
 const emit = defineEmits<{
   open: []
   close: []
@@ -226,6 +222,15 @@ const emit = defineEmits<{
 
 const { t: $t } = useI18n()
 const route = useRoute()
+const {
+  monthlyPrice,
+  originalMonthlyPrice,
+  yearlyPrice,
+  originalYearlyPrice,
+  hasMonthlyDiscount,
+  hasYearlyDiscount,
+} = useSubscriptionPricing()
+
 const showMonthlyPlan = computed(() => !props.isLikerPlus)
 const showYearlyPlan = computed(() => (
   showMonthlyPlan.value

@@ -106,8 +106,8 @@ onMounted(async () => {
         currency: currency.value,
         value: price,
         items: [{
-          id: `plus-beta-${isYearly.value ? 'yearly' : 'monthly'}`,
-          name: `Plus Beta (${isYearly.value ? 'yearly' : 'monthly'}`,
+          id: `plus-${isYearly.value ? 'yearly' : 'monthly'}`,
+          name: `Plus (${isYearly.value ? 'yearly' : 'monthly'}`,
           price,
           currency: currency.value,
           quantity: 1,

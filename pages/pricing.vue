@@ -17,8 +17,8 @@ const {
   currency,
 } = subscription
 
-const productGroup = 'plus-beta'
-const monthlyProductId = 'plus-beta-monthly'
+const productGroup = 'plus'
+const monthlyProductId = 'plus-monthly'
 
 const structuredData = computed(() => {
   return {

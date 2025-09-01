@@ -17,12 +17,14 @@ export function useSubscription() {
 
   const { handleError } = useErrorHandler()
 
-  const modalProps = ref<PaywallModalProps>({})
-  // TODO: Don't hardcode prices here
-  const yearlyPrice = ref(69.99)
-  const monthlyPrice = ref(6.99)
+  const {
+    monthlyPrice,
+    yearlyPrice,
+  } = useSubscriptionPricing()
+
+  const paywallModalProps = ref<PaywallModalProps>({})
   const currency = ref('USD')
-  const PLUS_DISCOUNT_PERCENTAGE = 0.2 // 20% discount
+  const PLUS_BOOK_PURCHASE_DISCOUNT = 0.2 // 20% discount
   const isLikerPlus = computed(() => {
     if (!hasLoggedIn.value) return false
     return user.value?.isLikerPlus
@@ -37,8 +39,8 @@ export function useSubscription() {
     currency: currency.value,
     value: selectedPlan.value === 'yearly' ? yearlyPrice.value : monthlyPrice.value,
     items: [{
-      id: `plus-beta-${selectedPlan.value}`,
-      name: `Plus Beta (${selectedPlan.value})`,
+      id: `plus-${selectedPlan.value}`,
+      name: `Plus (${selectedPlan.value})`,
       price: selectedPlan.value === 'yearly' ? yearlyPrice.value : monthlyPrice.value,
       currency: currency.value,
       quantity: 1,
@@ -48,8 +50,6 @@ export function useSubscription() {
   function getPaywallModalProps(): PaywallModalProps {
     return {
       'modelValue': selectedPlan.value,
-      'discountedYearlyPrice': yearlyPrice.value,
-      'discountedMonthlyPrice': monthlyPrice.value,
       'isProcessingSubscription': isProcessingSubscription.value,
       'onUpdate:modelValue': (value: SubscriptionPlan) => {
         selectedPlan.value = value
@@ -64,10 +64,10 @@ export function useSubscription() {
 
   function getUpsellPlusModalProps(): UpsellPlusModalProps {
     return {
-      onSubscribe: startSubscription,
-      onClose: () => useLogEvent('subscription_button_click_skip'),
       isLikerPlus: isLikerPlus.value,
       likerPlusPeriod: likerPlusPeriod.value,
+      onSubscribe: startSubscription,
+      onClose: () => useLogEvent('subscription_button_click_skip'),
     }
   }
 
@@ -84,11 +84,11 @@ export function useSubscription() {
       paywallModal.close()
     }
 
-    modalProps.value = {
+    paywallModalProps.value = {
       ...getPaywallModalProps(),
       ...props,
     }
-    return paywallModal.open(modalProps.value).result
+    return paywallModal.open(paywallModalProps.value).result
   }
 
   async function openUpsellPlusModalIfEligible(props: UpsellPlusModalProps = {}) {
@@ -188,21 +188,21 @@ export function useSubscription() {
 
   function getPlusDiscountPrice(price: number): number | null {
     if (isLikerPlus.value && price > 0) {
-      return Math.round(price * (1 - PLUS_DISCOUNT_PERCENTAGE) * 100) / 100
+      return Math.round(price * (1 - PLUS_BOOK_PURCHASE_DISCOUNT) * 100) / 100
     }
     return null
   }
 
   function getPlusDiscountRate(): number {
     if (isLikerPlus.value) {
-      return (1 - PLUS_DISCOUNT_PERCENTAGE)
+      return (1 - PLUS_BOOK_PURCHASE_DISCOUNT)
     }
     return 0
   }
 
   watch(isProcessingSubscription, (newValue) => {
     paywallModal.patch({
-      ...modalProps.value,
+      ...paywallModalProps.value,
       isProcessingSubscription: newValue,
     })
   })
