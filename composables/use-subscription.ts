@@ -39,8 +39,8 @@ export function useSubscription() {
     currency: currency.value,
     value: selectedPlan.value === 'yearly' ? yearlyPrice.value : monthlyPrice.value,
     items: [{
-      id: `plus-beta-${selectedPlan.value}`,
-      name: `Plus Beta (${selectedPlan.value})`,
+      id: `plus-${selectedPlan.value}`,
+      name: `Plus (${selectedPlan.value})`,
       price: selectedPlan.value === 'yearly' ? yearlyPrice.value : monthlyPrice.value,
       currency: currency.value,
       quantity: 1,
