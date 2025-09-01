@@ -2,6 +2,7 @@
   <NuxtLoadingIndicator />
   <UApp>
     <NuxtLayout>
+      <NuxtPwaManifest />
       <NuxtPage class="flex flex-col grow" />
     </NuxtLayout>
   </UApp>
@@ -89,7 +90,6 @@ useHead({
       sizes: '16x16',
       href: '/favicon-16x16.png',
     },
-    { rel: 'manifest', href: '/site.webmanifest' },
   ],
   script: [
     {

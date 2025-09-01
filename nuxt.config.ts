@@ -25,6 +25,7 @@ export default defineNuxtConfig({
     '@nuxt/scripts',
     '@nuxtjs/sitemap',
     'v-gsap-nuxt',
+    '@vite-pwa/nuxt',
   ],
 
   devtools: { enabled: true },
@@ -145,6 +146,30 @@ export default defineNuxtConfig({
     lazy: true,
     defaultLocale: 'zh-Hant',
     detectBrowserLanguage: false,
+  },
+
+  pwa: {
+    registerType: 'autoUpdate',
+    manifest: {
+      name: '3ook.com',
+      short_name: '3ook',
+      description: 'AI reading companion & decentralized bookstore',
+      theme_color: '#131313',
+      background_color: '#F2F0E9',
+      display: 'standalone',
+      icons: [
+        {
+          src: '/android-chrome-192x192.png',
+          sizes: '192x192',
+          type: 'image/png',
+        },
+        {
+          src: '/android-chrome-512x512.png',
+          sizes: '512x512',
+          type: 'image/png',
+        },
+      ],
+    },
   },
 
   scripts: {
