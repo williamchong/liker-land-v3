@@ -24,6 +24,7 @@ declare interface BookstoreInfo {
   id: string
   classId: string
   prices: BookstorePrice[]
+  inLanguage: string
   isSoldOut: boolean
   stock: number
   ownerWallet: string

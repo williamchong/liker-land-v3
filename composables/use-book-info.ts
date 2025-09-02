@@ -114,6 +114,10 @@ export default function (
     })
   })
 
+  const inLanguage = computed(() => {
+    return bookstoreInfo.value?.inLanguage || bookInfo.inLanguage.value || 'zh'
+  })
+
   const contentTypes = computed(() => {
     const types = contentURLs.value.map(({ type }) => type)
     return [...new Set(types.filter(type => type !== 'unknown'))]
@@ -220,6 +224,7 @@ export default function (
     formattedPublishedDate,
     nftClassOwnerAvatar,
     description,
+    inLanguage,
 
     contentURLs,
     defaultContentURL,
