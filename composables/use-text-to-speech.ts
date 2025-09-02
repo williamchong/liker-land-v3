@@ -91,7 +91,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   const isTextToSpeechPlaying = ref(false)
   const isPendingResetOnStart = ref(false)
   const audioBuffers = ref<(HTMLAudioElement | null)[]>([null, null])
-  const currentAudioTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
   const currentBufferIndex = ref<0 | 1>(0)
   const currentTTSSegmentIndex = ref(0)
   const ttsSegments = ref<TTSSegment[]>([])
@@ -254,31 +253,22 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     return audio
   }
 
-  function playCurrentElement({ delay = 0 } = {}) {
+  function playCurrentElement() {
     const currentElement = ttsSegments.value[currentTTSSegmentIndex.value]
     if (!currentElement) return
 
-    currentBufferIndex.value = currentBufferIndex.value === 0 ? 1 : 0
-    createAudio(currentElement, currentBufferIndex.value)
+    // TODO: enable double buffering if not PWA
+    // currentBufferIndex.value = currentBufferIndex.value === 0 ? 1 : 0
+
+    const currentAudio = createAudio(currentElement, currentBufferIndex.value)
+    currentAudio.play()
 
     const nextElementForBuffer = ttsSegments.value[currentTTSSegmentIndex.value + 1]
 
-    const nextIndex = currentBufferIndex.value === 0 ? 1 : 0
-
+    const nextBufferIndex = currentBufferIndex.value === 0 ? 1 : 0
     if (nextElementForBuffer) {
-      createAudio(nextElementForBuffer, nextIndex)
+      createAudio(nextElementForBuffer, nextBufferIndex)
     }
-
-    if (currentAudioTimeout.value) clearTimeout(currentAudioTimeout.value)
-
-    currentAudioTimeout.value = setTimeout(() => {
-      const currentAudio = audioBuffers.value[currentBufferIndex.value]
-      if (currentAudio && isTextToSpeechPlaying.value) {
-        currentAudio.pause()
-        currentAudio.currentTime = 0
-        currentAudio.play()
-      }
-    }, delay)
   }
 
   function playNextElement() {
@@ -286,7 +276,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       return
     }
     currentTTSSegmentIndex.value += 1
-    playCurrentElement({ delay: 200 })
+    playCurrentElement()
   }
 
   async function startTextToSpeech(index: number | null = null) {
@@ -337,10 +327,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   }
 
   function resetAudio() {
-    if (currentAudioTimeout.value) {
-      clearTimeout(currentAudioTimeout.value)
-      currentAudioTimeout.value = null
-    }
     currentBufferIndex.value = 0
     audioBuffers.value.forEach((audio) => {
       if (audio) {
