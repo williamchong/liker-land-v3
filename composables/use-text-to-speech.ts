@@ -1,4 +1,4 @@
-import { useStorage, useDebounceFn } from '@vueuse/core'
+import { useStorage, useDebounceFn, isIOS } from '@vueuse/core'
 import phoebeAvatar from '@/assets/images/voice-avatars/phoebe.jpg'
 import leiTingYinAvatar from '@/assets/images/voice-avatars/lei-ting-yin.jpg'
 import pazuAvatar from '@/assets/images/voice-avatars/pazu.jpg'
@@ -27,6 +27,8 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   const nftClassId = options.nftClassId
 
   const config = useRuntimeConfig()
+  const { $pwa } = useNuxtApp()
+
   const { t: $t } = useI18n()
   const ttsConfigCacheKey = computed(() =>
     [
@@ -257,8 +259,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     const currentElement = ttsSegments.value[currentTTSSegmentIndex.value]
     if (!currentElement) return
 
-    // TODO: enable double buffering if not PWA
-    // currentBufferIndex.value = currentBufferIndex.value === 0 ? 1 : 0
+    // Double buffer breaks background audio playback in iOS PWA
+    // Only switch buffers when NOT running as an installed iOS PWA
+    if (!isIOS || !$pwa?.isPWAInstalled) {
+      currentBufferIndex.value = currentBufferIndex.value === 0 ? 1 : 0
+    }
 
     const currentAudio = createAudio(currentElement, currentBufferIndex.value)
     currentAudio.play()
