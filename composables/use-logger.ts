@@ -132,6 +132,8 @@ export function useSetLogUser(user: User | null) {
       }
       else {
         intercom('update', {
+          intercom_user_jwt: user.intercomToken,
+          session_duration: 2592000000, // 30d
           user_id: user.likerId,
           email: user.email,
           name: user.displayName || user.evmWallet || user.likeWallet,
