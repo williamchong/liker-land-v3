@@ -52,10 +52,12 @@ export default defineEventHandler(async (event) => {
   let likeWallet: string | undefined
   let jwtId: string | undefined
   let token: string | undefined
+  let intercomToken: string | undefined
   try {
     const authorizeRes = await getLikeCoinAPIFetch()<{
       jwtid: string
       token: string
+      intercomToken?: string
     }>('/wallet/authorize', {
       method: 'POST',
       body: {
@@ -69,6 +71,7 @@ export default defineEventHandler(async (event) => {
     ;({ likeWallet } = jwtDecode<{ likeWallet: string }>(authorizeRes.token))
     jwtId = authorizeRes.jwtid
     token = authorizeRes.token
+    intercomToken = authorizeRes.intercomToken
   }
   catch (error) {
     console.error('Failed to authorize wallet:', error)
@@ -101,6 +104,7 @@ export default defineEventHandler(async (event) => {
     likeWallet,
     token,
     jwtId,
+    intercomToken,
     likerId: userInfoRes.user,
     displayName: userInfoRes.displayName,
     description: userInfoRes.description,

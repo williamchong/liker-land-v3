@@ -4,6 +4,7 @@ declare module '#auth-utils' {
     likeWallet?: string
     jwtId?: string
     token?: string
+    intercomToken?: string
     likerId?: string
     displayName?: string
     description?: string
