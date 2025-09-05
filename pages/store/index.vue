@@ -38,7 +38,8 @@
             base: 'rounded-full bg-(--app-bg) !ring-gray-600 max-phone:px-[10px] px-4',
             label: 'text-sm laptop:text-base',
           }"
-          @click="handleTagClick(fixedTag.value)"
+          :to="localeRoute({ name: 'store', query: { ...route.query, tag: fixedTag.value } })"
+          @click.prevent="handleTagClick(fixedTag.value)"
         />
 
         <USelect
