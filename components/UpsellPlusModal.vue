@@ -25,48 +25,35 @@
       />
     </template>
     <template #body>
-      <span
+      <i18n-t
         v-if="showYearlyPlan"
-        class="w-full flex justify-center items-center gap-1 text-[16px] laptop:text-[20px]"
+        class="self-center text-theme-500 text-center font-bold whitespace-nowrap text-[16px] laptop:text-[20px]"
+        keypath="upsell_plus_yearly_notice"
+        tag="p"
       >
-        <i18n-t
-          class="text-theme-500 text-center font-bold whitespace-nowrap"
-          keypath="upsell_plus_yearly_notice"
-          tag="span"
-        >
-          <template #year>
-            <span
-              class="text-theme-400 font-semibold"
-              v-text="$t('upsell_plus_yearly_member')"
-            />
-          </template>
-          <template #gift>
-            <span
-              class="text-theme-400 font-semibold"
-              v-text="$t('upsell_plus_yearly_gift')"
-            />
-          </template>
-        </i18n-t>
-        <UTooltip
-          :delay-duration="0"
-          :text="$t('upsell_plus_yearly_tooltip')"
-        >
-          <UIcon
-            name="i-material-symbols-info-outline"
-            class="text-gray-500 cursor-pointer"
+        <template #year>
+          <span
+            class="text-theme-400 font-semibold"
+            v-text="$t('upsell_plus_yearly_member')"
           />
-        </UTooltip>
-      </span>
+        </template>
+        <template #gift>
+          <span
+            class="text-theme-400 font-semibold"
+            v-text="$t('upsell_plus_yearly_gift')"
+          />
+        </template>
+      </i18n-t>
       <span
         v-if="showMonthlyPlan"
-        class=" w-full text-center text-gray-500 text-xs"
+        class="self-center text-center text-gray-500 text-xs"
         v-text="$t('upsell_plus_or')"
       />
       <i18n-t
         v-if="showMonthlyPlan"
-        class="text-theme-500 text-center font-bold whitespace-nowrap text-[16px] laptop:text-[20px] pb-[12px] w-full"
+        class="self-center text-theme-500 text-center font-bold whitespace-nowrap text-[16px] laptop:text-[20px]"
         keypath="upsell_plus_monthly_notice"
-        tag="span"
+        tag="p"
       >
         <template #month>
           <span
@@ -81,7 +68,7 @@
           />
         </template>
       </i18n-t>
-      <div class="hidden laptop:block self-center border-t border-gray-200 h-1 w-[24px]" />
+      <div class="hidden laptop:block self-center border-t border-gray-200 h-1 w-[24px] my-[12px]" />
       <span
         class="text-sm !text-gray-500 mb-1"
         v-text="$t('upsell_plus_modal_other_benefits')"
