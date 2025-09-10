@@ -371,5 +371,17 @@
   "staking_dashboard_page_description": "View and manage your staked books and rewards",
   "staking_dashboard_load_error": "Failed to load staking data",
   "staking_claim_all_rewards_success": "All rewards claimed successfully!",
-  "staking_claim_all_rewards_error": "Failed to claim rewards"
+  "staking_claim_all_rewards_error": "Failed to claim rewards",
+  "staking_explore_page_title": "Explore Staking",
+  "staking_explore_page_description": "Discover books with community staking and join the collective support",
+  "staking_explore_no_items": "No staked books found",
+  "staking_explore_total_staked": "Total Staked",
+  "staking_explore_stakers": "Stakers",
+  "staking_explore_your_stake": "Your Stake",
+  "staking_explore_you_staked": "STAKED",
+  "staking_explore_more_sorting": "More Sorting",
+  "staking_explore_sort_total_staked": "Most Staked",
+  "staking_explore_sort_staker_count": "Most Stakers",
+  "staking_explore_sort_recent": "Recent Activity",
+  "staking_explore_fetch_error": "Failed to load staking books"
 }

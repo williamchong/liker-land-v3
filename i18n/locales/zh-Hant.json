@@ -371,5 +371,17 @@
   "staking_dashboard_page_description": "查看和管理你的質押書籍及獎勵",
   "staking_dashboard_load_error": "載入質押數據失敗",
   "staking_claim_all_rewards_success": "所有獎勵領取成功！",
-  "staking_claim_all_rewards_error": "獎勵領取失敗"
+  "staking_claim_all_rewards_error": "獎勵領取失敗",
+  "staking_explore_page_title": "探索質押",
+  "staking_explore_page_description": "發現有社群質押支持的書籍，加入集體支持",
+  "staking_explore_no_items": "找不到已質押的書籍",
+  "staking_explore_total_staked": "總質押量",
+  "staking_explore_stakers": "質押者",
+  "staking_explore_your_stake": "您的質押",
+  "staking_explore_you_staked": "已質押",
+  "staking_explore_more_sorting": "更多排序",
+  "staking_explore_sort_total_staked": "質押最多",
+  "staking_explore_sort_staker_count": "參與者最多",
+  "staking_explore_sort_recent": "最近活動",
+  "staking_explore_fetch_error": "載入質押書籍失敗"
 }
