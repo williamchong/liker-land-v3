@@ -69,10 +69,22 @@
         </template>
       </UCard>
 
+      <!-- Loading State -->
+      <div
+        v-if="hasLoggedIn && isLoading"
+        class="flex flex-col items-center m-auto py-24"
+      >
+        <UIcon
+          class="animate-spin opacity-50"
+          name="material-symbols-progress-activity"
+          size="48"
+        />
+        <span class="mt-4 text-gray-500">{{ $t('loading') }}...</span>
+      </div>
 
       <!-- Books List -->
       <div
-        v-if="hasLoggedIn && (stakingItems.length === 0 && !isLoading && hasFetched)"
+        v-else-if="hasLoggedIn && (stakingItems.length === 0 && !isLoading && hasFetched)"
         class="flex flex-col items-center m-auto"
       >
         <UIcon
@@ -153,37 +165,79 @@ const localeRoute = useLocaleRoute()
 const { handleError } = useErrorHandler()
 const toast = useToast()
 
+// Stores
+const stakingStore = useStakingStore()
+const bookshelfStore = useBookshelfStore()
+
 // Constants
 const LIKE_TOKEN_DECIMALS = 6
 
 // Contract functions
-const {
-  getWalletPendingRewardsOfNFTClass,
-  getWalletStakeOfNFTClass,
-  claimAllRewards,
-} = useLikeCollectiveContract()
+const { claimAllRewards } = useLikeCollectiveContract()
 
 // State
-const isLoading = ref(false)
-const hasFetched = ref(false)
 const isClaimingAllRewards = ref(false)
-const stakingItems = ref<Array<{
-  nftClassId: string
-  stakedAmount: bigint
-  pendingRewards: bigint
-  isOwned: boolean
-}>>([])
-const totalUnclaimedRewards = ref(0n)
 const hasMoreItems = ref(false)
 
 const userDisplayName = computed(() => {
   return user.value?.displayName || user.value?.evmWallet
 })
 
-const formattedTotalRewards = computed(() => {
-  return Number(formatUnits(totalUnclaimedRewards.value, LIKE_TOKEN_DECIMALS)).toLocaleString(undefined, {
-    maximumFractionDigits: 6,
+// Data from store
+const stakingData = computed(() => {
+  return user.value?.evmWallet
+    ? stakingStore.getUserStakingData(user.value.evmWallet)
+    : {
+        items: [],
+        totalUnclaimedRewards: 0n,
+        isFetching: false,
+        hasFetched: false,
+      }
+})
+
+// Merge staking data with owned books
+const stakingItems = computed(() => {
+  if (!user.value?.evmWallet) return []
+
+  const stakingMap = new Map(
+    stakingData.value.items.map(item => [item.nftClassId.toLowerCase(), item]),
+  )
+
+  const ownedBooks = bookshelfStore.items
+  const mergedItems = []
+
+  // Add all owned books (with or without stakes)
+  for (const book of ownedBooks) {
+    const stakingItem = stakingMap.get(book.nftClassId)
+    mergedItems.push({
+      nftClassId: book.nftClassId,
+      stakedAmount: stakingItem?.stakedAmount || 0n,
+      pendingRewards: stakingItem?.pendingRewards || 0n,
+      isOwned: true,
+    })
+    // Remove from stakingMap to avoid duplicates
+    stakingMap.delete(book.nftClassId)
+  }
+
+  // Add remaining staked books that user doesn't own
+  for (const stakingItem of stakingMap.values()) {
+    mergedItems.push(stakingItem)
+  }
+
+  // Sort by staked amount descending, then by owned status (owned first)
+  return mergedItems.sort((a, b) => {
+    if (a.isOwned !== b.isOwned) {
+      return a.isOwned ? -1 : 1
+    }
+    return Number(b.stakedAmount - a.stakedAmount)
   })
+})
+const totalUnclaimedRewards = computed(() => stakingData.value.totalUnclaimedRewards)
+const isLoading = computed(() => stakingData.value.isFetching || bookshelfStore.isFetching)
+const hasFetched = computed(() => stakingData.value.hasFetched && bookshelfStore.hasFetched)
+
+const formattedTotalRewards = computed(() => {
+  return user.value?.evmWallet ? stakingStore.getFormattedTotalRewards(user.value.evmWallet) : '0'
 })
 
 const itemsCount = computed(() => stakingItems.value.length)
@@ -211,61 +265,16 @@ async function loadStakingData() {
   if (!hasLoggedIn.value || !user.value?.evmWallet) return
 
   try {
-    isLoading.value = true
-
-    // Get user's owned books
-    const bookshelfStore = useBookshelfStore()
-    await bookshelfStore.fetchItems({ walletAddress: user.value.evmWallet, isRefresh: true })
-
-    // Get all books user has staked on (this would need to be implemented in the indexer)
-    // For now, we'll use owned books and check their staking status
-    const ownedBooks = bookshelfStore.items
-
-    const stakingData = new Map<string, {
-      nftClassId: string
-      stakedAmount: bigint
-      pendingRewards: bigint
-      isOwned: boolean
-    }>()
-
-    let totalRewards = 0n
-
-    // Check staking status for owned books
-    for (const book of ownedBooks) {
-      const [stakedAmount, pendingRewards] = await Promise.all([
-        getWalletStakeOfNFTClass(user.value.evmWallet, book.nftClassId),
-        getWalletPendingRewardsOfNFTClass(user.value.evmWallet, book.nftClassId),
-      ])
-
-      if (stakedAmount > 0n || pendingRewards > 0n) {
-        stakingData.set(book.nftClassId, {
-          nftClassId: book.nftClassId,
-          stakedAmount,
-          pendingRewards,
-          isOwned: true,
-        })
-        totalRewards += pendingRewards
-      }
-    }
-
-    // TODO: Get books user has staked on but doesn't own
-    // This would require indexer API to return all books a user has staked on
-
-    // Convert to array and sort by staked amount descending
-    stakingItems.value = Array.from(stakingData.values()).sort((a, b) => {
-      return Number(b.stakedAmount - a.stakedAmount)
-    })
-
-    totalUnclaimedRewards.value = totalRewards
-    hasFetched.value = true
+    // Fetch both staking data and owned books
+    await Promise.all([
+      stakingStore.fetchUserStakingData(user.value.evmWallet, { isRefresh: true }),
+      bookshelfStore.fetchItems({ walletAddress: user.value.evmWallet, isRefresh: true }),
+    ])
   }
   catch (error) {
     await handleError(error, {
       title: $t('staking_dashboard_load_error'),
     })
-  }
-  finally {
-    isLoading.value = false
   }
 }
 
@@ -322,10 +331,9 @@ watch(hasLoggedIn, async (isLoggedIn) => {
   if (isLoggedIn) {
     await loadStakingData()
   }
-  else {
-    stakingItems.value = []
-    totalUnclaimedRewards.value = 0n
-    hasFetched.value = false
+  else if (user.value?.evmWallet) {
+    stakingStore.clearUserStakingData(user.value.evmWallet)
+    bookshelfStore.reset()
   }
 })
 </script>
