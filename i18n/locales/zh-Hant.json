@@ -357,5 +357,19 @@
   "staking_explore_tab": "探索",
   "staking_dashboard_tab": "儀表板",
   "staking_related_books_title": "相關書籍",
-  "staking_please_enter_amount": "請輸入質押數量"
+  "staking_please_enter_amount": "請輸入質押數量",
+  "staking_dashboard_please_login": "請登入以查看質押儀表板",
+  "staking_dashboard_total_rewards": "總待領取獎勵",
+  "staking_dashboard_rewards_description": "來自所有質押書籍的累積獎勵",
+  "staking_claim_all_rewards": "全部領取",
+  "staking_dashboard_no_items": "尚未質押任何書籍",
+  "staking_dashboard_no_items_description": "開始質押書籍以支持創作者並賺取獎勵",
+  "staking_dashboard_owned": "已擁有",
+  "staking_dashboard_staked": "已質押",
+  "staking_dashboard_rewards": "獎勵",
+  "staking_dashboard_page_title": "質押儀表板",
+  "staking_dashboard_page_description": "查看和管理你的質押書籍及獎勵",
+  "staking_dashboard_load_error": "載入質押數據失敗",
+  "staking_claim_all_rewards_success": "所有獎勵領取成功！",
+  "staking_claim_all_rewards_error": "獎勵領取失敗"
 }

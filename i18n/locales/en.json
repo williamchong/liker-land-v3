@@ -357,5 +357,19 @@
   "staking_explore_tab": "Explore",
   "staking_dashboard_tab": "Dashboard",
   "staking_related_books_title": "Related Books",
-  "staking_please_enter_amount": "Please enter an amount to stake"
+  "staking_please_enter_amount": "Please enter an amount to stake",
+  "staking_dashboard_please_login": "Please login to view your staking dashboard",
+  "staking_dashboard_total_rewards": "Total Unclaimed Rewards",
+  "staking_dashboard_rewards_description": "Rewards accumulated from all your staked books",
+  "staking_claim_all_rewards": "Claim All",
+  "staking_dashboard_no_items": "No staked books yet",
+  "staking_dashboard_no_items_description": "Start staking on books to support creators and earn rewards",
+  "staking_dashboard_owned": "OWNED",
+  "staking_dashboard_staked": "Staked",
+  "staking_dashboard_rewards": "Rewards",
+  "staking_dashboard_page_title": "Staking Dashboard",
+  "staking_dashboard_page_description": "View and manage your staked books and rewards",
+  "staking_dashboard_load_error": "Failed to load staking data",
+  "staking_claim_all_rewards_success": "All rewards claimed successfully!",
+  "staking_claim_all_rewards_error": "Failed to claim rewards"
 }
