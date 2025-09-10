@@ -5,7 +5,7 @@
   >
     <BookCover
       :src="bookCoverSrc"
-      :to="bookInfo.productPageRoute.value"
+      :to="productPageRoute"
       :alt="bookName"
       :lazy="props.lazy"
       @click="onBookCoverClick"
@@ -62,6 +62,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  llMedium: {
+    type: String,
+    default: '',
+  },
+  llSource: {
+    type: String,
+    default: '',
+  },
 })
 
 const emit = defineEmits(['visible', 'open'])
@@ -72,6 +80,13 @@ const metadataStore = useMetadataStore()
 const bookInfo = useBookInfo({ nftClassId: props.nftClassId })
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value || props.bookCoverSrc, { size: 300 }))
 const { getPlusDiscountPrice } = useSubscription()
+
+const productPageRoute = computed(() => {
+  return bookInfo.getProductPageRoute({
+    llMedium: props.llMedium || undefined,
+    llSource: props.llSource || undefined,
+  })
+})
 
 const bookName = computed(() => bookInfo.name.value || props.bookName)
 const authorName = computed(() => bookInfo.authorName.value)

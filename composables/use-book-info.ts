@@ -207,6 +207,24 @@ export default function (
     params: { nftClassId: toValue(nftClassId) },
   }))
 
+  function getProductPageRoute(options?: { llMedium?: string, llSource?: string }) {
+    const query: Record<string, string> = {}
+
+    if (options?.llMedium) {
+      query.ll_medium = options.llMedium
+    }
+
+    if (options?.llSource) {
+      query.ll_source = options.llSource
+    }
+
+    return localeRoute({
+      name: 'store-nftClassId',
+      params: { nftClassId: toValue(nftClassId) },
+      query: Object.keys(query).length > 0 ? query : undefined,
+    })
+  }
+
   function getIsAutoDelivery(index?: number) {
     return bookstoreInfo.value?.prices.find(item => item.index === index)?.isAutoDeliver || false
   }
@@ -245,6 +263,7 @@ export default function (
     firstUserOwnedNFTId,
 
     productPageRoute,
+    getProductPageRoute,
     getReaderRoute,
 
     getIsAutoDelivery,
