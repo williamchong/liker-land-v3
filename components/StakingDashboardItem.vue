@@ -4,12 +4,19 @@
     class="flex flex-col justify-end cursor-pointer"
     @click="handleClick"
   >
-    <BookCover
-      :src="bookCoverSrc"
-      :alt="bookName"
-      :lazy="props.lazy"
-      @click="handleClick"
-    />
+    <div
+      :class="[
+        'transition-opacity',
+        stakedAmount === 0 ? 'opacity-50' : 'opacity-100',
+      ]"
+    >
+      <BookCover
+        :src="bookCoverSrc"
+        :alt="bookName"
+        :lazy="props.lazy"
+        @click="handleClick"
+      />
+    </div>
 
     <div class="mt-2 h-[70px]">
       <div class="flex items-start gap-1">
