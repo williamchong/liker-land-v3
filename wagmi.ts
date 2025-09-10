@@ -1,5 +1,5 @@
 import { http, createConfig } from '@wagmi/vue'
-import { optimism, optimismSepolia } from '@wagmi/vue/chains'
+import { base, baseSepolia } from '@wagmi/vue/chains'
 import { injected, metaMask, walletConnect } from '@wagmi/vue/connectors'
 import { dedicatedWalletConnector } from '@likecoin/wagmi-connector'
 
@@ -19,7 +19,7 @@ export function createWagmiConfig({
   isServer?: boolean
 }) {
   return createConfig({
-    chains: [optimismSepolia, optimism],
+    chains: [baseSepolia, base],
     connectors: [
       injected(),
       metaMask(),
@@ -39,7 +39,7 @@ export function createWagmiConfig({
       ...(isServer
         ? []
         : [dedicatedWalletConnector({
-            chains: [optimismSepolia, optimism],
+            chains: [baseSepolia, base],
             options: {
               apiKey,
               accentColor: '#131313',
@@ -58,8 +58,8 @@ export function createWagmiConfig({
     ],
     ssr: true,
     transports: {
-      [optimism.id]: http(),
-      [optimismSepolia.id]: http(),
+      [base.id]: http(),
+      [baseSepolia.id]: http(),
     },
   })
 }
