@@ -134,6 +134,25 @@
       <section class="space-y-3 pt-4">
         <h2
           class="px-4 text-lg font-bold"
+          v-text="$t('account_page_staking_title')"
+        />
+
+        <UCard>
+          <UButton
+            :label="$t('account_page_enter_stake_mode')"
+            icon="i-material-symbols-trending-up-rounded"
+            variant="outline"
+            color="primary"
+            size="lg"
+            block
+            @click="handleEnterStakeMode"
+          />
+        </UCard>
+      </section>
+
+      <section class="space-y-3 pt-4">
+        <h2
+          class="px-4 text-lg font-bold"
           v-text="$t('account_page_settings_and_help_title')"
         />
 
@@ -292,6 +311,18 @@ async function handleClearReaderCacheButtonClick() {
   }
   catch (error) {
     await handleError(error, { title: $t('account_page_reader_cache_clear_failed') })
+  }
+}
+
+async function handleEnterStakeMode() {
+  useLogEvent('enter_stake_mode')
+
+  // Navigate based on login status (stake mode will be auto-detected by route)
+  if (hasLoggedIn.value) {
+    await navigateTo(localeRoute({ name: 'collective' }))
+  }
+  else {
+    await navigateTo(localeRoute({ name: 'stake' }))
   }
 }
 </script>

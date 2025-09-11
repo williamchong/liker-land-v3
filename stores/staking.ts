@@ -27,6 +27,13 @@ export const useStakingStore = defineStore('staking', () => {
   // State
   const stakingDataByWalletMap = ref<Record<string, UserStakingData>>({})
 
+  // Auto-detect stake mode based on current route
+  const route = useRoute()
+  const isStakeMode = computed(() => {
+    const routeName = route.name as string
+    return routeName?.startsWith('stake') || routeName?.startsWith('collective')
+  })
+
   // Getters
   const getUserStakingData = computed(() => (walletAddress: string) => {
     return {
@@ -155,8 +162,11 @@ export const useStakingStore = defineStore('staking', () => {
     }
   }
 
+  // Note: Stake mode is now auto-detected based on route
+
   return {
     stakingDataByWalletMap,
+    isStakeMode,
 
     getUserStakingData,
     getFormattedTotalRewards,
