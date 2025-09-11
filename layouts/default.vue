@@ -4,7 +4,8 @@
 
     <AppFooter :class="{ hidden: !props.isFooterVisible }" />
 
-    <AppTabBar />
+    <AppStakeTabBar v-if="isStakeMode" />
+    <AppTabBar v-else />
   </div>
 </template>
 
@@ -15,4 +16,7 @@ const props = defineProps({
     default: false,
   },
 })
+
+const stakingStore = useStakingStore()
+const { isStakeMode } = storeToRefs(stakingStore)
 </script>
