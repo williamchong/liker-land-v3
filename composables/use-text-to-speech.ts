@@ -107,6 +107,15 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     return getVoiceAvatar(ttsLanguageVoice.value)
   })
 
+  const activeTTSLanguageVoiceLabel = computed(() => {
+    const voice = ttsLanguageVoice.value
+    return (
+      ttsLanguageVoiceOptionsWithAvatars.value.find(
+        (option: { value: string, label: string }) => option.value === voice,
+      )?.label || voice
+    )
+  })
+
   const ttsLanguageVoiceOptionsWithAvatars = computed(() => {
     return availableTTSLanguageVoiceOptions.value.map((option: { value: string, label: string }) => ({
       ...option,
@@ -428,6 +437,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     ttsLanguageVoiceOptions: availableTTSLanguageVoiceOptions,
     ttsLanguageVoice,
     activeTTSLanguageVoiceAvatar,
+    activeTTSLanguageVoiceLabel,
     ttsLanguageVoiceOptionsWithAvatars,
     ttsPlaybackRateOptions,
     ttsPlaybackRate,

@@ -238,6 +238,7 @@ const {
   ttsLanguageVoiceOptionsWithAvatars,
   ttsLanguageVoice,
   activeTTSLanguageVoiceAvatar,
+  activeTTSLanguageVoiceLabel,
   ttsPlaybackRateOptions,
   ttsPlaybackRate,
   isTextToSpeechOn,
@@ -280,15 +281,6 @@ const visibleSegments = computed(() => {
     ...segment,
     index: start + index,
   }))
-})
-
-const activeTTSLanguageVoiceLabel = computed(() => {
-  const voice = ttsLanguageVoice.value
-  return (
-    ttsLanguageVoiceOptionsWithAvatars.value.find(
-      (option: { value: string, label: string }) => option.value === voice,
-    )?.label || voice
-  )
 })
 
 const sectionTitle = computed(() => {
