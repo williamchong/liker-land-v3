@@ -33,11 +33,17 @@
             >
               <li v-if="bookInfo.authorName.value">
                 <div v-text="$t('product_page_author_name_label')" />
-                <EntityItem :name="bookInfo.authorName.value" />
+                <EntityItem
+                  :name="bookInfo.authorName.value"
+                  entity-type="author"
+                />
               </li>
               <li v-if="bookInfo.publisherName.value">
                 <div v-text="$t('product_page_publisher_label')" />
-                <EntityItem :name="bookInfo.publisherName.value" />
+                <EntityItem
+                  :name="bookInfo.publisherName.value"
+                  entity-type="publisher"
+                />
               </li>
             </ul>
           </div>
@@ -627,15 +633,11 @@ const recommendedClassIds = computed(() => {
 
 const filteredRecommendedClassIds = computed(() => {
   return recommendedClassIds.value
-    .map(classId => bookstoreStore.getBookstoreInfoByNFTClassId(classId))
-    .filter(item => item && item?.prices.length && !item.isHidden)
-    .map(item => item?.id)
+    .filter((classId) => {
+      const bookstoreInfo = bookstoreStore.getBookstoreInfoByNFTClassId(classId)
+      return bookstoreInfo !== null && !bookstoreInfo?.isHidden
+    })
 })
-
-watch(recommendedClassIds, (newIds, oldIds = []) => {
-  const addedIds = newIds.filter(id => !oldIds.includes(id))
-  addedIds.forEach(id => nftStore.lazyFetchNFTClassAggregatedMetadataById(id))
-}, { immediate: true })
 
 const { gridClasses, getGridItemClassesByIndex } = usePaginatedGrid({
   itemsCount: computed(() => filteredRecommendedClassIds.value.length),
