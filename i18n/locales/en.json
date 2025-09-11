@@ -47,6 +47,8 @@
   "account_page_reader_cache_clear_failed": "Failed to clear book cache",
   "account_page_reader_cache_cleared": "Book cache has been cleared",
   "account_page_settings_and_help_title": "Support",
+  "account_page_staking_title": "Staking",
+  "account_page_enter_stake_mode": "Enter Stake Mode",
   "account_page_subscription": "Membership",
   "account_page_subscription_free": "Free",
   "account_page_subscription_plus": "Plus",
@@ -383,5 +385,18 @@
   "staking_explore_sort_total_staked": "Most Staked",
   "staking_explore_sort_staker_count": "Most Stakers",
   "staking_explore_sort_recent": "Recent Activity",
-  "staking_explore_fetch_error": "Failed to load staking books"
+  "staking_explore_fetch_error": "Failed to load staking books",
+  "stake_page_title": "Explore Staking",
+  "stake_page_login": "Login",
+  "stake_page_explore_title": "Stake on Books",
+  "stake_page_explore_description": "Discover and support your favorite books with staking. Earn rewards and boost book visibility.",
+  "stake_page_login_to_start": "Login to Start Staking",
+  "stake_page_view_dashboard": "View Dashboard",
+  "collective_page_title": "Staking Dashboard",
+  "collective_page_dashboard_title": "Your Staking Portfolio",
+  "collective_page_dashboard_description": "Track your staked amounts, pending rewards, and claim earnings.",
+  "collective_page_login_required": "Login Required",
+  "stake_tab_bar_explore": "Explore",
+  "stake_tab_bar_dashboard": "Dashboard",
+  "stake_tab_bar_exit": "Exit"
 }

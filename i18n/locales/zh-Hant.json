@@ -47,6 +47,8 @@
   "account_page_reader_cache_clear_failed": "清理書本快取資料失敗",
   "account_page_reader_cache_cleared": "已清理書本快取資料",
   "account_page_settings_and_help_title": "幫助",
+  "account_page_staking_title": "質押",
+  "account_page_enter_stake_mode": "進入質押模式",
   "account_page_subscription": "會員",
   "account_page_subscription_free": "免費",
   "account_page_subscription_plus": "Plus",
@@ -383,5 +385,18 @@
   "staking_explore_sort_total_staked": "質押最多",
   "staking_explore_sort_staker_count": "參與者最多",
   "staking_explore_sort_recent": "最近活動",
-  "staking_explore_fetch_error": "載入質押書籍失敗"
+  "staking_explore_fetch_error": "載入質押書籍失敗",
+  "stake_page_title": "探索質押",
+  "stake_page_login": "登入",
+  "stake_page_explore_title": "質押書籍",
+  "stake_page_explore_description": "發現並支持您喜愛的書籍。透過質押獲得獎勵並提高書籍曝光度。",
+  "stake_page_login_to_start": "登入開始質押",
+  "stake_page_view_dashboard": "檢視儀表板",
+  "collective_page_title": "質押儀表板",
+  "collective_page_dashboard_title": "您的質押組合",
+  "collective_page_dashboard_description": "追蹤您的質押金額、待領獎勵及領取收益。",
+  "collective_page_login_required": "需要登入",
+  "stake_tab_bar_explore": "探索",
+  "stake_tab_bar_dashboard": "儀表板",
+  "stake_tab_bar_exit": "離開"
 }
