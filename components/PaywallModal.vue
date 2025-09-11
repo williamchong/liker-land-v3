@@ -4,6 +4,7 @@
     :description="$t('pricing_page_subscription_description')"
     :fullscreen="isFullscreenModal"
     :dismissible="props.isBackdropDismissible"
+    :transition="props.hasTransition"
     :modal="isModalityOn"
     :ui="{ content: modalContentClass }"
     @update:open="onOpenUpdate"
@@ -15,9 +16,10 @@
         :class="[
           'absolute',
           'z-10',
-          'top-4',
-          'right-4',
-          { 'max-laptop:text-white': isShowPlusEarlyBirdBanner },
+          'top-0 phone:top-4',
+          'right-0 phone:right-4',
+          'max-phone:scale-75',
+          { 'max-laptop:text-white': isShowBlocktrendBundleBanner },
           'cursor-pointer',
         ]"
         variant="link"
@@ -25,8 +27,8 @@
         @click="handleCloseButtonClick"
       />
 
-      <PlusEarlyBirdBanner
-        v-if="isShowPlusEarlyBirdBanner"
+      <PlusBlocktrendBundleBanner
+        v-if="isShowBlocktrendBundleBanner"
         class="max-laptop:shrink-0 w-full"
       />
       <aside
@@ -61,7 +63,7 @@
           <div class="flex flex-col items-start gap-5">
             <div
               :class="[
-                { 'max-laptop:hidden': !isShowPlusEarlyBirdBanner },
+                { 'max-laptop:hidden': !isShowBlocktrendBundleBanner },
                 'px-6',
                 'py-2',
                 'text-white',
@@ -272,8 +274,6 @@ import plusLogo from '~/assets/images/paywall/plus-logo.png'
 // Therefore, we set modality to false so input in the Magic login UI remains accessible.
 const isModalityOn = false
 
-const isShowPlusEarlyBirdBanner = false
-
 const emit = defineEmits<{
   'open': []
   'close': []
@@ -291,6 +291,7 @@ const props = withDefaults(
   {
     isFullscreen: false,
     isBackdropDismissible: true,
+    hasTransition: true,
     isCloseButtonHidden: false,
     isProcessingSubscription: false,
   },
@@ -307,6 +308,11 @@ const {
   hasMonthlyDiscount,
   hasYearlyDiscount,
 } = useSubscriptionPricing()
+const getRouteQuery = useRouteQuery()
+
+const isShowBlocktrendBundleBanner = computed(() => {
+  return getRouteQuery('utm_campaign') === 'blocktrend-plus'
+})
 
 const isFullscreenModal = computed(() => props.isFullscreen || isScreenSmall.value)
 

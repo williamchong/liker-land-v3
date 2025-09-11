@@ -126,6 +126,7 @@ onMounted(async () => {
     await subscription.openPaywallModal({
       isFullscreen: true,
       isBackdropDismissible: false,
+      hasTransition: false,
       hasFreeTrial: getRouteQuery('trial') !== '0',
       utmCampaign: 'pricing_page',
       utmSource: 'website',

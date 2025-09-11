@@ -2,6 +2,7 @@ export interface PaywallModalProps {
   'modelValue'?: SubscriptionPlan
   'isFullscreen'?: boolean
   'isBackdropDismissible'?: boolean
+  'hasTransition'?: boolean
   'isCloseButtonHidden'?: boolean
   'isProcessingSubscription'?: boolean
   'hasFreeTrial'?: boolean

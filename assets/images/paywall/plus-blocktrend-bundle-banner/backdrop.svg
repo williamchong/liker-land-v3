@@ -1,0 +1,27 @@
+<svg width="2048" height="2048" viewBox="0 0 2048 2048" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="blocktrend-backdrop-alpha-mask" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1024 1024) scale(1024)">
+      <stop offset="0.25" stop-color="white"/>
+      <stop offset="1" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="2048" height="2048" fill="white"/>
+  <mask id="blocktrend-backdrop-mask" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="2048" height="2049">
+    <circle cx="1024" cy="1024" r="1024" fill="url(#blocktrend-backdrop-alpha-mask)"/>
+  </mask>
+  <g mask="url(#blocktrend-backdrop-mask)">
+    <rect width="2048" height="2048" fill="#ACD9EB"/>
+    <path d="M782.674 2020C687.743 1996.97 596.594 1960.47 511.999 1911.61L1024 1024.5L782.674 2020Z" fill="#34A9E1"/>
+    <path d="M1765.17 1731.31C1697.77 1802.04 1620.59 1862.75 1536 1911.61L1024 1024.5L1765.17 1731.31Z" fill="#34A9E1"/>
+    <path d="M41.5046 1313.18C13.9757 1219.43 -0.000968023 1122.21 -0.000976562 1024.5H1024L41.5046 1313.18Z" fill="#34A9E1"/>
+    <path d="M1265.32 28.9963C1360.26 52.0249 1451.4 88.5234 1536 137.381L1024 1024.5L1265.32 28.9963Z" fill="#34A9E1"/>
+    <path d="M1024 1024.5L282.83 317.681C350.232 246.955 427.404 186.24 511.999 137.382L1024 1024.5Z" fill="#34A9E1"/>
+    <path d="M2006.49 735.812C2034.02 829.567 2048 926.781 2048 1024.5H1024L2006.49 735.812Z" fill="#34A9E1"/>
+    <path d="M1312.18 2006.49C1218.43 2034.02 1121.21 2048 1023.5 2048V1024L1312.18 2006.49Z" fill="#3D607E"/>
+    <path d="M316.683 1765.17C245.957 1697.76 185.242 1620.59 136.384 1536L1023.5 1024L316.683 1765.17Z" fill="#3D607E"/>
+    <path d="M2019 1265.32C1995.97 1360.25 1959.47 1451.4 1910.61 1536L1023.5 1024L2019 1265.32Z" fill="#3D607E"/>
+    <path d="M1730.31 282.827C1801.04 350.229 1861.76 427.401 1910.61 511.996L1023.5 1024L1730.31 282.827Z" fill="#3D607E"/>
+    <path d="M1023.5 1024L734.815 41.5019C828.57 13.973 925.783 -0.00365773 1023.5 -0.00366211V1024Z" fill="#3D607E"/>
+    <path d="M1023.5 1024L27.999 782.671C51.0276 687.74 87.5261 596.592 136.384 511.996L1023.5 1024Z" fill="#3D607E"/>
+  </g>
+</svg>
