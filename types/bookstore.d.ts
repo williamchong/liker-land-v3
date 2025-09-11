@@ -22,6 +22,7 @@ declare interface BookstorePrice {
 declare interface BookstoreInfo {
   id: string
   classId: string
+  redirectClassId?: string
   prices: BookstorePrice[]
   inLanguage: string
   isSoldOut: boolean
