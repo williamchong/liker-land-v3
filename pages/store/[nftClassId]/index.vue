@@ -338,6 +338,8 @@
           :class="getGridItemClassesByIndex(index)"
           :nft-class-id="classId"
           :lazy="true"
+          :ll-medium="'recommendation'"
+          :ll-source="nftClassId"
           @open="handleRecommendedBookCoverClick"
         />
       </ul>
