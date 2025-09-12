@@ -376,11 +376,7 @@ const { setTTSSegments, setChapterTitles, openPlayer } = useTTSPlayerModal({
 const {
   activeTTSLanguageVoiceAvatar,
   activeTTSLanguageVoiceLabel,
-} = useTextToSpeech({
-  nftClassId: nftClassId.value,
-  bookName: bookInfo.name.value,
-  bookAuthorName: bookInfo.authorName.value,
-  bookCoverSrc,
+} = useTTSVoice({
   bookLanguage: bookInfo.inLanguage.value,
 })
 

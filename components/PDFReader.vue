@@ -271,10 +271,7 @@ const emit = defineEmits<{
 const {
   activeTTSLanguageVoiceAvatar,
   activeTTSLanguageVoiceLabel,
-} = useTextToSpeech({
-  nftClassId: props.nftClassId,
-  bookName: props.bookName,
-})
+} = useTTSVoice()
 
 const { pixelRatio } = useDevicePixelRatio()
 
