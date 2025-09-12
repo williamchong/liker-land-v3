@@ -202,10 +202,7 @@ export default function (
 
   const firstUserOwnedNFTId = computed(() => userOwnedNFTIds.value[0])
 
-  const productPageRoute = computed(() => localeRoute({
-    name: 'store-nftClassId',
-    params: { nftClassId: toValue(nftClassId) },
-  }))
+  const productPageRoute = computed(() => getProductPageRoute())
 
   function getProductPageRoute(options?: { llMedium?: string, llSource?: string }) {
     const query: Record<string, string> = {}
