@@ -66,7 +66,11 @@
               'laptop:hidden',
               { 'opacity-50 cursor-not-allowed': isAudioHidden },
             ]"
-            icon="i-material-symbols-play-arrow-rounded"
+            :avatar="{
+              src: activeTTSLanguageVoiceAvatar,
+              alt: activeTTSLanguageVoiceLabel,
+            }"
+            trailing-icon="i-material-symbols-play-arrow-rounded"
             variant="ghost"
             color="neutral"
             @click="handleMobileTTSClick"
@@ -80,7 +84,11 @@
                 base: '!rounded-l-md',
               }"
               class="max-laptop:hidden"
-              icon="i-material-symbols-play-arrow-rounded"
+              :avatar="{
+                src: activeTTSLanguageVoiceAvatar,
+                alt: activeTTSLanguageVoiceLabel,
+              }"
+              trailing-icon="i-material-symbols-play-arrow-rounded"
               :label="$t('reader_text_to_speech_button')"
               variant="ghost"
               color="neutral"
@@ -259,6 +267,11 @@ const emit = defineEmits<{
   ttsPlay: []
   pageChanged: [pageNumber: number]
 }>()
+
+const {
+  activeTTSLanguageVoiceAvatar,
+  activeTTSLanguageVoiceLabel,
+} = useTTSVoice()
 
 const { pixelRatio } = useDevicePixelRatio()
 
