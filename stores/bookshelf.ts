@@ -11,6 +11,11 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     return Object.values(nftByNFTClassIds.value[nftClassId] || {})
   })
 
+  const getFirstNFTByNFTClassId = computed(() => (nftClassId: string) => {
+    const nfts = getNFTsByNFTClassId.value(nftClassId)
+    return nfts[0]
+  })
+
   const items = computed(() => {
     return Object.entries(nftByNFTClassIds.value)
       .filter(([nftClassId]) => nftStore.getNFTClassMetadataById(nftClassId)?.['@type'] === 'Book')
@@ -106,6 +111,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
 
     fetchItems,
     getNFTsByNFTClassId,
+    getFirstNFTByNFTClassId,
     fetchNFTByNFTClassIdAndOwnerWalletAddressThroughContract,
     reset,
   }

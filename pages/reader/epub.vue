@@ -300,7 +300,7 @@ function getCacheKeyWithSuffix(suffix: ReaderCacheKeySuffix) {
 const isReaderLoading = ref(true)
 
 const isTocOpen = ref(false)
-const isDesktop = useMediaQuery('(min-width: 1024px)')
+const isDesktop = useDesktopScreen()
 watch(isDesktop, async () => {
   // Close the TOC when switching to desktop/mobile
   isTocOpen.value = false

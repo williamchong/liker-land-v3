@@ -17,7 +17,7 @@
           v-text="bookInfo.name"
         />
         <UDropdownMenu
-          v-if="isLargerScreen"
+          v-if="isDesktopScreen"
           :items="menuItems"
           :modal="true"
         >
@@ -102,29 +102,18 @@ const nftStore = useNFTStore()
 const metadataStore = useMetadataStore()
 const bookInfo = useBookInfo({ nftClassId: props.nftClassId })
 const { downloadBookFile } = useBookDownload()
+const getContentTypeLabel = useContentTypeLabel()
 
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 300 }))
 
-const isLargerScreen = useMediaQuery('(min-width: 1024px)')
+const isDesktopScreen = useDesktopScreen()
 
 const menuItems = computed<DropdownMenuItem[]>(() => {
-  const sortedContentURLs = [...bookInfo.contentURLs.value].sort(compareContentURL)
   const readerItems: DropdownMenuItem[] = []
   const downloadItems: DropdownMenuItem[] = []
 
-  sortedContentURLs.forEach((contentURL) => {
-    let label = ''
-    switch (contentURL.type) {
-      case 'epub':
-        label = $t('bookshelf_open_in_epub')
-        break
-      case 'pdf':
-        label = $t('bookshelf_open_in_pdf')
-        break
-      default:
-        label = $t('bookshelf_open_in_type', { type: contentURL.type })
-        break
-    }
+  bookInfo.sortedContentURLs.value.forEach((contentURL) => {
+    const label = getContentTypeLabel(contentURL.type)
 
     readerItems.push({
       label,
