@@ -64,27 +64,90 @@ export function fetchNFTClassesByOwnerWalletAddress(walletAddress: string, optio
   })
 };
 
-export function fetchNFTClassesByMetadata(
+function escapeCommasForFilter(value: string): string {
+  return value.replaceAll(',', '%2C')
+}
+
+export async function fetchNFTClassesByMetadata(
   filterType: 'author' | 'publisher',
   filterValue: string,
   options: IndexerQueryOptions = {},
-) {
+): Promise<FetchNFTClassesByOwnerWalletAddressResponseData> {
   const fetch = getIndexerAPIFetch()
-  if (!options.filter) {
-    options.filter = {}
-  }
+  const escapedFilterValue = escapeCommasForFilter(filterValue)
 
-  // Add the appropriate filter based on type
   if (filterType === 'author') {
-    options.filter['author.name'] = filterValue.replaceAll(',', '%2C')
+    // For author searches, query both 'author.name' and 'author' fields
+    const authorNameOptions = {
+      ...options,
+      filter: { ...options.filter, 'author.name': escapedFilterValue },
+    }
+    const authorOptions = {
+      ...options,
+      filter: { ...options.filter, author: escapedFilterValue },
+    }
+
+    const [authorNameResult, authorResult] = await Promise.all([
+      fetch<FetchNFTClassesByOwnerWalletAddressResponseData>(`/booknfts`, {
+        query: getIndexerQueryOptions(authorNameOptions),
+      }),
+      fetch<FetchNFTClassesByOwnerWalletAddressResponseData>(`/booknfts`, {
+        query: getIndexerQueryOptions(authorOptions),
+      }),
+    ])
+
+    // Merge results and remove duplicates
+    const combinedDataMap: Record<string, NFTClass> = {}
+    authorNameResult.data.forEach((item) => {
+      combinedDataMap[item.address] = item
+    })
+    authorResult.data.forEach((item) => {
+      combinedDataMap[item.address] = item
+    })
+    const combinedData = Object.values(combinedDataMap)
+
+    const queryOptions = getIndexerQueryOptions(options)
+    const actualLimit = parseInt(queryOptions['pagination.limit'] || '30')
+
+    let combinedNextKey: number | undefined
+    if (authorNameResult.pagination.count < actualLimit && authorResult.pagination.count < actualLimit) {
+      combinedNextKey = undefined
+    }
+    else {
+      const authorNameNextKey = authorNameResult.pagination.count === actualLimit ? authorNameResult.pagination.next_key : undefined
+      const authorNextKey = authorResult.pagination.count === actualLimit ? authorResult.pagination.next_key : undefined
+
+      if (authorNameNextKey !== undefined && authorNextKey !== undefined) {
+        combinedNextKey = Math.min(authorNameNextKey, authorNextKey)
+      }
+      else if (authorNameNextKey !== undefined) {
+        combinedNextKey = authorNameNextKey
+      }
+      else if (authorNextKey !== undefined) {
+        combinedNextKey = authorNextKey
+      }
+    }
+
+    return {
+      data: combinedData,
+      pagination: {
+        count: combinedData.length,
+        next_key: combinedNextKey,
+      },
+    }
   }
   else if (filterType === 'publisher') {
+    if (!options.filter) {
+      options.filter = {}
+    }
     options.filter.publisher = filterValue
+
+    return fetch<FetchNFTClassesByOwnerWalletAddressResponseData>(`/booknfts`, {
+      query: getIndexerQueryOptions(options),
+    })
   }
 
-  return fetch<FetchNFTClassesByOwnerWalletAddressResponseData>(`/booknfts`, {
-    query: getIndexerQueryOptions(options),
-  })
+  throw createError({ statusCode: 400, statusMessage: `Unsupported filter type: ${filterType}` })
 }
 
 export function fetchNFTsByOwnerWalletAddress(walletAddress: string, options: IndexerQueryOptions) {
