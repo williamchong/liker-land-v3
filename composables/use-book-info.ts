@@ -201,6 +201,13 @@ export default function (
   })
 
   const firstUserOwnedNFTId = computed(() => userOwnedNFTIds.value[0])
+  
+  const authorPageRoute = computed(() => {
+    return localeRoute({
+      name: 'store',
+      query: { author: authorName.value },
+    })
+  })
 
   const productPageRoute = computed(() => getProductPageRoute())
 
@@ -259,6 +266,7 @@ export default function (
     userOwnedNFTIds,
     firstUserOwnedNFTId,
 
+    authorPageRoute,
     productPageRoute,
     getProductPageRoute,
     getReaderRoute,

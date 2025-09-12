@@ -66,10 +66,10 @@
         </UDrawer>
       </div>
 
-      <div
-        class="mt-0.5 text-xs laptop:text-sm text-[#9B9B9B] line-clamp-1"
-        v-text="bookInfo.authorName"
-      />
+      <NuxtLink
+        :to="bookInfo.authorPageRoute.value"
+        class="inline-block mt-0.5 text-xs laptop:text-sm text-[#9B9B9B] hover:text-theme-500 line-clamp-1 hover:underline"
+      >{{ bookInfo.authorName }}</NuxtLink>
     </div>
   </li>
 </template>
