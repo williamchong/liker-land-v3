@@ -64,22 +64,27 @@ export function fetchNFTClassesByOwnerWalletAddress(walletAddress: string, optio
   })
 };
 
+function escapeCommasForFilter(value: string): string {
+  return value.replaceAll(',', '%2C')
+}
+
 export async function fetchNFTClassesByMetadata(
   filterType: 'author' | 'publisher',
   filterValue: string,
   options: IndexerQueryOptions = {},
 ): Promise<FetchNFTClassesByOwnerWalletAddressResponseData> {
   const fetch = getIndexerAPIFetch()
+  const escapedFilterValue = escapeCommasForFilter(filterValue)
 
   if (filterType === 'author') {
     // For author searches, query both 'author.name' and 'author' fields
     const authorNameOptions = {
       ...options,
-      filter: { ...options.filter, 'author.name': filterValue.replaceAll(',', '%2C') },
+      filter: { ...options.filter, 'author.name': escapedFilterValue },
     }
     const authorOptions = {
       ...options,
-      filter: { ...options.filter, author: filterValue.replaceAll(',', '%2C') },
+      filter: { ...options.filter, author: escapedFilterValue },
     }
 
     const [authorNameResult, authorResult] = await Promise.all([
@@ -142,7 +147,7 @@ export async function fetchNFTClassesByMetadata(
     })
   }
 
-  throw new Error(`Unsupported filter type: ${filterType}`)
+  throw createError({ statusCode: 400, statusMessage: `Unsupported filter type: ${filterType}` })
 }
 
 export function fetchNFTsByOwnerWalletAddress(walletAddress: string, options: IndexerQueryOptions) {
