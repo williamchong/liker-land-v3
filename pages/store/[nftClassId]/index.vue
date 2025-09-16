@@ -488,6 +488,7 @@ const isDesktopScreen = useDesktopScreen()
 
 const nftClassId = computed(() => getRouteParam('nftClassId'))
 const { isOwner: isUserBookOwner } = useUserBookOwnership(nftClassId)
+const bookInfo = useBookInfo({ nftClassId })
 const {
   generateBookStructuredData,
   generateOGMetaTags,
@@ -528,7 +529,6 @@ await callOnce(async () => {
   }
 })
 
-const bookInfo = useBookInfo({ nftClassId })
 const authorStore = useAuthorStore()
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 600 }))
 
