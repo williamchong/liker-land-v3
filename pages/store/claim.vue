@@ -237,12 +237,11 @@ const canStartReading = computed(() => !!receivedNFTId.value)
 
 async function checkItemsDeliveryThroughIndexer() {
   // TODO: Handle multiple items
-  await Promise.all([
-    // Check if the NFT class is already on the bookshelf
-    bookshelfStore.fetchItems({ isRefresh: true }),
-    // Check if the NFT class owners include the user
-    nftStore.fetchNFTClassAggregatedMetadataById(nftClassId.value as string, { include: ['owner'], nocache: true }),
-  ])
+  // Check if the NFT class is already on the bookshelf
+  await bookshelfStore.fetchItems({
+    isRefresh: true,
+    walletAddress: claimingWallet.value as string,
+  })
 }
 
 const isCheckingItemsDelivery = ref(false)
@@ -291,7 +290,7 @@ async function waitForItemsDelivery({ timeout = 30000, interval = 3000 } = {}) {
       await sleep(interval)
       if ((Date.now() - start) > timeout) {
         try {
-          await bookshelfStore.fetchNFTByNFTClassIdAndOwnerWalletAddressThroughContract(nftClassId.value as string, user.value?.evmWallet as string)
+          await bookshelfStore.fetchNFTByNFTClassIdAndOwnerWalletAddressThroughContract(nftClassId.value as string, claimingWallet.value as string)
         }
         catch (error) {
           console.error('Error fetching NFT by class ID and owner wallet address:', error)
@@ -322,16 +321,16 @@ async function waitForItemsDelivery({ timeout = 30000, interval = 3000 } = {}) {
 
 const isClaiming = ref(false)
 
+const claimingWallet = computed(() => user.value?.evmWallet)
+
 async function startClaimingItems() {
   if (isClaiming.value) return
 
   try {
     isClaiming.value = true
-
     startLoadingLabelAnimation()
 
-    const claimingWallet = user.value?.evmWallet
-    if (!claimingWallet) {
+    if (!claimingWallet.value) {
       throw createError({
         statusCode: 401,
         message: $t('claim_page_no_wallet_connected'),
@@ -343,7 +342,7 @@ async function startClaimingItems() {
       cartId: cartId.value,
       token: claimingToken.value,
       paymentId: paymentId.value,
-      wallet: claimingWallet,
+      wallet: claimingWallet.value,
     })
     if (data.allItemsAutoClaimed) {
       allItemsDelivered.value = true
