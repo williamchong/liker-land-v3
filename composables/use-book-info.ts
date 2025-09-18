@@ -71,7 +71,7 @@ export default function (
     if (readActionEntryPoints.value.length) {
       return readActionEntryPoints.value
     }
-    return bookInfo.sameAs.value.map((url, index) => ({
+    return bookInfo.sameAs.value.map((url: string, index: number) => ({
       url: normalizeURIToHTTP(url),
       name: extractFilenameFromContentURL(url),
       type: extractContentTypeFromURL(url),
