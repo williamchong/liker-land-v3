@@ -81,6 +81,7 @@ const formatPrice = useFormatPrice()
 const nftStore = useNFTStore()
 const metadataStore = useMetadataStore()
 const bookInfo = useBookInfo({ nftClassId: props.nftClassId })
+const { getResizedImageURL } = useCoverImage()
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value || props.bookCoverSrc, { size: 300 }))
 const { getPlusDiscountPrice } = useSubscription()
 

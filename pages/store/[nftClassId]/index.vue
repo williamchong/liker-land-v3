@@ -530,6 +530,7 @@ await callOnce(async () => {
 })
 
 const authorStore = useAuthorStore()
+const { getResizedImageURL } = useCoverImage()
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 600 }))
 
 const selectedPricingItemIndex = ref(Number(getRouteQuery('price_index') || 0))
