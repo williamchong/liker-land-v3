@@ -1,3 +1,10 @@
+declare interface NFTAccount {
+  id: number
+  cosmos_address?: string
+  evm_address: string
+  likeid?: string
+}
+
 declare interface NFTClassMetadata {
   name: string
   symbol: string
@@ -35,19 +42,20 @@ declare interface NFTClassMetadata {
   title: string
 }
 declare interface NFTClass {
-  address: `0x${string}`
+  address: string
   name: string
   symbol: string
-  owner_address: string
+  owner_address?: string
   total_supply: string
   max_supply: string
-  metadata: NFTClassMetadata
+  metadata?: NFTClassMetadata
   banner_image: string
   featured_image: string
   deployer_address: string
-  deployer_block_number: string
+  deployed_block_number: string
   minted_at: string
-  created_at: string
+  updated_at: string
+  owner?: NFTAccount
 }
 
 declare type NFTAttributeValue = string | number | { [key: string]: string | number }
@@ -55,22 +63,21 @@ declare type NFTAttributeValue = string | number | { [key: string]: string | num
 declare interface NFTAttribute {
   trait_type: string
   value: NFTAttributeValue
-  display_type?: string
+  display_type?: 'number' | 'boost_number' | 'boost_percentage'
 }
-
 declare interface NFT {
   contract_address: string
   token_id: string
-  token_uri: string
-  image: string
-  image_data: string
-  external_url: string
-  description: string
-  name: string
-  attributes: NFTAttribute[]
-  background_color: string
-  animation_url: string
-  youtube_url: string
+  token_uri?: string
+  image?: string
+  image_data?: string
+  external_url?: string
+  description?: string
+  name?: string
+  attributes?: NFTAttribute[]
+  background_color?: string
+  animation_url?: string
+  youtube_url?: string
   owner_address: string
   minted_at: string // ISO date string
   updated_at: string // ISO date string

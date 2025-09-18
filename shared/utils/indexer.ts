@@ -1,20 +1,39 @@
-export interface PaginationInfo {
+export interface PaginationResponse {
   next_key?: number
   count: number
 }
 
 export interface FetchNFTClassesByOwnerWalletAddressResponseData {
   data: NFTClass[]
-  pagination: PaginationInfo
+  pagination: PaginationResponse
 }
 
 export interface FetchNFTsByWalletAddressResponseData {
   data: NFT[]
-  pagination: PaginationInfo
+  pagination: PaginationResponse
 }
 
 export interface FetchLikeCoinNFTClassChainMetadataResponseData {
   metadata: NFTClassMetadata
+}
+
+export interface FetchBookNFTsResponseData {
+  data: NFTClass[]
+  pagination: PaginationResponse
+}
+
+export interface FetchTokensByBookNFTResponseData {
+  data: NFT[]
+  pagination: PaginationResponse
+}
+
+export interface FetchTokenAccountsByBookNFTResponseData {
+  data: NFTAccount[]
+  pagination: PaginationResponse
+}
+
+export interface FetchAccountByBookNFTResponseData {
+  account: NFTAccount
 }
 
 export function getIndexerAPIFetch() {
@@ -57,12 +76,12 @@ export function getIndexerQueryOptions({
   return query
 }
 
-export function fetchNFTClassesByOwnerWalletAddress(walletAddress: string, options: IndexerQueryOptions) {
+export function fetchNFTClassesByOwnerWalletAddress(walletAddress: string, options: IndexerQueryOptions = {}) {
   const fetch = getIndexerAPIFetch()
   return fetch<FetchNFTClassesByOwnerWalletAddressResponseData>(`/account/${walletAddress}/booknfts`, {
     query: getIndexerQueryOptions(options),
   })
-};
+}
 
 function escapeCommasForFilter(value: string): string {
   return value.replaceAll(',', '%2C')
@@ -72,7 +91,7 @@ export async function fetchNFTClassesByMetadata(
   filterType: 'author' | 'publisher',
   filterValue: string,
   options: IndexerQueryOptions = {},
-): Promise<FetchNFTClassesByOwnerWalletAddressResponseData> {
+): Promise<FetchBookNFTsResponseData> {
   const fetch = getIndexerAPIFetch()
   const escapedFilterValue = escapeCommasForFilter(filterValue)
 
@@ -88,10 +107,10 @@ export async function fetchNFTClassesByMetadata(
     }
 
     const [authorNameResult, authorResult] = await Promise.all([
-      fetch<FetchNFTClassesByOwnerWalletAddressResponseData>(`/booknfts`, {
+      fetch<FetchBookNFTsResponseData>(`/booknfts`, {
         query: getIndexerQueryOptions(authorNameOptions),
       }),
-      fetch<FetchNFTClassesByOwnerWalletAddressResponseData>(`/booknfts`, {
+      fetch<FetchBookNFTsResponseData>(`/booknfts`, {
         query: getIndexerQueryOptions(authorOptions),
       }),
     ])
@@ -142,7 +161,7 @@ export async function fetchNFTClassesByMetadata(
     }
     options.filter.publisher = filterValue
 
-    return fetch<FetchNFTClassesByOwnerWalletAddressResponseData>(`/booknfts`, {
+    return fetch<FetchBookNFTsResponseData>(`/booknfts`, {
       query: getIndexerQueryOptions(options),
     })
   }
@@ -150,14 +169,52 @@ export async function fetchNFTClassesByMetadata(
   throw createError({ statusCode: 400, statusMessage: `Unsupported filter type: ${filterType}` })
 }
 
-export function fetchNFTsByOwnerWalletAddress(walletAddress: string, options: IndexerQueryOptions) {
+export function fetchNFTsByOwnerWalletAddress(walletAddress: string, options: IndexerQueryOptions = {}) {
   const fetch = getIndexerAPIFetch()
   return fetch<FetchNFTsByWalletAddressResponseData>(`/account/${walletAddress}/tokens`, {
     query: getIndexerQueryOptions(options),
   })
-};
+}
 
 export function fetchLikeCoinNFTClassChainMetadataById(nftClassId: string) {
   const fetch = getIndexerAPIFetch()
-  return fetch<FetchLikeCoinNFTClassChainMetadataResponseData>(`/booknft/${nftClassId}`)
+  return fetch<NFTClass>(`/booknft/${nftClassId}`)
+}
+
+export function fetchTokenBookNFTsByAccount(walletAddress: string, options: IndexerQueryOptions = {}) {
+  const fetch = getIndexerAPIFetch()
+  return fetch<FetchNFTClassesByOwnerWalletAddressResponseData>(`/account/${walletAddress}/token-booknfts`, {
+    query: getIndexerQueryOptions(options),
+  })
+}
+
+export function fetchAllBookNFTs(options: IndexerQueryOptions = {}) {
+  const fetch = getIndexerAPIFetch()
+  return fetch<FetchBookNFTsResponseData>(`/booknfts`, {
+    query: getIndexerQueryOptions(options),
+  })
+}
+
+export function fetchTokensByBookNFT(nftClassId: string, options: IndexerQueryOptions = {}) {
+  const fetch = getIndexerAPIFetch()
+  return fetch<FetchTokensByBookNFTResponseData>(`/booknft/${nftClassId}/tokens`, {
+    query: getIndexerQueryOptions(options),
+  })
+}
+
+export function fetchTokenAccountsByBookNFT(nftClassId: string, options: IndexerQueryOptions = {}) {
+  const fetch = getIndexerAPIFetch()
+  return fetch<FetchTokenAccountsByBookNFTResponseData>(`/booknft/${nftClassId}/tokens/account`, {
+    query: getIndexerQueryOptions(options),
+  })
+}
+
+export function fetchAccountByBookNFT(nftClassId: string) {
+  const fetch = getIndexerAPIFetch()
+  return fetch<FetchAccountByBookNFTResponseData>(`/booknft/${nftClassId}/account`)
+}
+
+export function fetchTokenById(nftClassId: string, tokenId: string) {
+  const fetch = getIndexerAPIFetch()
+  return fetch<NFT>(`/token/${nftClassId}/${tokenId}`)
 }
