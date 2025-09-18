@@ -530,6 +530,7 @@ await callOnce(async () => {
 })
 
 const authorStore = useAuthorStore()
+const { getResizedImageURL } = useImageResize()
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 600 }))
 
 const selectedPricingItemIndex = ref(Number(getRouteQuery('price_index') || 0))
@@ -548,10 +549,7 @@ const canonicalURL = computed(() => {
 })
 
 const structuredData = computed(() => {
-  return generateBookStructuredData({
-    canonicalURL: canonicalURL.value,
-    image: bookInfo.coverSrc.value,
-  })
+  return generateBookStructuredData({ canonicalURL: canonicalURL.value })
 })
 
 const meta = [
