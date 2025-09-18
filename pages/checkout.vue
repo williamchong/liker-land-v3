@@ -184,7 +184,7 @@ const bookstoreStore = useBookstoreStore()
 const formatPrice = useFormatPrice()
 const { handleError } = useErrorHandler()
 const { getAnalyticsParameters } = useAnalytics()
-const { getResizedImageURL, normalizeURIToHTTP } = useCoverImage()
+const { getResizedImageURL, normalizeURIToHTTP } = useURIParser()
 const { t: $t, locale } = useI18n()
 const localeString = useLocaleString()
 

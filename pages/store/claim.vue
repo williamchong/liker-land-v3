@@ -212,7 +212,7 @@ const status = computed(() => cartData.value?.status)
 const isClaimed = ref(!!status.value && ['completed', 'done', 'pending', 'pendingNFT'].includes(status.value))
 
 const bookInfo = useBookInfo({ nftClassId })
-const { getResizedImageURL } = useCoverImage()
+const { getResizedImageURL } = useURIParser()
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 400 }))
 
 // TODO: Handle multiple items in the cart

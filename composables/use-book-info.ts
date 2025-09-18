@@ -8,7 +8,7 @@ export default function (
   const bookstoreStore = useBookstoreStore()
   const bookInfo = useEVMBookInfo({ nftClassId })
   const bookshelfStore = useBookshelfStore()
-  const { normalizeURIToHTTP } = useCoverImage()
+  const { normalizeURIToHTTP } = useURIParser()
 
   const bookstoreInfo = computed(() => {
     return bookstoreStore.getBookstoreInfoByNFTClassId(toValue(nftClassId))

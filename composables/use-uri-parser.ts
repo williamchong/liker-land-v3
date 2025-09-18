@@ -1,4 +1,4 @@
-export function useCoverImage() {
+export function useURIParser() {
   const config = useRuntimeConfig()
 
   function normalizeURIToHTTP(url?: string) {

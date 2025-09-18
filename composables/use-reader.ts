@@ -3,7 +3,7 @@ export default function (params: {
 } = {}) {
   const config = useRuntimeConfig()
   const getRouteQuery = useRouteQuery()
-  const { getResizedImageURL, getBookFileURLWithCORS } = useCoverImage()
+  const { getResizedImageURL, getBookFileURLWithCORS } = useURIParser()
 
   const nftClassId = computed(() =>
     getRouteQuery('nft_class_id') || toValue(params.nftClassId) || '',

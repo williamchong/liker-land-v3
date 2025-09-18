@@ -2,7 +2,7 @@ export function useEVMBookInfo(
   { nftClassId }: { nftClassId: string | Ref<string> | ComputedRef<string> },
 ) {
   const nftStore = useNFTStore()
-  const { normalizeURIToHTTP } = useCoverImage()
+  const { normalizeURIToHTTP } = useURIParser()
 
   const nftClass = computed(() => nftStore.getNFTClassById(toValue(nftClassId)))
 
