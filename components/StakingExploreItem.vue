@@ -92,6 +92,7 @@ const { loggedIn: hasLoggedIn } = useUserSession()
 const nftStore = useNFTStore()
 const metadataStore = useMetadataStore()
 const bookInfo = useBookInfo({ nftClassId: props.nftClassId })
+const { getResizedImageURL } = useImageResize()
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 300 }))
 
 const bookName = computed(() => bookInfo.name.value)
