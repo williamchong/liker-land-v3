@@ -7,13 +7,13 @@ export function useLikeCollectiveContract() {
   const { writeContractAsync } = useWriteContract()
   const { $wagmiConfig } = useNuxtApp()
   // TODO: Update address when deployed
-  const likeCollectiveAddress = '0x6b65396685496035ce0b03cbec9b9963793b08a9'
+  const likeCollectiveAddress = '0x4506ac2dd1e9a470d92a3d1656e1a99c676e1c8e'
 
   async function getWalletPendingRewardsOfNFTClass(wallet: string, nftClassId: string) {
     const rewards = await readContract($wagmiConfig, {
       address: likeCollectiveAddress,
       abi: likeCollectiveABI,
-      functionName: 'getPendingRewards',
+      functionName: 'getPendingRewardsForUser',
       args: [wallet, nftClassId],
     })
     return rewards as bigint
@@ -48,23 +48,30 @@ export function useLikeCollectiveContract() {
     })
   }
 
-  async function unstakeFromNFTClass(nftClassId: string, amount: bigint) {
-    const { writeContractAsync } = useWriteContract()
+  async function unstakeFromStakePosition(tokenId: bigint) {
     await writeContractAsync({
       address: likeCollectiveAddress,
       abi: likeCollectiveABI,
-      functionName: 'unstake',
-      args: [nftClassId, amount],
+      functionName: 'unstakePosition',
+      args: [tokenId],
     })
   }
 
-  async function claimAllRewards() {
-    const { writeContractAsync } = useWriteContract()
+  async function claimRewardsFromStakePosition(tokenId: bigint) {
+    await writeContractAsync({
+      address: likeCollectiveAddress,
+      abi: likeCollectiveABI,
+      functionName: 'claimRewards',
+      args: [tokenId],
+    })
+  }
+
+  async function claimWalletRewards(wallet: string) {
     await writeContractAsync({
       address: likeCollectiveAddress,
       abi: likeCollectiveABI,
       functionName: 'claimAllRewards',
-      args: [],
+      args: [wallet],
     })
   }
 
@@ -73,7 +80,8 @@ export function useLikeCollectiveContract() {
     getWalletStakeOfNFTClass,
     getTotalStakeOfNFTClass,
     stakeToNFTClass,
-    unstakeFromNFTClass,
-    claimAllRewards,
+    unstakeFromStakePosition,
+    claimRewardsFromStakePosition,
+    claimWalletRewards,
   }
 }

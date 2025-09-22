@@ -70,6 +70,11 @@
   },
   {
     "inputs": [],
+    "name": "ErrInvalidOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "ErrNoRewardsToClaim",
     "type": "error"
   },
@@ -234,31 +239,6 @@
         "type": "uint256"
       }
     ],
-    "name": "RewardAdded",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "bookNFT",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "rewardedAmount",
-        "type": "uint256"
-      }
-    ],
     "name": "RewardClaimed",
     "type": "event"
   },
@@ -276,12 +256,6 @@
         "internalType": "address",
         "name": "account",
         "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "stakedAmount",
-        "type": "uint256"
       },
       {
         "indexed": false,
@@ -371,6 +345,19 @@
   },
   {
     "inputs": [],
+    "name": "ACC_REWARD_PRECISION",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "UPGRADE_INTERFACE_VERSION",
     "outputs": [
       {
@@ -383,7 +370,13 @@
     "type": "function"
   },
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
     "name": "claimAllRewards",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -392,9 +385,9 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "bookNFT",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
       }
     ],
     "name": "claimRewards",
@@ -433,7 +426,45 @@
         "type": "address"
       }
     ],
-    "name": "getPendingRewards",
+    "name": "getPendingRewardsForUser",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "bookNFT",
+        "type": "address"
+      }
+    ],
+    "name": "getPendingRewardsPool",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getRewardsOfPosition",
     "outputs": [
       {
         "internalType": "uint256",
@@ -556,12 +587,38 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "restakeRewardPosition",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
-        "name": "bookNFT",
+        "name": "likeStakePosition",
         "type": "address"
       }
     ],
-    "name": "restakeReward",
+    "name": "setLikeStakePosition",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "likecoin",
+        "type": "address"
+      }
+    ],
+    "name": "setLikecoin",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -607,17 +664,12 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "bookNFT",
-        "type": "address"
-      },
-      {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "tokenId",
         "type": "uint256"
       }
     ],
-    "name": "unstake",
+    "name": "unstakePosition",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
