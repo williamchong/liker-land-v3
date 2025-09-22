@@ -385,24 +385,26 @@ const accountStore = useAccountStore()
 const nftStore = useNFTStore()
 const metadataStore = useMetadataStore()
 const { handleError } = useErrorHandler()
+const { getResizedImageURL } = useImageResize()
 
 const nftClassId = computed(() => getRouteParam('nftClassId'))
 const {
   generateBookStructuredData,
 } = useStructuredData({ nftClassId })
 
-// Constants
 const LIKE_TOKEN_DECIMALS = 6
 
-// Contract functions
 const {
   getWalletPendingRewardsOfNFTClass,
   getWalletStakeOfNFTClass,
   getTotalStakeOfNFTClass,
   stakeToNFTClass,
-  unstakeFromNFTClass,
-  claimAllRewards,
 } = useLikeCollectiveContract()
+
+const {
+  unstakeFromNFTClass,
+  claimWalletRewardsOfNFTClass,
+} = useLikeStaking()
 
 if (nftClassId.value !== nftClassId.value.toLowerCase()) {
   await navigateTo(localeRoute({
@@ -526,7 +528,6 @@ const canonicalURL = computed(() => {
 const structuredData = computed(() => {
   return generateBookStructuredData({
     canonicalURL: canonicalURL.value,
-    image: bookInfo.coverSrc.value,
   })
 })
 
@@ -698,9 +699,7 @@ async function handleUnstake() {
 
   try {
     isUnstaking.value = true
-    const amount = parseUnits(amountString, LIKE_TOKEN_DECIMALS)
-
-    await unstakeFromNFTClass(nftClassId.value, amount)
+    await unstakeFromNFTClass(user.value!.evmWallet, nftClassId.value)
 
     toast.add({
       title: $t('staking_unstake_success'),
@@ -730,7 +729,7 @@ async function handleClaimRewards() {
   try {
     isClaimingRewards.value = true
 
-    await claimAllRewards()
+    await claimWalletRewardsOfNFTClass(user.value!.evmWallet, nftClassId.value)
 
     toast.add({
       title: $t('staking_claim_rewards_success'),
