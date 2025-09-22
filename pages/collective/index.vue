@@ -173,7 +173,7 @@ const bookshelfStore = useBookshelfStore()
 const LIKE_TOKEN_DECIMALS = 6
 
 // Contract functions
-const { claimAllRewards } = useLikeCollectiveContract()
+const { claimWalletRewards } = useLikeCollectiveContract()
 
 // State
 const isClaimingAllRewards = ref(false)
@@ -284,7 +284,7 @@ async function handleClaimAllRewards() {
   try {
     isClaimingAllRewards.value = true
 
-    await claimAllRewards()
+    await claimWalletRewards(user.value!.evmWallet)
 
     toast.add({
       title: $t('staking_claim_all_rewards_success'),
