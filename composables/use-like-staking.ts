@@ -18,6 +18,7 @@ export function useLikeStaking() {
     unstakeFromStakePosition,
     claimRewardsFromStakePosition,
     claimWalletRewards,
+    depositReward: rawDepositReward,
   } = useLikeCollectiveContract()
 
   async function getAllLikeStakePositionInfosOfOwner(owner: string) {
@@ -56,6 +57,16 @@ export function useLikeStaking() {
     await Promise.all(tokenIds.map(tokenId => unstakeFromStakePosition(tokenId)))
   }
 
+  async function depositReward(nftClassId: string, amount: bigint) {
+    await writeContractAsync({
+      address: likeCoinErc20Address,
+      abi: likeCoinErc20Abi,
+      functionName: 'approve',
+      args: [likeCollectiveAddress, amount],
+    })
+    await rawDepositReward(nftClassId, amount)
+  }
+
   async function mergeWalletStakePositionsOfNFTClass(wallet: string, nftClassId: string) {
     const positionInfos = await getAllLikeStakePositionInfosOfNFTClassByOwner(wallet, nftClassId)
     const totalStakedAmount = positionInfos.reduce((acc, info) => acc + info.stakedAmount, BigInt(0))
@@ -74,5 +85,6 @@ export function useLikeStaking() {
     getWalletPendingRewardsOfNFTClass,
     getWalletStakeOfNFTClass,
     getTotalStakeOfNFTClass,
+    depositReward,
   }
 }
