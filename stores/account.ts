@@ -5,6 +5,7 @@ import { jwtDecode } from 'jwt-decode'
 import type { Magic } from 'magic-sdk'
 import type { RouteLocationAsRelativeGeneric } from 'vue-router'
 
+import { optimism, optimismSepolia } from '@wagmi/vue/chains'
 import { LoginModal, RegistrationModal } from '#components'
 
 const REGISTER_TIME_LIMIT_IN_TS = 15 * 60 * 1000 // 15 minutes
@@ -56,6 +57,10 @@ export const useAccountStore = defineStore('account', () => {
   const isLoggingIn = ref(false)
   const isConnectModalOpen = ref(false)
   const isClearingCaches = ref(false)
+
+  const chainId = computed(() => {
+    return config.public.isTestnet ? optimismSepolia.id : optimism.id
+  })
 
   watch(
     () => user.value,
@@ -343,7 +348,10 @@ export const useAccountStore = defineStore('account', () => {
 
       isLoggingIn.value = true
       if (status.value !== 'success') {
-        await connectAsync({ connector })
+        await connectAsync({
+          connector,
+          chainId: chainId.value,
+        })
       }
 
       blockingModal.open({ title: $t('account_logging_in') })
