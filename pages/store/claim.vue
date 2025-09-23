@@ -78,6 +78,7 @@ const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
 const nftStore = useNFTStore()
 const bookshelfStore = useBookshelfStore()
+const bookListStore = useBookListStore()
 const { errorModal, handleError } = useErrorHandler()
 
 const cartId = computed(() => getRouteQuery('cart_id'))
@@ -200,6 +201,10 @@ onMounted(async () => {
       fatal: true,
     })
   }
+
+  // Check and remove items from book list if they match the cart data
+  checkAndRemoveBookListItems()
+
   isLoading.value = false
   if (hasLoggedIn.value) {
     startClaimFlow()
@@ -446,6 +451,24 @@ const readerRoute = computed(() => bookInfo.getReaderRoute.value({
   nftId: receivedNFTId.value,
   shouldCustomMessageDisabled: hasBypassedIndexer.value,
 }))
+
+async function checkAndRemoveBookListItems() {
+  try {
+    const cartItems = cartData.value?.classIdsWithPrice || []
+    const removeItemPromises: Promise<void>[] = []
+    for (const item of cartItems) {
+      removeItemPromises.push(
+        bookListStore.checkItemExists(item.classId, item.priceIndex).then((isExistingItem) => {
+          if (isExistingItem) return bookListStore.removeItem(item.classId, item.priceIndex)
+        }),
+      )
+    }
+    await Promise.all(removeItemPromises)
+  }
+  catch (error) {
+    console.error('Error processing checkout book list:', error)
+  }
+}
 
 function handleStartReadingButtonClick() {
   if (!readerRoute.value) {

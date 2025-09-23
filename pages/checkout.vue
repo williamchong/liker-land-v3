@@ -181,7 +181,7 @@ const getRouteQuery = useRouteQuery()
 const { user } = useUserSession()
 const nftStore = useNFTStore()
 const bookstoreStore = useBookstoreStore()
-const formatPrice = useFormatPrice()
+const { formatPrice } = useCurrency()
 const { handleError } = useErrorHandler()
 const { getAnalyticsParameters } = useAnalytics()
 const { getResizedNormalizedImageURL } = useImageResize()
@@ -350,7 +350,7 @@ async function handleCheckout() {
   try {
     isPurchasing.value = true
 
-    const { url, paymentId } = await likeCoinSessionAPI.createBookCartPurchase(
+    const { url, paymentId } = await likeCoinSessionAPI.createNFTBookCartPurchase(
       cartItems.value.map(item => ({
         nftClassId: item.classId,
         priceIndex: item.priceIndex,
@@ -359,9 +359,9 @@ async function handleCheckout() {
       {
         email: user.value?.email || undefined,
         coupon: couponCode || undefined,
+        cancelPage: 'checkout',
         language: locale.value.split('-')[0],
-        from: 'checkout_page',
-        ...getAnalyticsParameters(),
+        ...getAnalyticsParameters({ utmSource: 'checkout' }),
       },
     )
 
