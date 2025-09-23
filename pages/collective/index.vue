@@ -166,11 +166,14 @@ const { handleError } = useErrorHandler()
 const toast = useToast()
 
 // Stores
+const accountStore = useAccountStore()
 const stakingStore = useStakingStore()
 const bookshelfStore = useBookshelfStore()
 
 // Constants
 const LIKE_TOKEN_DECIMALS = 6
+
+const { restoreConnection } = accountStore
 
 // Contract functions
 const { claimWalletRewards } = useLikeCollectiveContract()
@@ -282,6 +285,8 @@ async function handleClaimAllRewards() {
   if (!hasLoggedIn.value) return
 
   try {
+    await restoreConnection()
+
     isClaimingAllRewards.value = true
 
     await claimWalletRewards(user.value!.evmWallet)
