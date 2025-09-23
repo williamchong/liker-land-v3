@@ -249,7 +249,7 @@
                   :label="`${amount}`"
                   variant="outline"
                   size="xs"
-                  @click="stakeAmount = amount.toString()"
+                  @click="stakeAmount = amount"
                 />
               </div>
             </div>
@@ -278,7 +278,7 @@
                   variant="outline"
                   size="xl"
                   :loading="isUnstaking"
-                  :disabled="(!isValidUnstakeAmount && stakeAmount.length > 0) || isUnstaking"
+                  :disabled="!!(stakeAmount || isUnstaking)"
                   block
                   @click="handleUnstake"
                 />
@@ -353,7 +353,7 @@
         color="primary"
         size="xl"
         :loading="isStaking"
-        :disabled="hasLoggedIn ? ((!isValidStakeAmount && stakeAmount.length > 0) || isStaking) : false"
+        :disabled="hasLoggedIn ? ((!isValidStakeAmount && stakeAmount > 0) || isStaking) : false"
         block
         @click="hasLoggedIn ? handleStake : handleConnectWallet"
       />
@@ -444,7 +444,7 @@ const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, 
 const totalStake = ref(0n)
 const userStake = ref(0n)
 const pendingRewards = ref(0n)
-const stakeAmount = ref('')
+const stakeAmount = ref(0)
 const isStaking = ref(false)
 const isUnstaking = ref(false)
 const isClaimingRewards = ref(false)
@@ -495,19 +495,7 @@ const userStakePercentage = computed(() => {
 const quickAmounts = [1, 10, 100, 1000]
 
 const isValidStakeAmount = computed(() => {
-  const amount = String(stakeAmount.value || '').trim()
-  return amount && !isNaN(Number(amount)) && Number(amount) > 0
-})
-
-const isValidUnstakeAmount = computed(() => {
-  const amount = String(stakeAmount.value || '').trim()
-  if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) return false
-  try {
-    return parseUnits(amount, LIKE_TOKEN_DECIMALS) <= userStake.value
-  }
-  catch {
-    return false
-  }
+  return stakeAmount.value > 0
 })
 
 const ogTitle = computed(() => {
@@ -643,9 +631,8 @@ async function handleConnectWallet() {
 
 async function handleStake() {
   await restoreConnection()
-  const amountString = String(stakeAmount.value || '').trim()
 
-  if (!amountString) {
+  if (stakeAmount.value <= 0) {
     toast.add({
       title: $t('staking_please_enter_amount'),
       color: 'warning',
@@ -658,9 +645,10 @@ async function handleStake() {
 
   try {
     isStaking.value = true
-    const amount = parseUnits(amountString, LIKE_TOKEN_DECIMALS)
+    const amount = parseUnits(stakeAmount.value.toString(), LIKE_TOKEN_DECIMALS)
 
     await stakeToNFTClass(nftClassId.value, amount)
+    await sleep(3000)
 
     toast.add({
       title: $t('staking_stake_success'),
@@ -670,10 +658,10 @@ async function handleStake() {
 
     useLogEvent('stake_success', {
       nft_class_id: nftClassId.value,
-      amount: amountString,
+      amount: stakeAmount.value,
     })
 
-    stakeAmount.value = ''
+    stakeAmount.value = 0
     await loadStakingData()
   }
   catch (error) {
@@ -688,22 +676,11 @@ async function handleStake() {
 
 async function handleUnstake() {
   await restoreConnection()
-  const amountString = String(stakeAmount.value || '').trim()
-
-  if (!amountString) {
-    toast.add({
-      title: $t('staking_please_enter_amount'),
-      color: 'warning',
-      icon: 'i-material-symbols-warning-outline',
-    })
-    return
-  }
-
-  if (!isValidUnstakeAmount.value) return
 
   try {
     isUnstaking.value = true
     await unstakeFromNFTClass(user.value!.evmWallet, nftClassId.value)
+    await sleep(3000)
 
     toast.add({
       title: $t('staking_unstake_success'),
@@ -713,10 +690,10 @@ async function handleUnstake() {
 
     useLogEvent('unstake_success', {
       nft_class_id: nftClassId.value,
-      amount: amountString,
+      amount: totalStake.value.toString(),
     })
 
-    stakeAmount.value = ''
+    stakeAmount.value = 0
     await loadStakingData()
   }
   catch (error) {
