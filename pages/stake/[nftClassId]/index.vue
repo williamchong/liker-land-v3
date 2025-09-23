@@ -406,6 +406,8 @@ const {
   claimWalletRewardsOfNFTClass,
 } = useLikeStaking()
 
+const { login, restoreConnection } = accountStore
+
 if (nftClassId.value !== nftClassId.value.toLowerCase()) {
   await navigateTo(localeRoute({
     name: getRouteBaseName(route),
@@ -631,7 +633,7 @@ watch(hasLoggedIn, async (isLoggedIn) => {
 
 async function handleConnectWallet() {
   try {
-    await accountStore.login()
+    await login()
     useLogEvent('stake_connect_wallet', { nft_class_id: nftClassId.value })
   }
   catch (error) {
@@ -640,6 +642,7 @@ async function handleConnectWallet() {
 }
 
 async function handleStake() {
+  await restoreConnection()
   const amountString = String(stakeAmount.value || '').trim()
 
   if (!amountString) {
@@ -684,6 +687,7 @@ async function handleStake() {
 }
 
 async function handleUnstake() {
+  await restoreConnection()
   const amountString = String(stakeAmount.value || '').trim()
 
   if (!amountString) {
