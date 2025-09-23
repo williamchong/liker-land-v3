@@ -1,4 +1,10 @@
+import { useWriteContract } from '@wagmi/vue'
+import likeCoinErc20Abi from '~/contracts/likecoin.json'
+
+const likeCoinErc20Address = '0x1EE5DD1794C28F559f94d2cc642BaE62dC3be5cf'
+
 export function useLikeStaking() {
+  const { writeContractAsync } = useWriteContract()
   const {
     getLikeStakePositionInfo,
     getWalletLikeStakePositionIdsOfNFTClassId,
@@ -8,7 +14,7 @@ export function useLikeStaking() {
     getWalletPendingRewardsOfNFTClass,
     getWalletStakeOfNFTClass,
     getTotalStakeOfNFTClass,
-    stakeToNFTClass,
+    stakeToNFTClass: rawStakeToNFTClass,
     unstakeFromStakePosition,
     claimRewardsFromStakePosition,
     claimWalletRewards,
@@ -33,6 +39,16 @@ export function useLikeStaking() {
   async function claimWalletRewardsOfNFTClass(wallet: string, nftClassId: string) {
     const tokenIds = await getWalletLikeStakePositionIdsOfNFTClassId(wallet, nftClassId)
     await Promise.all(tokenIds.map(tokenId => claimRewardsFromStakePosition(tokenId)))
+  }
+
+  async function stakeToNFTClass(nftClassId: string, amount: bigint) {
+    await writeContractAsync({
+      address: likeCoinErc20Address,
+      abi: likeCoinErc20Abi,
+      functionName: 'approve',
+      args: [likeCollectiveAddress, amount],
+    })
+    await rawStakeToNFTClass(nftClassId, amount)
   }
 
   async function unstakeFromNFTClass(wallet: string, nftClassId: string) {
