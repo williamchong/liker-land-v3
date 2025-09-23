@@ -76,6 +76,15 @@ export function useLikeCollectiveContract() {
     })
   }
 
+  async function depositReward(nftClassId: string, amount: bigint) {
+    await writeContractAsync({
+      address: likeCollectiveAddress,
+      abi: likeCollectiveABI,
+      functionName: 'depositReward',
+      args: [nftClassId, amount],
+    })
+  }
+
   return {
     getWalletPendingRewardsOfNFTClass,
     getWalletStakeOfNFTClass,
@@ -84,5 +93,6 @@ export function useLikeCollectiveContract() {
     unstakeFromStakePosition,
     claimRewardsFromStakePosition,
     claimWalletRewards,
+    depositReward,
   }
 }

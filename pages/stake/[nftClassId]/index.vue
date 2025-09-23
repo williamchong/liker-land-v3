@@ -264,14 +264,25 @@
                 @click="handleConnectWallet"
               />
               <template v-else>
-                <UButton
-                  :label="$t('staking_stake_button')"
-                  size="xl"
-                  :loading="isStaking"
-                  :disabled="(!isValidStakeAmount && stakeAmount.length > 0) || isStaking"
-                  block
-                  @click="handleStake"
-                />
+                <div class="flex gap-2">
+                  <UButton
+                    :label="$t('staking_stake_button')"
+                    size="xl"
+                    :loading="isStaking"
+                    :disabled="(!isValidStakeAmount && stakeAmount > 0) || isStaking"
+                    class="flex-1"
+                    @click="handleStake"
+                  />
+                  <UButton
+                    size="xl"
+                    variant="outline"
+                    icon="i-material-symbols-volunteer-activism"
+                    :loading="isDonating"
+                    :disabled="(!isValidStakeAmount && stakeAmount > 0) || isDonating"
+                    class="px-4"
+                    @click="handleDonate"
+                  />
+                </div>
                 <UButton
                   v-if="userStake > 0n"
                   :label="$t('staking_unstake_button')"
@@ -404,6 +415,7 @@ const {
   unstakeFromNFTClass,
   claimWalletRewardsOfNFTClass,
   stakeToNFTClass,
+  depositReward,
 } = useLikeStaking()
 
 const { login, restoreConnection } = accountStore
@@ -448,6 +460,7 @@ const stakeAmount = ref(0)
 const isStaking = ref(false)
 const isUnstaking = ref(false)
 const isClaimingRewards = ref(false)
+const isDonating = ref(false)
 
 // Load staking data
 async function loadStakingData() {
@@ -732,6 +745,50 @@ async function handleClaimRewards() {
   }
   finally {
     isClaimingRewards.value = false
+  }
+}
+
+async function handleDonate() {
+  await restoreConnection()
+
+  if (stakeAmount.value <= 0) {
+    toast.add({
+      title: 'Please enter donation amount',
+      color: 'warning',
+      icon: 'i-material-symbols-warning-outline',
+    })
+    return
+  }
+
+  if (!isValidStakeAmount.value) return
+
+  try {
+    isDonating.value = true
+    const amount = parseUnits(stakeAmount.value.toString(), LIKE_TOKEN_DECIMALS)
+
+    await depositReward(nftClassId.value, amount)
+
+    toast.add({
+      title: 'Donation successful!',
+      color: 'success',
+      icon: 'i-material-symbols-check-circle',
+    })
+
+    useLogEvent('donate_success', {
+      nft_class_id: nftClassId.value,
+      amount: stakeAmount.value,
+    })
+
+    stakeAmount.value = 0
+    await loadStakingData()
+  }
+  catch (error) {
+    await handleError(error, {
+      title: 'Donation failed',
+    })
+  }
+  finally {
+    isDonating.value = false
   }
 }
 
