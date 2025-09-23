@@ -290,6 +290,7 @@ async function handleClaimAllRewards() {
     isClaimingAllRewards.value = true
 
     await claimWalletRewards(user.value!.evmWallet)
+    await sleep(3000)
 
     toast.add({
       title: $t('staking_claim_all_rewards_success'),
