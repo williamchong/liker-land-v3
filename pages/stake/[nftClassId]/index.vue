@@ -398,12 +398,12 @@ const {
   getWalletPendingRewardsOfNFTClass,
   getWalletStakeOfNFTClass,
   getTotalStakeOfNFTClass,
-  stakeToNFTClass,
 } = useLikeCollectiveContract()
 
 const {
   unstakeFromNFTClass,
   claimWalletRewardsOfNFTClass,
+  stakeToNFTClass,
 } = useLikeStaking()
 
 const { login, restoreConnection } = accountStore
