@@ -44,7 +44,7 @@ export function useLikeCollectiveContract() {
     await writeContractAsync({
       address: likeCollectiveAddress,
       abi: likeCollectiveABI,
-      functionName: 'stake',
+      functionName: 'newStakePosition',
       args: [nftClassId, amount],
     })
   }
@@ -53,17 +53,26 @@ export function useLikeCollectiveContract() {
     await writeContractAsync({
       address: likeCollectiveAddress,
       abi: likeCollectiveABI,
-      functionName: 'unstakePosition',
+      functionName: 'removeStakePosition',
       args: [tokenId],
     })
   }
 
-  async function claimRewardsFromStakePosition(tokenId: bigint) {
+  async function increaseStakePosition(tokenId: bigint, amount: bigint) {
     await writeContractAsync({
       address: likeCollectiveAddress,
       abi: likeCollectiveABI,
-      functionName: 'claimRewards',
-      args: [tokenId],
+      functionName: 'increaseStakeToPosition',
+      args: [tokenId, amount],
+    })
+  }
+
+  async function decreaseStakePosition(tokenId: bigint, amount: bigint) {
+    await writeContractAsync({
+      address: likeCollectiveAddress,
+      abi: likeCollectiveABI,
+      functionName: 'decreaseStakePosition',
+      args: [tokenId, amount],
     })
   }
 
@@ -85,12 +94,23 @@ export function useLikeCollectiveContract() {
     })
   }
 
+  async function claimRewardsFromStakePosition(tokenId: bigint) {
+    await writeContractAsync({
+      address: likeCollectiveAddress,
+      abi: likeCollectiveABI,
+      functionName: 'claimRewards',
+      args: [tokenId],
+    })
+  }
+
   return {
     getWalletPendingRewardsOfNFTClass,
     getWalletStakeOfNFTClass,
     getTotalStakeOfNFTClass,
     stakeToNFTClass,
     unstakeFromStakePosition,
+    increaseStakePosition,
+    decreaseStakePosition,
     claimRewardsFromStakePosition,
     claimWalletRewards,
     depositReward,
