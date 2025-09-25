@@ -846,6 +846,47 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "positionInfo",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "bookNFT",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "stakedAmount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "rewardIndex",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "initialStaker",
+            "type": "address"
+          }
+        ],
+        "internalType": "struct LikeStakePosition.Position",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "proxiableUUID",
     "outputs": [

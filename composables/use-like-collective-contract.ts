@@ -44,7 +44,7 @@ export function useLikeCollectiveContract() {
     await writeContractAsync({
       address: likeCollectiveAddress,
       abi: likeCollectiveABI,
-      functionName: 'stake',
+      functionName: 'newStakePosition',
       args: [nftClassId, amount],
     })
   }
@@ -53,7 +53,7 @@ export function useLikeCollectiveContract() {
     await writeContractAsync({
       address: likeCollectiveAddress,
       abi: likeCollectiveABI,
-      functionName: 'unstakePosition',
+      functionName: 'removeStakePosition',
       args: [tokenId],
     })
   }
