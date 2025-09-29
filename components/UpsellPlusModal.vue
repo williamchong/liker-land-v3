@@ -27,7 +27,7 @@
     <template #body>
       <i18n-t
         v-if="showYearlyPlan"
-        class="self-center text-theme-500 text-center font-bold whitespace-nowrap text-[16px] laptop:text-[20px]"
+        class="self-center text-theme-500 text-center font-bold text-[16px] laptop:text-[20px]"
         keypath="upsell_plus_yearly_notice"
         tag="p"
       >
@@ -51,7 +51,7 @@
       />
       <i18n-t
         v-if="showMonthlyPlan"
-        class="self-center text-theme-500 text-center font-bold whitespace-nowrap text-[16px] laptop:text-[20px]"
+        class="self-center text-theme-500 text-center font-bold text-[16px] laptop:text-[20px]"
         keypath="upsell_plus_monthly_notice"
         tag="p"
       >
@@ -68,7 +68,7 @@
           />
         </template>
       </i18n-t>
-      <div class="hidden laptop:block self-center border-t border-gray-200 h-1 w-[24px] my-[12px]" />
+      <div class="self-center border-t border-gray-200 h-1 w-[24px] my-[12px]" />
       <span
         class="text-sm !text-gray-500 mb-1"
         v-text="$t('upsell_plus_modal_other_benefits')"
@@ -134,11 +134,11 @@
             <span
               v-if="hasYearlyDiscount"
               class="text-gray-500 line-through"
-              v-text="`$${originalYearlyPrice}`"
+              v-text="`US$${originalYearlyPrice}`"
             />
             <span
               class="text-theme-50 font-bold"
-              v-text="`$${yearlyPrice}`"
+              v-text="`US$${yearlyPrice}`"
             />
           </div>
         </UButton>
@@ -161,11 +161,11 @@
             <span
               v-if="hasMonthlyDiscount"
               class="text-gray-500 line-through"
-              v-text="`$${originalMonthlyPrice}`"
+              v-text="`US$${originalMonthlyPrice}`"
             />
             <span
               class="text-theme-500"
-              v-text="`$${monthlyPrice}`"
+              v-text="`US$${monthlyPrice}`"
             />
           </div>
         </UButton>
