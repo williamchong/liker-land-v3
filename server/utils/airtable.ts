@@ -57,13 +57,75 @@ export interface FetchAirtableCMSProductsByTagIdResponseData {
       'Min Price'?: number
       'Listing Date'?: string[]
       'Timestamp'?: number
-      'DRM-free'?: number // 0 = false, 1 = true
+      'DRM-free'?: boolean | number // boolean in Publications table, number (0 = false, 1 = true) in Products table
       'Sales Count'?: number
       'Chain'?: string[]
       'Calculation'?: boolean
     }
   }>
-  offset: string
+  offset?: string
+}
+
+function getFormultaForSearchTerm(searchTerm: string) {
+  const formattedQueryString = searchTerm.replaceAll('"', '').toLowerCase()
+  const fieldNames = ['Name', 'Description', 'Owner Name', 'Author', 'Publisher']
+  const formulas = fieldNames.map(
+    field => `IF(SEARCH(LOWER("${formattedQueryString}"), LOWER({${field}})), 1)`,
+  )
+  const formula = `OR(${formulas.join(', ')})`
+  return formula
+}
+
+export async function fetchAirtableCMSPublicationsBySearchTerm(
+  searchTerm: string,
+  { pageSize = 100, offset }: { pageSize?: number, offset?: string } = {},
+): Promise<FetchBookstoreCMSProductsResponseData> {
+  const config = useRuntimeConfig()
+  const fetch = getAirtableCMSFetch()
+  const filterByFormula = getFormultaForSearchTerm(searchTerm)
+  const results = await fetch<FetchAirtableCMSProductsByTagIdResponseData>(
+    `/${config.public.airtableCMSPublicationsTableId}`,
+    {
+      params: {
+        pageSize,
+        filterByFormula,
+        offset,
+      },
+    },
+  )
+
+  const normalizedRecords: BookstoreCMSProduct[] = results.records.map(({ id, fields }) => {
+    const classId = fields.ID
+    const classIds = fields.IDs
+    const title = fields.Name
+    const titles = fields.Names
+    const imageUrl = fields['Image URL']
+    const imageUrls = fields['Image URLs']
+    const locales = fields.Locales
+    const isDRMFree = !!fields['DRM-free']
+    const timestamp = fields.Timestamp
+    const minPrice = fields['Min Price']
+    const isMultiple = classIds && classIds.length > 1
+    return {
+      id,
+      classId,
+      classIds: isMultiple ? classIds : undefined,
+      title,
+      titles: isMultiple ? titles : undefined,
+      imageUrl,
+      imageUrls: isMultiple ? imageUrls : undefined,
+      locales,
+      isDRMFree,
+      isMultiple: isMultiple ? true : undefined,
+      minPrice,
+      timestamp,
+    }
+  })
+
+  return {
+    records: normalizedRecords,
+    offset: results.offset,
+  }
 }
 
 export async function fetchAirtableCMSProductsByTagId(
@@ -130,7 +192,7 @@ export interface FetchAirtableCMSTagsResponseData {
       'Public'?: boolean
     }
   }>
-  offset: string
+  offset?: string
 }
 
 export async function fetchAirtableCMSTagsForAll(
