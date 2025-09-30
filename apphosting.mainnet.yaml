@@ -19,6 +19,8 @@ env:
     value: appdrA6ruqhPRRFQj
   - variable: AIRTABLE_CMS_PRODUCTS_TABLE_ID
     value: tblYTTj9AkyKAi8Md
+  - variable: AIRTABLE_CMS_PUBLICATIONS_TABLE_ID
+    value: tblgXqb89EtLtmaKw
   - variable: AIRTABLE_CMS_TAGS_TABLE_ID
     value: tblUhRa3g1x2qmrik
   - variable: AIRTABLE_API_SECRET

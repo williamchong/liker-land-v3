@@ -63,6 +63,7 @@ export default defineNuxtConfig({
       },
       airtableCMSBaseId: process.env.AIRTABLE_CMS_BASE_ID,
       airtableCMSProductsTableId: process.env.AIRTABLE_CMS_PRODUCTS_TABLE_ID,
+      airtableCMSPublicationsTableId: process.env.AIRTABLE_CMS_PUBLICATIONS_TABLE_ID,
       airtableCMSTagsTableId: process.env.AIRTABLE_CMS_TAGS_TABLE_ID,
       cacheKeyPrefix: '3ook',
       googleAdConversionId: process.env.AD_CONVERSION_ID,
