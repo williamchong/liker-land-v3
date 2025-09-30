@@ -124,15 +124,9 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     }
   })
 
-  async function fetchSearchResults(type: 'q' | 'author' | 'publisher', searchTerm: string, {
-    isRefresh = false,
-  }: {
-    isRefresh?: boolean
-  } = {}) {
-    const queryKey = `${type}:${searchTerm}`
-
+  function checkAndInitializeSearchState(queryKey: string, isRefresh: boolean) {
     if (bookstoreSearchResultsByQueryMap.value[queryKey]?.isFetching) {
-      return
+      return false
     }
 
     if (!bookstoreSearchResultsByQueryMap.value[queryKey] || isRefresh) {
@@ -143,70 +137,97 @@ export const useBookstoreStore = defineStore('bookstore', () => {
       }
     }
 
+    bookstoreSearchResultsByQueryMap.value[queryKey].isFetching = true
+    return true
+  }
+
+  function updateSearchResults(queryKey: string, items: BookstoreSearchResults['items'], nextKey: string | undefined, isRefresh: boolean) {
+    const state = bookstoreSearchResultsByQueryMap.value[queryKey]
+    if (!state) return
+
+    if (isRefresh) {
+      state.items = items
+    }
+    else {
+      state.items.push(...items)
+    }
+    state.nextKey = nextKey
+  }
+
+  function finalizeSearchState(queryKey: string) {
+    const state = bookstoreSearchResultsByQueryMap.value[queryKey]
+    if (!state) return
+
+    state.hasFetched = true
+    state.isFetching = false
+  }
+
+  async function fetchTextSearch(searchTerm: string, queryKey: string, isRefresh: boolean) {
+    const result = await fetchBookstoreCMSPublicationsBySearchTerm(searchTerm, {
+      offset: isRefresh ? undefined : bookstoreSearchResultsByQueryMap.value[queryKey]?.nextKey,
+      limit: 100,
+      ts: getTimestampRoundedToMinute(),
+    })
+
+    const mappedItems = result.records
+      .filter(item => item.classId && item.title && item.imageUrl)
+      .map(item => ({
+        classId: item.classId!,
+        title: item.title!,
+        imageUrl: item.imageUrl!,
+        minPrice: item.minPrice,
+      }))
+
+    updateSearchResults(queryKey, mappedItems, result.offset, isRefresh)
+  }
+
+  async function fetchMetadataSearch(type: 'author' | 'publisher', searchTerm: string, queryKey: string, isRefresh: boolean) {
+    const options = {
+      limit: 100,
+      key: isRefresh ? undefined : bookstoreSearchResultsByQueryMap.value[queryKey]?.nextKey,
+    }
+
+    const result = await fetchNFTClassesByMetadata(type, searchTerm, options)
+
+    if (result) {
+      const nftClasses = result.data.map(item => ({
+        ...item,
+        address: item.address.toLowerCase(),
+      }))
+      const mappedItems = nftClasses
+        .map(nftClass => ({
+          classId: nftClass.address.toLowerCase(),
+          title: nftClass.name || '',
+          imageUrl: nftClass.metadata?.image || '',
+          minPrice: undefined,
+        }))
+
+      const nextKey = result.pagination.count === options.limit ? result.pagination?.next_key?.toString() : undefined
+      updateSearchResults(queryKey, mappedItems, nextKey, isRefresh)
+    }
+  }
+
+  async function fetchSearchResults(type: 'q' | 'author' | 'publisher', searchTerm: string, {
+    isRefresh = false,
+  }: {
+    isRefresh?: boolean
+  } = {}) {
+    const queryKey = `${type}:${searchTerm}`
+
+    if (!checkAndInitializeSearchState(queryKey, isRefresh)) {
+      return
+    }
+
     try {
-      bookstoreSearchResultsByQueryMap.value[queryKey].isFetching = true
-
       if (type === 'q') {
-        const result = await fetchBookstoreCMSPublicationsBySearchTerm(searchTerm, {
-          offset: isRefresh ? undefined : bookstoreSearchResultsByQueryMap.value[queryKey]?.nextKey,
-          limit: 100,
-          ts: getTimestampRoundedToMinute(),
-        })
-
-        const mappedItems = result.records
-          .filter(item => item.classId && item.title && item.imageUrl)
-          .map(item => ({
-            classId: item.classId!,
-            title: item.title!,
-            imageUrl: item.imageUrl!,
-            minPrice: item.minPrice,
-          }))
-
-        if (isRefresh) {
-          bookstoreSearchResultsByQueryMap.value[queryKey].items = mappedItems
-        }
-        else {
-          bookstoreSearchResultsByQueryMap.value[queryKey].items.push(...mappedItems)
-        }
-
-        bookstoreSearchResultsByQueryMap.value[queryKey].nextKey = result.offset
+        await fetchTextSearch(searchTerm, queryKey, isRefresh)
       }
       else {
-        // For author/publisher queries, use indexer API
-        const options = {
-          limit: 100,
-          key: isRefresh ? undefined : bookstoreSearchResultsByQueryMap.value[queryKey]?.nextKey,
-        }
-
-        const result = await fetchNFTClassesByMetadata(type, searchTerm, options)
-
-        if (result) {
-          const nftClasses = result.data.map(item => ({
-            ...item,
-            address: item.address.toLowerCase(),
-          }))
-          const mappedItems = nftClasses
-            .map(nftClass => ({
-              classId: nftClass.address.toLowerCase(),
-              title: nftClass.name || '',
-              imageUrl: nftClass.metadata?.image || '',
-              minPrice: undefined,
-            }))
-
-          if (isRefresh) {
-            bookstoreSearchResultsByQueryMap.value[queryKey].items = mappedItems
-          }
-          else {
-            bookstoreSearchResultsByQueryMap.value[queryKey].items.push(...mappedItems)
-          }
-
-          bookstoreSearchResultsByQueryMap.value[queryKey].nextKey = result.pagination.count === options.limit ? result.pagination?.next_key?.toString() : undefined
-        }
+        await fetchMetadataSearch(type, searchTerm, queryKey, isRefresh)
       }
     }
     finally {
-      bookstoreSearchResultsByQueryMap.value[queryKey].hasFetched = true
-      bookstoreSearchResultsByQueryMap.value[queryKey].isFetching = false
+      finalizeSearchState(queryKey)
     }
   }
 
