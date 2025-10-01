@@ -5,21 +5,20 @@ import { dedicatedWalletConnector } from '@likecoin/wagmi-connector'
 
 export function createWagmiConfig({
   apiKey,
-  rpcURL = '',
-  chainId,
   customLogoURL,
   walletConnectProjectId,
   isServer = false,
+  isTestnet = false,
 }: {
   apiKey: string
-  rpcURL?: string
-  chainId?: number
   customLogoURL?: string
   walletConnectProjectId?: string
   isServer?: boolean
+  isTestnet?: boolean
 }) {
+  const chain = isTestnet ? optimismSepolia : optimism
   return createConfig({
-    chains: [optimismSepolia, optimism],
+    chains: [chain],
     connectors: [
       injected(),
       metaMask(),
@@ -39,7 +38,7 @@ export function createWagmiConfig({
       ...(isServer
         ? []
         : [dedicatedWalletConnector({
-            chains: [optimismSepolia, optimism],
+            chains: [chain],
             options: {
               apiKey,
               accentColor: '#131313',
@@ -49,8 +48,8 @@ export function createWagmiConfig({
               magicSdkConfiguration: {
                 deferPreload: true,
                 network: {
-                  rpcUrl: rpcURL,
-                  chainId,
+                  rpcUrl: chain.rpcUrls.default.http[0],
+                  chainId: chain.id,
                 },
               },
             },

@@ -9,11 +9,10 @@ export default defineNuxtPlugin((nuxtApp) => {
   const config = useRuntimeConfig()
   const wagmiConfig = createWagmiConfig({
     apiKey: config.public.magicLinkAPIKey,
-    rpcURL: config.public.magicLinkRPCURL,
-    chainId: config.public.magicLinkChainId,
     customLogoURL: config.public.magicLinkCustomLogoURL,
     walletConnectProjectId: config.public.walletConnectProjectId,
     isServer: !!nuxtApp.ssrContext,
+    isTestnet: !!config.public.isTestnet,
   })
   nuxtApp.vueApp
     .use(WagmiPlugin, { config: wagmiConfig })
