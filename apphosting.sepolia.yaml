@@ -51,12 +51,8 @@ env:
     value: https://likenft-migration.pandawork.com
   - variable: MAGIC_LINK_API_KEY
     value: pk_live_5E14E3184484268D
-  - variable: MAGIC_LINK_CHAIN_ID
-    value: 11155420
   - variable: MAGIC_LINK_CUSTOM_LOGO_URL
     value: https://sepolia.3ook.com/android-chrome-512x512.png
-  - variable: MAGIC_LINK_RPC_URL
-    value: https://sepolia.optimism.io
   - variable: NUXT_PUBLIC_SCRIPTS_INTERCOM_APP_ID
     value: j0ryap5a
   - variable: NUXT_SESSION_PASSWORD
