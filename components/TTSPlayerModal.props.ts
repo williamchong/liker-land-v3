@@ -8,6 +8,9 @@ export interface TTSPlayerModalProps {
   bookLanguage?: string | undefined
   nftClassId?: string
   startIndex?: number
+  specificLanguageVoice?: string
+  isAutoClose?: boolean
+  isFullscreen?: boolean
   onOpen?: () => void
   onClose?: () => void
   onSegmentChange?: (segment: TTSSegment & { index?: number } | undefined) => void
