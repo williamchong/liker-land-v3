@@ -128,17 +128,17 @@
         >
           <span
             class="font-bold"
-            v-text="$t('upsell_plus_yearly_button')"
+            v-text="yearlyButtonCTA"
           />
           <div class="flex items-center justify-center gap-1">
             <span
               v-if="hasYearlyDiscount"
               class="text-gray-500 line-through"
-              v-text="`US$${originalYearlyPrice}`"
+              v-text="$t('upsell_plus_yearly_price_full', { price: originalYearlyPrice })"
             />
             <span
               class="text-theme-50 font-bold"
-              v-text="`US$${yearlyPrice}`"
+              v-text="$t('upsell_plus_yearly_price_full', { price: yearlyPrice })"
             />
           </div>
         </UButton>
@@ -154,18 +154,16 @@
           }"
           @click="() => handleSubscribe('monthly')"
         >
-          <span
-            v-text="$t('upsell_plus_monthly_button')"
-          />
+          <span v-text="monthlyButtonCTA" />
           <div class="flex items-center justify-center gap-1">
             <span
               v-if="hasMonthlyDiscount"
               class="text-gray-500 line-through"
-              v-text="`US$${originalMonthlyPrice}`"
+              v-text="$t('upsell_plus_monthly_price_full', { price: originalMonthlyPrice })"
             />
             <span
               class="text-theme-500"
-              v-text="`US$${monthlyPrice}`"
+              v-text="$t('upsell_plus_monthly_price_full', { price: monthlyPrice })"
             />
           </div>
         </UButton>
@@ -224,9 +222,30 @@ const showYearlyPlan = computed(() => (
   || (props.isLikerPlus && props.likerPlusPeriod === 'month')
 ))
 
+const allowYearlyTrial = computed(() => !props.nftClassId)
+
+const yearlyButtonCTA = computed(() => {
+  if (props.nftClassId) {
+    return $t('upsell_plus_yearly_gift_cta')
+  }
+  if (props.trialPeriodDays && allowYearlyTrial.value) {
+    return $t('upsell_plus_yearly_trial_cta', { days: props.trialPeriodDays })
+  }
+  return $t('upsell_plus_yearly_button')
+})
+
+const monthlyButtonCTA = computed(() => {
+  if (props.trialPeriodDays) {
+    return $t('upsell_plus_monthly_trial_cta', { days: props.trialPeriodDays })
+  }
+  return $t('upsell_plus_monthly_button')
+})
+
 function handleSubscribe(plan: SubscriptionPlan) {
+  const shouldApplyTrial = plan === 'monthly' || allowYearlyTrial.value
   emit('subscribe', {
     plan,
+    trialPeriodDays: shouldApplyTrial ? props.trialPeriodDays : undefined,
     utmCampaign: props.utmCampaign,
     utmMedium: props.utmMedium,
     utmSource: props.utmSource,

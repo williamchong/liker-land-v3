@@ -249,7 +249,7 @@
 
             <UButton
               class="mt-4"
-              :label="$t('pricing_page_continue_button')"
+              :label="subscribeButtonLabel"
               block
               size="xl"
               :loading="props.isProcessingSubscription"
@@ -373,6 +373,13 @@ const planLabelBaseClass = [
   'hover:shadow-lg',
   'hover:border-gray-400',
 ]
+
+const subscribeButtonLabel = computed(() => {
+  if (props.trialPeriodDays) {
+    return $t('pricing_page_start_trial_button', { days: props.trialPeriodDays })
+  }
+  return $t('pricing_page_continue_button')
+})
 
 onMounted(() => {
   emit('open')
