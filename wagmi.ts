@@ -1,5 +1,5 @@
 import { http, createConfig } from '@wagmi/vue'
-import { optimism, optimismSepolia } from '@wagmi/vue/chains'
+import { base, baseSepolia } from '@wagmi/vue/chains'
 import { injected, metaMask, walletConnect } from '@wagmi/vue/connectors'
 import { dedicatedWalletConnector } from '@likecoin/wagmi-connector'
 
@@ -16,7 +16,7 @@ export function createWagmiConfig({
   isServer?: boolean
   isTestnet?: boolean
 }) {
-  const chain = isTestnet ? optimismSepolia : optimism
+  const chain = isTestnet ? baseSepolia : base
   return createConfig({
     chains: [chain],
     connectors: [
@@ -57,8 +57,8 @@ export function createWagmiConfig({
     ],
     ssr: true,
     transports: {
-      [optimism.id]: http(),
-      [optimismSepolia.id]: http(),
+      [base.id]: http(),
+      [baseSepolia.id]: http(),
     },
   })
 }
