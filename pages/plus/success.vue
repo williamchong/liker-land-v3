@@ -46,8 +46,7 @@ const getRouteBaseName = useRouteBaseName()
 
 const isRedirected = computed(() => !!getRouteQuery('redirect'))
 const isYearly = computed(() => getRouteQuery('period') === 'yearly')
-// Unused now but `payment_id` is set in the redirect URL
-// const paymentId = computed(() => getRouteQuery('payment_id'))
+const paymentId = computed(() => getRouteQuery('payment_id'))
 
 const isRefreshing = ref(true)
 const isRedirecting = ref(false)
@@ -112,13 +111,15 @@ onMounted(async () => {
       const subscriptionPrice = isYearly.value ? yearlyPrice.value : monthlyPrice.value
 
       if (isTrial) {
-        useLogEvent('StartTrial', {
+        useLogEvent('start_trial', {
+          transaction_id: paymentId.value,
           currency: currency.value,
           value: 0,
         })
       }
       else {
-        useLogEvent('Subscribe', {
+        useLogEvent('subscribe', {
+          transaction_id: paymentId.value,
           currency: currency.value,
           value: subscriptionPrice,
         })
