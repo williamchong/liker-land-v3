@@ -1,8 +1,9 @@
 <template>
   <NuxtLoadingIndicator />
+  <NuxtPwaManifest />
   <UApp :toaster="{ position: 'top-right' }">
-    <NuxtLayout>
-      <NuxtPwaManifest />
+    <MaintenancePage v-if="isShowMaintenancePage" />
+    <NuxtLayout v-else>
       <NuxtPage class="flex flex-col grow" />
     </NuxtLayout>
   </UApp>
@@ -121,4 +122,6 @@ useHead({
     },
   ],
 })
+
+const { isShowMaintenancePage } = useMaintenanceMode()
 </script>

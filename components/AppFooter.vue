@@ -25,7 +25,10 @@
         class="flex justify-center"
         :to="localeRoute({ name: 'about' })"
       >
-        <AppLogo :height="16" />
+        <AppLogo
+          v-if="props.isShowLogo"
+          :height="24"
+        />
       </ULink>
       <ULink
         class="border-b leading-5"
@@ -133,6 +136,13 @@
 </template>
 
 <script setup lang="ts">
+const props = defineProps({
+  isShowLogo: {
+    type: Boolean,
+    default: true,
+  },
+})
+
 const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 

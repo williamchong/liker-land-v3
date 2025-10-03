@@ -14,7 +14,7 @@
       <AppLogo
         class="w-full max-w-lg"
         height="auto"
-        fill="white"
+        :is-padded="false"
       />
 
       <div class="space-y-4 text-gray-100">

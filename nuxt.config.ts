@@ -76,6 +76,7 @@ export default defineNuxtConfig({
       walletConnectProjectId: process.env.WALLET_CONNECT_PROJECT_ID,
       arweaveEndpoint: process.env.ARWEAVE_ENDPOINT,
       ipfsEndpoint: process.env.IPFS_ENDPOINT,
+      isMaintenanceMode: process.env.IS_MAINTENANCE_MODE !== undefined,
       isTestnet: process.env.IS_TESTNET,
       pdfViewerOrigin: process.env.PDF_VIEWER_ORIGIN,
       pdfViewerURL: `${process.env.PDF_VIEWER_ORIGIN}${process.env.PDF_VIEWER_PATH}`,
