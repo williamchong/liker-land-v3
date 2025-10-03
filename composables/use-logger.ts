@@ -30,6 +30,8 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
       add_to_cart: 'AddToCart',
       purchase: 'Purchase',
       search: 'Search',
+      start_trial: 'StartTrial',
+      subscribe: 'Subscribe',
     }
     if (eventNameMapping[eventName]) {
       const {
@@ -37,6 +39,7 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
         value,
         currency,
         items,
+        predicted_ltv: predictedLTV,
       } = eventParams
       const eventId = paymentId ? `${eventNameMapping[eventName]}_${paymentId}` : undefined
       proxy.fbq('track', eventNameMapping[eventName], {
@@ -51,6 +54,7 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
             }))
           : undefined,
         content_ids: Array.isArray(items) ? items.map(i => i.id) : undefined,
+        predicted_ltv: predictedLTV,
       }, { eventID: eventId })
     }
   }
