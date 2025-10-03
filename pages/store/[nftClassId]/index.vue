@@ -513,13 +513,6 @@ if (nftClassId.value !== nftClassId.value.toLowerCase()) {
 await callOnce(async () => {
   try {
     await nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value)
-    if (bookInfo.bookstoreInfo.value?.redirectClassId) {
-      await navigateTo(localeRoute({
-        name: getRouteBaseName(route),
-        params: { nftClassId: bookInfo.bookstoreInfo.value.redirectClassId },
-        query: route.query,
-      }), { replace: true, redirectCode: 301 })
-    }
   }
   catch (error) {
     await handleError(error, {
@@ -536,6 +529,14 @@ await callOnce(async () => {
     })
   }
 })
+
+if (bookInfo.bookstoreInfo.value?.redirectClassId) {
+  await navigateTo(localeRoute({
+    name: getRouteBaseName(route),
+    params: { nftClassId: bookInfo.bookstoreInfo.value.redirectClassId },
+    query: route.query,
+  }), { replace: true, redirectCode: 301 })
+}
 
 const authorStore = useAuthorStore()
 const { getResizedImageURL } = useImageResize()
