@@ -1,6 +1,11 @@
 [
   {
     "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
     "name": "AccessControlBadConfirmation",
     "type": "error"
   },
@@ -161,7 +166,17 @@
   },
   {
     "inputs": [],
+    "name": "ErrMemoMetadataLengthMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "ErrNftNoSupply",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ErrSupplyDecrease",
     "type": "error"
   },
   {
@@ -285,6 +300,25 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "_fromTokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "_toTokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "BatchMetadataUpdate",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": true,
         "internalType": "address",
         "name": "beacon",
@@ -311,6 +345,19 @@
       }
     ],
     "name": "Initialized",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "_tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "MetadataUpdate",
     "type": "event"
   },
   {
@@ -773,53 +820,64 @@
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "creator",
+        "type": "address"
+      },
+      {
+        "internalType": "address[]",
+        "name": "minters",
+        "type": "address[]"
+      },
+      {
+        "internalType": "address[]",
+        "name": "updaters",
+        "type": "address[]"
+      },
+      {
         "components": [
           {
-            "internalType": "address",
-            "name": "creator",
-            "type": "address"
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
           },
           {
-            "internalType": "address[]",
-            "name": "updaters",
-            "type": "address[]"
+            "internalType": "string",
+            "name": "symbol",
+            "type": "string"
           },
           {
-            "internalType": "address[]",
-            "name": "minters",
-            "type": "address[]"
+            "internalType": "string",
+            "name": "metadata",
+            "type": "string"
           },
           {
-            "components": [
-              {
-                "internalType": "string",
-                "name": "name",
-                "type": "string"
-              },
-              {
-                "internalType": "string",
-                "name": "symbol",
-                "type": "string"
-              },
-              {
-                "internalType": "string",
-                "name": "metadata",
-                "type": "string"
-              },
-              {
-                "internalType": "uint64",
-                "name": "max_supply",
-                "type": "uint64"
-              }
-            ],
-            "internalType": "struct BookConfig",
-            "name": "config",
-            "type": "tuple"
+            "internalType": "uint64",
+            "name": "max_supply",
+            "type": "uint64"
           }
         ],
-        "internalType": "struct MsgNewBookNFT",
-        "name": "msgNewBookNFT",
+        "internalType": "struct BookConfig",
+        "name": "config",
         "type": "tuple"
+      }
+    ],
+    "name": "initConfig",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "name_",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "symbol_",
+        "type": "string"
       }
     ],
     "name": "initialize",
@@ -916,6 +974,24 @@
   {
     "inputs": [
       {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "ownerGrantRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
@@ -930,6 +1006,24 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "ownerRevokeRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -1316,6 +1410,24 @@
       }
     ],
     "name": "update",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "metadata",
+        "type": "string"
+      }
+    ],
+    "name": "updateTokenMetadata",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
