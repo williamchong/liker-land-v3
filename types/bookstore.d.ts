@@ -30,6 +30,9 @@ declare interface BookstoreInfo {
   ownerWallet: string
   mustClaimToView: boolean
   isHidden: boolean
+  isApprovedForSale: boolean
+  isApprovedForIndexing: boolean
+  isApprovedForAds: boolean
   hideDownload: boolean
   hideAudio: boolean
   enableCustomMessagePage: boolean
