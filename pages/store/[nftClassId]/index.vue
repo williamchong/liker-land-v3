@@ -253,7 +253,7 @@
                   class="cursor-pointer"
                   size="xl"
                   :loading="isPurchasing"
-                  :disabled="isSelectedPricingItemSoldOut || isPurchasing"
+                  :disabled="!canBePurchased"
                   block
                   @click="handlePurchaseButtonClick"
                 />
@@ -407,7 +407,7 @@
           color="primary"
           size="xl"
           :loading="isPurchasing"
-          :disabled="isSelectedPricingItemSoldOut || isPurchasing"
+          :disabled="!canBePurchased"
           block
           @click="handleStickyPurchaseButtonClick"
         />
@@ -573,7 +573,7 @@ const meta = [
   ...generateOGMetaTags({ selectedPricingItemIndex: selectedPricingItemIndex.value }),
 ]
 
-if (bookInfo.isHidden.value) {
+if (bookInfo.isHidden.value || !bookInfo.isApprovedForIndexing.value) {
   meta.push({ name: 'robots', content: 'noindex, nofollow' })
 }
 
@@ -707,6 +707,10 @@ const formattedLogPayload = computed(() => {
 
 const isSelectedPricingItemSoldOut = computed(() => {
   return !!selectedPricingItem.value?.isSoldOut
+})
+
+const canBePurchased = computed(() => {
+  return !isSelectedPricingItemSoldOut.value && !isPurchasing.value && bookInfo.isApprovedForSale.value
 })
 
 const getContentTypeLabel = useContentTypeLabel()

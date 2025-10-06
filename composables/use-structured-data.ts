@@ -15,7 +15,7 @@ export function useStructuredData(
 
     const pricingItems = bookInfo.pricingItems.value
     const pricingItem = pricingItems[selectedPricingItemIndex]
-    if (!pricingItem || bookInfo.isHidden.value) {
+    if (!pricingItem || bookInfo.isHidden.value || !bookInfo.isApprovedForAds.value) {
       return []
     }
     const meta = [{

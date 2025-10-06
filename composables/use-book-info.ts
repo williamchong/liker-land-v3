@@ -141,6 +141,18 @@ export default function (
     return bookstoreInfo.value?.isHidden || false
   })
 
+  const isApprovedForSale = computed(() => {
+    return bookstoreInfo.value?.isApprovedForSale || false
+  })
+
+  const isApprovedForIndexing = computed(() => {
+    return bookstoreInfo.value?.isApprovedForIndexing || false
+  })
+
+  const isApprovedForAds = computed(() => {
+    return bookstoreInfo.value?.isApprovedForAds || false
+  })
+
   const isCustomMessageEnabled = computed(() => {
     return bookstoreInfo.value?.enableCustomMessagePage || false
   })
@@ -265,6 +277,9 @@ export default function (
     bookstoreInfo,
     isCustomMessageEnabled,
     isHidden,
+    isApprovedForSale,
+    isApprovedForIndexing,
+    isApprovedForAds,
     isDownloadable,
     isAudioHidden,
     formattedTTSSupportLabel,
