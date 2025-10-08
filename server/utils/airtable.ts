@@ -66,7 +66,7 @@ export interface FetchAirtableCMSProductsByTagIdResponseData {
   offset?: string
 }
 
-function getFormultaForSearchTerm(searchTerm: string) {
+function getFormulaForSearchTerm(searchTerm: string) {
   const formattedQueryString = searchTerm.replaceAll('"', '').toLowerCase()
   const fieldNames = ['Name', 'Description', 'Owner Name', 'Author', 'Publisher']
   const formulas = fieldNames.map(
@@ -82,7 +82,7 @@ export async function fetchAirtableCMSPublicationsBySearchTerm(
 ): Promise<FetchBookstoreCMSProductsResponseData> {
   const config = useRuntimeConfig()
   const fetch = getAirtableCMSFetch()
-  const filterByFormula = getFormultaForSearchTerm(searchTerm)
+  const filterByFormula = getFormulaForSearchTerm(searchTerm)
   const results = await fetch<FetchAirtableCMSProductsByTagIdResponseData>(
     `/${config.public.airtableCMSPublicationsTableId}`,
     {
