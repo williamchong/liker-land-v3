@@ -151,6 +151,7 @@ onMounted(async () => {
       utmCampaign: 'pricing_page',
       utmSource: 'website',
       utmMedium: 'web',
+      coupon: getRouteQuery('coupon') as string | undefined,
     })
     navigateTo(localeRoute({ name: 'store' }))
   }

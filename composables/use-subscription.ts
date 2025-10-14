@@ -121,6 +121,7 @@ export function useSubscription() {
     utmCampaign,
     utmMedium,
     utmSource,
+    coupon,
     plan,
     nftClassId,
     redirectRoute,
@@ -172,6 +173,7 @@ export function useSubscription() {
           utmCampaign: analyticsParams.utmCampaign || utmCampaign,
           utmMedium: analyticsParams.utmMedium || utmMedium,
           utmSource: analyticsParams.utmSource || utmSource,
+          coupon,
         })
         if (redirectRoute && redirectRoute?.name) {
           accountStore.savePlusRedirectRoute(redirectRoute)
