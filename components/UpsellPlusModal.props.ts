@@ -8,6 +8,7 @@ export interface UpsellPlusModalSubscribeEventPayload {
   utmCampaign?: string
   utmMedium?: string
   utmSource?: string
+  coupon?: string
   redirectRoute?: RouteLocationAsRelativeGeneric
 }
 

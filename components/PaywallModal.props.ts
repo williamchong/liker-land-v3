@@ -10,6 +10,7 @@ export interface PaywallModalProps {
   'utmCampaign'?: string
   'utmMedium'?: string
   'utmSource'?: string
+  'coupon'?: string
   'onUpdate:modelValue'?: (value: SubscriptionPlan) => void
   'onSubscribe'?: (props: {
     trialPeriodDays?: number
@@ -17,6 +18,7 @@ export interface PaywallModalProps {
     utmCampaign?: string
     utmMedium?: string
     utmSource?: string
+    coupon?: string
   }) => void
   'onOpen'?: () => void
   'onClose'?: () => void

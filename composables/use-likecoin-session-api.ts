@@ -232,6 +232,7 @@ export function useLikeCoinSessionAPI() {
     gadClickId,
     gadSource,
     fbClickId,
+    coupon,
   }: {
     period: SubscriptionPlan
     trialPeriodDays?: number
@@ -247,6 +248,7 @@ export function useLikeCoinSessionAPI() {
     gadClickId?: string
     gadSource?: string
     fbClickId?: string
+    coupon?: string
   }) {
     return fetch.value<FetchLikerPlusCheckoutLinkResponseData>(`/plus/new`, {
       method: 'POST',
@@ -264,6 +266,7 @@ export function useLikeCoinSessionAPI() {
         gadClickId,
         gadSource,
         fbClickId,
+        coupon,
       },
     })
   }
