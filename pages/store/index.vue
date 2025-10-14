@@ -181,7 +181,7 @@ const tagId = computed({
 })
 const isDefaultTagId = computed(() => getIsDefaultTagId(tagId.value))
 
-const normalizedLocale = computed(() => locale.value === 'zh-Hant' ? 'zh' : 'en')
+const normalizedLocale = computed(() => 'zh' as const) // Always show chinese tags for all locales
 
 const allTagItems = computed(() => {
   return bookstoreStore.bookstoreCMSTags
