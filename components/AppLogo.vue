@@ -58,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-const { public: isTestnet } = useRuntimeConfig()
+const { public: { isTestnet } } = useRuntimeConfig()
 
 const props = defineProps({
   height: {
