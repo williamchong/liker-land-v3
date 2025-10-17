@@ -19,6 +19,27 @@ export function fetchBookstoreCMSProductsByTagId(tagId: string, {
   })
 }
 
+export function fetchBookstoreCMSPublicationsBySearchTerm(searchTerm: string, {
+  offset,
+  limit = 100,
+  ts,
+}: {
+  offset?: string
+  limit?: number
+  ts?: number
+} = {}) {
+  return $fetch<FetchBookstoreCMSProductsResponseData>('/api/store/search', {
+    query: {
+      q: searchTerm,
+      offset,
+      limit,
+      ts,
+    },
+    credentials: 'include',
+    mode: 'no-cors',
+  })
+}
+
 export function fetchBookstoreCMSTagsForAll({
   offset,
   limit,

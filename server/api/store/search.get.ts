@@ -3,10 +3,18 @@ import { FetchError } from 'ofetch'
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event)
-    const tagId = (Array.isArray(query.tag) ? query.tag[0] : query.tag) || 'latest'
+    const searchTerm = (Array.isArray(query.q) ? query.q[0] : query.q) || undefined
     const pageSize = (Array.isArray(query.limit) ? query.limit[0] : query.limit) || 100
     const offset = (Array.isArray(query.offset) ? query.offset[0] : query.offset) || undefined
-    const result = await fetchAirtableCMSProductsByTagId(tagId, {
+
+    if (!searchTerm) {
+      throw createError({
+        status: 400,
+        message: 'SEARCH_TERM_REQUIRED',
+      })
+    }
+
+    const result = await fetchAirtableCMSPublicationsBySearchTerm(searchTerm, {
       pageSize,
       offset,
     })
@@ -21,12 +29,6 @@ export default defineEventHandler(async (event) => {
         throw createError({
           status: 401,
           message: 'INVALID_API_SECRET',
-        })
-      }
-      if (code === 422 && type === 'VIEW_NAME_NOT_FOUND') {
-        throw createError({
-          status: 404,
-          message: 'TAG_NOT_FOUND',
         })
       }
     }
