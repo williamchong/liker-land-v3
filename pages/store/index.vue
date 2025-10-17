@@ -27,6 +27,7 @@
           <span v-if="querySearchTerm">{{ $t('store_search_prefix') }}: {{ querySearchTerm }}</span>
           <span v-else-if="queryAuthorName">{{ $t('store_author_prefix') }}: {{ queryAuthorName }}</span>
           <span v-else-if="queryPublisherName">{{ $t('store_publisher_prefix') }}: {{ queryPublisherName }}</span>
+          <span v-else-if="queryOwnerWallet">{{ $t('store_owner_wallet_prefix') }}: {{ queryOwnerWallet }}</span>
         </h1>
       </div>
 
@@ -151,12 +152,14 @@ const isMobile = useMediaQuery('(max-width: 768px)')
 const querySearchTerm = computed(() => getRouteQuery('q', ''))
 const queryAuthorName = computed(() => getRouteQuery('author', ''))
 const queryPublisherName = computed(() => getRouteQuery('publisher', ''))
+const queryOwnerWallet = computed(() => getRouteQuery('owner_wallet', ''))
 
 // Search query key for bookstore store
 const searchQuery = computed(() => {
   if (querySearchTerm.value) return `q:${querySearchTerm.value}`
   if (queryAuthorName.value) return `author:${queryAuthorName.value}`
   if (queryPublisherName.value) return `publisher:${queryPublisherName.value}`
+  if (queryOwnerWallet.value) return `owner_wallet:${queryOwnerWallet.value}`
   return ''
 })
 
@@ -248,6 +251,9 @@ const canonicalURL = computed(() => {
   if (queryPublisherName.value) {
     canonicalParams.set('publisher', queryPublisherName.value)
   }
+  if (queryOwnerWallet.value) {
+    canonicalParams.set('owner_wallet', queryOwnerWallet.value)
+  }
 
   const queryString = canonicalParams.toString()
   return `${baseURL}${path}${queryString ? `?${queryString}` : ''}`
@@ -300,7 +306,7 @@ watch(localizedTagId, async (value) => {
 })
 
 // Watch for changes in search parameters
-watch([querySearchTerm, queryAuthorName, queryPublisherName], async () => {
+watch([querySearchTerm, queryAuthorName, queryPublisherName, queryOwnerWallet], async () => {
   if (isSearchMode.value) {
     await fetchItems({ lazy: true })
   }
@@ -345,7 +351,7 @@ async function fetchItems({ lazy = false, isRefresh = false } = {}) {
     try {
       const [type, searchTerm] = searchQuery.value.split(':', 2)
       if (type && searchTerm) {
-        await bookstoreStore.fetchSearchResults(type as 'q' | 'author' | 'publisher', searchTerm, { isRefresh })
+        await bookstoreStore.fetchSearchResults(type as 'q' | 'author' | 'publisher' | 'owner_wallet', searchTerm, { isRefresh })
       }
     }
     catch (error) {

@@ -207,7 +207,34 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     }
   }
 
-  async function fetchSearchResults(type: 'q' | 'author' | 'publisher', searchTerm: string, {
+  async function fetchOwnerWalletSearch(walletAddress: string, queryKey: string, isRefresh: boolean) {
+    const options = {
+      limit: 100,
+      key: isRefresh ? undefined : bookstoreSearchResultsByQueryMap.value[queryKey]?.nextKey,
+      isBooksOnly: true,
+    }
+
+    const result = await fetchNFTClassesByOwnerWalletAddress(walletAddress, options)
+
+    if (result) {
+      const nftClasses = result.data.map(item => ({
+        ...item,
+        address: item.address.toLowerCase(),
+      }))
+      const mappedItems = nftClasses
+        .map(nftClass => ({
+          classId: nftClass.address.toLowerCase(),
+          title: nftClass.name || '',
+          imageUrl: nftClass.metadata?.image || '',
+          minPrice: undefined,
+        }))
+
+      const nextKey = result.pagination.count === options.limit ? result.pagination?.next_key?.toString() : undefined
+      updateSearchResults(queryKey, mappedItems, nextKey, isRefresh)
+    }
+  }
+
+  async function fetchSearchResults(type: 'q' | 'author' | 'publisher' | 'owner_wallet', searchTerm: string, {
     isRefresh = false,
   }: {
     isRefresh?: boolean
@@ -221,6 +248,9 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     try {
       if (type === 'q') {
         await fetchTextSearch(searchTerm, queryKey, isRefresh)
+      }
+      else if (type === 'owner_wallet') {
+        await fetchOwnerWalletSearch(searchTerm, queryKey, isRefresh)
       }
       else {
         await fetchMetadataSearch(type, searchTerm, queryKey, isRefresh)
