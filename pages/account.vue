@@ -131,7 +131,10 @@
         </UCard>
       </section>
 
-      <section class="space-y-3 pt-4">
+      <section
+        v-if="isShowStakeModeButton"
+        class="space-y-3 pt-4"
+      >
         <h2
           class="px-4 text-lg font-bold"
           v-text="$t('account_page_staking_title')"
@@ -243,6 +246,11 @@ const isWindowFocused = useDocumentVisibility()
 
 useHead({
   title: $t('account_page_title'),
+})
+
+const isShowStakeModeButton = computed(() => {
+  const config = useRuntimeConfig()
+  return !config.public.baseUrlStake
 })
 
 async function handleLogin() {
