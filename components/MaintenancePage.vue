@@ -3,14 +3,15 @@
     <div class="flex items-center justify-center grow p-5 laptop:p-12">
       <UCard
         :ui="{
-          root: 'ring-theme-500 ring-2',
-          header: 'bg-theme-500',
+          root: 'ring-theme-black ring-2',
+          header: 'bg-theme-black',
         }"
       >
         <template #header>
           <AppLogo
             class="max-w-xs mx-auto"
             height="auto"
+            :is-icon="false"
           />
         </template>
         <h1

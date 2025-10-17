@@ -5,7 +5,7 @@
         <ULink
           :to="localeRoute({ name: 'about' })"
         >
-          <AppLogo :height="16" />
+          <AppLogo />
         </ULink>
 
         <ul class="hidden laptop:flex items-center flex-wrap gap-10 gap-y-1 font-semibold">
@@ -46,7 +46,7 @@
           class="hidden laptop:flex items-center"
         >
           <UAvatar
-            class="bg-white border-[#EBEBEB]"
+            class="bg-white border-muted"
             :src="user?.avatar"
             :alt="user?.displayName"
             icon="i-material-symbols-person-2-rounded"
