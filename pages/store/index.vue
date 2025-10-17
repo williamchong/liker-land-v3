@@ -88,7 +88,27 @@
       class="flex flex-col items-center grow w-full max-w-[1440px] mx-auto pt-4 px-4 laptop:px-12 pb-16"
     >
       <div
-        v-if="itemsCount === 0 && !products.isFetchingItems && products.hasFetchedItems"
+        v-if="shouldShowDefaultListing"
+        class="w-full mb-8"
+      >
+        <div class="flex flex-col items-center py-8">
+          <UIcon
+            class="opacity-20 mb-4"
+            name="i-material-symbols-search-off"
+            size="64"
+          />
+          <h2 class="text-xl font-bold text-gray-900 mb-2">
+            {{ $t('store_no_search_results') }}
+          </h2>
+          <p class="text-gray-600 mb-4">
+            {{ $t('store_showing_recommendations') }}
+          </p>
+        </div>
+        <hr class="border-t border-gray-200">
+      </div>
+
+      <div
+        v-if="!shouldShowDefaultListing && itemsCount === 0 && !products.isFetchingItems && products.hasFetchedItems"
         class="flex flex-col items-center m-auto"
       >
         <UIcon
@@ -102,8 +122,9 @@
           v-text="$t('store_no_items')"
         />
       </div>
+
       <ul
-        v-else
+        v-if="itemsCount > 0"
         :class="[
           ...gridClasses,
 
@@ -312,12 +333,40 @@ watch([querySearchTerm, queryAuthorName, queryPublisherName, queryOwnerWallet], 
   }
 })
 
-const products = computed(() => {
+const searchResults = computed(() => {
   if (isSearchMode.value) {
     return bookstoreStore.getBookstoreSearchResultsByQuery(searchQuery.value)
   }
+  return null
+})
+
+const defaultListingProducts = computed(() => {
   return bookstoreStore.getBookstoreCMSProductsByTagId(localizedTagId.value)
 })
+
+const hasSearchResults = computed(() => {
+  return searchResults.value && searchResults.value.items.length > 0
+})
+
+const shouldShowDefaultListing = computed(() => {
+  return isSearchMode.value && !hasSearchResults.value && searchResults.value?.hasFetchedItems
+})
+
+const products = computed(() => {
+  if (isSearchMode.value) {
+    if (hasSearchResults.value && searchResults.value) {
+      return searchResults.value
+    }
+
+    if (shouldShowDefaultListing.value) {
+      return defaultListingProducts.value
+    }
+
+    return searchResults.value || defaultListingProducts.value
+  }
+  return defaultListingProducts.value
+})
+
 const itemsCount = computed(() => products.value.items.length)
 const hasMoreItems = computed(() => !!products.value.nextItemsKey || !products.value.hasFetchedItems)
 
@@ -387,8 +436,10 @@ async function fetchItems({ lazy = false, isRefresh = false } = {}) {
 
 onMounted(async () => {
   if (isSearchMode.value) {
-    // In search mode, skip tag fetching and just fetch search results
-    await fetchItems({ lazy: true })
+    await Promise.all([
+      fetchItems({ lazy: true }),
+      bookstoreStore.fetchCMSProductsByTagId(localizedTagId.value, { isRefresh: false }),
+    ])
     return
   }
 
