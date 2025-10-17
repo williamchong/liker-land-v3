@@ -40,6 +40,8 @@ const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 const route = useRoute()
 const getRouteBaseName = useRouteBaseName()
+const url = useRequestURL()
+const config = useRuntimeConfig()
 
 const menuItems = computed(() =>
   [
@@ -78,7 +80,11 @@ const menuItems = computed(() =>
 )
 
 async function handleExitStakeMode() {
-  // Navigate to store (stake mode will be auto-detected by route)
-  await navigateTo(localeRoute({ name: 'store-index' }))
+  if (config.public.baseUrlStake && url.origin === config.public.baseUrlStake) {
+    await navigateTo(config.public.baseUrl, { external: true })
+  }
+  else {
+    await navigateTo(localeRoute({ name: 'store-index' }))
+  }
 }
 </script>

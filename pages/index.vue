@@ -12,13 +12,28 @@
 const { loggedIn: hasLoggedIn } = useUserSession()
 
 const route = useRoute()
+const url = useRequestURL()
 const localeRoute = useLocaleRoute()
 
-await navigateTo(
-  localeRoute({
-    name: hasLoggedIn.value ? 'shelf' : 'store',
-    query: route.query,
-  }),
-  { replace: true },
-)
+const config = useRuntimeConfig()
+onMounted(async () => {
+  if (config.public.baseUrlStake && url.origin === config.public.baseUrlStake) {
+    await navigateTo(
+      localeRoute({
+        name: hasLoggedIn.value ? 'collective' : 'stake',
+        query: route.query,
+      }),
+      { replace: true },
+    )
+  }
+  else {
+    await navigateTo(
+      localeRoute({
+        name: hasLoggedIn.value ? 'shelf' : 'store',
+        query: route.query,
+      }),
+      { replace: true },
+    )
+  }
+})
 </script>
