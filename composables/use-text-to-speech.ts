@@ -55,9 +55,9 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   const isShowTextToSpeechOptions = ref(false)
   const isTextToSpeechOn = ref(false)
   const isTextToSpeechPlaying = ref(false)
-  const isPendingResetOnStart = ref(false)
   const audioBuffers = ref<(HTMLAudioElement | null)[]>([null, null])
   const currentBufferIndex = ref<0 | 1>(0)
+  const idleBufferIndex = computed<0 | 1>(() => (currentBufferIndex.value === 0 ? 1 : 0))
   const currentTTSSegmentIndex = ref(0)
   const ttsSegments = ref<TTSSegment[]>([])
   const currentTTSSegment = computed(() => {
@@ -115,6 +115,10 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     }
   }
 
+  watch (isTextToSpeechPlaying, () => {
+    updateMediaSessionPlaybackState()
+  })
+
   watch(ttsLanguageVoice, (newLanguage, oldLanguage) => {
     if (newLanguage !== oldLanguage) {
       restartTextToSpeech()
@@ -138,10 +142,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
   function pauseTextToSpeech() {
     if (isTextToSpeechOn.value) {
-      const activeAudio = audioBuffers.value[currentBufferIndex.value]
-      activeAudio?.pause()
-      isTextToSpeechPlaying.value = false
-      updateMediaSessionPlaybackState()
+      stopActiveAudio()
       useLogEvent('tts_pause', {
         nft_class_id: nftClassId,
       })
@@ -160,10 +161,14 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
       audio.onplay = () => {
         isTextToSpeechPlaying.value = true
-        updateMediaSessionPlaybackState()
+      }
+
+      audio.onpause = () => {
+        isTextToSpeechPlaying.value = false
       }
 
       audio.onended = () => {
+        isTextToSpeechPlaying.value = false
         playNextElement()
       }
 
@@ -205,7 +210,8 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     // Double buffer breaks background audio playback in iOS PWA
     // Only switch buffers when NOT running as an installed iOS PWA
     if (!isIOS || !$pwa?.isPWAInstalled) {
-      currentBufferIndex.value = currentBufferIndex.value === 0 ? 1 : 0
+      stopActiveAudio()
+      currentBufferIndex.value = idleBufferIndex.value
     }
 
     const currentAudio = createAudio(currentElement, currentBufferIndex.value)
@@ -213,7 +219,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
     const nextElementForBuffer = ttsSegments.value[currentTTSSegmentIndex.value + 1]
 
-    const nextBufferIndex = currentBufferIndex.value === 0 ? 1 : 0
+    const nextBufferIndex = idleBufferIndex.value
     if (nextElementForBuffer) {
       createAudio(nextElementForBuffer, nextBufferIndex)
     }
@@ -229,17 +235,19 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   }
 
   async function startTextToSpeech(index: number | null = null) {
+    isShowTextToSpeechOptions.value = true
     if (!ttsLanguageVoiceValues.includes(ttsLanguageVoice.value)) {
       ttsLanguageVoice.value = ttsLanguageVoiceValues[0]
     }
-    isShowTextToSpeechOptions.value = true
+
     if (index !== null) {
       currentTTSSegmentIndex.value = Math.max(Math.min(index, ttsSegments.value.length - 1), 0)
     }
-
-    if (isTextToSpeechOn.value && !isTextToSpeechPlaying.value && !isPendingResetOnStart.value) {
-      isTextToSpeechPlaying.value = true
-      updateMediaSessionPlaybackState()
+    else if (isTextToSpeechOn.value) {
+      const idleAudio = audioBuffers.value[idleBufferIndex.value]
+      if (idleAudio) {
+        idleAudio.pause()
+      }
       const activeAudio = audioBuffers.value[currentBufferIndex.value]
       if (activeAudio) {
         activeAudio.play()
@@ -249,14 +257,12 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         return
       }
     }
-
-    if (index == null) {
+    else {
       currentTTSSegmentIndex.value = 0
     }
-    resetAudio()
 
+    resetAudio()
     isTextToSpeechOn.value = true
-    isTextToSpeechPlaying.value = true
     setupMediaSession()
 
     useLogEvent('tts_start', {
@@ -283,6 +289,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         audio.src = ''
         audio.load()
         audio.onplay = null
+        audio.onpause = null
         audio.onended = null
         audio.onerror = null
       }
@@ -298,17 +305,20 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     playCurrentElement()
   }, 500)
 
-  function skipForward() {
-    if (!isTextToSpeechOn.value) return
-    useLogEvent('tts_skip_forward', {
-      nft_class_id: nftClassId,
-    })
+  function stopActiveAudio() {
     const activeAudio = audioBuffers.value[currentBufferIndex.value]
     if (activeAudio) {
       activeAudio.pause()
       activeAudio.currentTime = 0
     }
+  }
 
+  function skipForward() {
+    if (!isTextToSpeechOn.value) return
+    useLogEvent('tts_skip_forward', {
+      nft_class_id: nftClassId,
+    })
+    stopActiveAudio()
     if (currentTTSSegmentIndex.value + 1 < ttsSegments.value.length) {
       currentTTSSegmentIndex.value += 1
     }
@@ -320,12 +330,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     useLogEvent('tts_skip_to_index', {
       nft_class_id: nftClassId,
     })
-    const activeAudio = audioBuffers.value[currentBufferIndex.value]
-    if (activeAudio) {
-      activeAudio.pause()
-      activeAudio.currentTime = 0
-    }
-
+    stopActiveAudio()
     currentTTSSegmentIndex.value = Math.max(Math.min(segmentIndex, ttsSegments.value.length - 1), 0)
     playCurrentElementDebounced()
   }
@@ -335,12 +340,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     useLogEvent('tts_skip_backward', {
       nft_class_id: nftClassId,
     })
-    const activeAudio = audioBuffers.value[currentBufferIndex.value]
-    if (activeAudio) {
-      activeAudio.pause()
-      activeAudio.currentTime = 0
-    }
-
+    stopActiveAudio()
     if (currentTTSSegmentIndex.value > 0) {
       currentTTSSegmentIndex.value -= 1
     }
@@ -348,12 +348,10 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   }
 
   function restartTextToSpeech() {
-    if (isTextToSpeechOn.value && isTextToSpeechPlaying.value) {
-      resetAudio()
+    const wasPlaying = isTextToSpeechOn.value && isTextToSpeechPlaying.value
+    stopTextToSpeech()
+    if (wasPlaying) {
       startTextToSpeech(currentTTSSegmentIndex.value)
-    }
-    else {
-      isPendingResetOnStart.value = true
     }
   }
 
