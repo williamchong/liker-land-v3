@@ -41,6 +41,11 @@
             icon="i-material-symbols-diamond-outline-rounded"
             :label="$t('account_page_subscription')"
           >
+            <div
+              class="text-sm/5"
+              v-text="subscriptionStateLabel"
+            />
+
             <template #right>
               <UButton
                 :label="user?.isLikerPlus ? $t('account_page_manage_subscription') : $t('account_page_upgrade_to_plus')"
@@ -289,6 +294,15 @@ const { copy: copyToClipboard } = useClipboard()
 
 useHead({
   title: $t('account_page_title'),
+})
+
+const subscriptionStateLabel = computed(() => {
+  if (!user.value) return undefined
+  if (user.value.isLikerPlus) {
+    // TODO: Support Trial
+    return $t('account_page_subscription_plus')
+  }
+  return $t('account_page_subscription_free')
 })
 
 const likeWalletButtonTo = computed(() => {
