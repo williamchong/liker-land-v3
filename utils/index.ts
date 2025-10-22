@@ -67,3 +67,8 @@ export function parseURIString<T>(uri: string): T | undefined {
 export function shortenWalletAddress(address = '') {
   return `${address.slice(0, 8)}...${address.slice(-4)}`
 }
+
+export function trimText(text: string, length: number) {
+  if (!text || !length || text.length <= length) return text
+  return `${text.slice(0, length - 1)}...`
+}

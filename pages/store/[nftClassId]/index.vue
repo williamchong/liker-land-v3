@@ -596,6 +596,13 @@ useHead(() => ({
     : [],
 }))
 
+defineOgImageComponent('ProductPage', {
+  bookName: bookInfo.name.value,
+  bookDescription: bookInfo.description.value,
+  bookAuthor: bookInfo.authorName.value,
+  bookCoverSrc: bookInfo.coverSrc.value,
+})
+
 const bookInfoDescriptionHTML = computed(() => {
   return md.render(bookInfo.description?.value || '')
 })
