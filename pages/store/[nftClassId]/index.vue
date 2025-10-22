@@ -54,6 +54,7 @@
           :items="infoTabItems"
           variant="link"
           class="gap-6 w-full mt-[52px] tablet:mt-[80px]"
+          :unmount-on-hide="false"
           :ui="{ list: 'gap-6 border-0', trigger: 'text-lg font-bold pb-0 px-0', indicator: 'border-1' }"
         >
           <template #description>
