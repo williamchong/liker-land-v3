@@ -43,7 +43,6 @@
     "nuxt": "^3.16.0",
     "nuxt-auth-utils": "^0.5.17",
     "nuxt-gtag": "^3.0.2",
-    "nuxt-og-image": "^5.1.12",
     "nuxt-security": "^2.2.0",
     "nuxt-svgo": "^4.2.2",
     "pdfjs-dist": "^5.3.31",

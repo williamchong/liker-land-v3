@@ -15,6 +15,7 @@ const config = useRuntimeConfig()
 const ogTitle = $t('app_title')
 const ogDescription = $t('app_description')
 const ogURL = config.public.baseURL
+const ogImage = `${ogURL}/images/og/default.jpg`
 const isTestnet = !!config.public.isTestnet
 
 const i18nHead = useLocaleHead()
@@ -54,6 +55,10 @@ useHead({
       content: ogDescription,
     },
     {
+      property: 'og:image',
+      content: ogImage,
+    },
+    {
       property: 'og:url',
       content: ogURL,
     },
@@ -81,7 +86,7 @@ useHead({
           'https://x.com/3ookcom',
         ],
         'url': ogURL,
-        'logo': `${ogURL}/images/og/default.jpg`,
+        'logo': ogImage,
         'brand': [
           {
             '@context': 'https://schema.org',
@@ -94,8 +99,6 @@ useHead({
     },
   ],
 })
-
-defineOgImageComponent('Default')
 
 const { isShowMaintenancePage } = useMaintenanceMode()
 </script>
