@@ -322,11 +322,10 @@ const shouldShowTTSSamples = computed(() => {
 const abTest = shouldShowTTSSamples.value
   ? undefined
   : useABTest({
-      testName: 'tts-sample',
-      variants: ['show', 'hidden'],
+      experimentKey: 'pricing-page-tts-sample',
     })
 
-const isShowTTSSamples = computed(() => shouldShowTTSSamples.value || abTest?.isVariant('show'))
+const isShowTTSSamples = computed(() => shouldShowTTSSamples.value || abTest?.isVariant('tts-sample'))
 
 const utmCampaign = computed(() => {
   return getRouteQuery('utm_campaign') || props.utmCampaign
