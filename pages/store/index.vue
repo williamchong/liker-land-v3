@@ -21,13 +21,34 @@
       <!-- Search mode header -->
       <div
         v-if="isSearchMode"
-        class="flex items-center w-full"
+        class="flex items-center gap-4 w-full"
       >
-        <h1 class="text-xl laptop:text-2xl font-bold text-gray-900">
+        <div
+          v-if="queryOwnerWallet"
+          class="flex items-center gap-3 min-w-0 flex-1"
+        >
+          <UAvatar
+            :src="ownerWalletAvatarSrc"
+            :alt="ownerWalletDisplayName || queryOwnerWallet"
+            icon="i-material-symbols-person-2-rounded"
+            size="lg"
+          />
+          <div class="flex flex-col min-w-0 flex-1">
+            <p class="text-xs text-gray-500 uppercase tracking-wide">
+              {{ $t('store_owner_wallet_prefix') }}
+            </p>
+            <h1 class="text-xl laptop:text-2xl font-bold text-gray-900 truncate">
+              {{ ownerWalletDisplayName || queryOwnerWallet }}
+            </h1>
+          </div>
+        </div>
+        <h1
+          v-else
+          class="text-xl laptop:text-2xl font-bold text-gray-900"
+        >
           <span v-if="querySearchTerm">{{ $t('store_search_prefix') }}: {{ querySearchTerm }}</span>
           <span v-else-if="queryAuthorName">{{ $t('store_author_prefix') }}: {{ queryAuthorName }}</span>
           <span v-else-if="queryPublisherName">{{ $t('store_publisher_prefix') }}: {{ queryPublisherName }}</span>
-          <span v-else-if="queryOwnerWallet">{{ $t('store_owner_wallet_prefix') }}: {{ queryOwnerWallet }}</span>
         </h1>
       </div>
 
@@ -165,6 +186,7 @@ const route = useRoute()
 const getRouteQuery = useRouteQuery()
 const runtimeConfig = useRuntimeConfig()
 const bookstoreStore = useBookstoreStore()
+const metadataStore = useMetadataStore()
 const infiniteScrollDetectorElement = useTemplateRef<HTMLLIElement>('infiniteScrollDetector')
 const shouldLoadMore = useElementVisibility(infiniteScrollDetectorElement)
 const { handleError } = useErrorHandler()
@@ -174,6 +196,16 @@ const querySearchTerm = computed(() => getRouteQuery('q', ''))
 const queryAuthorName = computed(() => getRouteQuery('author', ''))
 const queryPublisherName = computed(() => getRouteQuery('publisher', ''))
 const queryOwnerWallet = computed(() => getRouteQuery('owner_wallet', ''))
+
+const ownerWalletAvatarSrc = computed(() => {
+  if (!queryOwnerWallet.value) return ''
+  return metadataStore.getLikerInfoByWalletAddress(queryOwnerWallet.value)?.avatarSrc || ''
+})
+
+const ownerWalletDisplayName = computed(() => {
+  if (!queryOwnerWallet.value) return ''
+  return metadataStore.getLikerInfoByWalletAddress(queryOwnerWallet.value)?.displayName || ''
+})
 
 // Search query key for bookstore store
 const searchQuery = computed(() => {
@@ -333,6 +365,17 @@ watch([querySearchTerm, queryAuthorName, queryPublisherName, queryOwnerWallet], 
   }
 })
 
+watch(queryOwnerWallet, async (wallet) => {
+  if (wallet) {
+    try {
+      await metadataStore.lazyFetchLikerInfoByWalletAddress(wallet)
+    }
+    catch (error) {
+      console.error('Failed to fetch wallet info:', error)
+    }
+  }
+})
+
 const searchResults = computed(() => {
   if (isSearchMode.value) {
     return bookstoreStore.getBookstoreSearchResultsByQuery(searchQuery.value)
@@ -436,10 +479,21 @@ async function fetchItems({ lazy = false, isRefresh = false } = {}) {
 
 onMounted(async () => {
   if (isSearchMode.value) {
-    await Promise.all([
+    const promises: Promise<unknown>[] = [
       fetchItems({ lazy: true }),
       bookstoreStore.fetchCMSProductsByTagId(localizedTagId.value, { isRefresh: false }),
-    ])
+    ]
+
+    if (queryOwnerWallet.value) {
+      promises.push(
+        metadataStore.lazyFetchLikerInfoByWalletAddress(queryOwnerWallet.value)
+          .catch((error) => {
+            console.error('Failed to fetch wallet info:', error)
+          }),
+      )
+    }
+
+    await Promise.all(promises)
     return
   }
 
