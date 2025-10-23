@@ -1,4 +1,4 @@
-import { useDebounceFn, isIOS, useStorage } from '@vueuse/core'
+import { useDebounceFn, useStorage } from '@vueuse/core'
 
 interface TTSOptions {
   nftClassId?: string
@@ -23,7 +23,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
   const nftClassId = options.nftClassId
 
-  const { $pwa } = useNuxtApp()
   const { t: $t } = useI18n()
   const config = useRuntimeConfig()
 
@@ -207,13 +206,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     const currentElement = ttsSegments.value[currentTTSSegmentIndex.value]
     if (!currentElement) return
 
-    // Double buffer breaks background audio playback in iOS PWA
-    // Only switch buffers when NOT running as an installed iOS PWA
-    if (!isIOS || !$pwa?.isPWAInstalled) {
-      stopActiveAudio()
-      currentBufferIndex.value = idleBufferIndex.value
-    }
-
+    stopActiveAudio()
     const currentAudio = createAudio(currentElement, currentBufferIndex.value)
     currentAudio.play()
 
