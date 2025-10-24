@@ -101,7 +101,7 @@
         />
       </ul>
       <div
-        v-if="hasMoreItems"
+        v-if="bookshelfStore.isFetching || hasMoreItems"
         ref="infiniteScrollDetector"
         class="flex justify-center py-48"
       >

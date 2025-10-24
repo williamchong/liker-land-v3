@@ -66,7 +66,11 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
         // NOTE: For a new wallet address, the API will return 404
         return
       }
-      throw error
+      throw createError({
+        statusCode,
+        statusMessage: getErrorMessage(error),
+        fatal: true,
+      })
     }
     finally {
       isFetching.value = false
