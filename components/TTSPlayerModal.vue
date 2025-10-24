@@ -164,33 +164,16 @@
               </template>
             </BottomSlideover>
 
-            <BottomSlideover :title="$t('reader_rate_options_button')">
+            <UTooltip :text="$t('reader_rate_options_button')">
               <UButton
-                :ui="{ leadingIcon: 'size-8' }"
-                icon="i-material-symbols-fast-forward-outline"
+                class="rounded-full w-18 h-12"
                 :label="getTTSPlaybackRateLabel"
-                class="rounded-full"
                 size="lg"
                 variant="soft"
+                :ui="{ label: 'w-full font-mono font-bold' }"
+                @click="handleTTSPlaybackRateButton"
               />
-
-              <template #body>
-                <div class="flex gap-2 items-center w-full">
-                  <URadioGroup
-                    v-model="ttsPlaybackRate"
-                    :ui="{
-                      item: '!rounded-none',
-                    }"
-                    class="w-full"
-                    color="primary"
-                    variant="table"
-                    :default-value="ttsPlaybackRate"
-                    :items="ttsPlaybackRateOptions"
-                    indicator="end"
-                  />
-                </div>
-              </template>
-            </BottomSlideover>
+            </UTooltip>
           </div>
         </div>
       </div>
@@ -268,6 +251,7 @@ const {
   skipBackward,
   stopTextToSpeech,
   currentTTSSegmentIndex,
+  cyclePlaybackRate,
 } = useTextToSpeech({
   nftClassId: props.nftClassId,
   bookName: props.bookTitle,
@@ -365,5 +349,10 @@ function handleModalUpdateOpen(isOpen: boolean) {
   if (!isOpen) {
     handleModalClose()
   }
+}
+
+function handleTTSPlaybackRateButton() {
+  const rate = cyclePlaybackRate()
+  useLogEvent('tts_playback_rate_change', { rate })
 }
 </script>

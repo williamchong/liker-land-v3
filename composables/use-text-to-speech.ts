@@ -23,7 +23,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
   const nftClassId = options.nftClassId
 
-  const { t: $t } = useI18n()
   const config = useRuntimeConfig()
 
   // Use the TTS voice composable
@@ -45,12 +44,14 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     ].join('-'),
   )
 
-  const ttsPlaybackRateOptions = computed(() => [0.75, 0.9, 1.0, 1.1, 1.25, 1.5].map(rate => ({
-    label: rate === 1.0 ? $t('reader_text_to_speech_normal_speed') : `${rate}x`,
+  const DEFAULT_PLAYBACK_RATE = 1.0
+
+  const ttsPlaybackRateOptions = computed(() => [0.75, 0.9, DEFAULT_PLAYBACK_RATE, 1.1, 1.25, 1.5].map(rate => ({
+    label: `${rate}x`,
     value: rate,
   })))
 
-  const ttsPlaybackRate = useStorage(getTTSConfigKeyWithSuffix(ttsConfigCacheKey.value, 'playback-rate'), 1.0)
+  const ttsPlaybackRate = useStorage(getTTSConfigKeyWithSuffix(ttsConfigCacheKey.value, 'playback-rate'), DEFAULT_PLAYBACK_RATE)
   const isShowTextToSpeechOptions = ref(false)
   const isTextToSpeechOn = ref(false)
   const isTextToSpeechPlaying = ref(false)
@@ -370,6 +371,13 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     }
   }
 
+  function cyclePlaybackRate() {
+    const currentIndex = ttsPlaybackRateOptions.value.findIndex(option => option.value === ttsPlaybackRate.value)
+    const optionsCount = ttsPlaybackRateOptions.value.length
+    ttsPlaybackRate.value = ttsPlaybackRateOptions.value[(currentIndex + 1) % optionsCount]?.value || DEFAULT_PLAYBACK_RATE
+    return ttsPlaybackRate.value
+  }
+
   return {
     // Voice-related properties (from useTTSVoice)
     ttsLanguageVoiceOptions: availableTTSLanguageVoiceOptions,
@@ -395,5 +403,6 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     skipBackward,
     restartTextToSpeech,
     stopTextToSpeech,
+    cyclePlaybackRate,
   }
 }
