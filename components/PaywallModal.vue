@@ -331,7 +331,7 @@ const utmCampaign = computed(() => {
   return getRouteQuery('utm_campaign') || props.utmCampaign
 })
 const campaignId = computed(() => {
-  return getRouteQuery('utm_term') || utmCampaign.value
+  return getRouteQuery('utm_term') || getRouteQuery('utm_campaign')
 })
 
 const {
