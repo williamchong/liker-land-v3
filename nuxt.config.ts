@@ -260,6 +260,7 @@ export default defineNuxtConfig({
       },
       // NOTE: Allow Magic Link/PDF.js iframes
       crossOriginEmbedderPolicy: 'unsafe-none',
+      crossOriginOpenerPolicy: 'same-origin-allow-popups',
     },
     rateLimiter: false,
   },
