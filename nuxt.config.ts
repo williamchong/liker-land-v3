@@ -229,6 +229,7 @@ export default defineNuxtConfig({
               'https://js.stripe.com',
               'https://td.doubleclick.net',
               'https://www.googletagmanager.com',
+              'https://www.facebook.com',
               'https://verify.walletconnect.org',
             ],
         'base-uri': [
@@ -254,6 +255,10 @@ export default defineNuxtConfig({
           'blob:',
           'https://fonts.gstatic.com',
           'https://fonts.intercomcdn.com',
+        ],
+        'form-action': [
+          '\'self\'',
+          'https://www.facebook.com',
         ],
         // NOTE: Resolve Safari force HTTPS in development
         'upgrade-insecure-requests': isDevelopment ? false : true,
