@@ -1,4 +1,4 @@
-import { computed, onMounted, ref, toValue, type MaybeRefOrGetter } from 'vue'
+import { computed, onMounted, toValue, type MaybeRefOrGetter } from 'vue'
 
 interface PricingPageCampaign {
   type: 'image' | 'video' | 'custom'
@@ -21,9 +21,8 @@ export function usePricingPageCampaign(options: {
   campaignId: MaybeRefOrGetter<string | undefined>
 } = { campaignId: undefined }) {
   const { $posthog } = useNuxtApp()
-  const experimentKey = 'pricing-page-campaign'
   const campaignId = computed(() => toValue(options.campaignId))
-  const experimentVariant = ref<string | null>(null)
+  const { variant: experimentVariant } = useABTest({ experimentKey: 'pricing-page-campaign' })
 
   const resolvedCampaignId = computed(() => {
     // If campaign ID is explicitly provided, use it
@@ -51,25 +50,12 @@ export function usePricingPageCampaign(options: {
   })
 
   onMounted(() => {
-    if ($posthog) {
+    if ($posthog && campaignId.value) {
       const posthog = $posthog()
       // If campaignId is explicitly set via query string, override the feature flag
-      if (campaignId.value) {
-        posthog.featureFlags.overrideFeatureFlags({
-          [experimentKey]: campaignId.value,
-        })
-      }
-      else {
-        // Otherwise, fetch experiment variant if experimentKey is provided
-        const updateVariant = () => {
-          const flag = posthog.getFeatureFlag(experimentKey)
-          experimentVariant.value = typeof flag === 'string' ? flag : null
-        }
-        posthog.onFeatureFlags(() => {
-          updateVariant()
-        })
-        updateVariant()
-      }
+      posthog.featureFlags.overrideFeatureFlags({
+        'pricing-page-campaign': campaignId.value,
+      })
     }
   })
 
