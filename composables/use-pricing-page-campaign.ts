@@ -48,8 +48,7 @@ export function usePricingPageCampaign(options: {
   const isBlocktrendCampaign = computed(() => {
     return resolvedCampaignId.value === 'blocktrend-plus'
   })
-
-  onMounted(() => {
+  const overrideFeatureFlag = () => {
     if ($posthog && campaignId.value) {
       const posthog = $posthog()
       // If campaignId is explicitly set via query string, override the feature flag
@@ -57,7 +56,10 @@ export function usePricingPageCampaign(options: {
         'pricing-page-campaign': campaignId.value,
       })
     }
-  })
+  }
+
+  watch(campaignId, () => overrideFeatureFlag)
+  onMounted(() => overrideFeatureFlag)
 
   return {
     campaignContent,
