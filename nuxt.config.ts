@@ -1,4 +1,5 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import type { ConfigDefaults } from 'posthog-js'
 
 const {
   GA_TRACKING_ID,
@@ -24,6 +25,7 @@ export default defineNuxtConfig({
     '@sentry/nuxt/module',
     '@nuxt/scripts',
     '@nuxtjs/sitemap',
+    '@posthog/nuxt',
     'v-gsap-nuxt',
     '@vite-pwa/nuxt',
   ],
@@ -184,6 +186,15 @@ export default defineNuxtConfig({
     lazy: true,
     defaultLocale: 'zh-Hant',
     detectBrowserLanguage: false,
+  },
+
+  posthogConfig: {
+    publicKey: process.env.POSTHOG_PUBLIC_KEY,
+    host: process.env.POSTHOG_HOST,
+    clientConfig: {
+      defaults: process.env.POSTHOG_DEFAULTS as ConfigDefaults | undefined,
+      person_profiles: 'identified_only',
+    },
   },
 
   pwa: {
