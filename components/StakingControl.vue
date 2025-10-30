@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-4 p-4 p bg-white rounded-lg shadow-[0px_10px_20px_0px_rgba(0,0,0,0.04)]">
+  <div class="flex flex-col gap-4 p-4 bg-white rounded-lg shadow-[0px_10px_20px_0px_rgba(0,0,0,0.04)]">
     <h2
       class="font-semibold tablet:text-lg"
       v-text="$t('staking_stake_on_book_title')"
