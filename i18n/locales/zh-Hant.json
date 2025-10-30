@@ -155,7 +155,7 @@
   "copy_link_failed": "複製連結失敗",
   "copy_link_success": "已複製連結",
   "donate_reward_button": "捐出奬勵",
-  "donate_reward_error": "捐出奬勵時出現誤",
+  "donate_reward_error": "捐出奬勵時出現錯誤",
   "donate_reward_please_input_amount": "請輸入捐出奬勵數量",
   "donate_reward_success": "成功捐出奬勵！",
   "error_back_to_bookshelf_button_label": "返回書架",
