@@ -2,12 +2,14 @@
   <li
     ref="lazyLoadTrigger"
     class="flex flex-col justify-end"
+    :class="!props.isOwned && props.stakedAmount > 0 ? 'opacity-50' : 'opacity-100'"
   >
     <BookCover
       :src="bookCoverSrc"
       :alt="bookInfo.name.value"
       :lazy="props.lazy"
       :is-claimable="isClaimable"
+      :is-staked="hasStakes"
       :has-shadow="true"
       @click="handleCoverClick"
     />
@@ -73,8 +75,27 @@
           llMedium: 'author-link',
           llSource: 'bookshelf-item',
         })"
-        class="inline-block mt-0.5 text-xs laptop:text-sm text-dimmed hover:text-theme-black line-clamp-1 hover:underline"
+        class="inline-block mt-0.5 text-xs laptop:text-sm text-toned hover:text-theme-black line-clamp-1 hover:underline"
       >{{ bookInfo.authorName }}</NuxtLink>
+
+      <!-- Staking info section -->
+      <div
+        v-if="hasStakes"
+        class="mt-3 space-y-1"
+      >
+        <div class="flex items-center justify-between text-toned text-sm">
+          <span v-text="$t('staking_dashboard_staked')" />
+          <BalanceLabel :value="formattedStakedAmount" />
+        </div>
+
+        <div
+          v-if="formattedPendingRewards"
+          class="flex items-center justify-between text-toned text-xs"
+        >
+          <span v-text="$t('staking_dashboard_rewards')" />
+          <BalanceLabel :value="formattedPendingRewards" />
+        </div>
+      </div>
     </div>
   </li>
 </template>
@@ -99,6 +120,18 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  stakedAmount: {
+    type: Number,
+    default: 0,
+  },
+  pendingRewards: {
+    type: Number,
+    default: 0,
+  },
+  isOwned: {
+    type: Boolean,
+    default: true,
+  },
 })
 
 const emit = defineEmits(['visible', 'open', 'download', 'claim'])
@@ -114,6 +147,22 @@ const { getResizedImageURL } = useImageResize()
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 300 }))
 
 const isDesktopScreen = useDesktopScreen()
+
+const formattedStakedAmount = computed(() => {
+  if (props.stakedAmount === 0) return ''
+  return props.stakedAmount.toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  })
+})
+
+const formattedPendingRewards = computed(() => {
+  if (props.pendingRewards === 0) return ''
+  return props.pendingRewards.toLocaleString(undefined, {
+    maximumFractionDigits: 6,
+  })
+})
+
+const hasStakes = computed(() => props.stakedAmount > 0)
 
 const menuItems = computed<DropdownMenuItem[]>(() => {
   const genericItems: DropdownMenuItem[] = []
@@ -156,6 +205,14 @@ const menuItems = computed<DropdownMenuItem[]>(() => {
     label: $t('bookshelf_view_book_product_page'),
     icon: 'i-material-symbols-visibility-outline',
     to: bookInfo.productPageRoute.value,
+  })
+
+  genericItems.push({
+    label: $t('bookshelf_view_book_staking_page'),
+    icon: 'i-material-symbols-visibility-outline',
+    to: bookInfo.getProductPageRoute({
+      hash: '#staking-info',
+    }),
   })
 
   return [

@@ -23,11 +23,15 @@
           llMedium: 'author-link',
           llSource: 'bookstore-item',
         })"
-        class="inline-block h-4 laptop:h-5 mt-0.5 text-xs laptop:text-sm text-dimmed line-clamp-1 hover:text-theme-black hover:underline"
+        class="inline-block h-4 laptop:h-5 mt-0.5 text-xs laptop:text-sm text-toned line-clamp-1 hover:text-theme-black hover:underline"
       >{{ authorName }}</NuxtLink>
     </div>
 
-    <div class="h-5 mt-3 text-sm text-theme-black">
+    <!-- Price info for store mode -->
+    <div
+      v-if="!isStakingMode"
+      class="h-5 mt-3 text-sm text-theme-black"
+    >
       <span
         v-if="price > 0"
         class="mr-0.5"
@@ -37,9 +41,25 @@
         v-text="formattedDiscountPrice"
       />
       <span
-        :class="{ 'text-xs text-dimmed ml-0.5 line-through': formattedDiscountPrice }"
+        :class="{ 'text-xs text-toned ml-0.5 line-through': formattedDiscountPrice }"
         v-text="formattedPrice"
       />
+    </div>
+
+    <!-- Staking info for staking mode -->
+    <div
+      v-else
+      class="mt-3 space-y-1"
+    >
+      <div class="flex items-center justify-between text-toned text-sm">
+        <span v-text="$t('staking_explore_total_staked')" />
+        <BalanceLabel :value="formattedTotalStaked" />
+      </div>
+
+      <div class="flex items-center justify-between text-muted text-xs">
+        <span v-text="$t('staking_explore_stakers')" />
+        <span v-text="stakerCount" />
+      </div>
     </div>
   </li>
 </template>
@@ -74,6 +94,14 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  totalStaked: {
+    type: Number,
+    default: 0,
+  },
+  stakerCount: {
+    type: Number,
+    default: 0,
+  },
 })
 
 const emit = defineEmits(['visible', 'open'])
@@ -102,6 +130,14 @@ const formattedPrice = computed(() => formatPrice(price.value))
 const formattedDiscountPrice = computed(() => {
   const plusPrice = getPlusDiscountPrice(price.value)
   return plusPrice ? formatPrice(plusPrice) : null
+})
+
+const isStakingMode = computed(() => props.totalStaked > 0 || props.stakerCount > 0)
+
+const formattedTotalStaked = computed(() => {
+  return props.totalStaked.toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  })
 })
 
 if (!props.lazy) {

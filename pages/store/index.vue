@@ -52,13 +52,27 @@
         </h1>
       </div>
 
-      <!-- Normal tag selector -->
+      <!-- Tag selector -->
       <div
-        v-else
         class="flex items-center max-phone:gap-1 gap-2 w-full"
       >
+        <template v-if="!bookstoreStore.hasFetchedBookstoreCMSTags && isDefaultTagId">
+          <USkeleton
+            v-for="(widthClass, i) in ['w-20', 'w-18', 'w-24', 'w-16']"
+            :key="`tag-skeleton-${i + 1}`"
+            :class="[
+              'shrink-0',
+              widthClass,
+              'h-8 laptop:h-9',
+              'rounded-full',
+              'border-2',
+              'border-muted',
+            ]"
+          />
+        </template>
+
         <UButton
-          v-if="!isDefaultTagId"
+          v-else-if="!isDefaultTagId"
           icon="i-material-symbols-close-rounded"
           variant="outline"
           rounded-full
@@ -81,14 +95,16 @@
         />
 
         <USelect
+          v-if="bookstoreStore.hasFetchedBookstoreCMSTags || !isDefaultTagId || isStakingTagId"
           v-model="tagId"
           :placeholder="isDefaultTagId ? $t('store_tag_more_categories') : undefined"
-          :items="isDefaultTagId ? selectorTagItems : allTagItems"
+          :items="selectorTagItems"
           :content="{
             align: 'center',
             side: 'bottom',
             sideOffset: 8,
           }"
+          :disabled="!bookstoreStore.hasFetchedBookstoreCMSTags"
           arrow
           size="md"
           :ui="{
@@ -161,6 +177,8 @@
           :book-name="item.title"
           :book-cover-src="item.imageUrl"
           :price="item.minPrice"
+          :total-staked="isStakingTagId ? Number(formatUnits(item.totalStaked ?? 0n, LIKE_TOKEN_DECIMALS)) : 0"
+          :staker-count="isStakingTagId ? (item.stakerCount ?? 0) : 0"
           :lazy="index >= columnMax"
         />
       </ul>
@@ -180,6 +198,9 @@
 </template>
 
 <script setup lang="ts">
+import { formatUnits } from 'viem'
+import { LIKE_TOKEN_DECIMALS } from '~/shared/constants'
+
 const { t: $t, locale } = useI18n()
 const localeRoute = useLocaleRoute()
 const route = useRoute()
@@ -219,9 +240,14 @@ const searchQuery = computed(() => {
 const isSearchMode = computed(() => !!searchQuery.value)
 
 const TAG_LISTING = 'listing'
+const STAKING_SORT_TAG_PREFIX = 'staking-'
 
 function getIsDefaultTagId(id: string) {
   return id === TAG_LISTING
+}
+
+function getIsStakingTagId(id: string) {
+  return id.startsWith(STAKING_SORT_TAG_PREFIX)
 }
 
 const tagId = computed({
@@ -239,11 +265,17 @@ const tagId = computed({
   },
 })
 const isDefaultTagId = computed(() => getIsDefaultTagId(tagId.value))
+const isStakingTagId = computed(() => getIsStakingTagId(tagId.value))
+
+await callOnce(async () => {
+  if (!tagId.value || isDefaultTagId.value || isStakingTagId.value) return
+  await bookstoreStore.fetchBookstoreCMSTag(tagId.value)
+})
 
 const normalizedLocale = computed(() => locale.value === 'zh-Hant' ? 'zh' : 'en')
 
 const allTagItems = computed(() => {
-  return bookstoreStore.bookstoreCMSTags
+  const cmsTags = bookstoreStore.bookstoreCMSTags
     .filter((tag) => {
       return !!tag.isPublic || tag.id === tagId.value
     })
@@ -251,6 +283,13 @@ const allTagItems = computed(() => {
       label: tag.name[normalizedLocale.value],
       value: tag.id,
     }))
+
+  const stakingTags = STAKING_SORT_OPTIONS.map(option => ({
+    label: $t(option.labelKey),
+    value: `${STAKING_SORT_TAG_PREFIX}${option.value}`,
+  }))
+
+  return [...cmsTags, ...stakingTags]
 })
 
 const tagsSliceIndex = computed(() => {
@@ -264,9 +303,40 @@ const fixedTags = computed(() => {
   return allTagItems.value.slice(0, tagsSliceIndex.value)
 })
 
-const selectorTagItems = computed(() => {
-  return allTagItems.value.slice(tagsSliceIndex.value)
+const activeTag = computed(() => {
+  return bookstoreStore.getBookstoreCMSTagById(tagId.value)
 })
+
+const selectorTagItems = computed(() => {
+  if (!bookstoreStore.hasFetchedBookstoreCMSTags && activeTag.value) {
+    return [
+      {
+        label: activeTag.value.name[normalizedLocale.value],
+        value: activeTag.value.id,
+      },
+    ]
+  }
+  return isDefaultTagId.value ? allTagItems.value.slice(tagsSliceIndex.value) : allTagItems.value
+})
+
+const STAKING_SORT_OPTIONS = [
+  { value: 'total_staked', labelKey: 'staking_explore_sort_total_staked' },
+  { value: 'staker_count', labelKey: 'staking_explore_sort_staker_count' },
+  { value: 'recent', labelKey: 'staking_explore_sort_recent' },
+]
+
+function mapToAPIStakingSortValue(sortValue: string): 'staked_amount' | 'last_staked_at' | 'number_of_stakers' {
+  switch (sortValue) {
+    case 'total_staked':
+      return 'staked_amount'
+    case 'staker_count':
+      return 'number_of_stakers'
+    case 'recent':
+      return 'last_staked_at'
+    default:
+      return 'staked_amount'
+  }
+}
 
 const localizedTagId = computed(() => {
   // NOTE: Only the default tag is localized
@@ -378,7 +448,17 @@ watch(queryOwnerWallet, async (wallet) => {
 
 const searchResults = computed(() => {
   if (isSearchMode.value) {
-    return bookstoreStore.getBookstoreSearchResultsByQuery(searchQuery.value)
+    const searchResults = bookstoreStore.getBookstoreSearchResultsByQuery(searchQuery.value)
+    return {
+      items: searchResults.items.map(item => ({
+        ...item,
+        totalStaked: 0n,
+        stakerCount: 0,
+      })),
+      isFetchingItems: searchResults.isFetchingItems,
+      hasFetchedItems: searchResults.hasFetchedItems,
+      nextItemsKey: searchResults.nextItemsKey,
+    }
   }
   return null
 })
@@ -407,6 +487,30 @@ const products = computed(() => {
 
     return searchResults.value || defaultListingProducts.value
   }
+
+  // Return staking books when viewing staking tag
+  if (isStakingTagId.value) {
+    const stakingSort = tagId.value.slice(STAKING_SORT_TAG_PREFIX.length) || 'total_staked'
+    const apiSortValue = mapToAPIStakingSortValue(stakingSort)
+    const staking = bookstoreStore.getStakingBooks(apiSortValue)
+    return {
+      items: staking.items.map((item) => {
+        const bookInfo = bookstoreStore.getBookstoreInfoByNFTClassId(item.nftClassId)
+        return {
+          classId: item.nftClassId,
+          title: bookInfo?.name || '',
+          imageUrl: bookInfo?.thumbnailUrl || '',
+          minPrice: undefined,
+          totalStaked: item.totalStaked,
+          stakerCount: item.stakerCount,
+        }
+      }),
+      isFetchingItems: staking.isFetchingItems,
+      hasFetchedItems: staking.hasFetchedItems,
+      nextItemsKey: staking.nextItemsKey,
+    }
+  }
+
   return defaultListingProducts.value
 })
 
@@ -418,20 +522,14 @@ const { gridClasses, getGridItemClassesByIndex, columnMax } = usePaginatedGrid({
   hasMore: hasMoreItems,
 })
 
-const isFetchingTags = ref(true)
-
 async function fetchTags() {
   try {
-    isFetchingTags.value = true
     await bookstoreStore.fetchBookstoreCMSTags()
   }
   catch (error) {
     await handleError(error, {
       title: $t('store_fetch_tags_error'),
     })
-  }
-  finally {
-    isFetchingTags.value = false
   }
 }
 
@@ -449,6 +547,20 @@ async function fetchItems({ lazy = false, isRefresh = false } = {}) {
     catch (error) {
       await handleError(error, {
         title: isRefresh ? $t('store_fetch_items_error') : $t('store_fetch_more_items_error'),
+      })
+    }
+    return
+  }
+
+  if (isStakingTagId.value) {
+    const stakingSort = tagId.value.slice(STAKING_SORT_TAG_PREFIX.length) || 'total_staked'
+    const apiSortValue = mapToAPIStakingSortValue(stakingSort)
+    try {
+      await bookstoreStore.fetchStakingBooks(apiSortValue, { isRefresh })
+    }
+    catch (error) {
+      await handleError(error, {
+        title: $t('staking_explore_fetch_error'),
       })
     }
     return
@@ -501,7 +613,7 @@ onMounted(async () => {
   if (!isDefaultTagId.value) {
     // NOTE: Need to fetch all tags if not the default tag
     await fetchTagPromise
-    if (!tag.value) {
+    if (!tag.value && !isStakingTagId.value) {
       throw createError({
         statusCode: 404,
         message: $t('error_page_not_found'),
