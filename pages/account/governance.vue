@@ -193,13 +193,23 @@
                   v-text="t('governance_page_stake_like')"
                 />
               </h3>
-              <UInput
-                v-model="stakeAmount"
-                type="number"
-                :placeholder="t('governance_page_amount_placeholder')"
-                step="0.01"
-                :disabled="isLoading"
-              />
+              <div class="flex items-center gap-2">
+                <UInput
+                  v-model="stakeAmount"
+                  type="number"
+                  :placeholder="t('governance_page_amount_placeholder')"
+                  step="0.01"
+                  :disabled="isLoading"
+                  class="flex-1"
+                />
+                <UButton
+                  label="Max"
+                  size="sm"
+                  color="neutral"
+                  variant="outline"
+                  @click="handleMaxStake"
+                />
+              </div>
               <UButton
                 :label="t('governance_page_stake_button')"
                 color="success"
@@ -225,13 +235,23 @@
                   v-text="t('governance_page_withdraw_like')"
                 />
               </h3>
-              <UInput
-                v-model="withdrawAmount"
-                type="number"
-                :placeholder="t('governance_page_withdraw_placeholder')"
-                step="0.01"
-                :disabled="isLoading"
-              />
+              <div class="flex items-center gap-2">
+                <UInput
+                  v-model="withdrawAmount"
+                  type="number"
+                  :placeholder="t('governance_page_withdraw_placeholder')"
+                  step="0.01"
+                  :disabled="isLoading"
+                  class="flex-1"
+                />
+                <UButton
+                  label="Max"
+                  size="sm"
+                  color="neutral"
+                  variant="outline"
+                  @click="handleMaxWithdraw"
+                />
+              </div>
               <UButton
                 :label="t('governance_page_withdraw_button')"
                 color="error"
@@ -257,7 +277,7 @@
 </template>
 
 <script setup lang="ts">
-import { parseUnits } from 'viem'
+import { formatUnits, parseUnits } from 'viem'
 import { LIKE_TOKEN_DECIMALS } from '~/composables/use-likecoin-contract'
 
 definePageMeta({
@@ -274,6 +294,7 @@ const { restoreConnection } = accountStore
 
 const governanceData = useGovernanceData(walletAddress)
 const { claimReward, restakeReward, withdraw } = useVeLikeContract()
+const { balanceOf } = useLikeCoinContract()
 
 const stakeAmount = ref(0)
 const withdrawAmount = ref(0)
@@ -390,5 +411,21 @@ async function handleWithdraw() {
   finally {
     isLoading.value = false
   }
+}
+
+async function handleMaxStake() {
+  if (!walletAddress.value) return
+  try {
+    const balance = await balanceOf(walletAddress.value)
+    stakeAmount.value = Number(formatUnits(balance, LIKE_TOKEN_DECIMALS))
+  }
+  catch (err) {
+    console.error('Error fetching LIKE balance:', err)
+  }
+}
+
+function handleMaxWithdraw() {
+  if (governanceData.veLikeBalance.value === 0n) return
+  withdrawAmount.value = Number(formatUnits(governanceData.veLikeBalance.value, LIKE_TOKEN_DECIMALS))
 }
 </script>
