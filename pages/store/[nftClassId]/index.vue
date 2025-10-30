@@ -185,7 +185,7 @@
             'flex-wrap',
             'gap-x-2',
             'gap-y-4',
-            'mt-[48px]',,
+            'mt-[48px]',
             { 'max-tablet:hidden': isStakingTabActive },
           ]"
         >
