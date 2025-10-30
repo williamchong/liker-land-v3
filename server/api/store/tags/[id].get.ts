@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
 
     const result = await fetchAirtableCMSTagById(tagId)
     if (!result) {
-      return createError({
+      throw createError({
         statusCode: 404,
         statusMessage: 'TAG_NOT_FOUND',
       })
