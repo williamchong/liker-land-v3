@@ -112,15 +112,16 @@
 </template>
 
 <script setup lang="ts">
-import { formatUnits, parseUnits } from 'viem'
-import { useBalance } from '@wagmi/vue'
+import { parseUnits } from 'viem'
 
 import { AmountInputModal } from '#components'
-import { LIKE_TOKEN_DECIMALS } from '~/shared/constants'
 
 const props = defineProps<{
   nftClassId: string
 }>()
+
+const config = useRuntimeConfig()
+const { likeCoinTokenDecimals } = config.public
 
 const { t: $t } = useI18n()
 const toast = useToast()
@@ -131,13 +132,7 @@ const {
   unstakeAmountFromNFTClass,
   stakeToNFTClass,
   depositReward,
-  likeCoinErc20Address,
 } = useLikeStaking()
-
-const { data: likeBalanceData } = useBalance({
-  address: walletAddress,
-  token: likeCoinErc20Address as `0x${string}`,
-})
 
 const accountStore = useAccountStore()
 const { handleError } = useErrorHandler()
@@ -164,14 +159,10 @@ const isStaking = ref(false)
 const isUnstakingAmount = ref(false)
 const isDonating = ref(false)
 
-const likeBalance = computed(() => likeBalanceData.value?.value || 0n)
-
-const formattedLikeBalance = computed(() => {
-  return Number(formatUnits(likeBalance.value, LIKE_TOKEN_DECIMALS)).toLocaleString(undefined, {
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 0,
-  })
-})
+const {
+  likeBalance,
+  formattedLikeBalance,
+} = useLikeCoinBalance(walletAddress)
 
 const isValidStakeAmount = computed(() => {
   return stakeAmount.value > 0
@@ -203,7 +194,7 @@ async function handleStakeButtonClick() {
 
   try {
     isStaking.value = true
-    const amount = parseUnits(stakeAmount.value.toString(), LIKE_TOKEN_DECIMALS)
+    const amount = parseUnits(stakeAmount.value.toString(), likeCoinTokenDecimals)
 
     if (amount > likeBalance.value) {
       toast.add({
@@ -258,7 +249,7 @@ async function handleUnstakeButtonClick() {
 
   try {
     isUnstakingAmount.value = true
-    const amount = parseUnits(stakeAmount.value.toString(), LIKE_TOKEN_DECIMALS)
+    const amount = parseUnits(stakeAmount.value.toString(), likeCoinTokenDecimals)
 
     if (amount > userStake.value) {
       toast.add({
@@ -310,7 +301,7 @@ async function handleDonateButtonClick() {
 
   try {
     isDonating.value = true
-    const amount = parseUnits(stakeAmount.value.toString(), LIKE_TOKEN_DECIMALS)
+    const amount = parseUnits(stakeAmount.value.toString(), likeCoinTokenDecimals)
 
     await depositReward(props.nftClassId, amount)
 

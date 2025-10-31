@@ -149,6 +149,52 @@
           </AccountSettingsItem>
 
           <AccountSettingsItem
+            :label="$t('account_page_likecoin')"
+          >
+            <template #label-prepend>
+              <img
+                class="w-5 h-5"
+                :src="likeCoinTokenImage"
+                :alt="$t('account_page_likecoin')"
+              >
+            </template>
+
+            <BalanceLabel
+              class="text-sm text-muted"
+              :value="formattedLikeBalance"
+            />
+
+            <template #right>
+              <UButton
+                :to="localeRoute({ name: 'account-deposit' })"
+                :label="$t('account_page_governance_button')"
+                variant="outline"
+                size="lg"
+              />
+            </template>
+          </AccountSettingsItem>
+
+          <AccountSettingsItem
+            :label="$t('account_page_staking_reward')"
+            icon="i-material-symbols-auto-graph-rounded"
+          >
+            <BalanceLabel
+              class="text-sm text-muted"
+              :value="formattedTotalStakingRewards"
+            />
+
+            <template #right>
+              <UButton
+                :label="$t('account_page_staking_reward_claim_button')"
+                size="lg"
+                :disabled="totalUnclaimedRewards <= 0n"
+                loading-auto
+                @click="handleClaimStakingRewardButtonClick"
+              />
+            </template>
+          </AccountSettingsItem>
+
+          <AccountSettingsItem
             v-if="user?.likeWallet"
             icon="i-material-symbols-key-outline-rounded"
             :label="$t('account_page_cosmos_wallet')"
@@ -278,6 +324,10 @@
 </template>
 
 <script setup lang="ts">
+import { formatUnits } from 'viem'
+
+import likeCoinTokenImage from '~/assets/images/likecoin-token.png'
+
 // NOTE: Set `layout` to false for injecting props into `<NuxtLayout/>`.
 definePageMeta({ layout: false })
 
@@ -286,11 +336,16 @@ const likeCoinSessionAPI = useLikeCoinSessionAPI()
 const { t: $t, locale } = useI18n()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
+const stakingStore = useStakingStore()
+const bookshelfStore = useBookshelfStore()
 const localeRoute = useLocaleRoute()
 const { handleError } = useErrorHandler()
 const toast = useToast()
 const isWindowFocused = useDocumentVisibility()
 const { copy: copyToClipboard } = useClipboard()
+
+const { formattedLikeBalance } = useLikeCoinBalance(user.value?.evmWallet)
+const { claimWalletRewards } = useLikeCollectiveContract()
 
 useHead({
   title: $t('account_page_title'),
@@ -309,6 +364,23 @@ const likeWalletButtonTo = computed(() => {
   if (!user.value?.likeWallet) return undefined
   return `${config.public.likerLandSiteURL}/${locale.value}/${user.value.likeWallet}?tab=collected`
 })
+
+const formattedTotalStakingRewards = computed(() => {
+  return user.value ? stakingStore.getFormattedTotalRewards(user.value.evmWallet) : '0'
+})
+
+const stakingData = computed(() => {
+  return user.value
+    ? stakingStore.getUserStakingData(user.value.evmWallet)
+    : {
+        items: [],
+        totalUnclaimedRewards: 0n,
+        isFetching: false,
+        hasFetched: false,
+      }
+})
+
+const totalUnclaimedRewards = computed(() => stakingData.value.totalUnclaimedRewards)
 
 async function handleLogin() {
   await accountStore.login()
@@ -431,5 +503,40 @@ function handleLikeWalletClick() {
 
 function handleMigrateLegacyBookButtonClick() {
   useLogEvent('migrate_legacy_book_button_click')
+}
+
+async function handleClaimStakingRewardButtonClick() {
+  if (!user.value?.evmWallet || totalUnclaimedRewards.value <= 0n) return
+
+  try {
+    await accountStore.restoreConnection()
+
+    await claimWalletRewards(user.value.evmWallet)
+    await sleep(3000)
+
+    toast.add({
+      title: $t('staking_claim_all_rewards_success'),
+      color: 'success',
+      icon: 'i-material-symbols-check-circle',
+    })
+
+    useLogEvent('staking_claim_all_rewards_success', {
+      total_amount: formatUnits(totalUnclaimedRewards.value, config.public.likeCoinTokenDecimals),
+      book_count: bookshelfStore.items.length,
+    })
+
+    // Reload data to refresh rewards
+    if (user.value?.evmWallet) {
+      await Promise.all([
+        stakingStore.fetchUserStakingData(user.value.evmWallet, { isRefresh: true }),
+        bookshelfStore.fetchItems({ walletAddress: user.value.evmWallet, isRefresh: true }),
+      ])
+    }
+  }
+  catch (error) {
+    await handleError(error, {
+      title: $t('staking_claim_all_rewards_error'),
+    })
+  }
 }
 </script>
