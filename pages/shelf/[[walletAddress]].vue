@@ -152,15 +152,42 @@ const stakingData = computed(() => {
 })
 
 const bookshelfItemsWithStaking = computed(() => {
-  const items = bookshelfStore.items.map((item) => {
-    const stakingItem = stakingData.value.items.find(
-      s => s.nftClassId.toLowerCase() === item.nftClassId.toLowerCase(),
-    )
+  const ownedItemsByNFTClassId = new Map(
+    bookshelfStore.items.map(item => [
+      item.nftClassId.toLowerCase(),
+      item,
+    ]),
+  )
+
+  const stakedItemsByNFTClassId = new Map(
+    stakingData.value.items.map(item => [
+      item.nftClassId.toLowerCase(),
+      item,
+    ]),
+  )
+
+  const items = bookshelfStore.items.map((bookshelfItem) => {
+    const normalizedNFTClassId = bookshelfItem.nftClassId.toLowerCase()
+    const stakedItem = stakedItemsByNFTClassId.get(normalizedNFTClassId)
+
     return {
-      ...item,
-      stakedAmount: stakingItem ? Number(formatUnits(stakingItem.stakedAmount, likeCoinTokenDecimals)) : 0,
-      pendingRewards: stakingItem ? Number(formatUnits(stakingItem.pendingRewards, likeCoinTokenDecimals)) : 0,
+      ...bookshelfItem,
+      stakedAmount: stakedItem ? Number(formatUnits(stakedItem.stakedAmount, likeCoinTokenDecimals)) : 0,
+      pendingRewards: stakedItem ? Number(formatUnits(stakedItem.pendingRewards, likeCoinTokenDecimals)) : 0,
       isOwned: true,
+    }
+  })
+
+  stakingData.value.items.forEach((stakedItem) => {
+    const normalizedNFTClassId = stakedItem.nftClassId.toLowerCase()
+    if (!ownedItemsByNFTClassId.has(normalizedNFTClassId)) {
+      items.push({
+        nftClassId: stakedItem.nftClassId,
+        nftIds: [],
+        stakedAmount: Number(formatUnits(stakedItem.stakedAmount, likeCoinTokenDecimals)),
+        pendingRewards: Number(formatUnits(stakedItem.pendingRewards, likeCoinTokenDecimals)),
+        isOwned: false,
+      })
     }
   })
 
@@ -169,13 +196,11 @@ const bookshelfItemsWithStaking = computed(() => {
     // If not my bookshelf, don't sort by staking
     if (!isMyBookshelf.value) return 0
 
-    // Sort by staked amount descending
-    if (a.stakedAmount !== b.stakedAmount) {
-      return b.stakedAmount - a.stakedAmount
+    if (a.isOwned !== b.isOwned) {
+      return a.isOwned ? -1 : 1
     }
 
-    // Keep original order if staked amounts are equal
-    return 0
+    return b.stakedAmount - a.stakedAmount
   })
 })
 
