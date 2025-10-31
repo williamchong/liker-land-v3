@@ -201,7 +201,7 @@
   "governance_page_accumulated_rewards": "累積獎勵",
   "governance_page_amount_placeholder": "輸入要質押的金額",
   "governance_page_auto_restake": "自動複利",
-  "governance_page_auto_restake_disabled": "自動複利已禁用",
+  "governance_page_auto_restake_disabled": "自動複利已關閉",
   "governance_page_claim_rewards": "領取獎勵",
   "governance_page_error": "錯誤",
   "governance_page_error_auto_restake": "切換自動複利失敗",
