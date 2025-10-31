@@ -237,13 +237,35 @@
                 v-text="t('governance_page_withdraw_like')"
               />
             </h3>
+
+            <!-- Lock Time Warning -->
+            <div
+              v-if="governanceData.isWithdrawLocked.value"
+              class="p-3 rounded-lg bg-amber-50 border border-amber-200"
+            >
+              <div class="flex items-start gap-2">
+                <UIcon
+                  name="i-material-symbols-lock-outline-rounded"
+                  class="size-5 text-amber-600 mt-0.5 shrink-0"
+                />
+                <div class="flex-1">
+                  <p class="text-sm font-semibold text-amber-900">
+                    {{ t('governance_page_withdraw_locked') }}
+                  </p>
+                  <p class="text-xs text-amber-800 mt-1">
+                    {{ formatLockTimeRemaining(governanceData.timeUntilWithdrawUnlock.value) }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div class="flex items-center gap-2">
               <UInput
                 v-model="withdrawAmount"
                 type="number"
                 :placeholder="t('governance_page_withdraw_placeholder')"
                 step="0.01"
-                :disabled="isLoading"
+                :disabled="isLoading || governanceData.isWithdrawLocked.value"
                 class="flex-1"
               />
               <UButton
@@ -251,6 +273,7 @@
                 size="sm"
                 color="neutral"
                 variant="outline"
+                :disabled="governanceData.isWithdrawLocked.value"
                 @click="handleMaxWithdraw"
               />
             </div>
@@ -260,7 +283,7 @@
               size="lg"
               block
               :loading="isLoading"
-              :disabled="!withdrawAmount || isLoading"
+              :disabled="!withdrawAmount || isLoading || governanceData.isWithdrawLocked.value"
               @click="handleWithdraw"
             />
           </div>
@@ -427,5 +450,25 @@ async function handleMaxStake() {
 function handleMaxWithdraw() {
   if (governanceData.veLikeBalance.value === 0n) return
   withdrawAmount.value = Number(formatUnits(governanceData.veLikeBalance.value, likeCoinTokenDecimals))
+}
+
+function formatLockTimeRemaining(secondsRemaining: number): string {
+  if (secondsRemaining <= 0) {
+    return ''
+  }
+
+  const days = Math.floor(secondsRemaining / 86400)
+  const hours = Math.floor((secondsRemaining % 86400) / 3600)
+  const minutes = Math.floor((secondsRemaining % 3600) / 60)
+
+  if (days > 0) {
+    return t('governance_page_unlock_time_days', { days, hours })
+  }
+  else if (hours > 0) {
+    return t('governance_page_unlock_time_hours', { hours, minutes })
+  }
+  else {
+    return t('governance_page_unlock_time_minutes', { minutes })
+  }
 }
 </script>

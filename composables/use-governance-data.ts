@@ -12,6 +12,7 @@ export function useGovernanceData(walletAddress: string | Ref<string>) {
     getCurrentRewardContract,
     convertToAssets,
     deposit,
+    getLockTime: getContractLockTime,
   } = useVeLikeContract()
   const { approve: approveLikeCoin } = useLikeCoinContract()
 
@@ -100,6 +101,23 @@ export function useGovernanceData(walletAddress: string | Ref<string>) {
     }
   })
 
+  const isWithdrawLocked = computed(() => {
+    if (lockTime.value === 0n) {
+      return false
+    }
+    const currentTime = BigInt(Math.floor(Date.now() / 1000))
+    return lockTime.value > currentTime
+  })
+
+  const timeUntilWithdrawUnlock = computed(() => {
+    if (!isWithdrawLocked.value) {
+      return 0
+    }
+    const currentTime = BigInt(Math.floor(Date.now() / 1000))
+    const secondsRemaining = Number(lockTime.value - currentTime)
+    return secondsRemaining
+  })
+
   async function loadGovernanceData() {
     if (!rewardContractAddress.value) {
       rewardContractAddress.value = await getCurrentRewardContract()
@@ -112,12 +130,13 @@ export function useGovernanceData(walletAddress: string | Ref<string>) {
     const address = toValue(walletAddress) as `0x${string}`
 
     // Load all governance data in parallel
-    const [veLikeBalanceResult, pendingRewardResult, claimedRewardResult, conditionResult, totalSupplyResult] = await Promise.all([
+    const [veLikeBalanceResult, pendingRewardResult, claimedRewardResult, conditionResult, totalSupplyResult, lockTimeResult] = await Promise.all([
       getVeLikeBalance(address),
       getPendingReward(address),
       getClaimedReward(address),
       getCurrentCondition(),
       getVeLikeTotalSupply(),
+      getContractLockTime(),
     ])
 
     veLikeBalance.value = veLikeBalanceResult
@@ -133,6 +152,7 @@ export function useGovernanceData(walletAddress: string | Ref<string>) {
       rewardIndex: bigint
     }
     totalSupplyValue.value = totalSupplyResult
+    lockTime.value = lockTimeResult
   }
 
   async function approveAndDeposit(amount: bigint, receiver: string) {
@@ -166,6 +186,9 @@ export function useGovernanceData(walletAddress: string | Ref<string>) {
     formattedPendingReward,
     formattedClaimedReward,
     totalVotingPower,
+    // Lock time status
+    isWithdrawLocked: readonly(isWithdrawLocked),
+    timeUntilWithdrawUnlock: readonly(timeUntilWithdrawUnlock),
     loadGovernanceData,
     approveAndDeposit,
   }
