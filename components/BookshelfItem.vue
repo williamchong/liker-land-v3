@@ -176,7 +176,7 @@ const menuItems = computed<DropdownMenuItem[]>(() => {
       onSelect: claimBook,
     })
   }
-  else {
+  else if (props.isOwned) {
     bookInfo.sortedContentURLs.value.forEach((contentURL) => {
       const label = getContentTypeLabel(contentURL.type)
 

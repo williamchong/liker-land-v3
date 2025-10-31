@@ -152,15 +152,42 @@ const stakingData = computed(() => {
 })
 
 const bookshelfItemsWithStaking = computed(() => {
-  const items = bookshelfStore.items.map((item) => {
-    const stakingItem = stakingData.value.items.find(
-      s => s.nftClassId.toLowerCase() === item.nftClassId.toLowerCase(),
-    )
+  const bookshelfByNftClassId = new Map(
+    bookshelfStore.items.map(item => [
+      item.nftClassId.toLowerCase(),
+      item,
+    ]),
+  )
+
+  const stakingByNftClassId = new Map(
+    stakingData.value.items.map(item => [
+      item.nftClassId.toLowerCase(),
+      item,
+    ]),
+  )
+
+  const items = bookshelfStore.items.map((bookshelfItem) => {
+    const nftClassIdLower = bookshelfItem.nftClassId.toLowerCase()
+    const stakingItem = stakingByNftClassId.get(nftClassIdLower)
+
     return {
-      ...item,
+      ...bookshelfItem,
       stakedAmount: stakingItem ? Number(formatUnits(stakingItem.stakedAmount, likeCoinTokenDecimals)) : 0,
       pendingRewards: stakingItem ? Number(formatUnits(stakingItem.pendingRewards, likeCoinTokenDecimals)) : 0,
       isOwned: true,
+    }
+  })
+
+  stakingData.value.items.forEach((stakingItem) => {
+    const nftClassIdLower = stakingItem.nftClassId.toLowerCase()
+    if (!bookshelfByNftClassId.has(nftClassIdLower)) {
+      items.push({
+        nftClassId: stakingItem.nftClassId,
+        nftIds: [],
+        stakedAmount: Number(formatUnits(stakingItem.stakedAmount, likeCoinTokenDecimals)),
+        pendingRewards: Number(formatUnits(stakingItem.pendingRewards, likeCoinTokenDecimals)),
+        isOwned: false,
+      })
     }
   })
 
@@ -169,13 +196,11 @@ const bookshelfItemsWithStaking = computed(() => {
     // If not my bookshelf, don't sort by staking
     if (!isMyBookshelf.value) return 0
 
-    // Sort by staked amount descending
-    if (a.stakedAmount !== b.stakedAmount) {
-      return b.stakedAmount - a.stakedAmount
+    if (a.isOwned !== b.isOwned) {
+      return a.isOwned ? -1 : 1
     }
 
-    // Keep original order if staked amounts are equal
-    return 0
+    return b.stakedAmount - a.stakedAmount
   })
 })
 
