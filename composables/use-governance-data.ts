@@ -83,7 +83,7 @@ export function useGovernanceData(walletAddress: string | Ref<string>) {
       // timeUnit * balanceOf(account) * rewardAmount / totalSupply / (endTime - startTime)
       // timeUnit = 86400 (seconds per day)
       const numerator = SECONDS_PER_DAY * veLikeBalance.value * rewardAmount
-      const denominator = totalSupplyValue.value * timeDuration * BigInt(LIKE_TOKEN_DECIMALS)
+      const denominator = totalSupplyValue.value * timeDuration * (BigInt(10) ** BigInt(LIKE_TOKEN_DECIMALS))
 
       // Convert to number for formatting
       const estimatedValue = Number(numerator) / Number(denominator)
