@@ -120,6 +120,7 @@
 
 <script setup lang="ts">
 import { formatUnits } from 'viem'
+import type { StakingItem } from '~/stores/staking'
 
 const { likeCoinTokenDecimals } = useRuntimeConfig().public
 const { t: $t } = useI18n()
@@ -160,7 +161,7 @@ const bookshelfItemsWithStaking = computed(() => {
   )
 
   const stakedItemsByNFTClassId = new Map(
-    stakingData.value.items.map(item => [
+    stakingData.value.items.map((item: StakingItem) => [
       item.nftClassId.toLowerCase(),
       item,
     ]),
@@ -178,7 +179,7 @@ const bookshelfItemsWithStaking = computed(() => {
     }
   })
 
-  stakingData.value.items.forEach((stakedItem) => {
+  stakingData.value.items.forEach((stakedItem: StakingItem) => {
     const normalizedNFTClassId = stakedItem.nftClassId.toLowerCase()
     if (!ownedItemsByNFTClassId.has(normalizedNFTClassId)) {
       items.push({
