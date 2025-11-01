@@ -94,9 +94,9 @@
         @click="handleConnectWallet"
       />
 
-      <!-- Donate Button (for testing) -->
+      <!-- Donate Button (testnet only) -->
       <UButton
-        v-if="hasLoggedIn"
+        v-if="hasLoggedIn && isTestnet"
         class="col-span-full"
         :label="$t('donate_reward_button')"
         icon="i-material-symbols-volunteer-activism"
@@ -121,7 +121,7 @@ const props = defineProps<{
 }>()
 
 const config = useRuntimeConfig()
-const { likeCoinTokenDecimals } = config.public
+const { likeCoinTokenDecimals, isTestnet } = config.public
 
 const { t: $t } = useI18n()
 const toast = useToast()
