@@ -142,7 +142,7 @@
                     <div
                       v-if="userStakePercentage > 0"
                       class="mt-1 text-xs text-dimmed"
-                      v-text="$tc('staking_of_total', { percentage: userStakePercentage })"
+                      v-text="$t('staking_of_total', { percentage: userStakePercentage })"
                     />
                   </div>
                 </UCard>
