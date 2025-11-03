@@ -28,10 +28,7 @@
     </div>
 
     <!-- Price info for store mode -->
-    <div
-      v-if="!isStakingMode"
-      class="h-5 mt-3 text-sm text-theme-black"
-    >
+    <div class="h-5 mt-3 text-sm text-theme-black">
       <span
         v-if="price > 0"
         class="mr-0.5"
@@ -47,19 +44,28 @@
     </div>
 
     <!-- Staking info for staking mode -->
-    <div
-      v-else
-      class="mt-3 space-y-1"
-    >
-      <div class="flex items-center justify-between text-toned text-sm">
-        <span v-text="$t('staking_explore_total_staked')" />
-        <BalanceLabel :value="formattedTotalStaked" />
-      </div>
-
-      <div class="flex items-center justify-between text-muted text-xs">
-        <span v-text="$t('staking_explore_stakers')" />
-        <span v-text="stakerCount" />
-      </div>
+    <div class="mt-3 space-y-1 text-muted text-xs">
+      <BookItemStatsRow
+        :label="$t('staking_explore_total_staked')"
+        :is-hidden="totalStaked <= 0"
+      >
+        <BalanceLabel
+          :value="totalStaked"
+          :is-bold="false"
+          :is-compact="true"
+        />
+      </BookItemStatsRow>
+      <BookItemStatsRow
+        :label="$t('staking_explore_stakers')"
+        :is-hidden="totalStaked <= 0"
+      >
+        <BalanceLabel
+          :value="stakerCount"
+          :is-compact="true"
+          :is-bold="false"
+          currency=""
+        />
+      </BookItemStatsRow>
     </div>
   </li>
 </template>
@@ -130,14 +136,6 @@ const formattedPrice = computed(() => formatPrice(price.value))
 const formattedDiscountPrice = computed(() => {
   const plusPrice = getPlusDiscountPrice(price.value)
   return plusPrice ? formatPrice(plusPrice) : null
-})
-
-const isStakingMode = computed(() => props.totalStaked > 0 || props.stakerCount > 0)
-
-const formattedTotalStaked = computed(() => {
-  return props.totalStaked.toLocaleString(undefined, {
-    maximumFractionDigits: 2,
-  })
 })
 
 if (!props.lazy) {

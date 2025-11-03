@@ -302,7 +302,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     }
   })
 
-  async function fetchStakingBooks(sortBy: string, { isRefresh = false } = {}) {
+  async function fetchStakingBooks(sortBy: string, { isRefresh = false, limit = 30 } = {}) {
     if (stakingBooksMap.value[sortBy]?.isFetching) {
       return
     }
@@ -319,7 +319,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
       stakingBooksMap.value[sortBy].isFetching = true
 
       const result = await fetchCollectiveBookNFTs({
-        'pagination.limit': 30,
+        'pagination.limit': limit,
         'time_frame_sort_order': 'desc',
         'time_frame_sort_by': sortBy as 'staked_amount' | 'last_staked_at' | 'number_of_stakers',
       })

@@ -77,25 +77,28 @@
         })"
         class="inline-block mt-0.5 text-xs laptop:text-sm text-toned hover:text-theme-black line-clamp-1 hover:underline"
       >{{ bookInfo.authorName }}</NuxtLink>
+    </div>
 
-      <!-- Staking info section -->
-      <div
-        v-if="hasStakes"
-        class="mt-3 space-y-1"
+    <!-- Staking info section -->
+    <div class="mt-3 space-y-1 text-toned text-xs">
+      <BookItemStatsRow
+        :label="$t('staking_dashboard_staked')"
+        :is-hidden="stakedAmount <= 0"
       >
-        <div class="flex items-center justify-between text-toned text-sm">
-          <span v-text="$t('staking_dashboard_staked')" />
-          <BalanceLabel :value="formattedStakedAmount" />
-        </div>
-
-        <div
-          v-if="formattedPendingRewards"
-          class="flex items-center justify-between text-toned text-xs"
-        >
-          <span v-text="$t('staking_dashboard_rewards')" />
-          <BalanceLabel :value="formattedPendingRewards" />
-        </div>
-      </div>
+        <BalanceLabel
+          :value="stakedAmount"
+          :is-compact="true"
+        />
+      </BookItemStatsRow>
+      <BookItemStatsRow
+        :label="$t('staking_dashboard_rewards')"
+        :is-hidden="pendingRewards <= 0"
+      >
+        <BalanceLabel
+          :value="pendingRewards"
+          :is-compact="true"
+        />
+      </BookItemStatsRow>
     </div>
   </li>
 </template>
@@ -147,20 +150,6 @@ const { getResizedImageURL } = useImageResize()
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 300 }))
 
 const isDesktopScreen = useDesktopScreen()
-
-const formattedStakedAmount = computed(() => {
-  if (props.stakedAmount === 0) return ''
-  return props.stakedAmount.toLocaleString(undefined, {
-    maximumFractionDigits: 2,
-  })
-})
-
-const formattedPendingRewards = computed(() => {
-  if (props.pendingRewards === 0) return ''
-  return props.pendingRewards.toLocaleString(undefined, {
-    maximumFractionDigits: 6,
-  })
-})
 
 const hasStakes = computed(() => props.stakedAmount > 0)
 

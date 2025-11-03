@@ -177,8 +177,8 @@
           :book-name="item.title"
           :book-cover-src="item.imageUrl"
           :price="item.minPrice"
-          :total-staked="isStakingTagId ? Number(formatUnits(item.totalStaked ?? 0n, likeCoinTokenDecimals)) : 0"
-          :staker-count="isStakingTagId ? (item.stakerCount ?? 0) : 0"
+          :total-staked="Number(formatUnits(item.totalStaked ?? 0n, likeCoinTokenDecimals))"
+          :staker-count="item.stakerCount ?? 0"
           :lazy="index >= columnMax"
         />
       </ul>
@@ -464,7 +464,34 @@ const searchResults = computed(() => {
 })
 
 const defaultListingProducts = computed(() => {
-  return bookstoreStore.getBookstoreCMSProductsByTagId(localizedTagId.value)
+  const stakingData = bookstoreStore.getStakingBooks('total_staked').items.reduce((map, item) => {
+    map[item.nftClassId.toLowerCase()] = {
+      totalStaked: item.totalStaked,
+      stakerCount: item.stakerCount,
+    }
+    return map
+  }, {} as Record<string, { totalStaked: bigint, stakerCount: number }>)
+
+  const listingProducts = bookstoreStore.getBookstoreCMSProductsByTagId(localizedTagId.value)
+  const items = listingProducts.items.map((item) => {
+    const stakingInfo = stakingData[item.classId?.toLowerCase() || '']
+    return {
+      ...item,
+      totalStaked: stakingInfo?.totalStaked ?? 0n,
+      stakerCount: stakingInfo?.stakerCount ?? 0,
+    }
+  })
+
+  items.sort((a, b) => {
+    const aTotalStaked = a.totalStaked ?? 0n
+    const bTotalStaked = b.totalStaked ?? 0n
+    return Number(bTotalStaked - aTotalStaked)
+  })
+
+  return {
+    ...listingProducts,
+    items,
+  }
 })
 
 const hasSearchResults = computed(() => {
@@ -567,7 +594,11 @@ async function fetchItems({ lazy = false, isRefresh = false } = {}) {
   }
 
   try {
-    await bookstoreStore.fetchCMSProductsByTagId(localizedTagId.value, { isRefresh })
+    await Promise.all([
+      bookstoreStore.fetchCMSProductsByTagId(localizedTagId.value, { isRefresh }),
+      // NOTE: Fetch staking books for sorting items
+      bookstoreStore.fetchStakingBooks('total_staked', { isRefresh, limit: 100 }).catch(() => {}),
+    ])
   }
   catch (error) {
     await handleError(error, {
