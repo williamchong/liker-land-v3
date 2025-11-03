@@ -490,7 +490,7 @@ async function handleClaimStakingRewardButtonClick() {
     // Reload data to refresh rewards
     if (user.value?.evmWallet) {
       await Promise.all([
-        stakingStore.fetchUserStakingData(user.value.evmWallet, { isRefresh: true }),
+        stakingStore.fetchUserStakingData(user.value.evmWallet),
         bookshelfStore.fetchItems({ walletAddress: user.value.evmWallet, isRefresh: true }),
       ])
     }
