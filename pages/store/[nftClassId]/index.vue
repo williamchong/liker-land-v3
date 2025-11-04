@@ -65,6 +65,45 @@
                 v-html="bookInfoDescriptionHTML"
               />
             </ExpandableContent>
+            <ul
+              v-if="bookInfo.keywords.value"
+              :class="[
+                'flex',
+                'flex-wrap',
+                'gap-x-2',
+                'gap-y-4',
+                'mt-[48px]',
+                { 'max-tablet:hidden': isStakingTabActive },
+              ]"
+            >
+              <li
+                v-for="tag in bookInfo.keywords.value"
+                :key="tag"
+              >
+                <TagItem :label="tag" />
+              </li>
+            </ul>
+            <div class="flex flex-wrap gap-1 mt-3">
+              <TagItem
+                :label="$t('product_page_book_format_value')"
+              />
+              <TagItem
+                v-for="contentType in bookInfo.contentTypes.value"
+                :key="contentType"
+                :label="contentType.toUpperCase()"
+              />
+              <TagItem
+                :label="$t('reading_method_read_online')"
+              />
+              <TagItem
+                v-if="bookInfo.isDownloadable.value"
+                :label="$t('reading_method_download_file')"
+              />
+              <TagItem
+                v-if="!bookInfo.isAudioHidden.value && isLikerPlus"
+                :label="$t('product_page_support_tts_label')"
+              />
+            </div>
           </template>
 
           <template #author>
@@ -74,40 +113,6 @@
                 v-html="authorDescriptionHTML"
               />
             </ExpandableContent>
-          </template>
-
-          <template #file-info>
-            <table class="border-separate border-spacing-2">
-              <tbody
-                :class="[
-                  '[&>tr>td:first-child]:pr-4',
-                  'text-sm',
-                  '[&>tr>td:first-child]:text-gray-400',
-                  '[&>tr>td:last-child]:text-gray-900',
-                ]"
-              >
-                <tr>
-                  <td v-text="$t('product_page_book_format_label')" />
-                  <td v-text="$t('product_page_book_format_value')" />
-                </tr>
-                <tr v-if="bookInfo.formattedContentTypes">
-                  <td v-text="$t('product_page_file_format_label')" />
-                  <td v-text="bookInfo.formattedContentTypes" />
-                </tr>
-                <tr v-if="bookInfo.formattedReadingMethods">
-                  <td v-text="$t('product_page_reading_methods_label')" />
-                  <td v-text="bookInfo.formattedReadingMethods" />
-                </tr>
-                <tr>
-                  <td v-text="$t('product_page_support_tts_label')" />
-                  <td v-text="bookInfo.formattedTTSSupportLabel" />
-                </tr>
-                <tr v-if="bookInfo.formattedPublishedDate">
-                  <td v-text="$t('product_page_publish_date_label')" />
-                  <td v-text="bookInfo.formattedPublishedDate" />
-                </tr>
-              </tbody>
-            </table>
           </template>
 
           <template #staking-info>
@@ -177,25 +182,6 @@
             </div>
           </template>
         </UTabs>
-
-        <ul
-          v-if="bookInfo.keywords.value"
-          :class="[
-            'flex',
-            'flex-wrap',
-            'gap-x-2',
-            'gap-y-4',
-            'mt-[48px]',
-            { 'max-tablet:hidden': isStakingTabActive },
-          ]"
-        >
-          <li
-            v-for="tag in bookInfo.keywords.value"
-            :key="tag"
-          >
-            <TagItem :label="tag" />
-          </li>
-        </ul>
       </div>
 
       <div class="relative w-full tablet:max-w-[300px] laptop:max-w-[380px] shrink-0">
@@ -222,10 +208,6 @@
 
           <template v-else-if="pricingItems.length">
             <div class="bg-white p-4 pb-8 rounded-lg shadow-[0px_10px_20px_0px_rgba(0,0,0,0.04)]">
-              <h2
-                class="font-semibold tablet:text-lg"
-                v-text="$t('product_page_pricing_title')"
-              />
               <ul
                 ref="pricing"
                 class="mt-2 space-y-2"
@@ -282,8 +264,8 @@
                         ]"
                       >
                         <span
-                          class="font-semibold"
-                          v-text="item.name"
+                          class="font-semibold text-left"
+                          v-text="item.isAutoDeliver ? item.name : $t('product_page_edition_title', { name: item.name })"
                         />
                         <span
                           v-if="item.isSoldOut"
@@ -333,6 +315,40 @@
                         class="markdown whitespace-normal text-left mt-2"
                         v-html="item.renderedDescription"
                       />
+
+                      <div class="flex flex-wrap gap-1 mt-3">
+                        <UBadge
+                          v-for="contentType in bookInfo.contentTypes.value"
+                          :key="contentType"
+                          :label="contentType.toUpperCase()"
+                          variant="outline"
+                          color="neutral"
+                          size="sm"
+                        />
+
+                        <UBadge
+                          :label="$t('reading_method_read_online')"
+                          variant="outline"
+                          color="neutral"
+                          size="sm"
+                        />
+
+                        <UBadge
+                          v-if="bookInfo.isDownloadable.value"
+                          :label="$t('reading_method_download_file')"
+                          variant="outline"
+                          color="neutral"
+                          size="sm"
+                        />
+
+                        <UBadge
+                          v-if="!bookInfo.isAudioHidden.value && isLikerPlus"
+                          :label="$t('product_page_support_tts_label')"
+                          variant="outline"
+                          color="neutral"
+                          size="sm"
+                        />
+                      </div>
                     </div>
                   </button>
                 </li>
@@ -346,15 +362,6 @@
                   :disabled="!canBePurchased"
                   block
                   @click="handlePurchaseButtonClick"
-                />
-
-                <UBadge
-                  v-if="!selectedPricingItem?.isAutoDeliver"
-                  class="self-center font-bold rounded-full pr-3"
-                  icon="i-material-symbols-warning-outline"
-                  variant="subtle"
-                  color="warning"
-                  :label="$t('manual_delivery_warning_label')"
                 />
               </footer>
             </div>
@@ -707,12 +714,6 @@ const infoTabItems = computed(() => {
       value: 'author',
     })
   }
-
-  items.push({
-    label: $t('product_page_info_tab_file_info'),
-    slot: 'file-info',
-    value: 'file-info',
-  })
 
   items.push({
     label: $t('staking_info_tab_staking_info'),
