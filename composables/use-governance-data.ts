@@ -158,6 +158,7 @@ export function useGovernanceData(walletAddress: string | Ref<string>) {
   async function approveAndDeposit(amount: bigint, receiver: string) {
     // Approve LIKE token for veLIKE contract
     await approveLikeCoin(veLikeAddress, amount)
+    await sleep(3000)
     await deposit(amount, receiver)
   }
 

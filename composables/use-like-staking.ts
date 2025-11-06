@@ -41,6 +41,7 @@ export function useLikeStaking() {
 
   async function stakeToNFTClass(wallet: string, nftClassId: string, amount: bigint) {
     await approveLikeCoin(likeCollectiveAddress, amount)
+    await sleep(3000)
     const tokenIds = await getWalletLikeStakePositionIdsOfNFTClassId(wallet, nftClassId)
     if (tokenIds[0]) {
       await increaseStakePosition(tokenIds[0], amount)
@@ -57,6 +58,7 @@ export function useLikeStaking() {
 
   async function depositReward(nftClassId: string, amount: bigint) {
     await approveLikeCoin(likeCollectiveAddress, amount)
+    await sleep(3000)
     await rawDepositReward(nftClassId, amount)
   }
 
