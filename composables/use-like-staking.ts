@@ -1,5 +1,5 @@
 export function useLikeStaking() {
-  const { approve: approveLikeCoin } = useLikeCoinContract()
+  const { approveIfNeeded: approveIfNeededLikeCoin } = useLikeCoinContract()
   const {
     getLikeStakePositionInfo,
     getWalletLikeStakePositionIdsOfNFTClassId,
@@ -40,8 +40,10 @@ export function useLikeStaking() {
   }
 
   async function stakeToNFTClass(wallet: string, nftClassId: string, amount: bigint) {
-    await approveLikeCoin(likeCollectiveAddress, amount)
-    await sleep(3000)
+    const approved = await approveIfNeededLikeCoin(wallet, likeCollectiveAddress, amount)
+    if (approved) {
+      await sleep(3000)
+    }
     const tokenIds = await getWalletLikeStakePositionIdsOfNFTClassId(wallet, nftClassId)
     if (tokenIds[0]) {
       await increaseStakePosition(tokenIds[0], amount)
@@ -56,9 +58,11 @@ export function useLikeStaking() {
     await Promise.all(tokenIds.map(tokenId => unstakeFromStakePosition(tokenId)))
   }
 
-  async function depositReward(nftClassId: string, amount: bigint) {
-    await approveLikeCoin(likeCollectiveAddress, amount)
-    await sleep(3000)
+  async function depositReward(wallet: string, nftClassId: string, amount: bigint) {
+    const approved = await approveIfNeededLikeCoin(wallet, likeCollectiveAddress, amount)
+    if (approved) {
+      await sleep(3000)
+    }
     await rawDepositReward(nftClassId, amount)
   }
 

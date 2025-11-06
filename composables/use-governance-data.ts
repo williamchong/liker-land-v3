@@ -14,7 +14,7 @@ export function useGovernanceData(walletAddress: string | Ref<string>) {
     deposit,
     getLockTime: getContractLockTime,
   } = useVeLikeContract()
-  const { approve: approveLikeCoin } = useLikeCoinContract()
+  const { approveIfNeeded: approveIfNeededLikeCoin } = useLikeCoinContract()
 
   const rewardContractAddress = ref<string | null>(null)
   const {
@@ -155,11 +155,12 @@ export function useGovernanceData(walletAddress: string | Ref<string>) {
     lockTime.value = lockTimeResult
   }
 
-  async function approveAndDeposit(amount: bigint, receiver: string) {
-    // Approve LIKE token for veLIKE contract
-    await approveLikeCoin(veLikeAddress, amount)
-    await sleep(3000)
-    await deposit(amount, receiver)
+  async function approveAndDeposit(amount: bigint, owner: string) {
+    const approved = await approveIfNeededLikeCoin(owner, veLikeAddress, amount)
+    if (approved) {
+      await sleep(3000)
+    }
+    await deposit(amount, owner)
   }
 
   // Load data when the composable is mounted
