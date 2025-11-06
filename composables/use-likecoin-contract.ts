@@ -76,6 +76,20 @@ export function useLikeCoinContract() {
     })
   }
 
+  async function approveIfNeeded(owner: string, spender: string, amount: bigint) {
+    const currentAllowance = await allowance(owner, spender)
+
+    // If current allowance is already sufficient, skip approval
+    if (currentAllowance >= amount) {
+      return false
+    }
+
+    // Approve to max uint256 to avoid multiple approvals in the future
+    const maxUint256 = (2n ** 256n) - 1n
+    await approve(spender, maxUint256)
+    return true
+  }
+
   async function transfer(to: string, amount: bigint) {
     await writeContractAsync({
       address: likeCoinAddress,
@@ -104,6 +118,7 @@ export function useLikeCoinContract() {
     symbol,
     // Write functions
     approve,
+    approveIfNeeded,
     transfer,
     transferFrom,
   }

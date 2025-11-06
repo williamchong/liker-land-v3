@@ -303,7 +303,7 @@ async function handleDonateButtonClick() {
     isDonating.value = true
     const amount = parseUnits(stakeAmount.value.toString(), likeCoinTokenDecimals)
 
-    await depositReward(props.nftClassId, amount)
+    await depositReward(user.value!.evmWallet, props.nftClassId, amount)
 
     toast.add({
       title: $t('donate_reward_success'),
