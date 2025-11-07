@@ -473,6 +473,7 @@ async function loadEPub() {
       return spineHref ? { ...item, href: spineHref } : null
     })
     .filter((item): item is NavItem => item !== null)
+
   activeNavItemHref.value = book.spine.first().href
   currentPageHref.value = activeNavItemHref.value
   lastSectionIndex.value = book.spine.last().index
@@ -497,7 +498,9 @@ async function loadEPub() {
   rendition.value.themes.default({ body: bodyCSS })
   rendition.value.themes.fontSize(`${fontSize.value}px`)
   isPageLoading.value = true
-  rendition.value.display(currentCfi.value || undefined)
+
+  const displayTarget = currentCfi.value || findNextCFIAfterTOC(navItems.value)
+  rendition.value.display(displayTarget || undefined)
 
   rendition.value.on('rendered', (section: Section, view: EpubView) => {
     currentSectionIndex.value = section.index
@@ -594,6 +597,20 @@ async function loadEPub() {
   const { segments: ttsSegments, chapterTitles } = await extractTTSSegments(book)
   setTTSSegments(ttsSegments)
   setChapterTitles(chapterTitles)
+}
+function findNextCFIAfterTOC(navItems: NavItem[]): string | undefined {
+  const firstChapter = navItems[0]
+  if (!firstChapter) return undefined
+
+  const tocKeywords = ['目錄', '目录', 'contents', 'table of contents', 'toc', 'index']
+  const isTOC = tocKeywords.some(keyword =>
+    firstChapter.label.toLowerCase().includes(keyword),
+  )
+
+  if (isTOC && navItems[1]?.href) {
+    return navItems[1].href
+  }
+  return firstChapter.href
 }
 
 async function extractTTSSegments(book: ePub.Book) {
