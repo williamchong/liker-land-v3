@@ -325,12 +325,16 @@ export const useBookstoreStore = defineStore('bookstore', () => {
         'time_frame_sort_by': sortBy as 'staked_amount' | 'last_staked_at' | 'number_of_stakers',
       })
 
-      let bookNFTs = result.data.map(bookNFT => ({
-        nftClassId: normalizeNFTClassId(bookNFT.evm_address),
-        totalStaked: BigInt(bookNFT.staked_amount || 0),
-        stakerCount: bookNFT.number_of_stakers,
-        lastStakedAt: bookNFT.last_staked_at,
-      }))
+      let bookNFTs = result.data
+        .map(bookNFT => ({
+          nftClassId: normalizeNFTClassId(bookNFT.evm_address),
+          totalStaked: BigInt(bookNFT.staked_amount || 0),
+          stakerCount: bookNFT.number_of_stakers,
+          lastStakedAt: bookNFT.last_staked_at,
+        }))
+        .filter((bookNFT) => {
+          return bookNFT.totalStaked > 0
+        })
 
       // HACK: time_frame_sort_order doesn't work in indexer now
       // Sort locally to ensure correct ordering, remove after indexer is fixed
