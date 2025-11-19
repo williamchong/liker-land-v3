@@ -3,24 +3,15 @@
     :text="props.walletAddress"
     :disabled="!props.walletAddress || !!displayName"
   >
-    <NuxtLink
+    <UButton
+      ref="lazyLoadTrigger"
+      :label="label"
       :to="linkRoute"
-      :class="linkRoute ? 'inline-block' : 'inline'"
-    >
-      <TagItem
-        ref="lazyLoadTrigger"
-        :label="label"
-        :class="linkRoute ? 'hover:bg-gray-100 transition-colors cursor-pointer' : ''"
-      >
-        <template #prepend>
-          <UAvatar
-            :alt="name"
-            size="xs"
-            icon="i-material-symbols-person-2-rounded"
-          />
-        </template>
-      </TagItem>
-    </NuxtLink>
+      variant="soft"
+      size="xl"
+      :avatar="{ icon: 'i-material-symbols-person-2-rounded' }"
+      :ui="{ base: 'pr-4 rounded-full' }"
+    />
   </UTooltip>
 </template>
 
@@ -66,12 +57,12 @@ const label = computed(() => {
 const linkRoute = computed(() => {
   const query = props.entityType === 'author'
     ? {
-        author: props.name,
+        q: props.name,
         ll_medium: 'author-link',
         ll_source: 'product-page',
       }
     : {
-        publisher: props.name,
+        q: props.name,
         ll_medium: 'publisher-link',
         ll_source: 'product-page',
       }

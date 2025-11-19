@@ -23,6 +23,13 @@
         v-if="isSearchMode"
         class="flex items-center gap-4 w-full"
       >
+        <UButton
+          :to="localeRoute({ name: 'store' })"
+          icon="i-material-symbols-close-rounded"
+          variant="outline"
+          :ui="{ base: [TAG_BUTTON_CLASS_LIGHT, TAG_BUTTON_CLASS_BASE] }"
+        />
+
         <div
           v-if="queryOwnerWallet"
           class="flex items-center gap-3 min-w-0 flex-1"
@@ -44,16 +51,17 @@
         </div>
         <h1
           v-else
-          class="text-xl laptop:text-2xl font-bold text-gray-900"
+          class="px-3 py-1 text-theme-cyan font-medium bg-theme-black rounded-full"
         >
-          <span v-if="querySearchTerm">{{ $t('store_search_prefix') }}: {{ querySearchTerm }}</span>
-          <span v-else-if="queryAuthorName">{{ $t('store_author_prefix') }}: {{ queryAuthorName }}</span>
-          <span v-else-if="queryPublisherName">{{ $t('store_publisher_prefix') }}: {{ queryPublisherName }}</span>
+          <span v-if="querySearchTerm">{{ $t('store_search_prefix') }}{{ querySearchTerm }}</span>
+          <span v-else-if="queryAuthorName">{{ $t('store_author_prefix') }}{{ queryAuthorName }}</span>
+          <span v-else-if="queryPublisherName">{{ $t('store_publisher_prefix') }}{{ queryPublisherName }}</span>
         </h1>
       </div>
 
       <!-- Tag selector -->
       <div
+        v-else
         class="flex items-center max-phone:gap-1 gap-2 w-full"
       >
         <template v-if="!bookstoreStore.hasFetchedBookstoreCMSTags && isDefaultTagId">
@@ -97,6 +105,70 @@
           :to="localeRoute({ name: 'store', query: { ...route.query, tag: fixedTag.value } })"
           @click.prevent="handleTagClick(fixedTag.value)"
         />
+
+        <UModal
+          v-if="bookstoreStore.hasFetchedBookstoreCMSTags && isDefaultTagId"
+          v-model:open="isSearchInputOpen"
+          :close="false"
+          :ui="{
+            content: 'max-phone:top-30 top-1/4',
+            body: 'p-0 sm:p-0',
+            footer: [
+              'flex',
+              'items-center',
+              'justify-between',
+
+              'sm:px-4',
+              'pl-3 sm:pl-3',
+              'py-2',
+            ],
+          }"
+        >
+          <UButton
+            icon="i-material-symbols-search-rounded"
+            variant="outline"
+            :ui="{
+              base: [TAG_BUTTON_CLASS_LIGHT, TAG_BUTTON_CLASS_BASE],
+              leadingIcon: 'laptop:size-6',
+            }"
+            @click="handleSearchTagClick"
+          />
+
+          <template #body>
+            <form
+              class="w-full"
+              action="."
+              @submit.prevent="handleSearchSubmit"
+            >
+              <UInput
+                v-model="searchInputValue"
+                class="w-full"
+                icon="i-material-symbols-search-rounded"
+                size="xl"
+                variant="none"
+                :placeholder="$t('store_search_input_placeholder')"
+                type="search"
+                :ui="{
+                  base: 'py-5',
+                  trailing: 'pe-2',
+                }"
+                @blur="isSearchInputOpen = false"
+              >
+                <template
+                  v-if="searchInputValue.length"
+                  #trailing
+                >
+                  <UButton
+                    color="neutral"
+                    variant="link"
+                    icon="i-material-symbols-close-rounded"
+                    @click="handleClearSearchInputButton"
+                  />
+                </template>
+              </UInput>
+            </form>
+          </template>
+        </UModal>
 
         <UTooltip
           v-if="bookstoreStore.hasFetchedBookstoreCMSTags && isDefaultTagId"
@@ -150,37 +222,38 @@
       class="flex flex-col items-center grow w-full max-w-[1440px] mx-auto pt-4 px-4 laptop:px-12 pb-16"
     >
       <div
-        v-if="shouldShowDefaultListing"
+        v-if="isSearchResultEmpty"
         class="w-full mb-8"
       >
         <div class="flex flex-col items-center py-8">
           <UIcon
             class="opacity-20 mb-4"
-            name="i-material-symbols-search-off"
+            name="i-material-symbols-search-off-rounded"
             size="64"
           />
-          <h2 class="text-xl font-bold text-gray-900 mb-2">
-            {{ $t('store_no_search_results') }}
-          </h2>
-          <p class="text-gray-600 mb-4">
-            {{ $t('store_showing_recommendations') }}
-          </p>
+          <h2
+            class="text-xl font-bold text-highlighted mb-2"
+            v-text="$t('store_no_search_results')"
+          />
+          <p
+            class="text-muted"
+            v-text="$t('store_showing_recommendations')"
+          />
         </div>
-        <hr class="border-t border-gray-200">
       </div>
 
       <div
-        v-if="!shouldShowDefaultListing && itemsCount === 0 && !products.isFetchingItems && products.hasFetchedItems"
+        v-else-if="itemsCount === 0 && !products.isFetchingItems && products.hasFetchedItems"
         class="flex flex-col items-center m-auto"
       >
         <UIcon
-          class="opacity-20"
+          class="opacity-20 mb-4"
           name="i-material-symbols-menu-book-outline-rounded"
           size="128"
         />
 
-        <span
-          class="font-bold opacity-20"
+        <p
+          class="text-muted"
           v-text="$t('store_no_items')"
         />
       </div>
@@ -526,7 +599,7 @@ const searchResults = computed<BookstoreItemList | null>(() => {
   return null
 })
 
-const defaultListingProducts = computed<BookstoreItemList>(() => {
+const cmsProducts = computed<BookstoreItemList>(() => {
   const apiSortValue = mapTagIdToAPIStakingSortValue(STAKING_TAG_DEFAULT)
   const stakingData = bookstoreStore.getStakingBooks(apiSortValue).items.reduce((map, item) => {
     map[item.nftClassId.toLowerCase()] = {
@@ -560,25 +633,15 @@ const defaultListingProducts = computed<BookstoreItemList>(() => {
   }
 })
 
-const hasSearchResults = computed(() => {
-  return searchResults.value && searchResults.value.items.length > 0
-})
-
-const shouldShowDefaultListing = computed(() => {
-  return isSearchMode.value && !hasSearchResults.value && searchResults.value?.hasFetchedItems
-})
+const isSearchResultEmpty = computed(() => (
+  searchResults.value
+  && searchResults.value.items.length === 0
+  && searchResults.value.hasFetchedItems
+))
 
 const products = computed<BookstoreItemList>(() => {
-  if (isSearchMode.value) {
-    if (hasSearchResults.value && searchResults.value) {
-      return searchResults.value
-    }
-
-    if (shouldShowDefaultListing.value) {
-      return defaultListingProducts.value
-    }
-
-    return searchResults.value || defaultListingProducts.value
+  if (searchResults.value) {
+    return searchResults.value
   }
 
   // Return staking books when viewing staking tag
@@ -607,7 +670,7 @@ const products = computed<BookstoreItemList>(() => {
     }
   }
 
-  return defaultListingProducts.value
+  return cmsProducts.value
 })
 
 const itemsCount = computed(() => products.value.items.length)
@@ -739,5 +802,30 @@ async function handleCloseTagClick() {
 
 async function handleBookListTagClick() {
   useLogEvent('store_tag_book_list_click')
+}
+
+const isSearchInputOpen = ref(false)
+const searchInputValue = ref('')
+
+function handleSearchTagClick() {
+  useLogEvent('store_tag_search_click')
+  searchInputValue.value = ''
+}
+
+function handleClearSearchInputButton() {
+  useLogEvent('store_search_input_clear_button_click')
+  searchInputValue.value = ''
+}
+
+async function handleSearchSubmit() {
+  if (!searchInputValue.value) return
+
+  isSearchInputOpen.value = false
+  let query = 'q'
+  if (checkIsEVMAddress(searchInputValue.value)) {
+    query = 'owner_wallet'
+  }
+  useLogEvent('store_search_submit')
+  await navigateTo({ query: { [query]: searchInputValue.value } })
 }
 </script>

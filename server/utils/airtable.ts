@@ -66,10 +66,18 @@ export interface FetchAirtableCMSProductsByTagIdResponseData {
   offset?: string
 }
 
+const SEARCH_FIELDS = [
+  'Name',
+  'Description',
+  'Owner Name',
+  'Author',
+  'Publisher',
+  'Keywords Text',
+]
+
 function getFormulaForSearchTerm(searchTerm: string) {
   const formattedQueryString = searchTerm.replaceAll('"', '').toLowerCase()
-  const fieldNames = ['Name', 'Description', 'Owner Name', 'Author', 'Publisher']
-  const formulas = fieldNames.map(
+  const formulas = SEARCH_FIELDS.map(
     field => `IF(SEARCH(LOWER("${formattedQueryString}"), LOWER({${field}})), 1)`,
   )
   const formula = `OR(${formulas.join(', ')})`
@@ -87,6 +95,7 @@ export async function fetchAirtableCMSPublicationsBySearchTerm(
     `/${config.public.airtableCMSPublicationsTableId}`,
     {
       params: {
+        view: 'search',
         pageSize,
         filterByFormula,
         offset,

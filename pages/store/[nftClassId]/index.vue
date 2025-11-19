@@ -91,7 +91,20 @@
                 v-for="tag in descriptionTags"
                 :key="tag"
               >
-                <TagItem :label="tag" />
+                <UButton
+                  :label="tag"
+                  :to="localeRoute({
+                    name: 'store',
+                    query: {
+                      q: tag,
+                      ll_medium: `keyword-${tag}`,
+                      ll_source: 'product-page',
+                    },
+                  })"
+                  variant="soft"
+                  :ui="{ base: 'rounded-full' }"
+                  @click="handleKeywordClick(tag)"
+                />
               </li>
             </ul>
           </template>
@@ -1168,5 +1181,9 @@ function calculateCustomPrice(editionPrice: number, tippingAmount: number | unde
   const tip = Number(tippingAmount) || 0
   const base = Number(editionPrice) || 0
   return Number((tip + base).toFixed(2))
+}
+
+function handleKeywordClick(keyword: string) {
+  useLogEvent('keyword_click', { keyword })
 }
 </script>
