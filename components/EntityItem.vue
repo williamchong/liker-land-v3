@@ -3,15 +3,16 @@
     :text="props.walletAddress"
     :disabled="!props.walletAddress || !!displayName"
   >
-    <UButton
-      ref="lazyLoadTrigger"
-      :label="label"
-      :to="linkRoute"
-      variant="soft"
-      size="xl"
-      :avatar="{ icon: 'i-material-symbols-person-2-rounded' }"
-      :ui="{ base: 'pr-4 rounded-full' }"
-    />
+    <span ref="lazyLoadTrigger">
+      <UButton
+        :label="label"
+        :to="linkRoute"
+        variant="soft"
+        size="xl"
+        :avatar="{ icon: 'i-material-symbols-person-2-rounded' }"
+        :ui="{ base: 'pr-4 rounded-full' }"
+      />
+    </span>
   </UTooltip>
 </template>
 
