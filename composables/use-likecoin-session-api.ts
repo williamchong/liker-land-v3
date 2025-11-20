@@ -373,7 +373,17 @@ export function useLikeCoinSessionAPI() {
   }
 
   function fetchPlusGiftCartStatusById({ cartId, token }: { cartId: string, token: string }) {
-    return fetch.value<{ giftInfo?: { toEmail?: string, toName?: string, fromName?: string, message?: string } }>(`/plus/gift/${cartId}/status`, {
+    return fetch.value<{
+      giftInfo?: { toEmail?: string, toName?: string, fromName?: string, message?: string }
+      period?: string
+    }>(`/plus/gift/${cartId}/status`, {
+      query: { token },
+    })
+  }
+
+  function claimPlusGiftCart({ cartId, token }: { cartId: string, token: string }) {
+    return fetch.value(`/plus/gift/${cartId}/claim`, {
+      method: 'POST',
       query: { token },
     })
   }
@@ -442,6 +452,7 @@ export function useLikeCoinSessionAPI() {
     updateLikerPlusSubscription,
     fetchLikerPlusGiftStatus,
     fetchPlusGiftCartStatusById,
+    claimPlusGiftCart,
     fetchLikerPlusBillingPortalLink,
     migrateMagicEmailUser,
     sendCollectorMessage,
