@@ -26,6 +26,25 @@
         </AccountSettingsItem>
 
         <AccountSettingsItem
+          icon="i-material-symbols-card-giftcard-outline-rounded"
+          :label="$t('account_page_gift_plus')"
+        >
+          <div
+            class="text-sm/5"
+            v-text="$t('account_page_gift_plus_description')"
+          />
+
+          <template #right>
+            <UButton
+              :label="$t('account_page_gift_plus_button')"
+              color="primary"
+              variant="outline"
+              :to="localeRoute({ name: 'gift-plus' })"
+            />
+          </template>
+        </AccountSettingsItem>
+
+        <AccountSettingsItem
           v-if="user?.likerId"
           icon="i-material-symbols-3p-outline-rounded"
           :label="$t('account_page_account_id')"
