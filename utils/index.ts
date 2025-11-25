@@ -80,3 +80,7 @@ export function getPercentageAmount<T extends number | bigint>(amount: T, percen
     minAmount,
   ) as T
 }
+
+export function validateEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
