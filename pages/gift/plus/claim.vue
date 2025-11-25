@@ -1,197 +1,215 @@
 <template>
-  <div>
-    <AppHeader :is-connect-hidden="false" />
-    <main class="flex items-center justify-center min-h-screen px-4 py-8">
-      <div class="w-full max-w-[512px] text-center">
-        <!-- Loading State -->
+  <!-- Claim State -->
+  <main v-if="!isLoading && !error && giftInfo">
+    <!-- Header -->
+    <div class="w-full bg-theme-black">
+      <div class="px-4 py-2">
+        <UButton
+          class="group"
+          :label="$t('gift_plus_claim_back_button')"
+          variant="link"
+          color="neutral"
+          :loading="isRedirecting"
+          :ui="{ base: '!px-0 text-white hover:text-theme-cyan' }"
+          @click="handleMaybeLater"
+        >
+          <template #leading>
+            <div class="rounded-full p-1 border-1 text-white group-hover:text-theme-cyan border-gray-300 flex">
+              <UIcon
+                name="i-material-symbols-arrow-back-rounded"
+                class="w-4 h-4"
+              />
+            </div>
+          </template>
+        </UButton>
+      </div>
+
+      <div class="flex flex-col items-center justify-center px-4 py-8 laptop:pb-16">
+        <!-- Gift Icon -->
         <div
-          v-if="isLoading"
-          class="py-12"
+          v-gsap.from="{
+            y: -6,
+            rotate: 6,
+            delay: 0.5,
+            duration: 1,
+            ease: 'power1.inOut',
+            repeat: -1,
+            yoyo: true,
+          }"
         >
           <UIcon
-            name="i-eos-icons-loading"
-            class="text-theme-cyan inline-block mb-4"
-            size="64"
-          />
-          <p
-            class="text-gray-600"
-            v-text="$t('gift_plus_claim_loading')"
+            v-gsap.from="{
+              opacity: 0,
+              scale: 5,
+              y: '-400%',
+              duration: 0.5,
+              ease: 'power3.out',
+            }"
+            class="text-theme-cyan"
+            name="i-material-symbols-featured-seasonal-and-gifts-rounded"
+            :size="64"
           />
         </div>
 
-        <!-- Claim State -->
-        <template v-else-if="giftInfo && !error">
-          <!-- Gift Icon -->
-          <div class="mb-6">
-            <UIcon
-              name="i-material-symbols-card-giftcard"
-              class="text-theme-cyan inline-block"
-              size="64"
-            />
-          </div>
+        <!-- Gift Message -->
+        <h1
+          class="mt-5 text-theme-cyan text-3xl font-bold text-center"
+          v-text="$t('gift_plus_claim_title')"
+        />
 
-          <!-- Gift Message -->
-          <h1
-            class="text-2xl font-bold mb-3"
-            v-text="$t('gift_plus_claim_title')"
-          />
-          <p
-            class="text-gray-600 text-lg mb-8"
-            v-text="$t('gift_plus_claim_description')"
-          />
+        <p
+          class="mt-3 text-white text-lg text-center"
+          v-text="$t('gift_plus_claim_description')"
+        />
 
-          <!-- Gift Details Card -->
-          <div class="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 mb-8 text-left">
-            <h3 class="font-semibold text-blue-900 mb-4">
-              {{ $t('gift_plus_claim_gift_details') }}
-            </h3>
-            <ul class="space-y-3 text-sm text-blue-800">
-              <li class="flex justify-between">
-                <span class="font-medium">{{ $t('gift_plus_claim_from') }}:</span>
-                <span v-text="giftInfo.fromName || $t('gift_plus_claim_anonymous')" />
-              </li>
-              <li class="flex justify-between">
-                <span class="font-medium">{{ $t('gift_plus_claim_plan') }}:</span>
-                <span v-text="period === 'yearly' ? $t('pricing_page_yearly') : $t('pricing_page_monthly')" />
-              </li>
-            </ul>
-          </div>
-
-          <!-- Gift Message Section -->
-          <div
-            v-if="giftInfo.message"
-            class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 mb-8 text-left"
-          >
-            <h3 class="font-semibold text-amber-900 mb-3">
-              {{ $t('gift_plus_claim_message_title') }}
-            </h3>
-            <p
-              class="text-sm text-amber-800 italic"
-              v-text="giftInfo.message"
-            />
-          </div>
-
-          <!-- Already Plus Member State -->
-          <template v-if="isExistingPlusMember">
-            <UIcon
-              name="i-material-symbols-check-circle-rounded"
-              class="text-blue-500 inline-block mb-4"
-              size="64"
-            />
-            <h1 class="text-2xl font-bold mb-3 text-blue-600">
-              {{ $t('gift_plus_claim_already_member_title') }}
-            </h1>
-            <p
-              class="text-gray-600 mb-8"
-              v-text="$t('gift_plus_claim_already_member_description')"
-            />
-            <UButton
-              :label="$t('gift_plus_claim_continue_button')"
-              color="primary"
-              size="xl"
-              class="w-full"
-              :ui="{ base: 'py-3 rounded-2xl cursor-pointer', label: 'font-bold' }"
-              @click="handleContinue"
-            />
-          </template>
-
-          <template v-else>
-            <!-- Info Section -->
-            <div class="mb-8">
-              <div
-                class="text-center font-bold text-lg text-theme-cyan border-b-2 border-theme-cyan mb-6 pb-3"
-                v-text="$t('gift_plus_claim_info_title')"
-              />
-              <ul class="space-y-4 text-left">
-                <li class="flex items-start gap-3">
-                  <UIcon
-                    name="i-material-symbols-check"
-                    class="shrink-0 mt-0.5 text-theme-cyan"
-                    size="20"
-                  />
-                  <span
-                    class="text-sm text-gray-700"
-                    v-text="$t('pricing_page_feature_1')"
-                  />
-                </li>
-                <li class="flex items-start gap-3">
-                  <UIcon
-                    name="i-material-symbols-check"
-                    class="shrink-0 mt-0.5 text-theme-cyan"
-                    size="20"
-                  />
-                  <span
-                    class="text-sm text-gray-700"
-                    v-text="$t('pricing_page_feature_2')"
-                  />
-                </li>
-                <li class="flex items-start gap-3">
-                  <UIcon
-                    name="i-material-symbols-check"
-                    class="shrink-0 mt-0.5 text-theme-cyan"
-                    size="20"
-                  />
-                  <span
-                    class="text-sm text-gray-700"
-                    v-text="$t('pricing_page_feature_3')"
-                  />
-                </li>
-              </ul>
-            </div>
-
-            <!-- Action Buttons -->
-            <div
-              class="flex flex-col gap-3"
-            >
-              <UButton
-                :label="$t('gift_plus_claim_button')"
-                color="primary"
-                size="xl"
-                :loading="isClaiming"
-                class="w-full"
-                :ui="{ base: 'py-3 rounded-2xl cursor-pointer', label: 'font-bold' }"
-                @click="handleClaim"
-              />
-              <UButton
-                :label="$t('gift_plus_claim_maybe_later')"
-                color="neutral"
-                variant="outline"
-                size="xl"
-                :loading="isRedirecting"
-                class="w-full"
-                :ui="{ base: 'py-3 rounded-2xl cursor-pointer', label: 'font-bold' }"
-                @click="handleMaybeLater"
-              />
-            </div>
-          </template>
-        </template>
-
-        <!-- Error State -->
-        <template v-else>
-          <UIcon
-            name="i-material-symbols-error-outline"
-            class="text-red-500 inline-block mb-4"
-            size="64"
-          />
-          <h1 class="text-2xl font-bold mb-3 text-red-600">
-            {{ $t('gift_plus_claim_error_title') }}
-          </h1>
-          <p
-            class="text-gray-600 mb-8"
-            v-text="error || $t('gift_plus_claim_error_description')"
-          />
-          <UButton
-            :label="$t('gift_plus_claim_retry')"
-            color="primary"
-            size="xl"
-            class="w-full"
-            :ui="{ base: 'py-3 rounded-2xl cursor-pointer', label: 'font-bold' }"
-            @click="handleRetry"
-          />
-        </template>
+        <!-- Info Section -->
+        <PricingPlanBenefits
+          v-if="!isExistingPlusMember"
+          class="mt-6"
+          :title="$t('gift_plus_claim_info_title')"
+          :selected-plan="period"
+          :is-title-center="true"
+          :is-dark-background="true"
+          :is-compact="true"
+        />
       </div>
-    </main>
-  </div>
+    </div>
+
+    <div class="flex flex-col items-center px-4 py-8">
+      <!-- Gift Details Card -->
+      <UCard class="w-full max-w-md">
+        <h3
+          class="font-semibold"
+          v-text="$t('gift_plus_claim_gift_details')"
+        />
+
+        <ul class="mt-4 space-y-3 text-sm">
+          <li class="flex justify-between">
+            <span class="font-medium">{{ $t('gift_plus_claim_from') }}</span>
+            <span v-text="giftInfo.fromName || $t('gift_plus_claim_anonymous')" />
+          </li>
+          <li class="flex justify-between">
+            <span class="font-medium">{{ $t('gift_plus_claim_plan') }}</span>
+            <span v-text="period === 'yearly' ? $t('pricing_page_yearly') : $t('pricing_page_monthly')" />
+          </li>
+        </ul>
+
+        <!-- Gift Message Section -->
+        <template
+          v-if="giftInfo.message"
+          #footer
+        >
+          <h3
+            class="font-semibold"
+            v-text="$t('gift_plus_claim_message_title')"
+          />
+          <p
+            class="mt-3 text-sm font-serif"
+            v-text="giftInfo.message"
+          />
+        </template>
+      </UCard>
+
+      <!-- Already Plus Member State -->
+      <template v-if="isExistingPlusMember">
+        <UIcon
+          class="mt-16 text-theme-black"
+          name="i-material-symbols-check-circle-rounded"
+          :size="64"
+        />
+        <h1
+          class="mt-5 text-2xl font-bold"
+          v-text="$t('gift_plus_claim_already_member_title')"
+        />
+        <p
+          class="mt-3 text-muted"
+          v-text="$t('gift_plus_claim_already_member_description')"
+        />
+
+        <UButton
+          class="mt-8"
+          :label="$t('gift_plus_claim_continue_button')"
+          color="primary"
+          variant="outline"
+          size="xl"
+          :ui="{ base: 'cursor-pointer' }"
+          @click="handleContinue"
+        />
+      </template>
+
+      <!-- Action Buttons -->
+      <div
+        v-else
+        class="flex flex-col gap-3 w-full max-w-sm mt-8"
+      >
+        <UButton
+          :label="$t('gift_plus_claim_button')"
+          color="primary"
+          size="xl"
+          :loading="isClaiming"
+          block
+          :ui="{ base: 'cursor-pointer' }"
+          @click="handleClaim"
+        />
+        <UButton
+          :label="$t('gift_plus_claim_maybe_later')"
+          color="neutral"
+          variant="outline"
+          size="xl"
+          :loading="isRedirecting"
+          block
+          :ui="{ base: 'cursor-pointer' }"
+          @click="handleMaybeLater"
+        />
+      </div>
+    </div>
+  </main>
+
+  <main
+    v-else
+    class="flex flex-col items-center justify-center grow px-4 py-8"
+  >
+    <!-- Loading State -->
+    <template v-if="isLoading">
+      <UIcon
+        class="text-theme-cyan animate-bounce"
+        name="i-material-symbols-featured-seasonal-and-gifts-rounded"
+        :size="64"
+      />
+
+      <p
+        class="mt-3 text-muted"
+        v-text="$t('gift_plus_claim_loading')"
+      />
+    </template>
+
+    <!-- Error State -->
+    <template v-else>
+      <UIcon
+        name="i-material-symbols-error-circle-rounded"
+        class="text-error"
+        :size="64"
+      />
+      <h1
+        class="mt-5 text-2xl font-bold"
+        v-text="$t('gift_plus_claim_error_title')"
+      />
+      <p
+        class="mt-3 text-muted"
+        v-text="error || $t('gift_plus_claim_error_description')"
+      />
+
+      <UButton
+        class="mt-8"
+        :label="$t('gift_plus_claim_retry')"
+        color="primary"
+        variant="outline"
+        size="xl"
+        :ui="{ base: 'cursor-pointer' }"
+        @click="handleRetry"
+      />
+    </template>
+  </main>
 </template>
 
 <script setup lang="ts">
@@ -225,7 +243,8 @@ const isExistingPlusMember = computed(() => hasLoggedIn.value && user.value?.isL
 const cartId = computed(() => getRouteQuery('cart_id') as string || '')
 const claimingToken = computed(() => getRouteQuery('claiming_token') as string || '')
 
-const giftPrice = computed(() => period.value === 'yearly' ? yearlyPrice.value : monthlyPrice.value)
+const isYearly = computed(() => period.value === 'yearly')
+const giftPrice = computed(() => isYearly.value ? yearlyPrice.value : monthlyPrice.value)
 
 async function fetchGiftInfo() {
   try {
@@ -324,7 +343,7 @@ async function navigateToPage(routeName: string) {
 }
 
 async function handleMaybeLater() {
-  await navigateToPage('shelf')
+  await navigateToPage('store')
 }
 
 async function handleContinue() {
