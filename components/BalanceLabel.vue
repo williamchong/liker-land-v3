@@ -15,23 +15,36 @@ const props = withDefaults(defineProps<{
 }>(), {
   value: 0,
   maximumFractionDigits: 2,
-  currency: 'LIKE',
+  currency: '',
   isBold: true,
   isCompact: false,
 })
 
-const value = computed(() => {
-  if (typeof props.value === 'string') return props.value
+const config = useRuntimeConfig()
 
-  if (props.isCompact && props.value >= 10_000) {
+const currency = computed(() => props.currency || config.public.likeCoinTokenSymbol)
+
+const value = computed(() => {
+  let num = props.value
+  if (typeof num !== 'number') {
+    if (typeof num === 'string') {
+      num = num.replace(/,/g, '')
+    }
+    num = Number(num)
+  }
+  if (Number.isNaN(num)) {
+    return '-'
+  }
+
+  if (props.isCompact && num >= 10_000) {
     const formatter = new Intl.NumberFormat('en-US', {
       notation: 'compact',
       compactDisplay: 'short',
     })
-    return formatter.format(props.value)
+    return formatter.format(num)
   }
 
-  return props.value.toLocaleString(undefined, {
+  return num.toLocaleString(undefined, {
     maximumFractionDigits: props.maximumFractionDigits,
   })
 })

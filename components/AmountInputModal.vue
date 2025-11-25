@@ -8,6 +8,8 @@
       <UFormField
         class="mb-2"
         :label="label"
+        :help="helpText"
+        :ui="{ help: 'text-xs text-right' }"
       >
         <UInput
           v-model="amountInput"
@@ -38,13 +40,15 @@
           size="xs"
           @click="amountInput = amount"
         />
-        <UButton
-          :label="$t('amount_input_max')"
-          color="neutral"
-          variant="subtle"
-          size="xs"
-          @click="handleMaxButtonClick"
-        />
+        <UTooltip :text="formattedMaxAmount">
+          <UButton
+            :label="maxButtonLabel || $t('amount_input_max')"
+            color="neutral"
+            variant="subtle"
+            size="xs"
+            @click="handleMaxButtonClick"
+          />
+        </UTooltip>
       </div>
     </template>
 
@@ -62,7 +66,7 @@
 <script lang="ts" setup>
 import { formatUnits, parseUnits } from 'viem'
 
-const { likeCoinTokenDecimals } = useRuntimeConfig().public
+const { likeCoinTokenDecimals, likeCoinTokenSymbol } = useRuntimeConfig().public
 
 const quickAmounts = [1, 10, 100, 1000]
 
@@ -70,11 +74,15 @@ const props = withDefaults(defineProps<{
   title?: string
   label?: string
   max: bigint
+  maxButtonLabel?: string
   ticker?: string
   confirmButtonTitle?: string
+  helpText?: string
 }>(), {
-  ticker: 'LIKE',
+  ticker: '',
 })
+
+const ticker = computed(() => props.ticker || likeCoinTokenSymbol)
 
 const emit = defineEmits(['close'])
 
@@ -82,8 +90,16 @@ const amountInput = ref(0)
 
 const isConfirmButtonDisabled = computed(() => amountInput.value <= 0n || amountInput.value > props.max)
 
+const maxAmount = computed(() => {
+  return Math.floor(Number(formatUnits(props.max, likeCoinTokenDecimals)) * 100) / 100
+})
+
+const formattedMaxAmount = computed(() => {
+  return maxAmount.value.toLocaleString(undefined, { maximumFractionDigits: 2 }).concat(` ${likeCoinTokenSymbol}`)
+})
+
 function handleMaxButtonClick() {
-  amountInput.value = Math.floor(Number(formatUnits(props.max, likeCoinTokenDecimals)))
+  amountInput.value = maxAmount.value
 }
 
 function handleConfirmButtonClick() {

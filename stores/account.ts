@@ -63,6 +63,10 @@ export const useAccountStore = defineStore('account', () => {
     return $wagmiConfig.chains[0].id
   })
 
+  const isLoginWithMagic = computed(() => {
+    return user.value && user.value.loginMethod === 'magic'
+  })
+
   watch(
     () => user.value,
     async (user) => {
@@ -614,6 +618,7 @@ export const useAccountStore = defineStore('account', () => {
     isLoggingIn,
     isConnectModalOpen,
     isClearingCaches,
+    isLoginWithMagic,
 
     login,
     logout,

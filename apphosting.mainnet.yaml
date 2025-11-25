@@ -55,6 +55,12 @@ env:
     value: 0x1EE5DD1794C28F559f94d2cc642BaE62dC3be5cf
   - variable: LIKECOIN_TOKEN_DECIMALS
     value: 6
+  - variable: LIKECOIN_TOKEN_SYMBOL
+    value: LIKE
+  - variable: LIKECOIN_VE_TOKEN_ADDRESS
+    value: 0xE55C2b91E688BE70e5BbcEdE3792d723b4766e2B
+  - variable: LIKECOIN_VE_TOKEN_SYMBOL
+    value: veLIKE
   - variable: LIKECOIN_V3_BOOK_MIGRATION_SITE_URL
     value: https://v3-book-migration.like.co
   - variable: LIKER_LAND_SITE_URL

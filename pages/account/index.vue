@@ -103,7 +103,7 @@
           </UTooltip>
 
           <template
-            v-if="user?.loginMethod === 'magic'"
+            v-if="accountStore.isLoginWithMagic"
             #right
           >
             <UButton

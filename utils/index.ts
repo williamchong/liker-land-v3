@@ -67,3 +67,16 @@ export function parseURIString<T>(uri: string): T | undefined {
 export function shortenWalletAddress(address = '') {
   return `${address.slice(0, 8)}...${address.slice(-4)}`
 }
+
+export function getPercentageAmount<T extends number | bigint>(amount: T, percentage = 0.99, minAmount = 0.01): T {
+  if (typeof amount === 'bigint') {
+    const percentageBigInt = BigInt(Math.floor(percentage * 100))
+    const result = (amount * percentageBigInt) / 100n
+    const minAmountBigInt = BigInt(Math.floor(minAmount * 100))
+    return (result > minAmountBigInt ? result : minAmountBigInt) as T
+  }
+  return Math.max(
+    Math.floor((amount as number) * percentage * 100) / 100,
+    minAmount,
+  ) as T
+}

@@ -71,14 +71,14 @@ export function useGovernanceData(walletAddress: string | Ref<string>) {
 
   const estimatedRewardPerDay = computed(() => {
     if (!currentCondition.value || veLikeBalance.value === 0n || totalSupplyValue.value === 0n) {
-      return '0.00'
+      return 0
     }
 
     const { startTime, endTime, rewardAmount } = currentCondition.value
 
     // Avoid division by zero
     if (rewardAmount === 0n || endTime <= startTime) {
-      return '0.00'
+      return 0
     }
 
     try {
@@ -89,18 +89,31 @@ export function useGovernanceData(walletAddress: string | Ref<string>) {
       const numerator = SECONDS_PER_DAY * veLikeBalance.value * rewardAmount
       const denominator = totalSupplyValue.value * timeDuration * (BigInt(10) ** BigInt(likeCoinTokenDecimals))
 
-      // Convert to number for formatting
-      const estimatedValue = Number(numerator) / Number(denominator)
-
-      return estimatedValue.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 6,
-      })
+      return Number(numerator) / Number(denominator)
     }
     catch (err) {
       console.error('Error calculating estimated reward per day:', err)
-      return '0.00'
+      return 0
     }
+  })
+
+  const formattedEstimatedRewardPerDay = computed(() => {
+    return estimatedRewardPerDay.value.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+    })
+  })
+
+  const estimatedRewardAPY = computed(() => {
+    if (!veLikeBalance.value || !estimatedRewardPerDay.value) {
+      return 0
+    }
+    // NOTE: Actually is APR
+    return estimatedRewardPerDay.value * 365 / Number(formatUnits(veLikeBalance.value, likeCoinTokenDecimals))
+  })
+
+  const formattedEstimatedRewardAPY = computed(() => {
+    return (estimatedRewardAPY.value * 100).toFixed(2).concat('%')
   })
 
   const isWithdrawLocked = computed(() => {
@@ -191,11 +204,14 @@ export function useGovernanceData(walletAddress: string | Ref<string>) {
     claimedReward,
     lockTime,
     estimatedRewardPerDay: readonly(estimatedRewardPerDay),
+    estimatedRewardAPY: readonly(estimatedRewardAPY),
     // Formatted values
     formattedVeLikeBalance,
     formattedLikeStakedBalance,
     formattedPendingReward,
     formattedClaimedReward,
+    formattedEstimatedRewardPerDay: readonly(formattedEstimatedRewardPerDay),
+    formattedEstimatedRewardAPY: readonly(formattedEstimatedRewardAPY),
     totalVotingPower,
     // Lock time status
     isWithdrawLocked: readonly(isWithdrawLocked),
