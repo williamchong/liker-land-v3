@@ -67,3 +67,7 @@ export function parseURIString<T>(uri: string): T | undefined {
 export function shortenWalletAddress(address = '') {
   return `${address.slice(0, 8)}...${address.slice(-4)}`
 }
+
+export function validateEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
