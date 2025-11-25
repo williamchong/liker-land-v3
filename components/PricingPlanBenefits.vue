@@ -1,13 +1,20 @@
 <template>
-  <div class="flex flex-col items-start gap-5">
+  <div
+    :class="[
+      'flex',
+      'flex-col',
+      isTitleCenter ? 'items-center' : 'items-start',
+      'gap-5',
+    ]"
+  >
     <div
       :class="[
         isDarkBackground ? 'text-theme-cyan' : 'text-theme-black',
-        'text-left',
+        isTitleCenter ? 'text-center' : 'text-left',
         'font-bold',
         'border-b-2 border-current',
       ]"
-      v-text="$t('pricing_page_subscription')"
+      v-text="title || $t('pricing_page_subscription')"
     />
 
     <ul
@@ -49,19 +56,30 @@
           />
         </li>
       </template>
-      <li>
+      <li v-if="selectedPlan === undefined || isYearlyPlan">
         <UIcon name="i-material-symbols-check" />
-        <span v-text="$t('pricing_page_feature_6')" />
+        <span
+          v-if="isYearlyPlan"
+          v-text="$t('pricing_page_feature_6_yearly')"
+        />
+        <span
+          v-else
+          v-text="$t('pricing_page_feature_6')"
+        />
       </li>
     </ul>
   </div>
 </template>
 
 <script lang="ts" setup>
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
+  selectedPlan?: SubscriptionPlan
+  title?: string
+  isTitleCenter?: boolean
   isDarkBackground?: boolean
   isCompact?: boolean
 }>(), {
+  isTitleCenter: false,
   isDarkBackground: false,
   isCompact: false,
 })
@@ -70,4 +88,8 @@ const {
   monthlyPrice,
   yearlyPrice,
 } = useSubscriptionPricing()
+
+const isYearlyPlan = computed(() => {
+  return props.selectedPlan === 'yearly'
+})
 </script>
