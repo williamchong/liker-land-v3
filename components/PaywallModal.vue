@@ -233,6 +233,9 @@ watch(
 
 const subscribeButtonLabel = computed(() => {
   if (props.trialPeriodDays) {
+    if (props.trialPeriodDays === 30) {
+      return $t('pricing_page_start_trial_button_30d')
+    }
     return $t('pricing_page_start_trial_button', { days: props.trialPeriodDays })
   }
   return $t('pricing_page_continue_button')

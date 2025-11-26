@@ -332,6 +332,7 @@
   "pricing_page_price_per_month": "US {price} /月",
   "pricing_page_price_per_year": "US {price} /年",
   "pricing_page_start_trial_button": "開始 {days} 日免費試用",
+  "pricing_page_start_trial_button_30d": "$1 開始 30 日試用",
   "pricing_page_subscription": "Plus 會員福利",
   "pricing_page_subscription_description": "3ook.com Plus 會員訂閱服務包含 AI 朗讀功能，5% 購書回贈，優先獲取新功能及真人客服支援",
   "pricing_page_title": "3ook.com Plus 會員訂閱",
@@ -474,6 +475,7 @@
   "upsell_plus_monthly_notice": "試用 Plus {month}會員，即享購書{discount}優惠",
   "upsell_plus_monthly_price_full": "US${price}／月",
   "upsell_plus_monthly_trial_cta": "{days} 日免費，其後",
+  "upsell_plus_monthly_trial_cta_30d": "$1 30 日試用，其後",
   "upsell_plus_or": "或",
   "upsell_plus_yearly_button": "成為年費會員",
   "upsell_plus_yearly_gift": "獲贈此書",
@@ -482,5 +484,6 @@
   "upsell_plus_yearly_notice": "成為 Plus {year}會員，即時{gift}",
   "upsell_plus_yearly_price_full": "US${price}／年",
   "upsell_plus_yearly_trial_cta": "{days} 日免費，其後",
+  "upsell_plus_yearly_trial_cta_30d": "$1 30 日試用，其後",
   "work_in_progress": "即將推出"
 }
