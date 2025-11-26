@@ -191,7 +191,7 @@ const props = withDefaults(defineProps<UpsellPlusModalProps>(), {
   isLikerPlus: false,
   likerPlusPeriod: undefined,
   isProcessingSubscription: false,
-  trialPeriodDays: 7,
+  trialPeriodDays: 30,
   mustCollectPaymentMethod: false,
   selectedPricingItemIndex: 0,
   utmCampaign: undefined,
@@ -229,6 +229,9 @@ const yearlyButtonCTA = computed(() => {
     return $t('upsell_plus_yearly_gift_cta')
   }
   if (props.trialPeriodDays && allowYearlyTrial.value) {
+    if (props.trialPeriodDays === 30) {
+      return $t('upsell_plus_yearly_trial_cta_30d')
+    }
     return $t('upsell_plus_yearly_trial_cta', { days: props.trialPeriodDays })
   }
   return $t('upsell_plus_yearly_button')
@@ -236,6 +239,9 @@ const yearlyButtonCTA = computed(() => {
 
 const monthlyButtonCTA = computed(() => {
   if (props.trialPeriodDays) {
+    if (props.trialPeriodDays === 30) {
+      return $t('upsell_plus_monthly_trial_cta_30d')
+    }
     return $t('upsell_plus_monthly_trial_cta', { days: props.trialPeriodDays })
   }
   return $t('upsell_plus_monthly_button')

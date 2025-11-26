@@ -332,6 +332,7 @@
   "pricing_page_price_per_month": "US {price} /month",
   "pricing_page_price_per_year": "US {price} /year",
   "pricing_page_start_trial_button": "Start {days}-day free trial",
+  "pricing_page_start_trial_button_30d": "Start 30-day trial for $1",
   "pricing_page_subscription": "Plus Membership Benefits",
   "pricing_page_subscription_description": "3ook.com Plus membership includes AI text-to-speech, 5% purchase rebate, priority access to new features, and human customer support",
   "pricing_page_title": "3ook.com Plus Membership",
@@ -474,6 +475,7 @@
   "upsell_plus_monthly_notice": "Become a Plus {month} member and enjoy {discount}",
   "upsell_plus_monthly_price_full": "US${price} / month",
   "upsell_plus_monthly_trial_cta": "Free for {days} days, then",
+  "upsell_plus_monthly_trial_cta_30d": "$1 for 30-day trial, then",
   "upsell_plus_or": "or",
   "upsell_plus_yearly_button": "Become an annual member",
   "upsell_plus_yearly_gift": "Get this book for free",
@@ -482,5 +484,6 @@
   "upsell_plus_yearly_notice": "Become a Plus {year} member and you will {gift}",
   "upsell_plus_yearly_price_full": "US${price} / year",
   "upsell_plus_yearly_trial_cta": "Free for {days} days, then",
+  "upsell_plus_yearly_trial_cta_30d": "$1 for 30-day trial, then",
   "work_in_progress": "Work in progress"
 }
