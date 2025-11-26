@@ -2,12 +2,14 @@ export const useNFTStore = defineStore('nft', () => {
   const bookstoreStore = useBookstoreStore()
 
   const nftClassByIdMap = ref<Record<string, Partial<NFTClass>>>({})
+  const messagesByNFTClassIdMap = ref<Record<string, NFTBuyerMessage[]>>({})
 
   const getNFTClassById = computed(() => (id: string) => nftClassByIdMap.value[normalizeNFTClassId(id)])
   const getNFTClassMetadataById = computed(() => (id: string) => {
     const nftClass = getNFTClassById.value(id)
     return nftClass?.metadata
   })
+  const getMessagesByNFTClassId = computed(() => (id: string) => messagesByNFTClassIdMap.value[id])
 
   function addNFTClass(nftClass: Partial<NFTClass>) {
     if (nftClass.address) {
@@ -72,11 +74,27 @@ export const useNFTStore = defineStore('nft', () => {
     return await fetchNFTClassChainMetadataById(nftClassId)
   }
 
+  async function fetchMessagesByClassId(classId: string) {
+    const data = await fetchPurchaseMessagesByNFTClassId(classId)
+    messagesByNFTClassIdMap.value[classId] = data.messages
+
+    return messagesByNFTClassIdMap.value[classId]
+  }
+
+  async function lazyFetchMessagesByClassId(classId: string) {
+    if (messagesByNFTClassIdMap.value[classId]) {
+      return messagesByNFTClassIdMap.value[classId]
+    }
+    return await fetchMessagesByClassId(classId)
+  }
+
   return {
     nftClassByIdMap,
+    messagesByNFTClassIdMap,
 
     getNFTClassById,
     getNFTClassMetadataById,
+    getMessagesByNFTClassId,
 
     addNFTClass,
     addNFTClasses,
@@ -85,5 +103,7 @@ export const useNFTStore = defineStore('nft', () => {
     lazyFetchNFTClassAggregatedMetadataById,
     fetchNFTClassChainMetadataById,
     lazyFetchNFTClassChainMetadataById,
+    fetchMessagesByClassId,
+    lazyFetchMessagesByClassId,
   }
 })

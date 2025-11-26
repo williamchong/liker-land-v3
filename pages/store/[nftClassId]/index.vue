@@ -213,6 +213,32 @@
               </div>
             </div>
           </template>
+
+          <template #buyer-messages>
+            <div
+              v-for="buyer in buyerMessages"
+              :key="buyer.txHash"
+              class="p-4"
+            >
+              <div class="flex flex-col items-start gap-3">
+                <div class="flex items-center gap-2">
+                  <EntityItem
+                    :name="buyer.wallet"
+                    :wallet-address="buyer.wallet"
+                    :is-link-disabled="true"
+                  />
+                  <p
+                    class="text-dimmed text-xs"
+                    v-text="new Date(buyer.timestamp).toLocaleString()"
+                  />
+                </div>
+                <p
+                  class="text-highlighted whitespace-pre-wrap break-words"
+                  v-text="buyer.message"
+                />
+              </div>
+            </div>
+          </template>
         </UTabs>
       </div>
 
@@ -737,6 +763,15 @@ const authorDescriptionHTML = computed(() => {
   return md.render(bookInfo.authorDescription?.value || '')
 })
 
+const buyerMessages = computed(() => {
+  const messages = nftStore.getMessagesByNFTClassId(nftClassId.value)
+  if (!messages) return []
+
+  return messages
+    .filter(result => result.message)
+    .sort((a, b) => Number(b.timestamp) - Number(a.timestamp))
+})
+
 const infoTabItems = computed(() => {
   const items: TabsItem[] = []
 
@@ -761,6 +796,14 @@ const infoTabItems = computed(() => {
     slot: 'staking-info',
     value: 'staking-info',
   })
+
+  if (buyerMessages.value.length) {
+    items.push({
+      label: $t('product_page_buyer_messages_tab'),
+      slot: 'buyer-messages',
+      value: 'buyer-messages',
+    })
+  }
 
   return items
 })
@@ -967,6 +1010,9 @@ const { gridClasses, getGridItemClassesByIndex } = usePaginatedGrid({
 
 onMounted(async () => {
   useLogEvent('view_item', formattedLogPayload.value)
+  nftStore.lazyFetchMessagesByClassId(nftClassId.value).catch((error) => {
+    console.error(`Failed to fetch messages for NFT class ${nftClassId.value}:`, error)
+  })
   const ownerWalletAddress = bookInfo.nftClassOwnerWalletAddress.value
   if (ownerWalletAddress) {
     metadataStore.lazyFetchLikerInfoByWalletAddress(ownerWalletAddress).catch((error) => {
