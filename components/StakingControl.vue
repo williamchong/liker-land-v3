@@ -189,7 +189,7 @@ async function handleStakeButtonClick() {
     title: $t('staking_stake_please_enter_amount'),
     max: getPercentageAmount(likeBalance.value, 0.99),
     maxButtonLabel: '99%',
-    helpText: $t('amount_available', { amount: `${formattedLikeBalance} ${likeCoinTokenSymbol}` }),
+    helpText: $t('amount_available', { amount: `${formattedLikeBalance.value} ${likeCoinTokenSymbol}` }),
   }).result
 
   if (!isValidStakeAmount.value) return
@@ -243,7 +243,7 @@ async function handleUnstakeButtonClick() {
   stakeAmount.value = await amountInputModal.open({
     title: $t('staking_unstake_please_input_amount'),
     max: userStake.value,
-    helpText: $t('amount_available', { amount: `${formattedUserStake} ${likeCoinTokenSymbol}` }),
+    helpText: $t('amount_available', { amount: `${formattedUserStake.value} ${likeCoinTokenSymbol}` }),
   }).result
 
   if (!isValidStakeAmount.value) return
