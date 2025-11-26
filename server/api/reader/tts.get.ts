@@ -12,6 +12,8 @@ const VOICE_PROVIDER_MAPPING: Record<string, TTSProvider> = {
   // Minimax voices
   0: TTSProvider.MINIMAX,
   1: TTSProvider.MINIMAX,
+  2: TTSProvider.MINIMAX,
+  3: TTSProvider.MINIMAX,
   pazu: TTSProvider.MINIMAX,
   phoebe: TTSProvider.MINIMAX,
   xiaochen: TTSProvider.AZURE,
