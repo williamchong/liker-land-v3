@@ -250,7 +250,7 @@
   "gift_plus_recipient_info": "Recipient Information",
   "gift_plus_recipient_name": "Recipient Name",
   "gift_plus_sender_name": "Your Name",
-  "gift_plus_sender_name_hint_text": "You can provide an email address, or write 'mystery person'",
+  "gift_plus_sender_name_hint_text": "You can provide a name, email address or just 'mystery person'",
   "gift_plus_sender_name_placeholder": "your name",
   "gift_plus_success_continue_button": "Continue to Bookshelf",
   "gift_plus_success_description": "Your Plus membership gift has been sent. The recipient will receive an email with instructions to claim their gift.",
