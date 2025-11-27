@@ -84,13 +84,14 @@ export class MinimaxTTSProvider implements BaseTTSProvider {
       text: text,
       stream: true,
       stream_options: {
-        exclude_aggregated_audio: false,
+        exclude_aggregated_audio: true,
       },
-      model: 'speech-2.5-hd-preview',
+      model: 'speech-2.6-hd',
       voice_setting: {
         voice_id: VOICE_MAPPING[voiceId],
         speed: 0.95,
         emotion: 'neutral',
+        text_normalization: true,
       },
       pronunciation_dict: getTTSPronunciationDictionary(language),
       language_boost: LANG_MAPPING[language as keyof typeof LANG_MAPPING],
