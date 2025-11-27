@@ -83,7 +83,10 @@
           v-else-if="!isDefaultTagId"
           icon="i-material-symbols-close-rounded"
           variant="outline"
-          :ui="{ base: [TAG_BUTTON_CLASS_LIGHT, TAG_BUTTON_CLASS_BASE] }"
+          :ui="{
+            base: [TAG_BUTTON_CLASS_LIGHT, TAG_BUTTON_CLASS_BASE],
+            leadingIcon: 'laptop:size-6',
+          }"
           @click="handleCloseTagClick"
         />
 
@@ -97,7 +100,7 @@
             base: [
               fixedTag.value === TAG_DEFAULT ? TAG_BUTTON_CLASS_DARK : TAG_BUTTON_CLASS_LIGHT,
               TAG_BUTTON_CLASS_BASE,
-              'px-4 max-phone:px-[10px]',
+              'px-2.5 laptop:px-4',
               '!ring-theme-black',
             ],
             label: 'text-sm laptop:text-base',
@@ -186,35 +189,52 @@
           />
         </UTooltip>
 
-        <USelect
+        <div
           v-if="bookstoreStore.hasFetchedBookstoreCMSTags"
-          v-model="tagId"
-          :placeholder="isDefaultTagId ? $t('store_tag_more_categories') : undefined"
-          :items="selectorTagItems"
-          :content="{
-            align: 'center',
-            side: 'bottom',
-            sideOffset: 8,
-          }"
-          :disabled="!bookstoreStore.hasFetchedBookstoreCMSTags"
-          arrow
-          size="md"
-          :ui="{
-            base: [
-              'justify-center',
-              'max-phone:!pl-[10px] !pl-[16px]',
-              'text-sm laptop:text-base',
-              'font-medium',
-              '!ring-theme-black',
-              TAG_BUTTON_CLASS_BASE,
-              isDefaultTagId
-                ? TAG_BUTTON_CLASS_LIGHT
-                : TAG_BUTTON_CLASS_DARK,
-            ],
-            content: 'min-w-fit',
-            placeholder: isDefaultTagId ? '!text-black text-sm laptop:text-base' : undefined,
-          }"
-        />
+          class="relative group rounded-full"
+        >
+          <template v-if="isDefaultTagId">
+            <!-- Dummy button -->
+            <UButton
+              icon="i-material-symbols-keyboard-arrow-down-rounded"
+              variant="outline"
+              :ui="{
+                base: [
+                  TAG_BUTTON_CLASS_LIGHT,
+                  TAG_BUTTON_CLASS_BASE,
+                  'group-hover:-translate-y-0.5',
+                  'pointer-events-none',
+                ],
+                leadingIcon: 'laptop:size-6 translate-y-[1px]',
+              }"
+            />
+            <!-- Real select -->
+            <select
+              v-model="tagId"
+              class="absolute inset-0 opacity-0 rounded-full cursor-pointer"
+            >
+              <option
+                v-for="tag in selectorTagItems"
+                :key="tag.value"
+                :value="tag.value"
+                v-text="tag.label"
+              />
+            </select>
+          </template>
+          <!-- Selected tag (dummy button) -->
+          <UButton
+            v-else
+            :label="activeTag?.label"
+            :ui="{
+              base: [
+                TAG_BUTTON_CLASS_BASE,
+                'px-2.5 laptop:px-4',
+                'pointer-events-none',
+              ],
+              label: 'text-sm laptop:text-base',
+            }"
+          />
+        </div>
       </div>
     </header>
 
@@ -426,12 +446,12 @@ const allTagItems = computed(() => {
 const tagsSliceIndex = computed(() => {
   if (locale.value === 'zh-Hant') {
     if (isMobile.value) {
-      return 2
+      return 3
     }
     if (isTablet.value) {
       return 4
     }
-    return 6
+    return 8
   }
   if (isMobile.value) {
     return 2
@@ -447,15 +467,19 @@ const fixedTags = computed(() => {
 })
 
 const activeTag = computed(() => {
+  return allTagItems.value.find(tag => tag.value === tagId.value)
+})
+
+const activeCMSTag = computed(() => {
   return bookstoreStore.getBookstoreCMSTagById(tagId.value)
 })
 
 const selectorTagItems = computed(() => {
-  if (!bookstoreStore.hasFetchedBookstoreCMSTags && activeTag.value) {
+  if (!bookstoreStore.hasFetchedBookstoreCMSTags && activeCMSTag.value) {
     return [
       {
-        label: activeTag.value.name[normalizedLocale.value],
-        value: activeTag.value.id,
+        label: activeCMSTag.value.name[normalizedLocale.value],
+        value: activeCMSTag.value.id,
       },
     ]
   }
@@ -475,20 +499,16 @@ function mapTagIdToAPIStakingSortValue(tagId: string): 'staked_amount' | 'last_s
   }
 }
 
-const cmsTag = computed(() => {
-  return bookstoreStore.getBookstoreCMSTagById(tagId.value)
-})
-
 const tagName = computed(() => {
   if (isStakingTagId.value) {
     return getStakingTagLabel(tagId.value)
   }
-  return cmsTag.value?.name[normalizedLocale.value] || ''
+  return activeCMSTag.value?.name[normalizedLocale.value] || ''
 })
 
 const tagDescription = computed(() => {
   if (isStakingTagId.value) return ''
-  return cmsTag.value?.description[normalizedLocale.value] || ''
+  return activeCMSTag.value?.description[normalizedLocale.value] || ''
 })
 
 const canonicalURL = computed(() => {
