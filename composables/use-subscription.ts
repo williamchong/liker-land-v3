@@ -121,7 +121,7 @@ export function useSubscription() {
     utmCampaign,
     utmMedium,
     utmSource,
-    coupon,
+    coupon = getRouteQuery('coupon'),
     plan,
     nftClassId,
     redirectRoute,
