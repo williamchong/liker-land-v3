@@ -22,58 +22,10 @@
       class="text-lg"
       v-text="description"
     />
-    <div
-      :class="[
-        props.isDarkBackground ? 'text-theme-cyan' : 'text-theme-black',
-        'text-center',
-        'font-bold',
-        'border-b-2 border-current',
-      ]"
-      v-text="$t('pricing_page_subscription')"
+    <PricingPlanBenefits
+      :is-dark-background="props.isDarkBackground"
+      :is-compact="!!title && !!description"
     />
-    <ul
-      :class="[
-        'whitespace-pre-wrap',
-        'space-y-4 text-left',
-        '*:flex *:items-start',
-        '[&>li>span:first-child]:shrink-0',
-        '[&>li>span:first-child]:mt-1',
-        '[&>li>span:first-child]:mr-2',
-        '[&>li>span:first-child]:text-theme-cyan',
-      ]"
-    >
-      <li>
-        <UIcon name="i-material-symbols-check" />
-        <span v-text="$t('pricing_page_feature_1')" />
-      </li>
-      <li>
-        <UIcon name="i-material-symbols-check" />
-        <span v-text="$t('pricing_page_feature_2')" />
-      </li>
-      <template v-if="!title && !description">
-        <li>
-          <UIcon name="i-material-symbols-check" />
-          <span v-text="$t('pricing_page_feature_3')" />
-        </li>
-        <li>
-          <UIcon name="i-material-symbols-check" />
-          <span v-text="$t('pricing_page_feature_4')" />
-        </li>
-        <li>
-          <UIcon name="i-material-symbols-check" />
-          <span
-            v-text="$t('pricing_page_feature_5', {
-              monthlyPrice,
-              yearlyPrice,
-            })"
-          />
-        </li>
-      </template>
-      <li>
-        <UIcon name="i-material-symbols-check" />
-        <span v-text="$t('pricing_page_feature_6')" />
-      </li>
-    </ul>
   </div>
 </template>
 
@@ -92,9 +44,4 @@ const props = defineProps({
     default: '',
   },
 })
-
-const {
-  monthlyPrice,
-  yearlyPrice,
-} = useSubscriptionPricing()
 </script>

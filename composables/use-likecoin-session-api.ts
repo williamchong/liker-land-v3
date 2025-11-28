@@ -309,8 +309,83 @@ export function useLikeCoinSessionAPI() {
     })
   }
 
+  function fetchLikerPlusGiftCheckoutLink({
+    period = 'yearly',
+    giftInfo,
+    coupon,
+    from,
+    referrer,
+    utmCampaign,
+    utmMedium,
+    utmSource,
+    utmContent,
+    utmTerm,
+    gaClientId,
+    gaSessionId,
+    gadClickId,
+    gadSource,
+    fbClickId,
+  }: {
+    period?: SubscriptionPlan
+    giftInfo: {
+      toEmail: string
+      toName?: string
+      fromName?: string
+      message?: string
+    }
+    coupon?: string
+    from?: string
+    referrer?: string
+    utmCampaign?: string
+    utmMedium?: string
+    utmSource?: string
+    utmContent?: string
+    utmTerm?: string
+    gaClientId?: string
+    gaSessionId?: string
+    gadClickId?: string
+    gadSource?: string
+    fbClickId?: string
+  }) {
+    return fetch.value<FetchLikerPlusCheckoutLinkResponseData>(`/plus/gift/new`, {
+      method: 'POST',
+      query: { period, from },
+      body: {
+        giftInfo,
+        referrer,
+        utmCampaign,
+        utmMedium,
+        utmSource,
+        utmContent,
+        utmTerm,
+        gaClientId,
+        gaSessionId,
+        gadClickId,
+        gadSource,
+        fbClickId,
+        coupon,
+      },
+    })
+  }
+
   function fetchLikerPlusGiftStatus() {
     return fetch.value<FetchLikerPlusGiftStatusResponseData>(`/plus/gift`)
+  }
+
+  function fetchPlusGiftCartStatusById({ cartId, token }: { cartId: string, token: string }) {
+    return fetch.value<{
+      giftInfo?: { toEmail?: string, toName?: string, fromName?: string, message?: string }
+      period?: string
+    }>(`/plus/gift/${cartId}/status`, {
+      query: { token },
+    })
+  }
+
+  function claimPlusGiftCart({ cartId, token }: { cartId: string, token: string }) {
+    return fetch.value(`/plus/gift/${cartId}/claim`, {
+      method: 'POST',
+      query: { token },
+    })
   }
 
   function fetchLikerPlusBillingPortalLink() {
@@ -373,8 +448,11 @@ export function useLikeCoinSessionAPI() {
     fetchCartStatusById,
     claimCartById,
     fetchLikerPlusCheckoutLink,
+    fetchLikerPlusGiftCheckoutLink,
     updateLikerPlusSubscription,
     fetchLikerPlusGiftStatus,
+    fetchPlusGiftCartStatusById,
+    claimPlusGiftCart,
     fetchLikerPlusBillingPortalLink,
     migrateMagicEmailUser,
     sendCollectorMessage,
