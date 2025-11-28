@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-3 laptop:gap-4">
     <label
       v-for="plan in plans"
       :key="plan.value"
@@ -11,14 +11,14 @@
         'items-center',
 
         'px-4',
-        'py-4',
+        'py-3 laptop:py-4',
 
         'hover:bg-theme-black/5',
         'text-theme-black',
-        'rounded-2xl',
+        'rounded-lg',
 
         'border-2',
-        plan.isSelected ? 'border-theme-black' : 'border-gray-200',
+        plan.isSelected ? 'border-theme-black' : 'border-theme-black/40',
 
         'hover:shadow-lg',
         'hover:-translate-y-0.5',
@@ -38,8 +38,8 @@
           'top-0',
           'right-4',
 
-          'px-3',
-          'py-1',
+          'px-1.5 laptop:px-3',
+          'py-0.5 laptop:py-1',
 
           'bg-theme-black',
 
@@ -58,7 +58,7 @@
         <div
           :class="[
             'size-5 shrink-0 mr-4 rounded-full border-2',
-            plan.isSelected ? 'bg-theme-black border-theme-black' : 'bg-transparent border-gray-200',
+            plan.isSelected ? 'bg-theme-black border-theme-black' : 'bg-transparent border-theme-black/40',
           ]"
         >
           <UIcon
@@ -75,7 +75,13 @@
         />
       </div>
 
-      <div class="text-sm text-right">
+      <div class="text-xs laptop:text-sm text-right">
+        <div
+          v-if="plan.hint"
+          class="text-muted"
+          v-text="plan.hint"
+        />
+
         <span
           v-if="plan.hasDiscount"
           class="text-muted after:content-['_']"
@@ -87,7 +93,7 @@
         <span class="font-bold whitespace-nowrap">
           <span>{{ currency }}&nbsp;</span>
           <span
-            class="text-2xl"
+            class="text-lg laptop:text-2xl"
             v-text="`$${plan.price}`"
           />
           <span>/{{ plan.perUnit }}</span>
@@ -106,10 +112,16 @@
 </template>
 
 <script lang="ts" setup>
-withDefaults(defineProps<{
-  currency?: string
+const props = withDefaults(defineProps<{
+  isYearlyHidden?: boolean
+  isMonthlyHidden?: boolean
+  trialPeriodDays?: number
+  trialPrice?: number
 }>(), {
-  currency: 'US',
+  isYearlyHidden: false,
+  isMonthlyHidden: false,
+  trialPeriodDays: 30,
+  trialPrice: 1,
 })
 
 const { t: $t } = useI18n()
@@ -122,6 +134,7 @@ const {
   yearlyDiscountPercent,
   hasMonthlyDiscount,
   hasYearlyDiscount,
+  currency,
 } = useSubscriptionPricing()
 
 const selectedPlan = defineModel({
@@ -129,17 +142,40 @@ const selectedPlan = defineModel({
   default: 'yearly',
 })
 
-const plans = computed(() => ['yearly', 'monthly'].map((value) => {
-  const isMonthly = value === 'monthly'
-  return {
-    isSelected: selectedPlan.value === value,
-    value,
-    label: isMonthly ? $t('pricing_page_monthly') : $t('pricing_page_yearly'),
-    perUnit: isMonthly ? $t('pricing_page_price_per_month') : $t('pricing_page_price_per_year'),
-    price: isMonthly ? monthlyPrice.value : yearlyPrice.value,
-    originalPrice: isMonthly ? originalMonthlyPrice.value : originalYearlyPrice.value,
-    hasDiscount: isMonthly ? hasMonthlyDiscount.value : hasYearlyDiscount.value,
-    discountPercent: isMonthly ? null : yearlyDiscountPercent.value,
+const isTrialFor30Days = computed(() => props.trialPeriodDays === 30)
+
+const plans = computed(() => {
+  const values: SubscriptionPlan[] = []
+  if (!props.isYearlyHidden) {
+    values.push('yearly')
   }
-}))
+  if (!props.isMonthlyHidden) {
+    values.push('monthly')
+  }
+  return values.map((value) => {
+    const isMonthly = value === 'monthly'
+    let hint: string | undefined
+    if (isTrialFor30Days.value) {
+      const hintI18nNames = {
+        days: props.trialPeriodDays,
+        currency: currency.value,
+        price: props.trialPrice,
+      }
+      hint = isMonthly
+        ? $t('plus_subscribe_cta_monthly_trial_with_price', hintI18nNames)
+        : $t('plus_subscribe_cta_yearly_trial_with_price', hintI18nNames)
+    }
+    return {
+      isSelected: selectedPlan.value === value,
+      value,
+      label: isMonthly ? $t('pricing_page_monthly') : $t('pricing_page_yearly'),
+      hint,
+      perUnit: isMonthly ? $t('pricing_page_price_per_month') : $t('pricing_page_price_per_year'),
+      price: isMonthly ? monthlyPrice.value : yearlyPrice.value,
+      originalPrice: isMonthly ? originalMonthlyPrice.value : originalYearlyPrice.value,
+      hasDiscount: isMonthly ? hasMonthlyDiscount.value : hasYearlyDiscount.value,
+      discountPercent: isMonthly ? null : yearlyDiscountPercent.value,
+    }
+  })
+})
 </script>
