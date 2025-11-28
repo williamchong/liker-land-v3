@@ -26,7 +26,7 @@
         </AccountSettingsItem>
 
         <AccountSettingsItem
-          icon="i-material-symbols-card-giftcard-outline-rounded"
+          icon="i-material-symbols-featured-seasonal-and-gifts-rounded"
           :label="$t('account_page_gift_plus')"
         >
           <div
