@@ -1,14 +1,38 @@
 <template>
   <div class="flex flex-col gap-4">
-    <!-- Yearly plan -->
     <label
+      v-for="plan in plans"
+      :key="plan.value"
       :class="[
-        ...PLAN_LABEL_BASE_CLASS,
-        selectedPlan === 'yearly' ? 'border-black' : 'border-gray-200',
+        'relative',
+
+        'flex',
+        'justify-between',
+        'items-center',
+
+        'px-4',
+        'py-4',
+
+        'hover:bg-theme-black/5',
+        'text-theme-black',
+        'rounded-2xl',
+
+        'border-2',
+        plan.isSelected ? 'border-theme-black' : 'border-gray-200',
+
+        'hover:shadow-lg',
+        'hover:-translate-y-0.5',
+
+        'cursor-pointer',
+
+        'transition-all',
+        'duration-200',
+        'ease-in-out',
+
       ]"
     >
-      <div
-        v-if="yearlyDiscountPercent"
+      <aside
+        v-if="plan.discountPercent"
         :class="[
           'absolute',
           'top-0',
@@ -17,7 +41,7 @@
           'px-3',
           'py-1',
 
-          'bg-black',
+          'bg-theme-black',
 
           'text-theme-cyan',
           'text-xs',
@@ -27,120 +51,54 @@
 
           '-translate-y-1/2',
         ]"
-        v-text="$t('pricing_page_yearly_discount', { discount: yearlyDiscountPercent })"
+        v-text="$t('pricing_page_yearly_discount', { discount: plan.discountPercent })"
       />
 
       <div class="flex items-center">
-        <div class="w-6 h-6 shrink-0 mr-4">
-          <div
-            :class="[
-              'w-full h-full rounded-full border flex items-center justify-center',
-              selectedPlan === 'yearly' ? 'bg-black' : 'bg-white border-gray-300',
-            ]"
-          >
-            <UIcon
-              v-show="selectedPlan === 'yearly'"
-              name="i-material-symbols-check"
-              class="text-theme-cyan"
-              :size="16"
-            />
-          </div>
-        </div>
         <div
-          class="text-md font-semibold whitespace-nowrap"
-          v-text="$t('pricing_page_yearly')"
-        />
-      </div>
-      <div class="text-right">
-        <div
-          v-if="hasYearlyDiscount"
-          class="flex justify-end items-center gap-2 text-sm text-gray-400"
+          :class="[
+            'size-5 shrink-0 mr-4 rounded-full border-2',
+            plan.isSelected ? 'bg-theme-black border-theme-black' : 'bg-transparent border-gray-200',
+          ]"
         >
-          <p v-text="$t('pricing_page_original_price')" />
-          <span
-            class="line-through text-gray-400"
-            v-text="`US$${originalYearlyPrice}`"
+          <UIcon
+            v-show="plan.isSelected"
+            name="i-material-symbols-check"
+            class="block text-theme-cyan"
+            :size="16"
           />
         </div>
-        <i18n-t
-          keypath="pricing_page_price_per_year"
-          tag="div"
-          class="flex items-baseline text-sm whitespace-nowrap"
-        >
-          <template #price>
-            <p
-              class="text-2xl font-bold px-1"
-              v-text="`$${yearlyPrice}`"
-            />
-          </template>
-        </i18n-t>
-      </div>
-      <input
-        v-model="selectedPlan"
-        type="radio"
-        name="plan"
-        value="yearly"
-        class="hidden"
-      >
-    </label>
 
-    <!-- Monthly plan -->
-    <label
-      :class="[
-        ...PLAN_LABEL_BASE_CLASS,
-        selectedPlan === 'monthly' ? 'border-black' : 'border-gray-200',
-      ]"
-    >
-      <div class="flex items-center">
-        <div class="w-6 h-6 flex-shrink-0 mr-4">
-          <div
-            class="w-full h-full rounded-full border flex items-center justify-center"
-            :class="selectedPlan === 'monthly' ? 'bg-black' : 'bg-white border-gray-300'"
-          >
-            <UIcon
-              v-show="selectedPlan === 'monthly'"
-              name="i-material-symbols-check"
-              class="text-theme-cyan"
-              :size="16"
-            />
-          </div>
-        </div>
-        <div
+        <span
           class="text-md font-semibold whitespace-nowrap"
-          v-text="$t('pricing_page_monthly')"
+          v-text="plan.label"
         />
       </div>
 
-      <div class="text-right">
-        <div
-          v-if="hasMonthlyDiscount"
-          class="flex justify-end items-center gap-2 text-sm text-gray-400"
+      <div class="text-sm text-right">
+        <span
+          v-if="plan.hasDiscount"
+          class="text-muted after:content-['_']"
         >
-          <p v-text="$t('pricing_page_original_price')" />
+          <span>{{ $t('pricing_page_original_price') }}&nbsp;</span>
+          <span class="line-through text-muted">{{ currency }} ${{ plan.originalPrice }}</span>
+        </span>
+
+        <span class="font-bold whitespace-nowrap">
+          <span>{{ currency }}&nbsp;</span>
           <span
-            class="line-through text-gray-400"
-            v-text="`US$${originalMonthlyPrice}`"
+            class="text-2xl"
+            v-text="`$${plan.price}`"
           />
-        </div>
-        <i18n-t
-          keypath="pricing_page_price_per_month"
-          tag="div"
-          class="flex items-baseline text-sm whitespace-nowrap"
-        >
-          <template #price>
-            <p
-              class="text-2xl font-bold px-1"
-              v-text="`$${monthlyPrice}`"
-            />
-          </template>
-        </i18n-t>
+          <span>/{{ plan.perUnit }}</span>
+        </span>
       </div>
 
       <input
         v-model="selectedPlan"
         type="radio"
         name="plan"
-        value="monthly"
+        :value="plan.value"
         class="hidden"
       >
     </label>
@@ -148,6 +106,14 @@
 </template>
 
 <script lang="ts" setup>
+withDefaults(defineProps<{
+  currency?: string
+}>(), {
+  currency: 'US',
+})
+
+const { t: $t } = useI18n()
+
 const {
   monthlyPrice,
   yearlyPrice,
@@ -160,23 +126,20 @@ const {
 
 const selectedPlan = defineModel({
   type: String,
-  default: 'monthly',
+  default: 'yearly',
 })
 
-const PLAN_LABEL_BASE_CLASS = [
-  'relative',
-  'flex',
-  'justify-between',
-  'items-center',
-  'px-4',
-  'py-4',
-  'rounded-2xl',
-  'border-2',
-  'cursor-pointer',
-  'transition-all',
-  'duration-200',
-  'ease-in-out',
-  'hover:shadow-lg',
-  'hover:border-gray-400',
-]
+const plans = computed(() => ['yearly', 'monthly'].map((value) => {
+  const isMonthly = value === 'monthly'
+  return {
+    isSelected: selectedPlan.value === value,
+    value,
+    label: isMonthly ? $t('pricing_page_monthly') : $t('pricing_page_yearly'),
+    perUnit: isMonthly ? $t('pricing_page_price_per_month') : $t('pricing_page_price_per_year'),
+    price: isMonthly ? monthlyPrice.value : yearlyPrice.value,
+    originalPrice: isMonthly ? originalMonthlyPrice.value : originalYearlyPrice.value,
+    hasDiscount: isMonthly ? hasMonthlyDiscount.value : hasYearlyDiscount.value,
+    discountPercent: isMonthly ? null : yearlyDiscountPercent.value,
+  }
+}))
 </script>
