@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@likecoin/epubjs": "^0.3.93",
-    "@likecoin/wagmi-connector": "2.2.4",
+    "@likecoin/wagmi-connector": "2.3.2",
     "@nuxt/eslint": "^1.2.0",
     "@nuxt/icon": "^1.11.0",
     "@nuxt/scripts": "^0.11.8",
