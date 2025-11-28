@@ -215,6 +215,7 @@ const likeCoinSessionAPI = useLikeCoinSessionAPI()
 const { yearlyPrice, monthlyPrice } = useSubscription()
 
 const getRouteQuery = useRouteQuery()
+const route = useRoute()
 
 useHead({
   title: $t('gift_plus_success_title'),
@@ -278,9 +279,9 @@ async function fetchGiftInfo() {
 
           // Remove redirect parameter to prevent duplication on page refresh
           await navigateTo({
-            ...useRoute(),
+            ...route,
             query: {
-              ...useRoute().query,
+              ...route.query,
               redirect: undefined,
             },
           }, { replace: true })
