@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-3 laptop:gap-4">
+  <div class="flex flex-col gap-2 laptop:gap-3">
     <label
       v-for="plan in plans"
       :key="plan.value"
@@ -13,15 +13,17 @@
         'px-4',
         'py-3 laptop:py-4',
 
-        'hover:bg-theme-black/5',
+        'bg-theme-white',
         'text-theme-black',
         'rounded-lg',
 
         'border-2',
         plan.isSelected ? 'border-theme-black' : 'border-theme-black/40',
 
-        'hover:shadow-lg',
-        'hover:-translate-y-0.5',
+        'mb-1',
+        'hover:mb-0',
+        'hover:border-b-6',
+        'hover:-translate-y-1',
 
         'cursor-pointer',
 
@@ -29,6 +31,14 @@
         'duration-200',
         'ease-in-out',
 
+        'before:content-[_]',
+        'before:absolute',
+        'before:inset-0',
+        'before:transition-colors',
+        'before:duration-[inherit]',
+        'before:ease-[inherit]',
+        'before:pointer-events-none',
+        'hover:before:bg-theme-black/5',
       ]"
     >
       <aside
@@ -78,16 +88,16 @@
       <div class="text-xs laptop:text-sm text-right">
         <div
           v-if="plan.hint"
-          class="text-muted"
+          class="text-theme-black/60"
           v-text="plan.hint"
         />
 
         <span
           v-if="plan.hasDiscount"
-          class="text-muted after:content-['_']"
+          class="text-theme-black/60 after:content-['_']"
         >
           <span>{{ $t('pricing_page_original_price') }}&nbsp;</span>
-          <span class="line-through text-muted">{{ currency }} ${{ plan.originalPrice }}</span>
+          <span class="line-through">{{ currency }} ${{ plan.originalPrice }}</span>
         </span>
 
         <span class="font-bold whitespace-nowrap">
