@@ -81,9 +81,11 @@ const bookshelfStore = useBookshelfStore()
 const bookListStore = useBookListStore()
 const { errorModal, handleError } = useErrorHandler()
 
+const route = useRoute()
 const cartId = computed(() => getRouteQuery('cart_id'))
 const claimingToken = computed(() => getRouteQuery('claiming_token'))
 const paymentId = computed(() => getRouteQuery('payment_id'))
+const isRedirected = computed(() => !!getRouteQuery('redirect'))
 
 const isLoading = ref(true)
 const isOpenCollectorMessageModal = ref(false)
@@ -246,6 +248,10 @@ onMounted(async () => {
   // Check and remove items from book list if they match the cart data
   checkAndRemoveBookListItems()
 
+  if (isRedirected.value) {
+    logPurchaseEvent()
+  }
+
   isLoading.value = false
   if (hasLoggedIn.value) {
     startClaimFlow()
@@ -354,30 +360,6 @@ async function startClaimingItems() {
       })
     }
     isClaimed.value = true
-    const coupon = cartData.value?.coupon
-    useLogEvent('purchase', {
-      transaction_id: cartId.value,
-      value: cartData.value?.price,
-      currency: 'USD',
-      items: cartData.value?.classIdsWithPrice.map((item) => {
-        const {
-          classId,
-          priceIndex,
-          quantity,
-          price,
-        } = item
-        return {
-          id: `${classId}-${priceIndex}`,
-          quantity,
-          price,
-          name: bookInfo?.name.value,
-          currency: 'USD',
-          google_business_vertical: 'retail',
-        }
-      }),
-      promotion_id: coupon,
-      promotion_name: coupon,
-    })
   }
   catch (error) {
     // If error is CART_ALREADY_CLAIMED_BY_WALLET, just skip and set isClaimed as if nothing happened
@@ -448,6 +430,47 @@ async function checkAndRemoveBookListItems() {
   }
   catch (error) {
     console.error('Error processing checkout book list:', error)
+  }
+}
+
+async function logPurchaseEvent() {
+  try {
+    const coupon = cartData.value?.coupon
+    useLogEvent('purchase', {
+      transaction_id: cartId.value,
+      value: cartData.value?.price,
+      currency: 'USD',
+      items: cartData.value?.classIdsWithPrice.map((item) => {
+        const {
+          classId,
+          priceIndex,
+          quantity,
+          price,
+        } = item
+        return {
+          id: `${classId}-${priceIndex}`,
+          quantity,
+          price,
+          name: bookInfo?.name.value,
+          currency: 'USD',
+          google_business_vertical: 'retail',
+        }
+      }),
+      promotion_id: coupon,
+      promotion_name: coupon,
+    })
+
+    // Remove redirect parameter to prevent duplication on page refresh
+    await navigateTo({
+      ...route,
+      query: {
+        ...route.query,
+        redirect: undefined,
+      },
+    }, { replace: true })
+  }
+  catch (error) {
+    console.error('Error logging purchase event:', error)
   }
 }
 
