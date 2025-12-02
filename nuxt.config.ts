@@ -5,6 +5,7 @@ const {
   GA_TRACKING_ID,
   AD_CONVERSION_ID,
   NODE_ENV,
+  IS_TESTNET,
 } = process.env
 
 const isDevelopment = NODE_ENV === 'development'
@@ -88,7 +89,7 @@ export default defineNuxtConfig({
       arweaveEndpoint: process.env.ARWEAVE_ENDPOINT,
       ipfsEndpoint: process.env.IPFS_ENDPOINT,
       isMaintenanceMode: process.env.IS_MAINTENANCE_MODE !== undefined,
-      isTestnet: process.env.IS_TESTNET,
+      isTestnet: IS_TESTNET,
       pdfViewerOrigin: process.env.PDF_VIEWER_ORIGIN,
       pdfViewerURL: `${process.env.PDF_VIEWER_ORIGIN}${process.env.PDF_VIEWER_PATH}`,
       posthogPublicKey: process.env.POSTHOG_PUBLIC_KEY,
@@ -149,6 +150,7 @@ export default defineNuxtConfig({
   },
 
   experimental: {
+    browserDevtoolsTiming: !!(isDevelopment || IS_TESTNET),
     clientNodeCompat: true,
   },
 
@@ -164,6 +166,8 @@ export default defineNuxtConfig({
       },
     },
   },
+
+  debug: !!(isDevelopment || IS_TESTNET),
 
   gtag: {
     tags: [
