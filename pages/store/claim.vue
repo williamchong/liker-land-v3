@@ -150,6 +150,46 @@ if (!cartId.value || !claimingToken.value || !paymentId.value) {
 }
 
 const cartData = ref<FetchCartStatusByIdResponseData | null>(null)
+const status = computed(() => cartData.value?.status)
+const isClaimed = ref(!!status.value && ['completed', 'done', 'pending', 'pendingNFT'].includes(status.value))
+const isClaiming = ref(false)
+
+const nftClassId = computed(() => cartData.value?.classIds[0] || '')
+
+const bookInfo = useBookInfo({ nftClassId })
+const { getResizedImageURL } = useImageResize()
+const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 400 }))
+
+// TODO: Handle multiple items in the cart
+const isAutoDeliver = computed(() => isItemAutoDeliver.value || allItemsDelivered.value)
+const isItemAutoDeliver = computed(() => bookInfo.getIsAutoDelivery(cartData.value?.classIdsWithPrice?.[0]?.priceIndex))
+const allItemsDelivered = ref(false)
+
+const claimTitle = computed(() => {
+  if (isLoading.value) {
+    return $t('claim_page_title')
+  }
+  if (canStartReading.value) {
+    return $t('claim_page_start_reading_footer_label')
+  }
+  if (!isAutoDeliver.value) {
+    return $t('claim_page_title_await_for_delivery')
+  }
+  return $t('claim_page_title')
+})
+
+const claimingWallet = computed(() => user.value?.evmWallet)
+
+const readerRoute = computed(() => bookInfo.getReaderRoute.value({
+  nftId: receivedNFTId.value,
+  shouldCustomMessageDisabled: hasBypassedIndexer.value,
+}))
+
+const receivedNFTId = computed(() => bookInfo.firstUserOwnedNFTId.value)
+const canStartReading = computed(() => !!receivedNFTId.value)
+const isCheckingItemsDelivery = ref(false)
+const hasBypassedIndexer = ref(false)
+let stopCollectorMessageModalTimer: (() => void) | null = null
 
 onMounted(async () => {
   isLoading.value = true
@@ -211,36 +251,6 @@ onMounted(async () => {
   }
 })
 
-const nftClassId = computed(() => cartData.value?.classIds[0] || '')
-
-const status = computed(() => cartData.value?.status)
-const isClaimed = ref(!!status.value && ['completed', 'done', 'pending', 'pendingNFT'].includes(status.value))
-
-const bookInfo = useBookInfo({ nftClassId })
-const { getResizedImageURL } = useImageResize()
-const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 400 }))
-
-// TODO: Handle multiple items in the cart
-const isAutoDeliver = computed(() => isItemAutoDeliver.value || allItemsDelivered.value)
-const isItemAutoDeliver = computed(() => bookInfo.getIsAutoDelivery(cartData.value?.classIdsWithPrice?.[0]?.priceIndex))
-const allItemsDelivered = ref(false)
-
-const claimTitle = computed(() => {
-  if (isLoading.value) {
-    return $t('claim_page_title')
-  }
-  if (canStartReading.value) {
-    return $t('claim_page_start_reading_footer_label')
-  }
-  if (!isAutoDeliver.value) {
-    return $t('claim_page_title_await_for_delivery')
-  }
-  return $t('claim_page_title')
-})
-
-const receivedNFTId = computed(() => bookInfo.firstUserOwnedNFTId.value)
-const canStartReading = computed(() => !!receivedNFTId.value)
-
 async function checkItemsDeliveryThroughIndexer() {
   // TODO: Handle multiple items
   // Check if the NFT class is already on the bookshelf
@@ -249,25 +259,6 @@ async function checkItemsDeliveryThroughIndexer() {
     walletAddress: claimingWallet.value as string,
   })
 }
-
-const isCheckingItemsDelivery = ref(false)
-const hasBypassedIndexer = ref(false)
-let stopCollectorMessageModalTimer: (() => void) | null = null
-
-watch([hasLoggedIn, canStartReading], () => {
-  if (!hasLoggedIn.value || isOpenCollectorMessageModal.value) return
-
-  if (canStartReading.value) {
-    openCollectorModal()
-  }
-  else {
-    stopCollectorMessageModalTimer = useTimeoutFn(openCollectorModal, 3000).stop
-  }
-}, { immediate: true })
-
-watch(hasLoggedIn, (value) => {
-  if (value) startClaimFlow()
-}, { immediate: true })
 
 function openCollectorModal() {
   if (isOpenCollectorMessageModal.value) return
@@ -324,10 +315,6 @@ async function waitForItemsDelivery({ timeout = 30000, interval = 3000 } = {}) {
     }
   }
 }
-
-const isClaiming = ref(false)
-
-const claimingWallet = computed(() => user.value?.evmWallet)
 
 async function startClaimingItems() {
   if (isClaiming.value) return
@@ -439,21 +426,10 @@ function startClaimFlow() {
   }
 }
 
-watch(hasLoggedIn, (value) => {
-  if (value) {
-    startClaimFlow()
-  }
-})
-
 async function handleLogin(connectorId: string) {
   if (hasLoggedIn.value) return
   await accountStore.login(connectorId)
 }
-
-const readerRoute = computed(() => bookInfo.getReaderRoute.value({
-  nftId: receivedNFTId.value,
-  shouldCustomMessageDisabled: hasBypassedIndexer.value,
-}))
 
 async function checkAndRemoveBookListItems() {
   try {
@@ -483,4 +459,21 @@ function handleStartReadingButtonClick() {
     })
   }
 }
+
+watch(hasLoggedIn, (value) => {
+  if (value) {
+    startClaimFlow()
+  }
+})
+
+watch([hasLoggedIn, canStartReading], () => {
+  if (!hasLoggedIn.value || isOpenCollectorMessageModal.value) return
+
+  if (canStartReading.value) {
+    openCollectorModal()
+  }
+  else {
+    stopCollectorMessageModalTimer = useTimeoutFn(openCollectorModal, 3000).stop
+  }
+}, { immediate: true })
 </script>
