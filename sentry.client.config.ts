@@ -8,9 +8,6 @@ if (sentryDsn) {
     dsn: sentryDsn,
 
     sendDefaultPii: true,
-    // We recommend adjusting this value in production, or using tracesSampler
-    // for finer control
-    tracesSampleRate: 1.0,
 
     // This sets the sample rate to be 10%. You may want this to be 100% while
     // in development and sample at a lower rate in production
