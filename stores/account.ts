@@ -129,7 +129,7 @@ export const useAccountStore = defineStore('account', () => {
     return {
       statusCode: 401,
       data: {
-        level: 'warning',
+        level: 'warning' as ErrorLevel,
         title: shouldMigrate
           ? $t('account_register_error_email_already_used_migrate_title')
           : $t('account_register_error_email_already_used_by_wallet_title'),
@@ -139,10 +139,10 @@ export const useAccountStore = defineStore('account', () => {
           likeWallet: boundLikeWallet,
         }),
         tags: [
-          { label: loginMethod, icon: 'i-material-symbols-login-rounded', class: 'font-mono' },
-          { label: walletAddress, icon: 'i-material-symbols-key-outline-rounded', class: 'font-mono' },
-        ],
-        actions: shouldMigrate
+          { label: loginMethod, icon: 'i-material-symbols-login-rounded' },
+          { label: walletAddress, icon: 'i-material-symbols-key-outline-rounded' },
+        ] as ErrorHandlerTag[],
+        actions: (shouldMigrate
           ? [{
               label: $t('account_register_error_contact_support'),
               color: 'secondary',
@@ -154,7 +154,7 @@ export const useAccountStore = defineStore('account', () => {
                 })
               },
             }]
-          : [],
+          : []) as ErrorHandlerAction[],
       },
     }
   }
@@ -334,7 +334,7 @@ export const useAccountStore = defineStore('account', () => {
                 boundEVMWallet: error.data?.evmWallet,
                 boundLikeWallet: error.data?.likeWallet,
                 loginMethod,
-              })).result
+              }).data).result
               continue
             }
             default:
