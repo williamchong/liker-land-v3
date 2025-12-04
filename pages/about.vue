@@ -50,10 +50,14 @@
                 size="24"
                 class="text-primary"
               />
-              <h3
-                class="text-xl font-semibold text-gray-900"
-                v-text="$t('about_page_feature_ai_narration')"
-              />
+              <h3 class="text-xl font-semibold text-gray-900">
+                <NuxtLink
+                  :to="localeRoute({ name: 'member' })"
+                  class="hover:text-primary hover:underline"
+                >
+                  {{ $t('about_page_feature_ai_narration') }}
+                </NuxtLink>
+              </h3>
             </div>
             <p
               class="mt-4 text-gray-700"
@@ -68,10 +72,14 @@
                 size="24"
                 class="text-primary"
               />
-              <h3
-                class="text-xl font-semibold text-gray-900"
-                v-text="$t('about_page_feature_dual_format')"
-              />
+              <h3 class="text-xl font-semibold text-gray-900">
+                <NuxtLink
+                  :to="localeRoute({ name: 'shelf' })"
+                  class="hover:text-primary hover:underline"
+                >
+                  {{ $t('about_page_feature_dual_format') }}
+                </NuxtLink>
+              </h3>
             </div>
             <p
               class="mt-4 text-gray-700"
@@ -86,10 +94,14 @@
                 size="24"
                 class="text-primary"
               />
-              <h3
-                class="text-xl font-semibold text-gray-900"
-                v-text="$t('about_page_feature_web3')"
-              />
+              <h3 class="text-xl font-semibold text-gray-900">
+                <NuxtLink
+                  :to="localeRoute({ name: 'store' })"
+                  class="hover:text-primary hover:underline"
+                >
+                  {{ $t('about_page_feature_web3') }}
+                </NuxtLink>
+              </h3>
             </div>
             <p
               class="mt-4 text-gray-700"
@@ -100,14 +112,44 @@
           <UCard class="p-6 space-y-3">
             <div class="flex items-center gap-3">
               <UIcon
+                name="i-material-symbols-pie-chart"
+                size="24"
+                class="text-primary"
+              />
+              <h3 class="text-xl font-semibold text-gray-900">
+                <NuxtLink
+                  to="https://3ook.com/store/0x3ddc416c403449bc2a9ae873bff0b687993cd662#staking-info"
+                  target="_blank"
+                  rel="noopener"
+                  class="hover:text-primary hover:underline"
+                >
+                  {{ $t('about_page_feature_curate_to_earn') }}
+                </NuxtLink>
+              </h3>
+            </div>
+            <p
+              class="mt-4 text-gray-700"
+              v-text="$t('about_page_feature_curate_to_earn_desc')"
+            />
+          </UCard>
+
+          <UCard class="p-6 space-y-3">
+            <div class="flex items-center gap-3">
+              <UIcon
                 name="i-material-symbols-handshake-rounded"
                 size="24"
                 class="text-primary"
               />
-              <h3
-                class="text-xl font-semibold text-gray-900"
-                v-text="$t('about_page_feature_author_benefits')"
-              />
+              <h3 class="text-xl font-semibold text-gray-900">
+                <NuxtLink
+                  :to="publishURL"
+                  target="_blank"
+                  rel="noopener"
+                  class="hover:text-primary hover:underline"
+                >
+                  {{ $t('about_page_feature_author_benefits') }}
+                </NuxtLink>
+              </h3>
             </div>
             <p
               class="mt-4 text-gray-700"
@@ -151,10 +193,20 @@
           class="text-2xl md:text-3xl text-center font-bold text-gray-900 mb-4"
           v-text="$t('about_page_platform_title')"
         />
-        <p
+        <i18n-t
+          keypath="about_page_platform_evolution"
+          tag="p"
           class="text-lg text-gray-700 text-center leading-relaxed"
-          v-text="$t('about_page_platform_evolution')"
-        />
+        >
+          <template #likecoin_v3>
+            <a
+              href="https://like.co"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-primary hover:underline font-medium"
+            >LikeCoin v3</a>
+          </template>
+        </i18n-t>
       </section>
 
       <!-- Get Started Section -->
@@ -197,6 +249,9 @@ const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 const config = useRuntimeConfig()
 const baseURL = config.public.baseURL
+const isTestnet = !!config.public.isTestnet
+
+const publishURL = computed(() => isTestnet ? 'https://publish.sepolia.3ook.com' : 'https://publish.3ook.com')
 
 const pageTitle = computed(() => $t('about_page_title'))
 const pageDescription = computed(() => $t('about_page_hero_subtitle'))
