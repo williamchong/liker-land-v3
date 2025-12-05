@@ -18,7 +18,7 @@
         v-text="bookName"
       />
 
-      <div class="h-4 laptop:h-5 mt-0.5 truncate">
+      <div class="h-4 laptop:h-5 mt-0.5 truncate leading-none">
         <NuxtLink
           :to="bookInfo.getAuthorPageRoute({
             llMedium: 'author-link',
