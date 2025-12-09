@@ -331,6 +331,7 @@ const metadataStore = useMetadataStore()
 const infiniteScrollDetectorElement = useTemplateRef<HTMLLIElement>('infiniteScrollDetector')
 const shouldLoadMore = useElementVisibility(infiniteScrollDetectorElement)
 const { handleError } = useErrorHandler()
+const storePageState = useStorePageState()
 const isTablet = useMediaQuery('(max-width: 768px)')
 const isMobile = useMediaQuery('(max-width: 425px)')
 
@@ -588,11 +589,21 @@ useHead(() => {
   }
 })
 
-watch(tagId, async (value) => {
-  if (value) {
-    await fetchItems({ lazy: true })
-  }
-})
+watch(
+  () => route.query.tag,
+  async (newTag, oldTag) => {
+    if (newTag !== oldTag) {
+      await fetchItems({ lazy: true })
+
+      if (!isSearchMode.value) {
+        if (!newTag) {
+          storePageState.clear()
+        }
+        storePageState.restoreScrollIfNeeded()
+      }
+    }
+  },
+)
 
 // Watch for changes in search parameters
 watch([querySearchTerm, queryAuthorName, queryPublisherName, queryOwnerWallet], async () => {
@@ -803,6 +814,10 @@ async function fetchItems({ lazy = false, isRefresh = false } = {}) {
 }
 
 onMounted(async () => {
+  if (!route.query.tag && !isSearchMode.value) {
+    await storePageState.restoreIfNeeded()
+  }
+
   if (isSearchMode.value) {
     const promises: Promise<unknown>[] = [
       fetchItems({ lazy: true }),
@@ -828,6 +843,15 @@ onMounted(async () => {
     fetchTags(),
     fetchItems({ lazy: true }),
   ])
+})
+
+onBeforeRouteLeave((to) => {
+  if (to.name && String(to.name).startsWith('store')) {
+    storePageState.save(tagId.value, route.query as Record<string, string>)
+  }
+  else {
+    storePageState.clear()
+  }
 })
 
 watch(
@@ -856,6 +880,7 @@ async function handleTagClick(tagValue?: string) {
 async function handleCloseTagClick() {
   useLogEvent('store_tag_close_click')
   tagId.value = TAG_DEFAULT
+  storePageState.clear()
 }
 
 async function handleBookListTagClick() {
