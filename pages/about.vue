@@ -156,6 +156,30 @@
               v-text="$t('about_page_feature_author_benefits_desc')"
             />
           </UCard>
+
+          <UCard class="p-6 space-y-3">
+            <div class="flex items-center gap-3">
+              <UIcon
+                name="i-material-symbols-trending-up-rounded"
+                size="24"
+                class="text-primary"
+              />
+              <h3 class="text-xl font-semibold text-gray-900">
+                <NuxtLink
+                  :to="affiliateURL"
+                  target="_blank"
+                  rel="noopener"
+                  class="hover:text-primary hover:underline"
+                >
+                  {{ $t('about_page_feature_affiliate') }}
+                </NuxtLink>
+              </h3>
+            </div>
+            <p
+              class="mt-4 text-gray-700"
+              v-text="$t('about_page_feature_affiliate_desc')"
+            />
+          </UCard>
         </div>
       </section>
     </div>
@@ -252,6 +276,7 @@ const baseURL = config.public.baseURL
 const isTestnet = !!config.public.isTestnet
 
 const publishURL = computed(() => isTestnet ? 'https://publish.sepolia.3ook.com' : 'https://publish.3ook.com')
+const affiliateURL = computed(() => `${publishURL.value}/sales-report`)
 
 const pageTitle = computed(() => $t('about_page_title'))
 const pageDescription = computed(() => $t('about_page_hero_subtitle'))
