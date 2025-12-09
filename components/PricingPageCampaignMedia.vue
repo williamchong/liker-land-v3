@@ -35,7 +35,7 @@ const props = withDefaults(defineProps<{
 const { campaignContent } = usePricingPageCampaign({ campaignId: props.campaignId })
 
 const filepath = computed(() => {
-  return `${VIDEOS_PATH}/${props.campaignId}-${props.orientation}`
+  return `${VIDEOS_PATH}/${props.campaignId}/${props.orientation}`
 })
 const videoSrc = computed(() => `${filepath.value}.mp4`)
 const imageSrc = computed(() => `${filepath.value}.jpg`)

@@ -15,6 +15,11 @@ const CAMPAIGNS: Record<string, PricingPageCampaign> = {
     title: '善用碎片時間，自我增值',
     description: '上班族必備！在午休、上班途中，甚至做運動時聽書，放鬆身心和汲取新知！',
   },
+  'fragmentedtime2': {
+    type: 'video',
+    title: '善用碎片時間，自我增值',
+    description: '上班族必備！在午休、上班途中，甚至做運動時聽書，放鬆身心和汲取新知！',
+  },
 }
 
 export function usePricingPageCampaign(options: {
