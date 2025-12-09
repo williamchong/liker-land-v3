@@ -14,6 +14,7 @@
         'text-3xl',
         'font-bold',
         { 'text-theme-cyan': props.isDarkBackground },
+        'whitespace-pre-wrap',
       ]"
       v-text="title"
     />
