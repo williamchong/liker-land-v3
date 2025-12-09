@@ -292,6 +292,10 @@ const {
   bookFileCacheKey,
 } = useReader()
 const { handleError } = useErrorHandler()
+const {
+  shouldShowTTSTryModal,
+  showTTSTryModal,
+} = useTTSTryModal()
 
 function getCacheKeyWithSuffix(suffix: ReaderCacheKeySuffix) {
   return getReaderCacheKeyWithSuffix(bookFileCacheKey.value, suffix)
@@ -597,6 +601,15 @@ async function loadEPub() {
   const { segments: ttsSegments, chapterTitles } = await extractTTSSegments(book)
   setTTSSegments(ttsSegments)
   setChapterTitles(chapterTitles)
+
+  if (shouldShowTTSTryModal.value && !bookInfo.isAudioHidden.value) {
+    showTTSTryModal({
+      nftClassId: nftClassId.value,
+      onVoiceSelected: () => {
+        onClickTTSPlay()
+      },
+    })
+  }
 }
 function findNextCFIAfterTOC(navItems: NavItem[]): string | undefined {
   const firstChapter = navItems[0]
