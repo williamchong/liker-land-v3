@@ -1233,21 +1233,30 @@ function handleRecommendedBookCoverClick(classId: string) {
 async function handleReadButtonClick() {
   useLogEvent('product_page_read_button_click', { nft_class_id: nftClassId.value })
 
-  // Get the first NFT owned by the user for this NFT class
-  const firstNFT = bookshelfStore.getFirstNFTByNFTClassId(nftClassId.value)
-  if (!firstNFT) return
+  try {
+    // Get the first NFT owned by the user for this NFT class
+    const firstNFT = bookshelfStore.getFirstNFTByNFTClassId(nftClassId.value)
+    if (!firstNFT) {
+      throw createError({ data: { description: $t('error_book_not_owned') } })
+    }
 
-  const contentURLs = bookInfo.contentURLs.value || []
-  // If there are multiple content URLs, open the drawer for selection
-  if (contentURLs.length > 1) {
-    isReadBookDrawerOpen.value = true
-    return
-  }
+    const contentURLs = bookInfo.contentURLs.value || []
+    // If there are multiple content URLs, open the drawer for selection
+    if (contentURLs.length > 1) {
+      isReadBookDrawerOpen.value = true
+      return
+    }
 
-  // If there's only one content URL, open it directly
-  const contentURL = contentURLs[0] || bookInfo.defaultContentURL.value
-  if (contentURL) {
+    // If there's only one content URL, open it directly
+    const contentURL = contentURLs[0] || bookInfo.defaultContentURL.value
+    if (!contentURL) {
+      throw createError({ data: { description: $t('error_book_content_url_empty') } })
+    }
+
     openContentURL(contentURL, firstNFT.token_id)
+  }
+  catch (error) {
+    await handleError(error)
   }
 }
 
