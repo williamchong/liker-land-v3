@@ -284,8 +284,8 @@ const eventPayload = computed(() => {
   const payload = {
     currency: totalCurrency.value,
     value: totalPrice.value,
-    promotion_id: couponCode || undefined,
-    promotion_name: couponCode || undefined,
+    promotion_id: couponCode || (user.value?.isLikerPlus ? 'plus' : undefined),
+    promotion_name: couponCode || (user.value?.isLikerPlus ? 'plus' : undefined),
     items: cartItems.value.map(item => ({
       id: `${item.classId}-${item.priceIndex}`,
       name: item.bookInfo?.name || '',

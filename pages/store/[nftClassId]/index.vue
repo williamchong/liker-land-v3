@@ -953,8 +953,8 @@ const formattedLogPayload = computed(() => {
       quantity: 1,
       google_business_vertical: 'retail',
     }],
-    promotional_id: coupon || undefined,
-    promotional_name: coupon || undefined,
+    promotion_id: coupon || (user.value?.isLikerPlus ? 'plus' : undefined),
+    promotion_name: coupon || (user.value?.isLikerPlus ? 'plus' : undefined),
   }
 })
 

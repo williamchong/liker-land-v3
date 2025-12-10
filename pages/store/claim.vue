@@ -456,8 +456,8 @@ async function logPurchaseEvent() {
           google_business_vertical: 'retail',
         }
       }),
-      promotion_id: coupon,
-      promotion_name: coupon,
+      promotion_id: coupon || (user.value?.isLikerPlus ? 'plus' : undefined),
+      promotion_name: coupon || (user.value?.isLikerPlus ? 'plus' : undefined),
     })
 
     // Remove redirect parameter to prevent duplication on page refresh
