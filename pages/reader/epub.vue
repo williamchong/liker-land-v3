@@ -45,7 +45,7 @@
                       }"
                       @click="() => {
                         isMobileTocOpen = false
-                        setActiveNavItemHref(item.href)
+                        setActiveNavItem(item)
                       }"
                     />
                   </li>
@@ -97,7 +97,7 @@
                       block
                       @click="() => {
                         isDesktopTocOpen = false
-                        setActiveNavItemHref(item.href)
+                        setActiveNavItem(item)
                       }"
                     />
                   </li>
@@ -291,7 +291,7 @@ const {
   bookFileURLWithCORS,
   bookFileCacheKey,
 } = useReader()
-const { handleError } = useErrorHandler()
+const { errorModal, handleError } = useErrorHandler()
 const {
   shouldShowTTSTryModal,
   showTTSTryModal,
@@ -357,6 +357,7 @@ onMounted(async () => {
 })
 
 const rendition = ref<Rendition>()
+const sectionHrefByFilename = ref<Record<string, string>>({})
 const navItems = ref<NavItem[]>([])
 const activeNavItemLabel = computed(() => {
   const item = navItems.value.find(item => item.href === activeNavItemHref.value)
@@ -415,6 +416,22 @@ let removeSelectAllByHotkeyListener: (() => void) | undefined
 const renditionElement = useTemplateRef<HTMLDivElement>('reader')
 const renditionViewWindow = ref<Window | undefined>(undefined)
 
+async function displayRendition(href?: string, { isSilentError = false } = {}) {
+  if (rendition.value) {
+    try {
+      await rendition.value.display(href)
+      return true
+    }
+    catch (error) {
+      console.error(`Error occurred when displaying${href ? ` ${href}` : ''} in rendition of ${nftClassId.value}`, error)
+      if (!isSilentError) {
+        await handleError(error, { description: $t('reader_epub_rendition_display_failed') })
+      }
+    }
+  }
+  return false
+}
+
 async function loadEPub() {
   const buffer = await loadFileAsBuffer(bookFileURLWithCORS.value, bookFileCacheKey.value)
   if (!buffer) {
@@ -461,22 +478,13 @@ async function loadEPub() {
     console.warn('Failed to get location cache:', error)
   }
 
-  const sectionHrefByFilename: Record<string, string> = {}
   book.spine.each((section: Section) => {
     const directories = section.href.split('/')
     const filename = directories.pop()
     if (!filename) return
-    sectionHrefByFilename[filename] = section.href
+    sectionHrefByFilename.value[filename] = section.href
   })
-  navItems.value = toc
-    .map((item: NavItem) => {
-      // Extract filename by removing anchor part from href
-      const filename = item.href.split('#')[0] as string
-      const spineHref = sectionHrefByFilename[filename]
-      // Replace toc's href with spine's href
-      return spineHref ? { ...item, href: spineHref } : null
-    })
-    .filter((item): item is NavItem => item !== null)
+  navItems.value = toc.filter((item): item is NavItem => item !== null)
 
   activeNavItemHref.value = book.spine.first().href
   currentPageHref.value = activeNavItemHref.value
@@ -503,8 +511,22 @@ async function loadEPub() {
   rendition.value.themes.fontSize(`${fontSize.value}px`)
   isPageLoading.value = true
 
-  const displayTarget = currentCfi.value || findNextCFIAfterTOC(navItems.value)
-  rendition.value.display(displayTarget || undefined)
+  let hasDisplayed = false
+  if (currentCfi.value) {
+    hasDisplayed = await displayRendition(currentCfi.value, { isSilentError: true })
+  }
+  if (!hasDisplayed) {
+    const fallbackCfi = findNextCFIAfterTOC(navItems.value)
+    if (fallbackCfi) {
+      hasDisplayed = await displayRendition(fallbackCfi, { isSilentError: true })
+    }
+  }
+  if (!hasDisplayed) {
+    hasDisplayed = await displayRendition()
+    if (!hasDisplayed) {
+      return
+    }
+  }
 
   rendition.value.on('rendered', (section: Section, view: EpubView) => {
     currentSectionIndex.value = section.index
@@ -680,11 +702,29 @@ async function extractTTSSegments(book: ePub.Book) {
   return { segments, chapterTitles }
 }
 
-function setActiveNavItemHref(href: string) {
+async function setActiveNavItem(item: NavItem) {
   activeTTSElementIndex.value = undefined
-  activeNavItemHref.value = href
+  activeNavItemHref.value = item.href
   isPageLoading.value = true
-  rendition.value?.display(href)
+
+  let hasDisplayed = await displayRendition(item.href, { isSilentError: true })
+  if (hasDisplayed) return
+
+  // Try replacing nav item's href with spine's href if section cannot be found
+  const [filename, anchor] = item.href.split('#')
+  if (filename) {
+    let spineHref = sectionHrefByFilename.value[filename]
+    if (spineHref) {
+      if (anchor) {
+        spineHref = `${spineHref}#${anchor}`
+      }
+      hasDisplayed = await displayRendition(spineHref)
+      if (hasDisplayed) {
+        return
+      }
+    }
+  }
+  await errorModal.open({ description: $t('reader_epub_rendition_display_failed') }).result
 }
 
 function nextPage() {

@@ -383,6 +383,7 @@
   "product_page_tts_disabled": "不支援",
   "product_page_tts_enabled": "支援",
   "reader_display_options_button": "顯示選項",
+  "reader_epub_rendition_display_failed": "無法顯示該頁。",
   "reader_page_mode_dual": "雙頁顯示",
   "reader_page_mode_single": "單頁顯示",
   "reader_rate_options_button": "語速",
