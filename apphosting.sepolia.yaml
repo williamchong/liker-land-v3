@@ -83,6 +83,8 @@ env:
     value: https://us.i.posthog.com
   - variable: POSTHOG_DEFAULTS
     value: 2025-05-24
+  - variable: PUBLISH_BOOK_ENDPOINT
+    value: https://publish.sepolia.3ook.com
   - variable: WALLET_CONNECT_PROJECT_ID
     value: 526a2e1c9bf37fb75a7e0a4b11d6008e
   # Grant access to secrets in Cloud Secret Manager.

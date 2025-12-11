@@ -272,7 +272,7 @@
 
         <UButton
           :label="$t('account_page_publish_book')"
-          to="https://publish.3ook.com?utm_source=3ookcom&utm_medium=referral&utm_campaign=3ookcom_account"
+          :to="publishBookURL"
           target="_blank"
           variant="link"
           leading-icon="i-material-symbols-book-4-spark-rounded"
@@ -280,6 +280,7 @@
           color="neutral"
           size="lg"
           block
+          @click="handlePublishBookButtonClick"
         />
       </UCard>
     </section>
@@ -312,6 +313,7 @@
 <script setup lang="ts">
 import { formatUnits } from 'viem'
 import { waitForTransactionReceipt } from '@wagmi/core'
+import { useSignMessage } from '@wagmi/vue'
 
 import likeCoinTokenImage from '~/assets/images/likecoin-token.png'
 
@@ -334,6 +336,12 @@ const { claimWalletRewards } = useLikeCollectiveContract()
 
 useHead({
   title: $t('account_page_title'),
+})
+
+const { signMessageAsync } = useSignMessage()
+
+const publishBookURL = computed(() => {
+  return `${config.public.publishBookEndpoint}?utm_source=3ookcom&utm_medium=referral&utm_campaign=3ookcom_account`
 })
 
 const subscriptionStateLabel = computed(() => {
@@ -524,6 +532,51 @@ async function handleClaimStakingRewardButtonClick() {
     await handleError(error, {
       title: $t('staking_claim_all_rewards_error'),
     })
+  }
+}
+
+async function handlePublishBookButtonClick(event: MouseEvent) {
+  useLogEvent('account_page_publish_book_button_click')
+
+  if (!user.value) return
+
+  const {
+    loginMethod,
+    evmWallet,
+  } = user.value
+  if (!loginMethod || loginMethod !== 'magic') return
+
+  // Do not open URL first
+  event.preventDefault()
+
+  try {
+    // Sign authorize message to login publish.3ook.com automatically
+    await accountStore.restoreConnection()
+    const payload = JSON.stringify({
+      action: 'authorize',
+      evmWallet,
+      permissions: [
+        'read:nftbook',
+        'write:nftbook',
+        'read:iscn',
+        'write:iscn',
+      ],
+      ts: Date.now(),
+    })
+    const signature = await signMessageAsync({ message: payload })
+    const url = new URL(publishBookURL.value)
+    url.searchParams.set('auth', JSON.stringify({
+      signature,
+      message: payload,
+      wallet: evmWallet,
+      signMethod: 'personal_sign',
+      expiresIn: '7d',
+    }))
+    await navigateTo(url.toString(), { external: true })
+  }
+  catch (error) {
+    console.error(error)
+    await navigateTo(publishBookURL.value, { external: true })
   }
 }
 </script>

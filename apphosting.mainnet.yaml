@@ -83,6 +83,8 @@ env:
     value: https://us.i.posthog.com
   - variable: POSTHOG_DEFAULTS
     value: 2025-05-24
+  - variable: PUBLISH_BOOK_ENDPOINT
+    value: https://publish.3ook.com
   - variable: GA_TRACKING_ID
     value: G-WBSJGPMQE2
   - variable: SENTRY_AUTH_TOKEN

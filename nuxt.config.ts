@@ -94,6 +94,7 @@ export default defineNuxtConfig({
       posthogPublicKey: process.env.POSTHOG_PUBLIC_KEY,
       posthogHost: process.env.POSTHOG_HOST,
       posthogDefaults: process.env.POSTHOG_DEFAULTS,
+      publishBookEndpoint: process.env.PUBLISH_BOOK_ENDPOINT,
       sentryDsn: process.env.SENTRY_DSN,
       subscription: {
         pricing: {
