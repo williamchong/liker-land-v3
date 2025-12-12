@@ -66,6 +66,10 @@ useHead({
       property: 'og:type',
       content: 'website',
     },
+    {
+      name: 'base:app_id',
+      content: '693c33358a7c4e55fec73fbd',
+    },
   ],
   titleTemplate: title => title ? `${title} | ${$t('app_title')}` : $t('app_title'),
   link: [
