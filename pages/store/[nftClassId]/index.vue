@@ -707,6 +707,8 @@ const isInBookList = ref(false)
 const isCheckingBookList = ref(false)
 const isUpdatingBookList = ref(false)
 
+const from = computed(() => getRouteQuery('from') || undefined)
+
 const ogTitle = computed(() => {
   const title = bookInfo.name.value
   const author = bookInfo.authorName.value
@@ -849,7 +851,7 @@ const isPricingItemsVisible = useElementVisibility(pricingItemsElement)
 
 const pricingItems = computed(() => {
   return bookInfo.pricingItems.value.map((item, index) => {
-    const discountPrice = getPlusDiscountPrice(item.price)
+    const discountPrice = from.value ? null : getPlusDiscountPrice(item.price)
     return {
       ...item,
       originalPrice: formatPrice(item.price),
@@ -1041,9 +1043,8 @@ function getShareURL(medium: string) {
   url.searchParams.set('utm_source', medium)
   url.searchParams.set('utm_medium', 'social')
   url.searchParams.set('utm_campaign', 'share')
-  const from = getRouteQuery('from')
-  if (from) {
-    url.searchParams.set('from', from)
+  if (from.value) {
+    url.searchParams.set('from', from.value)
   }
   return url.toString()
 }
@@ -1244,7 +1245,7 @@ async function handlePurchaseButtonClick() {
       priceIndex: selectedPricingItem.value.index,
       coupon: getRouteQuery('coupon'),
       language: locale.value.split('-')[0],
-      from: getRouteQuery('from'),
+      from: from.value,
       ...getAnalyticsParameters(),
     })
     useLogEvent('begin_checkout', {
