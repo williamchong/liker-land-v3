@@ -323,8 +323,8 @@ export const useBookstoreStore = defineStore('bookstore', () => {
       const result = await fetchCollectiveBookNFTs({
         'pagination.limit': limit,
         'pagination.key': stakingBooksMap.value[sortBy].offset,
-        'time_frame_sort_order': 'desc',
-        'time_frame_sort_by': sortBy as 'staked_amount' | 'last_staked_at' | 'number_of_stakers',
+        'sort_order': 'desc',
+        'sort_by': sortBy as 'staked_amount' | 'last_staked_at' | 'number_of_stakers',
       })
 
       let bookNFTs = result.data

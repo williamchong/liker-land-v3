@@ -117,9 +117,8 @@ export interface CollectiveQueryOptions {
 }
 
 export interface CollectiveBookNFTsQueryOptions extends CollectiveQueryOptions {
-  time_frame?: '7d' | '30d' | '1y' | 'all'
-  time_frame_sort_by?: 'staked_amount' | 'last_staked_at' | 'number_of_stakers'
-  time_frame_sort_order?: 'asc' | 'desc'
+  sort_by?: 'staked_amount' | 'last_staked_at' | 'number_of_stakers'
+  sort_order?: 'asc' | 'desc'
 }
 
 export interface CollectiveAccountBookNFTsQueryOptions extends CollectiveQueryOptions {
@@ -144,9 +143,8 @@ function getCollectiveQueryOptions(options: CollectiveQueryOptions = {}) {
 
 function getCollectiveBookNFTsQueryOptions(options: CollectiveBookNFTsQueryOptions = {}) {
   const query = getCollectiveQueryOptions(options)
-  if (options.time_frame) query.time_frame = options.time_frame
-  if (options.time_frame_sort_by) query.time_frame_sort_by = options.time_frame_sort_by
-  if (options.time_frame_sort_order) query.time_frame_sort_order = options.time_frame_sort_order
+  if (options.sort_by) query.sort_by = options.sort_by
+  if (options.sort_order) query.sort_order = options.sort_order
   return query
 }
 
