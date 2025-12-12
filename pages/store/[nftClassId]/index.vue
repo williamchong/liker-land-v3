@@ -462,7 +462,6 @@
                   variant="outline"
                   size="xs"
                   :icon="button.icon"
-                  :disabled="!button.isEnabled"
                   :ui="{ base: 'p-2 rounded-full' }"
                   @click="handleSocialButtonClick(button.key)"
                 />
@@ -931,7 +930,7 @@ function handlePricingItemClick(index: number) {
 watch([hasLoggedIn, selectedPricingItemIndex], checkBookListStatusDebounced)
 
 const socialButtons = computed(() => [
-  { key: 'copy-links', label: $t('share_button_hint_copy_link'), icon: 'i-material-symbols-link-rounded', isEnabled: true },
+  { key: 'copy-links', label: $t('share_button_hint_copy_link'), icon: 'i-material-symbols-link-rounded' },
   { key: 'threads', label: $t('share_button_hint_threads'), icon: 'i-simple-icons-threads' },
   { key: 'facebook', label: $t('share_button_hint_facebook'), icon: 'i-simple-icons-facebook' },
   { key: 'whatsapp', label: $t('share_button_hint_whatsapp'), icon: 'i-simple-icons-whatsapp' },
@@ -1036,11 +1035,34 @@ onMounted(async () => {
 
 const { copy: copyToClipboard } = useClipboard()
 
+function getShareURL(medium: string) {
+  const baseURL = canonicalURL.value
+  const url = new URL(baseURL)
+  url.searchParams.set('utm_source', medium)
+  url.searchParams.set('utm_medium', 'social')
+  url.searchParams.set('utm_campaign', 'share')
+  const from = getRouteQuery('from')
+  if (from) {
+    url.searchParams.set('from', from)
+  }
+  return url.toString()
+}
+
 async function handleSocialButtonClick(key: string) {
+  const shareText = bookInfo.authorName.value
+    ? $t('product_page_share_text_with_author', { title: bookName.value, author: bookInfo.authorName.value })
+    : $t('product_page_share_text', { title: bookName.value })
+
+  useLogEvent('share', {
+    method: key,
+    item_id: `${nftClassId.value}-${selectedPricingItemIndex.value}`,
+  })
+
   switch (key) {
     case 'copy-links':
       try {
-        await copyToClipboard(window.location.href)
+        const shareUrl = getShareURL('copy-link')
+        await copyToClipboard(shareUrl)
         toast.add({
           title: $t('copy_link_success'),
           duration: 3000,
@@ -1059,16 +1081,44 @@ async function handleSocialButtonClick(key: string) {
       }
       break
     case 'threads':
-      // TODO: Handle Threads
+      {
+        const shareUrl = getShareURL('threads')
+        window.open(
+          `https://threads.net/intent/post?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`,
+          '_blank',
+          'noopener,noreferrer',
+        )
+      }
       break
     case 'facebook':
-      // TODO: Handle Facebook
+      {
+        const shareUrl = getShareURL('facebook')
+        window.open(
+          `https://m.facebook.com/sharer/sharer.php?display=page&u=${encodeURIComponent(shareUrl)}`,
+          '_blank',
+          'noopener,noreferrer',
+        )
+      }
       break
     case 'whatsapp':
-      // TODO: Handle WhatsApp
+      {
+        const shareUrl = getShareURL('whatsapp')
+        window.open(
+          `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`,
+          '_blank',
+          'noopener,noreferrer',
+        )
+      }
       break
     case 'x':
-      // TODO: Handle X
+      {
+        const shareUrl = getShareURL('x')
+        window.open(
+          `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`,
+          '_blank',
+          'noopener,noreferrer',
+        )
+      }
       break
     default:
   }
