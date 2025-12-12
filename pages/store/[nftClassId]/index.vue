@@ -1216,6 +1216,7 @@ async function handlePurchaseButtonClick() {
         utmSource: 'upsell_plus',
         utmCampaign: `upsell_plus_${nftClassId.value}`,
         utmMedium: 'product_page',
+        from: getRouteQuery('from') || undefined,
       })
       if (isStartSubscription) return
     }

@@ -24,6 +24,7 @@ export interface UpsellPlusModalProps {
   utmMedium?: string
   utmSource?: string
   selectedPricingItemIndex?: number
+  from?: string
   onSubscribe?: (payload: UpsellPlusModalSubscribeEventPayload) => void
   onOpen?: () => void
   onClose?: () => void

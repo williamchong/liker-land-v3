@@ -9,7 +9,7 @@
     @update:open="onOpenUpdate"
   >
     <template
-      v-if="isTrialFor30Days"
+      v-if="!isLikerPlus && isTrialFor30Days && (shouldShowMonthlyPlan || isAllowYearlyTrial)"
       #header
     >
       <PricingLimitedOfferAlert
@@ -130,6 +130,7 @@ const props = withDefaults(defineProps<UpsellPlusModalProps>(), {
   trialPrice: 1,
   mustCollectPaymentMethod: false,
   selectedPricingItemIndex: 0,
+  from: undefined,
   utmCampaign: undefined,
   utmMedium: undefined,
   utmSource: undefined,
@@ -147,7 +148,7 @@ const { currency } = useSubscriptionPricing()
 
 const selectedPlan = ref<SubscriptionPlan>('yearly')
 
-const shouldShowMonthlyPlan = computed(() => !props.isLikerPlus)
+const shouldShowMonthlyPlan = computed(() => !props.isLikerPlus && !props.from)
 const shouldShowYearlyPlan = computed(() => (
   shouldShowMonthlyPlan.value
   || (props.isLikerPlus && props.likerPlusPeriod === 'month')
