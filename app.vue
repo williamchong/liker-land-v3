@@ -68,7 +68,13 @@ useHead({
     },
   ],
   titleTemplate: title => title ? `${title} | ${$t('app_title')}` : $t('app_title'),
-  link: i18nHead.value.link || [],
+  link: [
+    {
+      rel: 'me',
+      href: 'https://www.threads.com/@3ookcom',
+    },
+    ...(i18nHead.value.link || []),
+  ],
   script: [
     {
       type: 'application/ld+json',
@@ -84,6 +90,7 @@ useHead({
           'https://www.facebook.com/3ookcom',
           'https://review.3ook.com',
           'https://x.com/3ookcom',
+          'https://www.threads.com/@3ookcom',
         ],
         'url': ogURL,
         'logo': ogImage,
