@@ -38,6 +38,10 @@ export function useNFTClassStakingData(nftClassId: ComputedRef<string>) {
     return stakingStore.getTotalStakeOfNFTClassCached(nftClassId.value)
   })
 
+  const numberOfStakers = computed(() => {
+    return stakingStore.getNumberOfStakersCached(nftClassId.value)
+  })
+
   // Load staking data from blockchain
   async function loadStakingData() {
     try {
@@ -119,6 +123,7 @@ export function useNFTClassStakingData(nftClassId: ComputedRef<string>) {
     userStake,
     pendingRewards,
     isClaimingRewards,
+    numberOfStakers,
     // Computed
     formattedTotalStake,
     formattedUserStake,

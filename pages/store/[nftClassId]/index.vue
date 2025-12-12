@@ -149,16 +149,29 @@
 
           <template #staking-info>
             <div class="max-tablet:hidden space-y-4 text-theme-black">
-              <div class="grid grid-cols-1 tablet:grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 tablet:grid-cols-3 gap-4">
                 <UCard :ui="{ body: 'p-4' }">
                   <div class="text-center">
                     <BalanceLabel
                       class="text-2xl"
                       :value="formattedTotalStake"
+                      :is-compact="true"
                     />
                     <div
                       class="mt-1 text-sm text-muted"
                       v-text="$t('staking_total_staked')"
+                    />
+                  </div>
+                </UCard>
+                <UCard :ui="{ body: 'p-4' }">
+                  <div class="text-center">
+                    <div
+                      class="text-2xl font-semibold"
+                      v-text="numberOfStakers.toLocaleString()"
+                    />
+                    <div
+                      class="mt-1 text-sm text-muted"
+                      v-text="$t('staking_total_stakers')"
                     />
                   </div>
                 </UCard>
@@ -170,16 +183,12 @@
                     <BalanceLabel
                       class="text-2xl"
                       :value="formattedUserStake"
+                      :is-compact="true"
                     />
 
                     <div
                       class="mt-1 text-sm text-muted"
                       v-text="$t('staking_your_stake')"
-                    />
-                    <div
-                      v-if="userStakePercentage > 0"
-                      class="mt-1 text-xs text-dimmed"
-                      v-text="$t('staking_of_total', { percentage: userStakePercentage })"
                     />
                   </div>
                 </UCard>
@@ -819,7 +828,7 @@ const {
   formattedTotalStake,
   formattedUserStake,
   formattedPendingRewards,
-  userStakePercentage,
+  numberOfStakers,
   handleClaimRewards,
   loadStakingData,
 } = useNFTClassStakingData(nftClassId)
