@@ -1,4 +1,4 @@
-import { fetchCollectiveSortedBookNFTs } from '~/shared/utils/collective-indexer'
+import { fetchCollectiveBookNFTs } from '~/shared/utils/collective-indexer'
 
 interface BookstoreCMSTagProducts {
   items: BookstoreCMSProduct[]
@@ -28,7 +28,7 @@ interface StakingBooks {
   }>
   isFetching: boolean
   hasFetched: boolean
-  offset?: number
+  offset?: number | string
 }
 
 export const useBookstoreStore = defineStore('bookstore', () => {
@@ -320,19 +320,16 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     try {
       stakingBooksMap.value[sortBy].isFetching = true
 
-      // HACK: Use 1 year until API support all time
-      const result = await fetchCollectiveSortedBookNFTs('1y', {
-        'sort_by': sortBy as 'staked_amount' | 'last_staked_at' | 'number_of_stakers',
-        'sort_order': 'desc',
+      const result = await fetchCollectiveBookNFTs({
         'pagination.limit': limit,
-        'pagination.page': isRefresh
-          ? undefined
-          : stakingBooksMap.value[sortBy]?.offset,
+        'pagination.key': stakingBooksMap.value[sortBy].offset,
+        'time_frame_sort_order': 'desc',
+        'time_frame_sort_by': sortBy as 'staked_amount' | 'last_staked_at' | 'number_of_stakers',
       })
 
-      const bookNFTs = result.data
+      let bookNFTs = result.data
         .map(bookNFT => ({
-          nftClassId: normalizeNFTClassId(bookNFT.book_nft),
+          nftClassId: normalizeNFTClassId(bookNFT.evm_address),
           totalStaked: BigInt(bookNFT.staked_amount || 0),
           stakerCount: bookNFT.number_of_stakers,
           lastStakedAt: bookNFT.last_staked_at,
@@ -341,6 +338,21 @@ export const useBookstoreStore = defineStore('bookstore', () => {
           return bookNFT.totalStaked > 0
         })
 
+      // HACK: time_frame_sort_order doesn't work in indexer now
+      // Sort locally to ensure correct ordering, remove after indexer is fixed
+      bookNFTs = bookNFTs.sort((a, b) => {
+        switch (sortBy) {
+          case 'staked_amount':
+            return Number(b.totalStaked - a.totalStaked)
+          case 'number_of_stakers':
+            return b.stakerCount - a.stakerCount
+          case 'last_staked_at':
+            return new Date(b.lastStakedAt || 0).getTime() - new Date(a.lastStakedAt || 0).getTime()
+          default:
+            return 0
+        }
+      })
+
       if (isRefresh) {
         stakingBooksMap.value[sortBy].items = bookNFTs
       }
@@ -348,7 +360,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
         stakingBooksMap.value[sortBy].items.push(...bookNFTs)
       }
 
-      stakingBooksMap.value[sortBy].offset = result.data.length <= limit ? undefined : ((stakingBooksMap.value[sortBy].offset || 0) + 1)
+      stakingBooksMap.value[sortBy].offset = result.data.length === limit ? result.pagination?.next_key?.toString() : undefined
       stakingBooksMap.value[sortBy].hasFetched = true
     }
     catch (error) {
