@@ -149,7 +149,7 @@
 
           <template #staking-info>
             <div class="max-tablet:hidden space-y-4 text-theme-black">
-              <div class="grid grid-cols-1 tablet:grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 tablet:grid-cols-3 gap-4">
                 <UCard :ui="{ body: 'p-4' }">
                   <div class="text-center">
                     <BalanceLabel
@@ -159,6 +159,18 @@
                     <div
                       class="mt-1 text-sm text-muted"
                       v-text="$t('staking_total_staked')"
+                    />
+                  </div>
+                </UCard>
+                <UCard :ui="{ body: 'p-4' }">
+                  <div class="text-center">
+                    <div
+                      class="text-2xl font-semibold"
+                      v-text="numberOfStakers.toLocaleString()"
+                    />
+                    <div
+                      class="mt-1 text-sm text-muted"
+                      v-text="$t('staking_total_stakers')"
                     />
                   </div>
                 </UCard>
@@ -818,6 +830,7 @@ const {
   formattedUserStake,
   formattedPendingRewards,
   userStakePercentage,
+  numberOfStakers,
   handleClaimRewards,
   loadStakingData,
 } = useNFTClassStakingData(nftClassId)
