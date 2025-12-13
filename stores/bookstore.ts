@@ -327,7 +327,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
         'sort_by': sortBy as 'staked_amount' | 'last_staked_at' | 'number_of_stakers',
       })
 
-      let bookNFTs = result.data
+      const bookNFTs = result.data
         .map(bookNFT => ({
           nftClassId: normalizeNFTClassId(bookNFT.evm_address),
           totalStaked: BigInt(bookNFT.staked_amount || 0),
@@ -338,21 +338,6 @@ export const useBookstoreStore = defineStore('bookstore', () => {
           return bookNFT.totalStaked > 0
         })
 
-      // HACK: time_frame_sort_order doesn't work in indexer now
-      // Sort locally to ensure correct ordering, remove after indexer is fixed
-      bookNFTs = bookNFTs.sort((a, b) => {
-        switch (sortBy) {
-          case 'staked_amount':
-            return Number(b.totalStaked - a.totalStaked)
-          case 'number_of_stakers':
-            return b.stakerCount - a.stakerCount
-          case 'last_staked_at':
-            return new Date(b.lastStakedAt || 0).getTime() - new Date(a.lastStakedAt || 0).getTime()
-          default:
-            return 0
-        }
-      })
-
       if (isRefresh) {
         stakingBooksMap.value[sortBy].items = bookNFTs
       }
@@ -360,7 +345,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
         stakingBooksMap.value[sortBy].items.push(...bookNFTs)
       }
 
-      stakingBooksMap.value[sortBy].offset = result.data.length === limit ? result.pagination?.next_key?.toString() : undefined
+      stakingBooksMap.value[sortBy].offset = result.data.length <= limit ? undefined : result.pagination?.next_key?.toString()
       stakingBooksMap.value[sortBy].hasFetched = true
     }
     catch (error) {
