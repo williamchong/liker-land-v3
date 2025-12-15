@@ -1,4 +1,4 @@
-import { fetchCollectiveSortedBookNFTs } from '~/shared/utils/collective-indexer'
+import { fetchCollectiveBookNFTs } from '~/shared/utils/collective-indexer'
 
 interface BookstoreCMSTagProducts {
   items: BookstoreCMSProduct[]
@@ -28,7 +28,7 @@ interface StakingBooks {
   }>
   isFetching: boolean
   hasFetched: boolean
-  offset?: number
+  offset?: number | string
 }
 
 export const useBookstoreStore = defineStore('bookstore', () => {
@@ -320,19 +320,16 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     try {
       stakingBooksMap.value[sortBy].isFetching = true
 
-      // HACK: Use 1 year until API support all time
-      const result = await fetchCollectiveSortedBookNFTs('1y', {
-        'sort_by': sortBy as 'staked_amount' | 'last_staked_at' | 'number_of_stakers',
-        'sort_order': 'desc',
+      const result = await fetchCollectiveBookNFTs({
         'pagination.limit': limit,
-        'pagination.page': isRefresh
-          ? undefined
-          : stakingBooksMap.value[sortBy]?.offset,
+        'pagination.key': stakingBooksMap.value[sortBy].offset,
+        'sort_order': 'desc',
+        'sort_by': sortBy as 'staked_amount' | 'last_staked_at' | 'number_of_stakers',
       })
 
       const bookNFTs = result.data
         .map(bookNFT => ({
-          nftClassId: normalizeNFTClassId(bookNFT.book_nft),
+          nftClassId: normalizeNFTClassId(bookNFT.evm_address),
           totalStaked: BigInt(bookNFT.staked_amount || 0),
           stakerCount: bookNFT.number_of_stakers,
           lastStakedAt: bookNFT.last_staked_at,
@@ -348,7 +345,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
         stakingBooksMap.value[sortBy].items.push(...bookNFTs)
       }
 
-      stakingBooksMap.value[sortBy].offset = result.data.length <= limit ? undefined : ((stakingBooksMap.value[sortBy].offset || 0) + 1)
+      stakingBooksMap.value[sortBy].offset = result.data.length <= limit ? undefined : result.pagination?.next_key?.toString()
       stakingBooksMap.value[sortBy].hasFetched = true
     }
     catch (error) {

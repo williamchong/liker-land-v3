@@ -571,7 +571,7 @@ useHead(() => {
     ...(isStakingTagId.value
       ? [{
           rel: 'preload',
-          href: `${runtimeConfig.public.likeCoinEVMChainCollectiveAPIEndpoint}/book-nfts/1y/delta?pagination.limit=100&sort_by=${mapTagIdToAPIStakingSortValue(tagId.value)}&sort_order=desc`,
+          href: `${runtimeConfig.public.likeCoinEVMChainCollectiveAPIEndpoint}/book-nfts?pagination.limit=100&sort_by=${mapTagIdToAPIStakingSortValue(tagId.value)}&sort_order=desc`,
           as: 'fetch' as const,
           crossorigin: 'anonymous' as const,
         }]
