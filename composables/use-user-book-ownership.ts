@@ -4,6 +4,7 @@ export function useUserBookOwnership(nftClassId: MaybeRef<string>) {
 
   const isChecking = ref(false)
   const hasChecked = ref(false)
+  let pendingCheckPromise: Promise<boolean> | null = null
 
   const nftClassIdRef = computed(() => toValue(nftClassId))
 
@@ -12,12 +13,12 @@ export function useUserBookOwnership(nftClassId: MaybeRef<string>) {
       return false
     }
 
-    const nfts = bookshelfStore.getNFTsByNFTClassId(nftClassIdRef.value)
-    return nfts.length > 0
+    const tokenIds = bookshelfStore.getTokenIdsByNFTClassId(nftClassIdRef.value)
+    return tokenIds.length > 0
   })
 
-  async function checkOwnership() {
-    if (!nftClassIdRef.value || !hasLoggedIn.value || !user.value?.evmWallet || isChecking.value) {
+  async function performOwnershipCheck() {
+    if (!nftClassIdRef.value || !hasLoggedIn.value || !user.value?.evmWallet) {
       return false
     }
 
@@ -25,8 +26,8 @@ export function useUserBookOwnership(nftClassId: MaybeRef<string>) {
       isChecking.value = true
 
       // First check if we already have the NFT in the bookshelf store
-      const existingNFTs = bookshelfStore.getNFTsByNFTClassId(nftClassIdRef.value)
-      if (existingNFTs.length > 0) {
+      const existingTokenIds = bookshelfStore.getTokenIdsByNFTClassId(nftClassIdRef.value)
+      if (existingTokenIds.length > 0) {
         hasChecked.value = true
         return true
       }
@@ -48,6 +49,17 @@ export function useUserBookOwnership(nftClassId: MaybeRef<string>) {
     finally {
       isChecking.value = false
     }
+  }
+
+  async function checkOwnership() {
+    if (pendingCheckPromise) {
+      return pendingCheckPromise
+    }
+    pendingCheckPromise = performOwnershipCheck().finally(() => {
+      pendingCheckPromise = null
+    })
+
+    return pendingCheckPromise
   }
 
   // Auto-check ownership when user login or NFT class ID changes
