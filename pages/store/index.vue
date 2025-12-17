@@ -289,7 +289,7 @@
         <BookstoreItem
           v-for="(item, index) in products.items"
           :id="item.classId"
-          :key="item.classId"
+          :key="`${tagId}-${item.classId}`"
           :class="getGridItemClassesByIndex(index)"
           :nft-class-id="item.classId"
           :book-name="item.title"
