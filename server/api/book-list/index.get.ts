@@ -2,6 +2,7 @@ import { fetchUserBookListItem } from '~/server/utils/book-list'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
+  setHeader(event, 'cache-control', 'private')
   const userWallet = session.user.evmWallet
   const query = getQuery(event)
   const nftClassId = query.nft_class_id as string
