@@ -204,6 +204,7 @@ function handleSubscribe() {
       query: {
         ...route.query,
         edition: String(props.selectedPricingItemIndex),
+        upsell: '1',
       },
       hash: route.hash,
     },

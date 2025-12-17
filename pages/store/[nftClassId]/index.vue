@@ -719,6 +719,7 @@ const isUpdatingBookList = ref(false)
 const from = computed(() => getRouteQuery('from') || undefined)
 const coupon = computed(() => getRouteQuery('coupon') || undefined)
 const quantity = computed(() => Math.max(parseInt(getRouteQuery('quantity'), 10) || 1, 1))
+const isRedirectedFromUpsell = computed(() => getRouteQuery('upsell') === '1')
 
 const ogTitle = computed(() => {
   const title = bookInfo.name.value
@@ -1220,7 +1221,7 @@ async function handlePurchaseButtonClick() {
       await accountStore.login()
       if (!hasLoggedIn.value) return
     }
-    if (selectedPricingItem.value.price) {
+    if (selectedPricingItem.value.price && !isRedirectedFromUpsell.value) {
       const isStartSubscription = await openUpsellPlusModalIfEligible({
         nftClassId: nftClassId.value,
         bookPrice: selectedPricingItem.value.price,
