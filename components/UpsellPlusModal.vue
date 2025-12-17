@@ -1,7 +1,7 @@
 <template>
   <UModal
     :ui="{
-      header: isTrialFor30Days ? 'p-0 sm:p-0 min-h-max' : undefined,
+      header: shouldShowLimitedOfferAlert ? 'p-0 sm:p-0 min-h-max' : undefined,
       title: 'text-sm laptop:text-base font-bold text-center',
       footer: 'flex flex-col-reverse laptop:flex-row items-center gap-3',
       body: 'flex flex-col items-start gap-1 laptop:gap-2 max-laptop:text-sm px-6',
@@ -9,7 +9,7 @@
     @update:open="onOpenUpdate"
   >
     <template
-      v-if="!isLikerPlus && isTrialFor30Days && (shouldShowMonthlyPlan || isAllowYearlyTrial)"
+      v-if="shouldShowLimitedOfferAlert"
       #header
     >
       <PricingLimitedOfferAlert
@@ -149,14 +149,15 @@ const { currency } = useSubscriptionPricing()
 const selectedPlan = ref<SubscriptionPlan>('yearly')
 
 const shouldShowMonthlyPlan = computed(() => !props.isLikerPlus && !props.from)
-const shouldShowYearlyPlan = computed(() => (
-  shouldShowMonthlyPlan.value
-  || (props.isLikerPlus && props.likerPlusPeriod === 'month')
-))
+const shouldShowYearlyPlan = computed(() => (!props.isLikerPlus || props.likerPlusPeriod === 'month') && (!props.from || props.nftClassId))
 
 const isAllowYearlyTrial = computed(() => !props.nftClassId)
 
 const isTrialFor30Days = computed(() => props.trialPeriodDays === 30)
+
+const shouldShowLimitedOfferAlert = computed(() => {
+  return !props.isLikerPlus && isTrialFor30Days.value && (shouldShowMonthlyPlan.value || isAllowYearlyTrial.value)
+})
 
 const subscribeButtonLabel = computed(() => {
   if (selectedPlan.value === 'yearly') {
