@@ -174,6 +174,9 @@ export function useSubscription() {
           period: subscribePlan,
           giftNFTClassId: isYearly ? nftClassId : undefined,
         })
+        if (upsellPlusModal.isOpen) {
+          upsellPlusModal.close()
+        }
         await navigateTo(localeRoute({ name: 'plus-success', query: { period: subscribePlan } }))
       }
       else {
