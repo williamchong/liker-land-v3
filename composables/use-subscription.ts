@@ -174,7 +174,7 @@ export function useSubscription() {
           period: subscribePlan,
           giftNFTClassId: isYearly ? nftClassId : undefined,
         })
-        await navigateTo(localeRoute({ name: 'plus-success' }))
+        await navigateTo(localeRoute({ name: 'plus-success', query: { period: subscribePlan } }))
       }
       else {
         const { url } = await likeCoinSessionAPI.fetchLikerPlusCheckoutLink({

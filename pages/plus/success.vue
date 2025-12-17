@@ -45,13 +45,17 @@ const getRouteQuery = useRouteQuery()
 const getRouteBaseName = useRouteBaseName()
 
 const isRedirected = computed(() => !!getRouteQuery('redirect'))
-const isYearly = computed(() => getRouteQuery('period') === 'yearly')
+const targetPeriod = computed(() => getRouteQuery('period'))
+const isYearly = computed(() => targetPeriod.value === 'yearly')
 const paymentId = computed(() => getRouteQuery('payment_id'))
 const coupon = computed(() => getRouteQuery('coupon'))
 
 const isRefreshing = ref(true)
 const isRedirecting = ref(false)
 const isLikerPlus = computed(() => user.value?.isLikerPlus)
+const isPeriodMatch = computed(() => {
+  return !targetPeriod.value || user.value?.likerPlusPeriod === targetPeriod.value
+})
 
 useHead({
   title: $t('subscription_success_page_title'),
@@ -86,7 +90,7 @@ onMounted(async () => {
     isRefreshing.value = true
     await accountStore.refreshSessionInfo()
     let retry = 0
-    while (!isLikerPlus.value && retry < 4) {
+    while (!(isLikerPlus.value && isPeriodMatch.value) && retry < 4) {
       await sleep(5000)
       await accountStore.refreshSessionInfo()
       retry++
