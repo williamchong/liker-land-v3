@@ -8,15 +8,7 @@ const CURRENCY_PREFIXES: Record<PricingCurrency, string> = {
 
 export default function () {
   const { t: $t } = useI18n()
-  const { currency } = usePaymentCurrency()
-
-  function getDisplayCurrency(): PricingCurrency {
-    const curr = currency.value
-    if (curr === 'auto') {
-      return 'usd'
-    }
-    return curr as PricingCurrency
-  }
+  const { getDisplayCurrency } = usePaymentCurrency()
 
   function getCurrencyPrefix(currency: PricingCurrency) {
     return CURRENCY_PREFIXES[currency] ?? 'US$'
