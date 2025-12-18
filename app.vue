@@ -24,6 +24,7 @@ const { memberProgramData } = useMemberProgramStructuredData()
 
 const { initializeServerGeolocation, initializeClientGeolocation } = useDetectedGeolocation()
 const { initializePaymentCurrency } = usePaymentCurrency()
+const { initializeLocale } = useAutoLocale()
 
 callOnce(() => {
   initializeServerGeolocation()
@@ -32,6 +33,7 @@ callOnce(() => {
 onMounted(() => {
   initializeClientGeolocation()
   initializePaymentCurrency()
+  initializeLocale()
 })
 
 const i18nHead = useLocaleHead()
