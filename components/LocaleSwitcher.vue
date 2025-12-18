@@ -6,7 +6,7 @@
     :icon="props.isIconHidden ? undefined : 'i-material-symbols-language'"
     trailing-icon="i-material-symbols-keyboard-arrow-down-rounded"
     size="md"
-    @update:model-value="setLocale"
+    @update:model-value="handleLocaleChange"
   />
 </template>
 
@@ -15,7 +15,11 @@ const props = defineProps({
   isIconHidden: Boolean,
 })
 
-const { locale, locales, setLocale } = useI18n()
+const { locale, locales, setLocale } = useAutoLocale()
 
 const localesItems = computed(() => locales.value.map(l => ({ label: l.name, value: l.code })))
+
+function handleLocaleChange(value: string) {
+  setLocale(value as 'en' | 'zh-Hant')
+}
 </script>

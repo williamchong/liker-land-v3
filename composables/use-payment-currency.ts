@@ -3,17 +3,6 @@ import type { PricingCurrency } from './use-pricing'
 
 export type PaymentCurrency = 'auto' | 'hkd' | 'twd' | 'usd'
 
-function getDetectedCountry(): string {
-  // Try to get country from Cloudflare IP Geolocation header
-  if (import.meta.server) {
-    const headers = useRequestHeaders()
-    const country = headers['cf-ipcountry']?.toUpperCase()
-    return country || 'US'
-  }
-
-  return 'US'
-}
-
 function getDefaultCurrencyFromCountry(country: string): PricingCurrency {
   switch (country) {
     case 'HK':
@@ -26,7 +15,7 @@ function getDefaultCurrencyFromCountry(country: string): PricingCurrency {
 }
 
 export function usePaymentCurrency() {
-  const detectedCountry = useState<string>('detected-country', getDetectedCountry)
+  const { detectedCountry } = useGeolocation()
   const currency = useStorage<PaymentCurrency>('payment_currency', 'auto')
 
   const detectedCurrency = computed(() => getDefaultCurrencyFromCountry(detectedCountry.value))
