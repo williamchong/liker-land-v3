@@ -88,6 +88,7 @@ export function useLikeCoinSessionAPI() {
     customPrice,
     priceIndex,
     coupon,
+    currency,
     language,
     referrer,
     utmCampaign,
@@ -106,6 +107,7 @@ export function useLikeCoinSessionAPI() {
     customPrice?: number
     priceIndex: number
     coupon?: string
+    currency?: string
     from?: string
     language?: string
     referrer?: string
@@ -130,6 +132,7 @@ export function useLikeCoinSessionAPI() {
         email,
         customPriceInDecimal: customPrice !== undefined ? Math.floor(customPrice * 100) : undefined,
         coupon,
+        currency,
         language,
         referrer,
         utmCampaign,
@@ -153,6 +156,7 @@ export function useLikeCoinSessionAPI() {
       email,
       from = 'liker_land',
       coupon,
+      currency,
       cancelPage = 'list',
       language,
       referrer,
@@ -169,6 +173,7 @@ export function useLikeCoinSessionAPI() {
     }: {
       email?: string
       coupon?: string
+      currency?: string
       cancelPage?: 'list' | 'checkout'
       from?: string
       language?: string
@@ -200,6 +205,7 @@ export function useLikeCoinSessionAPI() {
           quantity: item.quantity,
         })),
         coupon,
+        currency,
         cancelPage,
         language,
         referrer,
