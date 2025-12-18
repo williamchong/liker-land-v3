@@ -638,6 +638,7 @@ const { t: $t, locale } = useI18n()
 const toast = useToast()
 const wipModal = useWIPModal()
 const { formatPrice } = useCurrency()
+const { getCheckoutCurrency } = usePaymentCurrency()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
 const nftStore = useNFTStore()
@@ -1265,6 +1266,7 @@ async function handlePurchaseButtonClick() {
             coupon: coupon.value,
             from: from.value,
             language,
+            currency: getCheckoutCurrency(),
             ...getAnalyticsParameters(),
           })
         : likeCoinSessionAPI.createNFTBookPurchase({
@@ -1275,6 +1277,7 @@ async function handlePurchaseButtonClick() {
             coupon: coupon.value,
             from: from.value,
             language,
+            currency: getCheckoutCurrency(),
             ...getAnalyticsParameters(),
           })
     )
