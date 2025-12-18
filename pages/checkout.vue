@@ -182,6 +182,7 @@ const { user } = useUserSession()
 const nftStore = useNFTStore()
 const bookstoreStore = useBookstoreStore()
 const { formatPrice } = useCurrency()
+const { getCheckoutCurrency } = usePaymentCurrency()
 const { handleError } = useErrorHandler()
 const { getAnalyticsParameters } = useAnalytics()
 const { getResizedNormalizedImageURL } = useImageResize()
@@ -368,6 +369,7 @@ async function handleCheckout() {
         coupon: couponCode || undefined,
         cancelPage: 'checkout',
         language: locale.value.split('-')[0],
+        currency: getCheckoutCurrency(),
         ...getAnalyticsParameters({ utmSource: 'checkout' }),
       },
     )

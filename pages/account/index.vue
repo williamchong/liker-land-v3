@@ -224,6 +224,15 @@
             <LocaleSwitcher :is-icon-hidden="true" />
           </template>
         </AccountSettingsItem>
+
+        <AccountSettingsItem
+          icon="i-material-symbols-payments-outline-rounded"
+          :label="$t('account_page_payment_currency')"
+        >
+          <template #right>
+            <CurrencySwitcher :is-icon-hidden="true" />
+          </template>
+        </AccountSettingsItem>
       </UCard>
     </section>
 
