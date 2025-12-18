@@ -35,23 +35,13 @@
             v-text="$t('book_list_item_sold_out')"
           />
           <template v-else-if="pricingItem">
-            <span
-              v-if="originalPrice > 0"
-              class="mr-0.5 font-semibold"
-              v-text="currency"
-            />
             <template v-if="formattedDiscountedPrice">
               <span
-                v-if="formattedDiscountedPrice"
                 class="font-semibold"
                 v-text="formattedDiscountedPrice"
               />
               <PlusBadge class="inline ml-1" />
               <span class="block text-xs text-gray-400 line-through">
-                <span
-                  class="mr-0.5"
-                  v-text="currency"
-                />
                 <span v-text="formattedOriginalPrice" />
               </span>
             </template>
@@ -97,7 +87,7 @@ const emit = defineEmits(['click-cover', 'remove', 'select', 'unselect'])
 
 const nftStore = useNFTStore()
 const bookInfo = useBookInfo({ nftClassId: props.nftClassId })
-const { getPlusDiscountPrice } = useSubscription()
+const { isLikerPlus, PLUS_BOOK_PURCHASE_DISCOUNT } = useSubscription()
 const { getResizedImageURL } = useImageResize()
 
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 300 }))
@@ -112,16 +102,17 @@ useVisibility('lazyLoadTrigger', (isVisible) => {
   }
 })
 
-const { formatPrice } = useCurrency()
+const { formatPrice, formatDiscountedPrice } = useCurrency()
 
 const pricingItem = computed(() => bookInfo.pricingItems.value[props.priceIndex])
 const originalPrice = computed(() => pricingItem.value?.price || 0)
 const formattedOriginalPrice = computed(() => formatPrice(originalPrice.value))
 const formattedDiscountedPrice = computed(() => {
-  const discountedPrice = getPlusDiscountPrice(originalPrice.value)
-  return discountedPrice ? formatPrice(discountedPrice) : null
+  if (isLikerPlus.value && originalPrice.value > 0) {
+    return formatDiscountedPrice(originalPrice.value, PLUS_BOOK_PURCHASE_DISCOUNT)
+  }
+  return null
 })
-const currency = computed(() => pricingItem.value?.currency || 'USD')
 const isSoldOut = computed(() => pricingItem.value?.isSoldOut || false)
 
 function handleCheckboxValueChange(isSelected: boolean | 'indeterminate') {
