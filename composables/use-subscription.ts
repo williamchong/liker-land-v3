@@ -238,6 +238,7 @@ export function useSubscription() {
     likerPlusPeriod,
     getPlusDiscountPrice,
     getPlusDiscountRate,
+    PLUS_BOOK_PURCHASE_DISCOUNT,
     isProcessingSubscription,
 
     openPaywallModal,
