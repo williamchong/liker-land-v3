@@ -262,7 +262,7 @@
 
           <template v-else-if="isUserBookOwner">
             <UButton
-              class="max-laptop:hidden"
+              class="max-tablet:hidden"
               :label="$t('product_page_read_button_label')"
               icon="i-material-symbols-auto-stories-outline-rounded"
               size="xl"
