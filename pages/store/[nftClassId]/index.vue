@@ -1221,7 +1221,7 @@ async function handlePurchaseButtonClick() {
       await accountStore.login()
       if (!hasLoggedIn.value) return
     }
-    if (selectedPricingItem.value.price && !isRedirectedFromUpsell.value) {
+    if (selectedPricingItem.value.price && !isRedirectedFromUpsell.value && !bookInfo.isUpsellDisabled.value) {
       const isStartSubscription = await openUpsellPlusModalIfEligible({
         nftClassId: nftClassId.value,
         bookPrice: selectedPricingItem.value.price,
