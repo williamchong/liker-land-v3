@@ -138,7 +138,7 @@ const props = withDefaults(defineProps<UpsellPlusModalProps>(), {
 
 const emit = defineEmits<{
   open: []
-  close: []
+  close: [isSuccess: boolean]
   subscribe: [payload: UpsellPlusModalSubscribeEventPayload]
 }>()
 
@@ -209,10 +209,11 @@ function handleSubscribe() {
       hash: route.hash,
     },
   })
+  emit('close', true)
 }
 
 function handleClose() {
-  emit('close')
+  emit('close', false)
 }
 
 onMounted(() => {
@@ -224,7 +225,7 @@ const onOpenUpdate = (open: boolean) => {
     emit('open')
   }
   else {
-    emit('close')
+    emit('close', false)
   }
 }
 </script>
