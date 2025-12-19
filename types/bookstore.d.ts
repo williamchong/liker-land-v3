@@ -60,6 +60,7 @@ declare interface BookstoreInfo {
   isApprovedForAds: boolean
   hideDownload: boolean
   hideAudio: boolean
+  hideUpsell: boolean
   enableCustomMessagePage: boolean
   name: string
   description: string

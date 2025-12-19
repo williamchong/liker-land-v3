@@ -169,6 +169,10 @@ export default function (
     return bookstoreInfo.value?.hideAudio || false
   })
 
+  const isUpsellDisabled = computed(() => {
+    return bookstoreInfo.value?.hideUpsell || false
+  })
+
   const formattedReadingMethods = computed(() => {
     const methods = [$t('reading_method_read_online')]
     if (isDownloadable.value) {
@@ -287,6 +291,7 @@ export default function (
     isApprovedForAds,
     isDownloadable,
     isAudioHidden,
+    isUpsellDisabled,
     formattedTTSSupportLabel,
     formattedReadingMethods,
     keywords,
