@@ -10,6 +10,7 @@ export function useSubscription() {
   const localeRoute = useLocaleRoute()
   const getRouteQuery = useRouteQuery()
   const toast = useToast()
+  const blockingModal = useBlockingModal()
   const { getAnalyticsParameters } = useAnalytics()
 
   const selectedPlan = ref<SubscriptionPlan>('yearly')
@@ -68,7 +69,9 @@ export function useSubscription() {
       isLikerPlus: isLikerPlus.value,
       likerPlusPeriod: likerPlusPeriod.value,
       onSubscribe: startSubscription,
-      onClose: () => useLogEvent('subscription_button_click_skip'),
+      onClose: () => {
+        useLogEvent('subscription_button_click_skip')
+      },
     }
   }
 
@@ -156,6 +159,7 @@ export function useSubscription() {
     if (isProcessingSubscription.value) return
     try {
       isProcessingSubscription.value = true
+      blockingModal.open({ title: $t('common_processing') })
 
       if (!user.value?.likerId) {
         toast.add({
@@ -174,7 +178,7 @@ export function useSubscription() {
           period: subscribePlan,
           giftNFTClassId: isYearly ? nftClassId : undefined,
         })
-        await navigateTo(localeRoute({ name: 'plus-success' }))
+        await navigateTo(localeRoute({ name: 'plus-success', query: { period: subscribePlan } }))
       }
       else {
         const { url } = await likeCoinSessionAPI.fetchLikerPlusCheckoutLink({
@@ -200,6 +204,7 @@ export function useSubscription() {
     }
     finally {
       isProcessingSubscription.value = false
+      blockingModal.close()
     }
   }
 
