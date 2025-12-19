@@ -1,6 +1,6 @@
 import { BlockingModal } from '#components'
 
-export default function useBlackingModal() {
+export default function useBlockingModal() {
   const overlay = useOverlay()
   const modal = overlay.create(BlockingModal)
   return modal
