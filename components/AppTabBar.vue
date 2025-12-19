@@ -8,7 +8,7 @@
       >
         <NuxtLink
           v-if="item.key === 'account' && hasLoggedIn"
-          class="flex justify-center items-center"
+          class="relative flex justify-center items-center"
           :to="item.to"
         >
           <UAvatar
@@ -21,6 +21,19 @@
             icon="i-material-symbols-person-2-rounded"
             size="lg"
           />
+          <UBadge
+            v-if="user?.isLikerPlus"
+            class="absolute bottom-0 translate-y-1/2"
+            size="xs"
+            :variant="item.isActive ? 'solid' : 'outline'"
+            :ui="{
+              base: [
+                'rounded-full',
+                item.isActive ? 'bg-theme-black text-theme-cyan' : 'bg-theme-white',
+                'font-bold',
+              ],
+            }"
+          >PLUS</UBadge>
         </NuxtLink>
         <UButton
           v-else
