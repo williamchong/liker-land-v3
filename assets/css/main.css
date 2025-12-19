@@ -98,6 +98,7 @@ body {
 }
 
 /* Launcher element after message frame open */
-.intercom-launcher-frame {
+.intercom-launcher-frame,
+.intercom-launcher-frame + div {
   transform: translateY(calc(-1 * var(--intercom-launcher-offset))) !important;
 }
