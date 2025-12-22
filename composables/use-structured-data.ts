@@ -1,9 +1,100 @@
+function generateBookOffer({
+  sellerWalletAddress,
+  canonicalURL,
+  priceIndex,
+  price,
+  isSoldOut,
+  isAutoDeliver,
+  productId,
+  baseURL,
+  validForMemberTier,
+}: {
+  sellerWalletAddress?: string
+  canonicalURL: string
+  priceIndex: number
+  price: number
+  isSoldOut: boolean
+  isAutoDeliver: boolean
+  productId: string
+  baseURL: string
+  validForMemberTier?: Array<{
+    '@type': string
+    'name': string
+    'memberProgram': {
+      '@type': string
+      'name': string
+    }
+  }>
+}) {
+  const offer: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Offer',
+    'seller': sellerWalletAddress
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'Person',
+          'identifier': sellerWalletAddress,
+        }
+      : undefined,
+    'url': `${canonicalURL}?price_index=${priceIndex}`,
+    'price': price,
+    'priceCurrency': 'USD',
+    'availability': isSoldOut ? 'https://schema.org/SoldOut' : 'https://schema.org/LimitedAvailability',
+    'itemCondition': 'https://schema.org/NewCondition',
+    'checkoutPageURLTemplate': `${baseURL}/checkout?products=${productId}&utm_medium=structured-data`,
+    'shippingDetails': {
+      '@type': 'OfferShippingDetails',
+      'shippingRate': {
+        '@type': 'MonetaryAmount',
+        'value': 0,
+        'currency': 'USD',
+      },
+      'deliveryTime': {
+        '@type': 'ShippingDeliveryTime',
+        'handlingTime': !isAutoDeliver
+          ? {
+              '@type': 'QuantitativeValue',
+              'minValue': 1,
+              'maxValue': 7,
+              'unitCode': 'DAY',
+            }
+          : {
+              '@type': 'QuantitativeValue',
+              'minValue': 0,
+              'maxValue': 0,
+              'unitCode': 'DAY',
+            },
+        'transitTime': {
+          '@type': 'QuantitativeValue',
+          'minValue': 0,
+          'maxValue': 0,
+          'unitCode': 'DAY',
+        },
+      },
+    },
+    'hasMerchantReturnPolicy': {
+      '@type': 'MerchantReturnPolicy',
+      'returnPolicyCategory': 'https://schema.org/MerchantReturnNotPermitted',
+    },
+  }
+
+  if (validForMemberTier) {
+    offer.validForMemberTier = validForMemberTier
+  }
+
+  return offer
+}
+
 function generateReadAction({
   urlTemplate,
+  nftClassId,
+  sellerWalletAddress,
   price,
   isSoldOut = false,
 }: {
   urlTemplate: string
+  nftClassId: string
+  sellerWalletAddress?: string
   price?: number
   isSoldOut?: boolean
 }) {
@@ -21,13 +112,17 @@ function generateReadAction({
   }
 
   if (price !== undefined) {
-    const offer: Record<string, unknown> = {
-      '@type': 'Offer',
-      'category': price > 0 ? 'purchase' : 'free',
-      'price': price,
-      'priceCurrency': 'USD',
-      'availability': isSoldOut ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock',
-    }
+    const productId = `${nftClassId}-${0}`
+    const offer = generateBookOffer({
+      sellerWalletAddress: sellerWalletAddress,
+      canonicalURL: urlTemplate,
+      priceIndex: 0,
+      price,
+      isSoldOut,
+      isAutoDeliver: true,
+      productId,
+      baseURL: urlTemplate,
+    })
 
     action.expectsAcceptanceOf = offer
   }
@@ -73,6 +168,7 @@ export function useStorePageStructuredData({
           ...(authorName && { author: authorName }),
           'bookFormat': 'https://schema.org/EBook',
           'potentialAction': generateReadAction({
+            nftClassId: item.classId!,
             urlTemplate: `${baseURL}/store/${item.classId}`,
             price: item.minPrice,
           }),
@@ -96,7 +192,7 @@ export function useStructuredData(
 ) {
   const bookInfo = useBookInfo({ nftClassId })
   const config = useRuntimeConfig()
-
+  const { getPlusDiscountRate } = useSubscription()
   function generateOGMetaTags({
     selectedPricingItemIndex = 0,
   }) {
@@ -238,56 +334,52 @@ export function useStructuredData(
         keywords,
         'bookFormat': 'https://schema.org/EBook',
         'bookEdition': pricing?.name,
-        'offers': {
-          '@context': 'https://schema.org',
-          '@type': 'Offer',
-          'seller': {
-            '@context': 'https://schema.org',
-            '@type': 'Person',
-            'identifier': bookInfo.nftClassOwnerWalletAddress.value,
-          },
-          'url': `${canonicalURL}?price_index=${pricing.index}`,
-          'price': pricing?.price || 0,
-          'priceCurrency': 'USD',
-          'availability': pricing?.isSoldOut ? 'https://schema.org/SoldOut' : 'https://schema.org/LimitedAvailability',
-          'itemCondition': 'https://schema.org/NewCondition',
-          'checkoutPageURLTemplate': `${baseURL}/checkout?products=${productId}&utm_medium=structured-data`,
-          'shippingDetails': {
-            '@type': 'OfferShippingDetails',
-            'shippingRate': {
-              '@type': 'MonetaryAmount',
-              'value': 0,
-              'currency': 'USD',
-            },
-            'deliveryTime': {
-              '@type': 'ShippingDeliveryTime',
-              'handlingTime': !pricing.isAutoDeliver
-                ? {
-                    '@type': 'QuantitativeValue',
-                    'minValue': 1,
-                    'maxValue': 7,
-                    'unitCode': 'DAY',
-                  }
-                : {
-                    '@type': 'QuantitativeValue',
-                    'minValue': 0,
-                    'maxValue': 0,
-                    'unitCode': 'DAY',
+        'offers': [
+          // Regular offer for all users
+          generateBookOffer({
+            sellerWalletAddress: bookInfo.nftClassOwnerWalletAddress.value,
+            canonicalURL,
+            priceIndex: pricing.index,
+            price: pricing?.price || 0,
+            isSoldOut: pricing?.isSoldOut || false,
+            isAutoDeliver: pricing.isAutoDeliver,
+            productId,
+            baseURL,
+          }),
+          ...(pricing?.price > 0 && getPlusDiscountRate()
+            ? [generateBookOffer({
+                sellerWalletAddress: bookInfo.nftClassOwnerWalletAddress.value,
+                canonicalURL,
+                priceIndex: pricing.index,
+                price: pricing.price * getPlusDiscountRate(),
+                isSoldOut: pricing?.isSoldOut || false,
+                isAutoDeliver: pricing.isAutoDeliver,
+                productId,
+                baseURL,
+                validForMemberTier: [
+                  {
+                    '@type': 'MemberProgramTier',
+                    'name': 'Monthly',
+                    'memberProgram': {
+                      '@type': 'MemberProgram',
+                      'name': '3ook.com Plus',
+                    },
                   },
-              'transitTime': {
-                '@type': 'QuantitativeValue',
-                'minValue': 0,
-                'maxValue': 0,
-                'unitCode': 'DAY',
-              },
-            },
-          },
-          'hasMerchantReturnPolicy': {
-            '@type': 'MerchantReturnPolicy',
-            'returnPolicyCategory': 'https://schema.org/MerchantReturnNotPermitted',
-          },
-        },
+                  {
+                    '@type': 'MemberProgramTier',
+                    'name': 'Yearly',
+                    'memberProgram': {
+                      '@type': 'MemberProgram',
+                      'name': '3ook.com Plus',
+                    },
+                  },
+                ],
+              })]
+            : []),
+        ],
         'potentialAction': generateReadAction({
+          sellerWalletAddress: bookInfo.nftClassOwnerWalletAddress.value,
+          nftClassId: nftClassIdValue,
           urlTemplate: `${baseURL}/store/${nftClassIdValue}`,
           price: pricing?.price || 0,
           isSoldOut: pricing?.isSoldOut || false,

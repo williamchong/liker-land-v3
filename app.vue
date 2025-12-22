@@ -12,11 +12,18 @@
 <script setup lang="ts">
 const { t: $t } = useI18n()
 const config = useRuntimeConfig()
+const subscription = useSubscription()
 const ogTitle = $t('app_title')
 const ogDescription = $t('app_description')
 const ogURL = config.public.baseURL
 const ogImage = `${ogURL}/images/og/default.jpg`
 const isTestnet = !!config.public.isTestnet
+
+const {
+  yearlyPrice,
+  monthlyPrice,
+  currency,
+} = subscription
 
 const i18nHead = useLocaleHead()
 useHead({
@@ -121,6 +128,44 @@ useHead({
             'name': '3ook.com',
           },
         ],
+        'hasMemberProgram': {
+          '@type': 'MemberProgram',
+          'name': '3ook.com Plus',
+          'description': $t('pricing_page_subscription_description'),
+          'url': `${ogURL}/member`,
+          'hasTiers': [
+            {
+              '@type': 'MemberProgramTier',
+              'name': 'Monthly',
+              'url': `${ogURL}/member`,
+              'hasTierBenefit': [
+                'https://schema.org/TierBenefitLoyaltyPrice',
+              ],
+              'hasTierRequirement': {
+                '@type': 'UnitPriceSpecification',
+                'price': monthlyPrice.value,
+                'priceCurrency': currency.value,
+                'billingDuration': 'P1M',
+                'name': $t('pricing_page_monthly'),
+              },
+            },
+            {
+              '@type': 'MemberProgramTier',
+              'name': 'Yearly',
+              'url': `${ogURL}/member`,
+              'hasTierBenefit': [
+                'https://schema.org/TierBenefitLoyaltyPrice',
+              ],
+              'hasTierRequirement': {
+                '@type': 'UnitPriceSpecification',
+                'price': yearlyPrice.value,
+                'priceCurrency': currency.value,
+                'billingDuration': 'P1Y',
+                'name': $t('pricing_page_yearly'),
+              },
+            },
+          ],
+        },
       }]),
     },
   ],
