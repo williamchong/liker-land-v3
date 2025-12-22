@@ -1,3 +1,96 @@
+function generateReadAction({
+  urlTemplate,
+  price,
+  isSoldOut = false,
+}: {
+  urlTemplate: string
+  price?: number
+  isSoldOut?: boolean
+}) {
+  const action: Record<string, unknown> = {
+    '@type': 'ReadAction',
+    'target': {
+      '@type': 'EntryPoint',
+      'urlTemplate': urlTemplate,
+      'actionPlatform': [
+        'https://schema.org/DesktopWebPlatform',
+        'https://schema.org/AndroidPlatform',
+        'https://schema.org/IOSPlatform',
+      ],
+    },
+  }
+
+  if (price !== undefined) {
+    const offer: Record<string, unknown> = {
+      '@type': 'Offer',
+      'category': price > 0 ? 'purchase' : 'free',
+      'price': price,
+      'priceCurrency': 'USD',
+      'availability': isSoldOut ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock',
+    }
+
+    action.expectsAcceptanceOf = offer
+  }
+
+  return action
+}
+
+export function useStorePageStructuredData({
+  items,
+  canonicalURL,
+  name,
+  description,
+}: {
+  items: Array<{
+    classId?: string
+    title?: string
+    imageUrl?: string
+    minPrice?: number
+  }>
+  canonicalURL: string
+  name: string
+  description?: string
+}) {
+  const config = useRuntimeConfig()
+  const baseURL = config.public.baseURL
+  const bookstoreStore = useBookstoreStore()
+
+  const listItems = items
+    .filter(item => item.classId && item.title)
+    .map((item, index) => {
+      const bookInfo = bookstoreStore.getBookstoreInfoByNFTClassId(item.classId!)
+      const authorName = bookInfo?.author?.name || ''
+
+      return {
+        '@type': 'ListItem',
+        'position': index + 1,
+        'item': {
+          '@type': 'Book',
+          '@id': `${baseURL}/store/${item.classId}`,
+          'url': `${baseURL}/store/${item.classId}`,
+          'name': item.title,
+          'image': item.imageUrl,
+          ...(authorName && { author: authorName }),
+          'bookFormat': 'https://schema.org/EBook',
+          'potentialAction': generateReadAction({
+            urlTemplate: `${baseURL}/store/${item.classId}`,
+            price: item.minPrice,
+          }),
+        },
+      }
+    })
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    'url': canonicalURL,
+    'name': name,
+    ...(description && { description }),
+    'numberOfItems': listItems.length,
+    'itemListElement': listItems,
+  }
+}
+
 export function useStructuredData(
   { nftClassId }: { nftClassId: string | Ref<string> | ComputedRef<string> },
 ) {
@@ -194,6 +287,11 @@ export function useStructuredData(
             'returnPolicyCategory': 'https://schema.org/MerchantReturnNotPermitted',
           },
         },
+        'potentialAction': generateReadAction({
+          urlTemplate: `${baseURL}/store/${nftClassIdValue}`,
+          price: pricing?.price || 0,
+          isSoldOut: pricing?.isSoldOut || false,
+        }),
         'productID': productId,
         'inProductGroupWithID': nftClassIdValue,
       }
