@@ -207,9 +207,9 @@ const bookshelfItemsWithStaking = computed(() => {
 
 const itemsCount = computed(() => bookshelfStore.items.length)
 const hasMoreItems = computed(() => !!bookshelfStore.nextKey)
-
+const paramWalletAddress = computed(() => getRouteParam('walletAddress'))
 const walletAddress = computed(() => {
-  return (getRouteParam('walletAddress') || user.value?.evmWallet)?.toLowerCase()
+  return (paramWalletAddress.value || user.value?.evmWallet)?.toLowerCase()
 })
 
 const isMyBookshelf = computed(() => {
@@ -276,6 +276,13 @@ onMounted(async () => {
       ])
     }
     await bookshelfStore.fetchItems({ walletAddress: walletAddress.value })
+  }
+})
+
+onUnmounted(() => {
+  if (paramWalletAddress.value) {
+    bookshelfStore.reset()
+    resetClaimableBooks()
   }
 })
 
