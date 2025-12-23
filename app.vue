@@ -18,6 +18,8 @@ const ogURL = config.public.baseURL
 const ogImage = `${ogURL}/images/og/default.jpg`
 const isTestnet = !!config.public.isTestnet
 
+const { memberProgramData } = useMemberProgramStructuredData()
+
 const i18nHead = useLocaleHead()
 useHead({
   htmlAttrs: {
@@ -121,6 +123,7 @@ useHead({
             'name': '3ook.com',
           },
         ],
+        'hasMemberProgram': memberProgramData.value,
       }]),
     },
   ],

@@ -17,24 +17,29 @@ const {
   currency,
 } = subscription
 
+const { memberProgramData } = useMemberProgramStructuredData()
+
 const productGroup = 'plus'
 const monthlyProductId = 'plus-monthly'
 
 const structuredData = computed(() => {
   return {
     '@context': 'https://schema.org',
-    '@type': 'Product',
-    'name': $t('pricing_page_title'),
+    '@type': ['Product', 'MemberProgram'],
+    'name': memberProgramData.value.name,
     'brand': {
       '@context': 'https://schema.org',
       '@type': 'Brand',
-      'name': '3ook.com Plus',
-      'url': canonicalURL.value,
+      'name': '3ook.com',
+      'url': baseURL,
     },
-    'description': $t('pricing_page_subscription_description'),
+    'description': memberProgramData.value.description,
     'url': canonicalURL.value,
     'image': `${baseURL}/images/og/plus.jpg`,
     'productID': productGroup,
+    // MemberProgram fields
+    'hasTiers': memberProgramData.value.hasTiers,
+    // Product offers
     'offers': [
       {
         '@type': 'Offer',

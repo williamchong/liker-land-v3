@@ -542,10 +542,8 @@ const canonicalURL = computed(() => {
   return `${baseURL}${path}${queryString ? `?${queryString}` : ''}`
 })
 
-useHead(() => {
-  const meta = []
+const ogTitle = computed(() => {
   let title = $t('store_page_title')
-
   if (isSearchMode.value) {
     if (querySearchTerm.value) {
       title = `${$t('store_search_prefix')}${querySearchTerm.value} - ${$t('store_page_title')}`
@@ -564,102 +562,7 @@ useHead(() => {
   else if (tagName.value) {
     title = [tagName.value, $t('store_page_title')].join(' - ')
   }
-
-  // Add og:title
-  meta.push({
-    property: 'og:title',
-    content: title,
-  })
-
-  const description = tagDescription.value
-  if (description) {
-    meta.push(
-      {
-        name: 'description',
-        content: description,
-      },
-      {
-        property: 'og:description',
-        content: description,
-      },
-    )
-  }
-
-  const link = [
-    {
-      rel: 'canonical',
-      href: canonicalURL.value,
-    },
-    {
-      rel: 'preload',
-      href: '/api/store/tags',
-      as: 'fetch' as const,
-    },
-    ...(isStakingTagId.value
-      ? [{
-          rel: 'preload',
-          href: `${runtimeConfig.public.likeCoinEVMChainCollectiveAPIEndpoint}/book-nfts?pagination.limit=100&sort_by=${mapTagIdToAPIStakingSortValue(tagId.value)}&sort_order=desc`,
-          as: 'fetch' as const,
-          crossorigin: 'anonymous' as const,
-        }]
-      : [{
-          rel: 'preload',
-          href: `/api/store/products?tag=${tagId.value}&limit=100&ts=${getTimestampRoundedToMinute()}`,
-          as: 'fetch' as const,
-        }]),
-  ]
-
-  return {
-    title,
-    meta,
-    link,
-  }
-})
-
-watch(
-  () => route.query.tag,
-  async (newTag, oldTag) => {
-    if (newTag !== oldTag) {
-      await fetchItems({ lazy: true })
-
-      if (!isSearchMode.value) {
-        if (!newTag) {
-          storePageState.clear()
-        }
-        storePageState.restoreScrollIfNeeded()
-      }
-    }
-  },
-)
-
-// Watch for changes in search parameters
-watch([querySearchTerm, queryAuthorName, queryPublisherName, queryOwnerWallet], async () => {
-  if (isSearchMode.value) {
-    await fetchItems({ lazy: true })
-  }
-})
-
-watch(queryOwnerWallet, async (wallet) => {
-  if (wallet) {
-    try {
-      await metadataStore.lazyFetchLikerInfoByWalletAddress(wallet)
-    }
-    catch (error) {
-      console.error('Failed to fetch wallet info:', error)
-    }
-  }
-})
-
-watch(ownerWalletInfo, (info) => {
-  if (info?.evmWallet && queryOwnerWallet.value.toLowerCase() !== info.evmWallet.toLowerCase()) {
-    navigateTo(localeRoute({
-      name: 'store',
-      query: {
-        ...route.query,
-        owner_wallet: info.evmWallet,
-      },
-    }))
-  }
+  return title
 })
 
 const searchResults = computed<BookstoreItemList | null>(() => {
@@ -755,6 +658,123 @@ const products = computed<BookstoreItemList>(() => {
 
 const itemsCount = computed(() => products.value.items.length)
 const hasMoreItems = computed(() => !!products.value.nextItemsKey || !products.value.hasFetchedItems)
+
+const itemsForStructuredData = computed(() => products.value.items.slice(0, Math.min(20, itemsCount.value)))
+const structuredData = useStorePageStructuredData({
+  items: itemsForStructuredData,
+  canonicalURL,
+  name: ogTitle,
+  description: tagDescription,
+})
+
+useHead(() => {
+  const meta = []
+  const script = []
+
+  // Add og:title
+  meta.push({
+    property: 'og:title',
+    content: ogTitle.value,
+  })
+
+  const description = tagDescription.value
+  if (description) {
+    meta.push(
+      {
+        name: 'description',
+        content: description,
+      },
+      {
+        property: 'og:description',
+        content: description,
+      },
+    )
+  }
+
+  if (itemsCount.value > 0 && !isSearchResultEmpty.value) {
+    script.push({
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify(structuredData.value),
+    })
+  }
+
+  const link = [
+    {
+      rel: 'canonical',
+      href: canonicalURL.value,
+    },
+    {
+      rel: 'preload',
+      href: '/api/store/tags',
+      as: 'fetch' as const,
+    },
+    ...(isStakingTagId.value
+      ? [{
+          rel: 'preload',
+          href: `${runtimeConfig.public.likeCoinEVMChainCollectiveAPIEndpoint}/book-nfts?pagination.limit=100&sort_by=${mapTagIdToAPIStakingSortValue(tagId.value)}&sort_order=desc`,
+          as: 'fetch' as const,
+          crossorigin: 'anonymous' as const,
+        }]
+      : [{
+          rel: 'preload',
+          href: `/api/store/products?tag=${tagId.value}&limit=100&ts=${getTimestampRoundedToMinute()}`,
+          as: 'fetch' as const,
+        }]),
+  ]
+
+  return {
+    title: ogTitle.value,
+    meta,
+    link,
+    script,
+  }
+})
+
+watch(
+  () => route.query.tag,
+  async (newTag, oldTag) => {
+    if (newTag !== oldTag) {
+      await fetchItems({ lazy: true })
+
+      if (!isSearchMode.value) {
+        if (!newTag) {
+          storePageState.clear()
+        }
+        storePageState.restoreScrollIfNeeded()
+      }
+    }
+  },
+)
+
+// Watch for changes in search parameters
+watch([querySearchTerm, queryAuthorName, queryPublisherName, queryOwnerWallet], async () => {
+  if (isSearchMode.value) {
+    await fetchItems({ lazy: true })
+  }
+})
+
+watch(queryOwnerWallet, async (wallet) => {
+  if (wallet) {
+    try {
+      await metadataStore.lazyFetchLikerInfoByWalletAddress(wallet)
+    }
+    catch (error) {
+      console.error('Failed to fetch wallet info:', error)
+    }
+  }
+})
+
+watch(ownerWalletInfo, (info) => {
+  if (info?.evmWallet && queryOwnerWallet.value.toLowerCase() !== info.evmWallet.toLowerCase()) {
+    navigateTo(localeRoute({
+      name: 'store',
+      query: {
+        ...route.query,
+        owner_wallet: info.evmWallet,
+      },
+    }))
+  }
+})
 
 const llMedium = computed(() => {
   if (isSearchResultEmpty.value) {
