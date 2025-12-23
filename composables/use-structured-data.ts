@@ -136,55 +136,62 @@ export function useStorePageStructuredData({
   name,
   description,
 }: {
-  items: Array<{
+  items: MaybeRefOrGetter<Array<{
     classId?: string
     title?: string
     imageUrl?: string
     minPrice?: number
-  }>
-  canonicalURL: string
-  name: string
-  description?: string
+  }>>
+  canonicalURL: MaybeRefOrGetter<string>
+  name: MaybeRefOrGetter<string>
+  description?: MaybeRefOrGetter<string | undefined>
 }) {
   const config = useRuntimeConfig()
   const baseURL = config.public.baseURL
   const bookstoreStore = useBookstoreStore()
 
-  const listItems = items
-    .filter(item => item.classId && item.title)
-    .map((item, index) => {
-      const bookInfo = bookstoreStore.getBookstoreInfoByNFTClassId(item.classId!)
-      const authorName = bookInfo?.author?.name || ''
+  return computed(() => {
+    const itemsValue = toValue(items)
+    const canonicalURLValue = toValue(canonicalURL)
+    const nameValue = toValue(name)
+    const descriptionValue = toValue(description)
 
-      return {
-        '@type': 'ListItem',
-        'position': index + 1,
-        'item': {
-          '@type': 'Book',
-          '@id': `${baseURL}/store/${item.classId}`,
-          'url': `${baseURL}/store/${item.classId}`,
-          'name': item.title,
-          'image': item.imageUrl,
-          ...(authorName && { author: authorName }),
-          'bookFormat': 'https://schema.org/EBook',
-          'potentialAction': generateReadAction({
-            nftClassId: item.classId!,
-            urlTemplate: `${baseURL}/store/${item.classId}`,
-            price: item.minPrice,
-          }),
-        },
-      }
-    })
+    const listItems = itemsValue
+      .filter(item => item.classId && item.title)
+      .map((item, index) => {
+        const bookInfo = bookstoreStore.getBookstoreInfoByNFTClassId(item.classId!)
+        const authorName = bookInfo?.author?.name || ''
 
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    'url': canonicalURL,
-    'name': name,
-    ...(description && { description }),
-    'numberOfItems': listItems.length,
-    'itemListElement': listItems,
-  }
+        return {
+          '@type': 'ListItem',
+          'position': index + 1,
+          'item': {
+            '@type': 'Book',
+            '@id': `${baseURL}/store/${item.classId}`,
+            'url': `${baseURL}/store/${item.classId}`,
+            'name': item.title,
+            'image': item.imageUrl,
+            ...(authorName && { author: authorName }),
+            'bookFormat': 'https://schema.org/EBook',
+            'potentialAction': generateReadAction({
+              nftClassId: item.classId!,
+              urlTemplate: `${baseURL}/store/${item.classId}`,
+              price: item.minPrice,
+            }),
+          },
+        }
+      })
+
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      'url': canonicalURLValue,
+      'name': nameValue,
+      ...(descriptionValue && { description: descriptionValue }),
+      'numberOfItems': listItems.length,
+      'itemListElement': listItems,
+    }
+  })
 }
 
 export function useStructuredData(

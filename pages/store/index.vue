@@ -661,10 +661,10 @@ const hasMoreItems = computed(() => !!products.value.nextItemsKey || !products.v
 
 const itemsForStructuredData = computed(() => products.value.items.slice(0, Math.min(20, itemsCount.value)))
 const structuredData = useStorePageStructuredData({
-  items: itemsForStructuredData.value,
-  canonicalURL: canonicalURL.value,
-  name: ogTitle.value,
-  description: tagDescription.value,
+  items: itemsForStructuredData,
+  canonicalURL,
+  name: ogTitle,
+  description: tagDescription,
 })
 
 useHead(() => {
@@ -694,7 +694,7 @@ useHead(() => {
   if (itemsCount.value > 0 && !isSearchResultEmpty.value) {
     script.push({
       type: 'application/ld+json',
-      innerHTML: JSON.stringify(structuredData),
+      innerHTML: JSON.stringify(structuredData.value),
     })
   }
 
