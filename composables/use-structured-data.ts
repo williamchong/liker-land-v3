@@ -1,3 +1,78 @@
+export function useMemberProgramStructuredData() {
+  const { t: $t } = useI18n()
+  const config = useRuntimeConfig()
+  const baseURL = config.public.baseURL
+  const subscription = useSubscription()
+  const {
+    yearlyPrice,
+    monthlyPrice,
+    currency,
+  } = subscription
+
+  const memberProgramTiers = computed(() => [
+    {
+      '@type': 'MemberProgramTier',
+      'name': 'Monthly',
+      'memberProgram': {
+        '@type': 'MemberProgram',
+        'name': '3ook.com Plus',
+      },
+    },
+    {
+      '@type': 'MemberProgramTier',
+      'name': 'Yearly',
+      'memberProgram': {
+        '@type': 'MemberProgram',
+        'name': '3ook.com Plus',
+      },
+    },
+  ])
+
+  const memberProgramData = computed(() => ({
+    '@type': 'MemberProgram',
+    'name': '3ook.com Plus',
+    'description': $t('pricing_page_subscription_description'),
+    'url': `${baseURL}/member`,
+    'hasTiers': [
+      {
+        '@type': 'MemberProgramTier',
+        'name': 'Monthly',
+        'url': `${baseURL}/member`,
+        'hasTierBenefit': [
+          'https://schema.org/TierBenefitLoyaltyPrice',
+        ],
+        'hasTierRequirement': {
+          '@type': 'UnitPriceSpecification',
+          'price': monthlyPrice.value,
+          'priceCurrency': currency.value,
+          'billingDuration': 'P1M',
+          'name': $t('pricing_page_monthly'),
+        },
+      },
+      {
+        '@type': 'MemberProgramTier',
+        'name': 'Yearly',
+        'url': `${baseURL}/member`,
+        'hasTierBenefit': [
+          'https://schema.org/TierBenefitLoyaltyPrice',
+        ],
+        'hasTierRequirement': {
+          '@type': 'UnitPriceSpecification',
+          'price': yearlyPrice.value,
+          'priceCurrency': currency.value,
+          'billingDuration': 'P1Y',
+          'name': $t('pricing_page_yearly'),
+        },
+      },
+    ],
+  }))
+
+  return {
+    memberProgramData,
+    memberProgramTiers,
+  }
+}
+
 function generateBookOffer({
   sellerWalletAddress,
   canonicalURL,
@@ -200,6 +275,7 @@ export function useStructuredData(
   const bookInfo = useBookInfo({ nftClassId })
   const config = useRuntimeConfig()
   const { getPlusDiscountRate } = useSubscription()
+  const { memberProgramTiers } = useMemberProgramStructuredData()
   function generateOGMetaTags({
     selectedPricingItemIndex = 0,
   }) {
@@ -363,24 +439,7 @@ export function useStructuredData(
                 isAutoDeliver: pricing.isAutoDeliver,
                 productId,
                 baseURL,
-                validForMemberTier: [
-                  {
-                    '@type': 'MemberProgramTier',
-                    'name': 'Monthly',
-                    'memberProgram': {
-                      '@type': 'MemberProgram',
-                      'name': '3ook.com Plus',
-                    },
-                  },
-                  {
-                    '@type': 'MemberProgramTier',
-                    'name': 'Yearly',
-                    'memberProgram': {
-                      '@type': 'MemberProgram',
-                      'name': '3ook.com Plus',
-                    },
-                  },
-                ],
+                validForMemberTier: memberProgramTiers.value,
               })]
             : []),
         ],
