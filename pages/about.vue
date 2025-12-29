@@ -4,7 +4,10 @@
     :is-footer-visible="true"
   >
     <!-- Hero Section with Banner -->
-    <section class="flex flex-col justify-center items-center text-center space-y-16 min-h-[70vh] px-8 py-20 bg-theme-black bg-center">
+    <section
+      id="hero"
+      class="flex flex-col justify-center items-center text-center space-y-16 min-h-[70vh] px-8 py-20 bg-theme-black bg-center"
+    >
       <AppLogo
         class="w-full max-w-lg"
         height="auto"
@@ -27,6 +30,7 @@
     <div class="w-full max-w-4xl mx-auto px-4 pt-12 py-16 space-y-12">
       <!-- What is 3ook.com Section -->
       <h2
+        id="what-is"
         class="text-2xl md:text-3xl text-center font-bold text-gray-900 mb-4"
         v-text="$t('about_page_what_is_title')"
       />
@@ -36,14 +40,20 @@
       />
 
       <!-- Key Features Section -->
-      <section class="space-y-6">
+      <section
+        id="features"
+        class="space-y-6"
+      >
         <h2
           class="text-2xl md:text-3xl font-bold text-gray-900 text-center"
           v-text="$t('about_page_features_title')"
         />
 
         <div class="grid md:grid-cols-2 gap-6">
-          <UCard class="p-6 space-y-3">
+          <UCard
+            id="ai-narration"
+            class="p-6 space-y-3"
+          >
             <div class="flex items-center gap-3">
               <UIcon
                 name="i-material-symbols-volume-up-rounded"
@@ -65,7 +75,10 @@
             />
           </UCard>
 
-          <UCard class="p-6 space-y-3">
+          <UCard
+            id="dual-format"
+            class="p-6 space-y-3"
+          >
             <div class="flex items-center gap-3">
               <UIcon
                 name="i-material-symbols-auto-stories-rounded"
@@ -87,7 +100,10 @@
             />
           </UCard>
 
-          <UCard class="p-6 space-y-3">
+          <UCard
+            id="web3"
+            class="p-6 space-y-3"
+          >
             <div class="flex items-center gap-3">
               <UIcon
                 name="i-material-symbols-store-rounded"
@@ -109,7 +125,10 @@
             />
           </UCard>
 
-          <UCard class="p-6 space-y-3">
+          <UCard
+            id="curate-to-earn"
+            class="p-6 space-y-3"
+          >
             <div class="flex items-center gap-3">
               <UIcon
                 name="i-material-symbols-pie-chart"
@@ -133,7 +152,10 @@
             />
           </UCard>
 
-          <UCard class="p-6 space-y-3">
+          <UCard
+            id="author-benefits"
+            class="p-6 space-y-3"
+          >
             <div class="flex items-center gap-3">
               <UIcon
                 name="i-material-symbols-handshake-rounded"
@@ -157,7 +179,10 @@
             />
           </UCard>
 
-          <UCard class="p-6 space-y-3">
+          <UCard
+            id="affiliate"
+            class="p-6 space-y-3"
+          >
             <div class="flex items-center gap-3">
               <UIcon
                 name="i-material-symbols-trending-up-rounded"
@@ -185,7 +210,10 @@
     </div>
 
     <!-- Mission Section -->
-    <div class="p-8 py-12 bg-gradient-to-r from-primary/10 to-secondary/20">
+    <div
+      id="mission"
+      class="p-8 py-12 bg-gradient-to-r from-primary/10 to-secondary/20"
+    >
       <div class="max-w-4xl mx-auto text-center space-y-6">
         <h2
           class="text-2xl md:text-3xl font-bold text-gray-900 mb-4"
@@ -200,7 +228,7 @@
 
     <div class="w-full max-w-4xl mx-auto px-4 py-12 space-y-12">
       <!-- Team Section -->
-      <section>
+      <section id="team">
         <h2
           class="text-2xl md:text-3xl text-center font-bold text-gray-900 mb-4"
           v-text="$t('about_page_team_title')"
@@ -212,7 +240,7 @@
       </section>
 
       <!-- Platform Evolution Section -->
-      <section>
+      <section id="platform">
         <h2
           class="text-2xl md:text-3xl text-center font-bold text-gray-900 mb-4"
           v-text="$t('about_page_platform_title')"
@@ -235,6 +263,7 @@
 
       <!-- Get Started Section -->
       <UCard
+        id="contact"
         :ui="{ body: 'p-12 sm:py-12 space-y-4 text-center' }"
       >
         <h2
