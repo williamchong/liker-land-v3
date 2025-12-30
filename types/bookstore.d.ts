@@ -66,6 +66,8 @@ declare interface BookstoreInfo {
   description: string
   descriptionFull?: string
   descriptionSummary?: string
+  reviewTitle?: string
+  reviewURL?: string
   author: {
     name: string
     description: string

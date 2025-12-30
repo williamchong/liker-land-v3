@@ -38,6 +38,16 @@ export default function (
     return bookstoreInfo.value?.descriptionSummary || ''
   })
 
+  const bookReviewInfo = computed(() => {
+    if (!bookstoreInfo.value?.reviewURL) {
+      return null
+    }
+    return {
+      title: bookstoreInfo.value.reviewTitle || '',
+      url: bookstoreInfo.value.reviewURL,
+    }
+  })
+
   const authorDescription = computed(() => {
     const author = bookInfo.author.value
     if (typeof author === 'object' && 'description' in author) return author.description
@@ -275,6 +285,7 @@ export default function (
     nftClassOwnerAvatar,
     description,
     descriptionSummary,
+    bookReviewInfo,
     inLanguage,
 
     contentURLs,

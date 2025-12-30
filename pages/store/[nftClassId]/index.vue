@@ -105,6 +105,27 @@
                 />
               </ExpandableContent>
             </template>
+            <template v-if="bookInfo.bookReviewInfo.value?.url">
+              <h3 class="text-lg font-semibold mt-8 mb-4">
+                {{ $t('product_page_review_info_label') }}
+              </h3>
+              <NuxtLink
+                :to="bookInfo.bookReviewInfo.value.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center text-sm text-primary hover:underline"
+              >
+                <UIcon
+                  name="i-material-symbols-book-outline-rounded"
+                  size="16"
+                />
+                <span class="mx-2">{{ bookInfo.bookReviewInfo.value?.title || $t('product_page_book_review_link_label') }}</span>
+                <UIcon
+                  name="i-material-symbols-open-in-new-rounded"
+                  size="14"
+                />
+              </NuxtLink>
+            </template>
             <ul
               v-if="descriptionTags.length"
               :class="[
