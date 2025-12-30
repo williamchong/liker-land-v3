@@ -8,12 +8,16 @@
       id="hero"
       class="flex flex-col justify-center items-center text-center space-y-16 min-h-[70vh] px-8 py-20 bg-theme-black bg-center"
     >
-      <AppLogo
+      <NuxtLink
+        :to="localeRoute({ name: 'store' })"
         class="w-full max-w-lg"
-        height="auto"
-        :is-icon="false"
-        :is-padded="false"
-      />
+      >
+        <AppLogo
+          height="auto"
+          :is-icon="false"
+          :is-padded="false"
+        />
+      </NuxtLink>
 
       <div class="space-y-4 text-gray-100">
         <h1
