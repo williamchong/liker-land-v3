@@ -227,6 +227,52 @@
       </UCard>
     </section>
 
+    <section
+      v-if="!hasLoggedIn"
+      class="space-y-3"
+    >
+      <h2
+        class="px-4 pt-4 text-lg font-bold"
+        v-text="$t('account_page_learn_more_title')"
+      />
+
+      <UCard
+        :ui="{
+          body: [
+            '!p-0',
+            'divide-y-1',
+            'divide-(--ui-border)',
+            '[&>*:not(:first-child)]:rounded-t-none',
+            '[&>*:not(:last-child)]:rounded-b-none',
+            '[&>*]:p-4',
+            '[&>*]:py-4.5',
+          ].join(' '),
+        }"
+      >
+        <UButton
+          :label="$t('account_page_view_about')"
+          :to="localeRoute({ name: 'about' })"
+          variant="link"
+          leading-icon="i-material-symbols-info-outline-rounded"
+          trailing-icon="i-material-symbols-arrow-forward-rounded"
+          color="neutral"
+          size="lg"
+          block
+        />
+
+        <UButton
+          :label="$t('account_page_view_member')"
+          :to="localeRoute({ name: 'member' })"
+          variant="link"
+          leading-icon="i-material-symbols-diamond-outline-rounded"
+          trailing-icon="i-material-symbols-arrow-forward-rounded"
+          color="neutral"
+          size="lg"
+          block
+        />
+      </UCard>
+    </section>
+
     <section class="space-y-3">
       <h2
         class="px-4 pt-4 text-lg font-bold"
