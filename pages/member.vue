@@ -11,6 +11,7 @@ const config = useRuntimeConfig()
 const baseURL = config.public.baseURL
 
 const hasOpened = ref(false)
+const isUnmounting = ref(false)
 const {
   yearlyPrice,
   monthlyPrice,
@@ -159,7 +160,18 @@ onMounted(async () => {
       utmMedium: 'web',
       coupon: getRouteQuery('coupon') as string | undefined,
     })
+    if (isUnmounting.value) return
     navigateTo(localeRoute({ name: 'store' }))
+  }
+})
+
+onBeforeUnmount(() => {
+  isUnmounting.value = true
+  try {
+    subscription.closePaywallModal()
+  }
+  catch {
+    // do nothing
   }
 })
 </script>

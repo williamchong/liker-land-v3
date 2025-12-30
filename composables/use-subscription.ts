@@ -95,6 +95,10 @@ export function useSubscription() {
     return paywallModal.open(paywallModalProps.value).result
   }
 
+  function closePaywallModal() {
+    paywallModal.close()
+  }
+
   async function openUpsellPlusModalIfEligible(props: UpsellPlusModalProps = {}) {
     if (upsellPlusModal.isOpen) {
       upsellPlusModal.close()
@@ -241,6 +245,7 @@ export function useSubscription() {
     isProcessingSubscription,
 
     openPaywallModal,
+    closePaywallModal,
     openUpsellPlusModalIfEligible,
     redirectIfSubscribed,
     startSubscription,
