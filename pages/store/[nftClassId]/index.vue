@@ -110,10 +110,11 @@
                 {{ $t('product_page_review_info_label') }}
               </h3>
               <NuxtLink
-                :to="bookInfo.bookReviewInfo.value.url"
+                :to="bookReviewURLWithUTM"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="inline-flex items-center text-sm text-primary hover:underline"
+                @click="handleBookReviewClick"
               >
                 <UIcon
                   name="i-material-symbols-book-outline-rounded"
@@ -948,6 +949,28 @@ const descriptionTags = computed(() => {
   return [...new Set(tags)]
 })
 
+const bookReviewURLWithUTM = computed(() => {
+  const url = bookInfo.bookReviewInfo.value?.url
+  if (!url) return ''
+
+  try {
+    const urlObj = new URL(url)
+    if (!urlObj.searchParams.has('utm_source')) {
+      urlObj.searchParams.set('utm_source', 'product-page')
+    }
+    if (!urlObj.searchParams.has('utm_medium')) {
+      urlObj.searchParams.set('utm_medium', 'book-review-link')
+    }
+    if (!urlObj.searchParams.has('utm_campaign')) {
+      urlObj.searchParams.set('utm_campaign', nftClassId.value)
+    }
+    return urlObj.toString()
+  }
+  catch {
+    return url
+  }
+})
+
 async function checkBookListStatus() {
   if (!hasLoggedIn.value) {
     isInBookList.value = false
@@ -1401,5 +1424,11 @@ async function handleBackButtonClick() {
     name: 'store',
     query: route.query,
   }))
+}
+
+function handleBookReviewClick() {
+  useLogEvent('book_review_link_click', {
+    nft_class_id: nftClassId.value,
+  })
 }
 </script>
