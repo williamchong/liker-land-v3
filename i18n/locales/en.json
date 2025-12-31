@@ -363,6 +363,8 @@
   "product_page_buyer_messages_tab": "Reader Messages",
   "product_page_checkout_button_label": "Buy Now",
   "product_page_description_summary_label": "Companion's Note",
+  "product_page_review_info_label": "3ook Review",
+  "product_page_book_review_link_label": "Read Book Review",
   "product_page_edition_title": "{name}* Signed by the author, shipping will be slightly delayed.",
   "product_page_fetch_metadata_failed_error": "Failed to fetch the book metadata",
   "product_page_file_format_label": "File Format",

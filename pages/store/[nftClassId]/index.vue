@@ -105,6 +105,28 @@
                 />
               </ExpandableContent>
             </template>
+            <template v-if="bookInfo.bookReviewInfo.value?.url">
+              <h3 class="text-lg font-semibold mt-8 mb-4">
+                {{ $t('product_page_review_info_label') }}
+              </h3>
+              <NuxtLink
+                :to="bookReviewURLWithUTM"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center text-sm text-primary hover:underline"
+                @click="handleBookReviewClick"
+              >
+                <UIcon
+                  name="i-material-symbols-book-outline-rounded"
+                  size="16"
+                />
+                <span class="mx-2">{{ bookInfo.bookReviewInfo.value?.title || $t('product_page_book_review_link_label') }}</span>
+                <UIcon
+                  name="i-material-symbols-open-in-new-rounded"
+                  size="14"
+                />
+              </NuxtLink>
+            </template>
             <ul
               v-if="descriptionTags.length"
               :class="[
@@ -927,6 +949,28 @@ const descriptionTags = computed(() => {
   return [...new Set(tags)]
 })
 
+const bookReviewURLWithUTM = computed(() => {
+  const url = bookInfo.bookReviewInfo.value?.url
+  if (!url) return ''
+
+  try {
+    const urlObj = new URL(url)
+    if (!urlObj.searchParams.has('utm_source')) {
+      urlObj.searchParams.set('utm_source', 'product-page')
+    }
+    if (!urlObj.searchParams.has('utm_medium')) {
+      urlObj.searchParams.set('utm_medium', 'book-review-link')
+    }
+    if (!urlObj.searchParams.has('utm_campaign')) {
+      urlObj.searchParams.set('utm_campaign', nftClassId.value)
+    }
+    return urlObj.toString()
+  }
+  catch {
+    return url
+  }
+})
+
 async function checkBookListStatus() {
   if (!hasLoggedIn.value) {
     isInBookList.value = false
@@ -1380,5 +1424,11 @@ async function handleBackButtonClick() {
     name: 'store',
     query: route.query,
   }))
+}
+
+function handleBookReviewClick() {
+  useLogEvent('book_review_link_click', {
+    nft_class_id: nftClassId.value,
+  })
 }
 </script>
