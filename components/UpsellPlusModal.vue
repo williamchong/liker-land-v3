@@ -77,7 +77,7 @@
         </template>
         <template #discount>
           <span
-            class="text-theme-black font-semibold"
+            class="text-theme-400 font-semibold"
             v-text="$t('upsell_plus_monthly_discount')"
           />
         </template>
@@ -88,6 +88,7 @@
         :selected-plan="selectedPlan"
         :is-title-center="true"
         :is-compact="true"
+        :is-audio-hidden="isAudioHidden"
       />
 
       <PricingPlanSelect
@@ -131,6 +132,7 @@ const props = withDefaults(defineProps<UpsellPlusModalProps>(), {
   mustCollectPaymentMethod: false,
   selectedPricingItemIndex: 0,
   from: undefined,
+  isAudioHidden: false,
   utmCampaign: undefined,
   utmMedium: undefined,
   utmSource: undefined,
