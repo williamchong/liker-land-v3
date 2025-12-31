@@ -21,6 +21,7 @@ export interface UpsellPlusModalProps {
   mustCollectPaymentMethod?: boolean
   nftClassId?: string
   bookPrice?: number
+  isAudioHidden?: boolean
   utmCampaign?: string
   utmMedium?: string
   utmSource?: string

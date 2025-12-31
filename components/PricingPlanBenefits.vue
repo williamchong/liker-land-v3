@@ -30,7 +30,7 @@
         { '[&>li>span:last-child]:text-white': isDarkBackground },
       ]"
     >
-      <li>
+      <li v-if="!isAudioHidden">
         <UIcon name="i-material-symbols-check" />
         <span v-text="$t('pricing_page_feature_1')" />
       </li>
@@ -80,10 +80,12 @@ const props = withDefaults(defineProps<{
   isTitleCenter?: boolean
   isDarkBackground?: boolean
   isCompact?: boolean
+  isAudioHidden?: boolean
 }>(), {
   isTitleCenter: false,
   isDarkBackground: false,
   isCompact: false,
+  isAudioHidden: false,
 })
 
 const {
