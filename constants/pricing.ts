@@ -1,0 +1,3 @@
+export const DEFAULT_TRIAL_PERIOD_DAYS = 7
+export const PAID_TRIAL_PERIOD_DAYS = 30
+export const DEFAULT_TRIAL_PRICE = 1

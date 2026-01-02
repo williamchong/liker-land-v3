@@ -122,6 +122,8 @@
 </template>
 
 <script lang="ts" setup>
+import { DEFAULT_TRIAL_PERIOD_DAYS, DEFAULT_TRIAL_PRICE, PAID_TRIAL_PERIOD_DAYS } from '~/constants/pricing'
+
 const props = withDefaults(defineProps<{
   isYearlyHidden?: boolean
   isMonthlyHidden?: boolean
@@ -132,8 +134,8 @@ const props = withDefaults(defineProps<{
   isYearlyHidden: false,
   isMonthlyHidden: false,
   isAllowYearlyTrial: true,
-  trialPeriodDays: 7,
-  trialPrice: 1,
+  trialPeriodDays: DEFAULT_TRIAL_PERIOD_DAYS,
+  trialPrice: DEFAULT_TRIAL_PRICE,
 })
 
 const { t: $t } = useI18n()
@@ -154,7 +156,7 @@ const selectedPlan = defineModel({
   default: 'yearly',
 })
 
-const isTrialFor30Days = computed(() => props.trialPeriodDays === 30)
+const isTrialFor30Days = computed(() => props.trialPeriodDays === PAID_TRIAL_PERIOD_DAYS)
 
 const plans = computed(() => {
   const values: SubscriptionPlan[] = []

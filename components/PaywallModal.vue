@@ -149,6 +149,7 @@
 
 <script setup lang="ts">
 import type { PaywallModalProps } from './PaywallModal.props'
+import { PAID_TRIAL_PERIOD_DAYS } from '~/constants/pricing'
 
 import plusLogo from '~/assets/images/paywall/plus-logo.png'
 
@@ -241,7 +242,7 @@ watch(
   value => emit('update:modelValue', value),
 )
 
-const isTrialFor30Days = computed(() => props.trialPeriodDays === 30)
+const isTrialFor30Days = computed(() => props.trialPeriodDays === PAID_TRIAL_PERIOD_DAYS)
 
 const subscribeButtonLabel = computed(() => {
   if (props.trialPeriodDays) {

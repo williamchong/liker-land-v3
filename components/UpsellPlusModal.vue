@@ -122,13 +122,14 @@
 
 <script setup lang="ts">
 import type { UpsellPlusModalProps, UpsellPlusModalSubscribeEventPayload } from './UpsellPlusModal.props'
+import { DEFAULT_TRIAL_PERIOD_DAYS, DEFAULT_TRIAL_PRICE, PAID_TRIAL_PERIOD_DAYS } from '~/constants/pricing'
 
 const props = withDefaults(defineProps<UpsellPlusModalProps>(), {
   isLikerPlus: false,
   likerPlusPeriod: undefined,
   isProcessingSubscription: false,
-  trialPeriodDays: 7,
-  trialPrice: 1,
+  trialPeriodDays: DEFAULT_TRIAL_PERIOD_DAYS,
+  trialPrice: DEFAULT_TRIAL_PRICE,
   mustCollectPaymentMethod: false,
   selectedPricingItemIndex: 0,
   from: undefined,
@@ -155,7 +156,7 @@ const shouldShowYearlyPlan = computed(() => (!props.isLikerPlus || props.likerPl
 
 const isAllowYearlyTrial = computed(() => !props.nftClassId)
 
-const isTrialFor30Days = computed(() => props.trialPeriodDays === 30)
+const isTrialFor30Days = computed(() => props.trialPeriodDays === PAID_TRIAL_PERIOD_DAYS)
 
 const shouldShowLimitedOfferAlert = computed(() => {
   return !props.isLikerPlus && isTrialFor30Days.value && (shouldShowMonthlyPlan.value || isAllowYearlyTrial.value)
