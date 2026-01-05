@@ -1,4 +1,5 @@
 import { FetchError } from 'ofetch'
+import { FieldValue } from 'firebase-admin/firestore'
 
 export default defineEventHandler(async (event) => {
   let body: {
@@ -116,6 +117,14 @@ export default defineEventHandler(async (event) => {
     isLikerPlus: userInfoRes.isLikerPlus || false,
   }
   await setUserSession(event, { user: userInfo })
+
+  const userDocRef = getUserCollection().doc(body.walletAddress)
+  await userDocRef.set({
+    registerTimestamp: FieldValue.serverTimestamp(),
+    loginTimestamp: FieldValue.serverTimestamp(),
+    accessTimestamp: FieldValue.serverTimestamp(),
+    loginMethod: body.loginMethod,
+  }, { merge: true })
 
   return userInfo
 })

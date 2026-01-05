@@ -10,6 +10,8 @@
 </template>
 
 <script setup lang="ts">
+import { useStorage } from '@vueuse/core'
+
 const { t: $t } = useI18n()
 const config = useRuntimeConfig()
 const ogTitle = $t('app_title')
@@ -21,6 +23,28 @@ const isTestnet = !!config.public.isTestnet
 const { memberProgramData } = useMemberProgramStructuredData()
 
 const i18nHead = useLocaleHead()
+
+const { user } = useUserSession()
+const accountStore = useAccountStore()
+const lastSessionRefreshTs = useStorage('lastSessionRefreshTs', 0)
+
+onMounted(async () => {
+  if (user.value) {
+    const now = Date.now()
+    const oneDayInMs = 24 * 60 * 60 * 1000
+    const shouldRefresh = now - lastSessionRefreshTs.value > oneDayInMs
+
+    if (shouldRefresh) {
+      try {
+        await accountStore.refreshSessionInfo()
+        lastSessionRefreshTs.value = now
+      }
+      catch (error) {
+        console.warn('Failed to refresh session info on app mount:', error)
+      }
+    }
+  }
+})
 useHead({
   htmlAttrs: {
     lang: i18nHead.value.htmlAttrs!.lang,

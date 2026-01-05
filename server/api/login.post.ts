@@ -1,4 +1,5 @@
 import { jwtDecode } from 'jwt-decode'
+import { FieldValue } from 'firebase-admin/firestore'
 
 export default defineEventHandler(async (event) => {
   let body: {
@@ -115,6 +116,13 @@ export default defineEventHandler(async (event) => {
     likerPlusPeriod: userInfoRes.likerPlusPeriod,
   }
   await setUserSession(event, { user: userInfo })
+
+  const userDocRef = getUserCollection().doc(body.walletAddress)
+  await userDocRef.set({
+    loginTimestamp: FieldValue.serverTimestamp(),
+    accessTimestamp: FieldValue.serverTimestamp(),
+    loginMethod: body.loginMethod,
+  }, { merge: true })
 
   return userInfo
 })
