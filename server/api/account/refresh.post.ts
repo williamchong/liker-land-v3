@@ -1,3 +1,5 @@
+import { FieldValue } from 'firebase-admin/firestore'
+
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   const walletAddress = session.user.evmWallet || session.user.likeWallet
@@ -34,4 +36,9 @@ export default defineEventHandler(async (event) => {
       likerPlusPeriod: userInfoRes.likerPlusPeriod,
     },
   })
+
+  const userDocRef = getUserCollection().doc(walletAddress)
+  await userDocRef.set({
+    accessTimestamp: FieldValue.serverTimestamp(),
+  }, { merge: true })
 })
