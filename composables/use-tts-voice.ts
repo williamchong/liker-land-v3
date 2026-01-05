@@ -49,17 +49,14 @@ export function useTTSVoice(options: TTSVoiceOptions = {}) {
   function getDefaultTTSVoiceByLocale(): string {
     let voice: string = ttsLanguageVoiceValues[0] as string
 
-    if (import.meta.client && typeof navigator !== 'undefined') {
-      const locales = Array.isArray(navigator.languages) && navigator.languages.length > 0
-        ? navigator.languages.map(l => l.toLowerCase())
-        : [navigator.language?.toLowerCase()].filter(Boolean)
+    const { detectedCountry } = useGeolocation()
+    const country = detectedCountry.value?.toUpperCase()
 
-      if (locales.some(locale => locale.includes('-hk'))) {
-        voice = ttsLanguageVoiceValues.find(value => value.startsWith('zh-HK')) || voice
-      }
-      else if (locales.some(locale => locale.startsWith('zh') && !locale.includes('-hk'))) {
-        voice = ttsLanguageVoiceValues.find(value => value.startsWith('zh-TW')) || voice
-      }
+    if (country === 'HK') {
+      voice = ttsLanguageVoiceValues.find(value => value.startsWith('zh-HK')) || voice
+    }
+    else if (country === 'TW') {
+      voice = ttsLanguageVoiceValues.find(value => value.startsWith('zh-TW')) || voice
     }
 
     return voice

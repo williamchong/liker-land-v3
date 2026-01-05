@@ -3,17 +3,6 @@ import type { PricingCurrency } from '~/utils/pricing'
 
 export type PaymentCurrency = 'auto' | 'hkd' | 'twd' | 'usd'
 
-function getDetectedCountry(): string {
-  // Try to get country from Cloudflare IP Geolocation header
-  if (import.meta.server) {
-    const headers = useRequestHeaders()
-    const country = headers['cf-ipcountry']?.toUpperCase()
-    return country || 'US'
-  }
-
-  return 'US'
-}
-
 function getDefaultCurrencyFromCountry(country: string): PricingCurrency {
   switch (country) {
     case 'HK':
@@ -26,8 +15,8 @@ function getDefaultCurrencyFromCountry(country: string): PricingCurrency {
 }
 
 export function usePaymentCurrency() {
-  const detectedCountry = useState<string>('detected-country', getDetectedCountry)
-  const currency = useState<PaymentCurrency>('auto')
+  const { detectedCountry, initializeGeolocation } = useGeolocation()
+  const currency = useState<PaymentCurrency>('payment-currency', () => 'auto')
   const storedCurrency = useStorage<PaymentCurrency>('payment_currency', 'auto')
 
   const detectedCurrency = computed(() => getDefaultCurrencyFromCountry(detectedCountry.value))
@@ -44,10 +33,6 @@ export function usePaymentCurrency() {
     return currency.value as PricingCurrency
   })
 
-  function getDisplayCurrency(): PricingCurrency {
-    return displayCurrency.value
-  }
-
   function getCheckoutCurrency(): string | undefined {
     const curr = currency.value
     if (curr === 'auto') {
@@ -56,17 +41,20 @@ export function usePaymentCurrency() {
     return curr.toLowerCase()
   }
 
-  onMounted(() => {
-    // SSR cannot get useStorage, get it on mounted hook
+  function initializePaymentCurrency() {
+    if (!detectedCountry.value) {
+      initializeGeolocation()
+    }
     setCurrency(storedCurrency.value)
-  })
+  }
+
   return {
     currency: readonly(currency),
-    detectedCountry: readonly(detectedCountry),
+    detectedCountry,
     detectedCurrency: readonly(detectedCurrency),
     displayCurrency: readonly(displayCurrency),
     setCurrency,
-    getDisplayCurrency,
     getCheckoutCurrency,
+    initializePaymentCurrency,
   }
 }
