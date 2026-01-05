@@ -189,7 +189,6 @@
 
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
-import { useStorage } from '@vueuse/core'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 
 interface Props {
@@ -205,6 +204,7 @@ const props = defineProps<Props>()
 
 const toast = useToast()
 const { t: $t } = useI18n()
+const bookSettingsStore = useBookSettingsStore()
 
 const pdfjsLib = ref<typeof import('pdfjs-dist') | undefined>(undefined)
 const singleCanvas = useTemplateRef<HTMLCanvasElement>('singleCanvas')
@@ -213,24 +213,29 @@ const rightCanvas = useTemplateRef<HTMLCanvasElement>('rightCanvas')
 const scrollableContainer = useTemplateRef<HTMLDivElement>('scrollableContainer')
 const pagePaddingClasses = ['p-4', 'laptop:px-12', 'laptop:pt-6', 'pb-[64px]']
 
-function getCacheKeyWithSuffix(suffix: ReaderCacheKeySuffix) {
-  return getReaderCacheKeyWithSuffix(props.bookFileCacheKey, suffix)
-}
-
 const {
   readingProgress,
-  getProgressKeyWithSuffix,
 } = useReaderProgress({
   nftClassId: props.nftClassId,
   bookProgressKeyPrefix: props.bookProgressKeyPrefix,
 })
 
-const currentPage = useStorage(computed(() => getProgressKeyWithSuffix('locations')), 1)
+const currentPage = useSyncedBookSettings({
+  nftClassId: props.nftClassId,
+  key: 'currentPage',
+  defaultValue: 1,
+  namespace: 'pdf',
+})
 const totalPages = ref(0)
 const scaleMin = 0.5
 const scaleMax = 3.0
 const scaleStep = 0.25
-const scale = useStorage(computed(() => getCacheKeyWithSuffix('scale')), 1.0)
+const scale = useSyncedBookSettings({
+  nftClassId: props.nftClassId,
+  key: 'scale',
+  defaultValue: 1.0,
+  namespace: 'pdf',
+})
 const scaleMenuItems = computed<DropdownMenuItem[]>(() => {
   const items: number[] = []
   let step = scaleStep
@@ -249,7 +254,12 @@ const scaleMenuItems = computed<DropdownMenuItem[]>(() => {
 const pdfDocument = shallowRef<PDFDocumentProxy>()
 const renderQueue = ref<(() => Promise<void>)[]>([])
 const isRendering = ref(false)
-const isDualPageMode = useStorage(computed(() => getCacheKeyWithSuffix('dual-page-mode')), true)
+const isDualPageMode = useSyncedBookSettings({
+  nftClassId: props.nftClassId,
+  key: 'isDualPageMode',
+  defaultValue: true,
+  namespace: 'pdf',
+})
 const pageMode = computed({
   get: () => isDualPageMode.value ? 'dual' : 'single',
   set: (value) => {
@@ -268,7 +278,12 @@ const pageModeOptions = computed(() => [
     icon: 'i-material-symbols-splitscreen-landscape-outline-rounded',
   },
 ])
-const isRightToLeft = useStorage(computed(() => getCacheKeyWithSuffix('right-to-left')), false)
+const isRightToLeft = useSyncedBookSettings({
+  nftClassId: props.nftClassId,
+  key: 'isRightToLeft',
+  defaultValue: false,
+  namespace: 'pdf',
+})
 
 const emit = defineEmits<{
   error: [error: Error]
@@ -321,6 +336,7 @@ async function loadPDFLib() {
 onMounted(async () => {
   try {
     await loadPDFLib()
+    await bookSettingsStore.ensureInitialized(props.nftClassId)
     isDualPageMode.value = !isMobile.value
     await loadPDF()
   }
