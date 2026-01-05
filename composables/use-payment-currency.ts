@@ -37,11 +37,15 @@ export function usePaymentCurrency() {
     storedCurrency.value = value
   }
 
-  function getDisplayCurrency(): PricingCurrency {
+  const displayCurrency = computed<PricingCurrency>(() => {
     if (currency.value === 'auto') {
       return detectedCurrency.value
     }
     return currency.value as PricingCurrency
+  })
+
+  function getDisplayCurrency(): PricingCurrency {
+    return displayCurrency.value
   }
 
   function getCheckoutCurrency(): string | undefined {
@@ -60,6 +64,7 @@ export function usePaymentCurrency() {
     currency: readonly(currency),
     detectedCountry: readonly(detectedCountry),
     detectedCurrency: readonly(detectedCurrency),
+    displayCurrency: readonly(displayCurrency),
     setCurrency,
     getDisplayCurrency,
     getCheckoutCurrency,
