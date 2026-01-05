@@ -76,13 +76,10 @@
                       class="text-xs text-gray-500"
                       v-text="$t('checkout_quantity_label', { quantity: item.quantity })"
                     />
-                    <span class="text-green-600 font-semibold">
-                      <span
-                        class="text-xs mr-0.5"
-                        v-text="totalCurrency"
-                      />
-                      <span v-text="formatPrice((item.pricingItem?.price || 0) * item.quantity)" />
-                    </span>
+                    <span
+                      class="text-green-600 font-semibold"
+                      v-text="formatPrice((item.pricingItem?.price || 0) * item.quantity)"
+                    />
                   </div>
                 </div>
               </div>
@@ -109,13 +106,10 @@
         <div class="bg-gray-50 p-6 rounded-lg mb-6">
           <div class="flex justify-between items-center text-xl font-bold">
             <span v-text="$t('checkout_total_label')" />
-            <span class="text-green-600">
-              <span
-                class="text-sm mr-0.5"
-                v-text="totalCurrency"
-              />
-              <span v-text="formatPrice(totalPrice)" />
-            </span>
+            <span
+              class="text-green-600"
+              v-text="formatPrice(totalPrice)"
+            />
           </div>
         </div>
 
@@ -182,6 +176,7 @@ const { user } = useUserSession()
 const nftStore = useNFTStore()
 const bookstoreStore = useBookstoreStore()
 const { formatPrice } = useCurrency()
+const { getCheckoutCurrency } = usePaymentCurrency()
 const { handleError } = useErrorHandler()
 const { getAnalyticsParameters } = useAnalytics()
 const { getResizedNormalizedImageURL } = useImageResize()
@@ -276,13 +271,9 @@ const totalPrice = computed(() => {
   }, 0)
 })
 
-const totalCurrency = computed(() => {
-  return 'USD'
-})
-
 const eventPayload = computed(() => {
   const payload = {
-    currency: totalCurrency.value,
+    currency: 'USD',
     value: totalPrice.value,
     promotion_id: couponCode || (user.value?.isLikerPlus ? 'plus' : undefined),
     promotion_name: couponCode || (user.value?.isLikerPlus ? 'plus' : undefined),
@@ -290,7 +281,7 @@ const eventPayload = computed(() => {
       id: `${item.classId}-${item.priceIndex}`,
       name: item.bookInfo?.name || '',
       price: item.pricingItem?.price || 0,
-      currency: totalCurrency.value,
+      currency: 'USD',
       quantity: item.quantity,
       google_business_vertical: 'retail',
     })),
@@ -368,6 +359,7 @@ async function handleCheckout() {
         coupon: couponCode || undefined,
         cancelPage: 'checkout',
         language: locale.value.split('-')[0],
+        currency: getCheckoutCurrency(),
         ...getAnalyticsParameters({ utmSource: 'checkout' }),
       },
     )

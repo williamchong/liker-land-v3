@@ -37,10 +37,6 @@
     <!-- Price info for store mode -->
     <div class="h-5 mt-3 text-sm text-theme-black">
       <span
-        v-if="price > 0"
-        class="mr-0.5"
-      >US</span>
-      <span
         v-if="formattedDiscountPrice"
         v-text="formattedDiscountPrice"
       />
@@ -121,13 +117,13 @@ const props = defineProps({
 
 const emit = defineEmits(['visible', 'open'])
 
-const { formatPrice } = useCurrency()
+const { formatPrice, formatDiscountedPrice } = useCurrency()
 const nftStore = useNFTStore()
 const metadataStore = useMetadataStore()
 const bookInfo = useBookInfo({ nftClassId: props.nftClassId })
 const { getResizedImageURL } = useImageResize()
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value || props.bookCoverSrc, { size: 300 }))
-const { getPlusDiscountPrice } = useSubscription()
+const { isLikerPlus, PLUS_BOOK_PURCHASE_DISCOUNT } = useSubscription()
 
 const productPageRoute = computed(() => {
   return bookInfo.getProductPageRoute({
@@ -153,8 +149,10 @@ const price = computed(() => props.price || bookInfo.minPrice.value)
 const formattedPrice = computed(() => formatPrice(price.value))
 
 const formattedDiscountPrice = computed(() => {
-  const plusPrice = getPlusDiscountPrice(price.value)
-  return plusPrice ? formatPrice(plusPrice) : null
+  if (isLikerPlus.value && price.value > 0) {
+    return formatDiscountedPrice(price.value, PLUS_BOOK_PURCHASE_DISCOUNT)
+  }
+  return null
 })
 
 if (!props.lazy) {

@@ -380,10 +380,6 @@
                         >
                           <template v-if="item?.discountedPrice">
                             <span class="flex flex-nowrap items-center text-gray-900 font-semibold">
-                              <span
-                                class="mx-0.5"
-                                v-text="item.currency"
-                              />
                               <span v-text="item.discountedPrice" />
                               <PlusBadge
                                 v-if="isLikerPlus"
@@ -391,24 +387,14 @@
                               />
                             </span>
                             <span class="text-xs text-gray-400 line-through">
-                              <span
-                                class="mr-0.5"
-                                v-text="item.currency"
-                              />
                               <span v-text="item.originalPrice" />
                             </span>
                           </template>
                           <template v-else>
-                            <span class="flex flex-row items-center">
-                              <span
-                                class="text-xs mr-0.5"
-                                v-text="item.currency"
-                              />
-                              <span
-                                class="font-semibold"
-                                v-text="item.originalPrice"
-                              />
-                            </span>
+                            <span
+                              class="font-semibold"
+                              v-text="item.originalPrice"
+                            />
                           </template>
                         </span>
                       </div>
@@ -581,10 +567,6 @@
       <template v-else-if="pricingItems.length">
         <span class="text-green-500">
           <span
-            class="text-xs mr-0.5"
-            v-text="selectedPricingItem?.currency"
-          />
-          <span
             v-if="selectedPricingItem?.discountedPrice"
             class="text-2xl font-semibold"
             v-text="selectedPricingItem?.discountedPrice"
@@ -672,7 +654,8 @@ const getRouteQuery = useRouteQuery()
 const { t: $t, locale } = useI18n()
 const toast = useToast()
 const wipModal = useWIPModal()
-const { formatPrice } = useCurrency()
+const { formatPrice, formatDiscountedPrice } = useCurrency()
+const { getCheckoutCurrency } = usePaymentCurrency()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
 const nftStore = useNFTStore()
@@ -681,7 +664,7 @@ const bookshelfStore = useBookshelfStore()
 const { open: openTippingModal } = useTipping()
 const {
   isLikerPlus,
-  getPlusDiscountPrice,
+  PLUS_BOOK_PURCHASE_DISCOUNT,
   getPlusDiscountRate,
   openUpsellPlusModalIfEligible,
 } = useSubscription()
@@ -902,11 +885,11 @@ const isPricingItemsVisible = useElementVisibility(pricingItemsElement)
 
 const pricingItems = computed(() => {
   return bookInfo.pricingItems.value.map((item, index) => {
-    const discountPrice = from.value ? null : getPlusDiscountPrice(item.price)
+    const shouldShowDiscount = !from.value && isLikerPlus.value && item.price > 0
     return {
       ...item,
       originalPrice: formatPrice(item.price),
-      discountedPrice: discountPrice ? formatPrice(discountPrice) : null,
+      discountedPrice: shouldShowDiscount ? formatDiscountedPrice(item.price, PLUS_BOOK_PURCHASE_DISCOUNT) : null,
       isSelected: index === selectedPricingItemIndex.value,
       renderedDescription: md.render(item.description || ''),
     }
@@ -1326,6 +1309,7 @@ async function handlePurchaseButtonClick() {
             coupon: coupon.value,
             from: from.value,
             language,
+            currency: getCheckoutCurrency(),
             ...getAnalyticsParameters(),
           })
         : likeCoinSessionAPI.createNFTBookPurchase({
@@ -1336,6 +1320,7 @@ async function handlePurchaseButtonClick() {
             coupon: coupon.value,
             from: from.value,
             language,
+            currency: getCheckoutCurrency(),
             ...getAnalyticsParameters(),
           })
     )

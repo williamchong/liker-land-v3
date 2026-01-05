@@ -106,6 +106,7 @@ const bookListStore = useBookListStore()
 const { handleError } = useErrorHandler()
 const likeCoinSessionAPI = useLikeCoinSessionAPI()
 const { getAnalyticsParameters } = useAnalytics()
+const { getCheckoutCurrency } = usePaymentCurrency()
 
 useHead({ title: $t('book_list_title') })
 
@@ -160,6 +161,7 @@ async function handleCheckoutButtonClick() {
         email: user.value?.email,
         cancelPage: 'list',
         language: locale.value.split('-')[0],
+        currency: getCheckoutCurrency(),
         ...getAnalyticsParameters({ utmSource: '3ook-list' }),
       },
     )
