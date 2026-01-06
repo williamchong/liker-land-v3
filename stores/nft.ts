@@ -50,15 +50,15 @@ export const useNFTStore = defineStore('nft', () => {
     return data
   }
 
-  async function lazyFetchNFTClassAggregatedMetadataById(nftClassId: string, { exclude = [] }: FetchLikeCoinNFTClassAggregatedMetadataOptions = {}) {
+  async function lazyFetchNFTClassAggregatedMetadataById(nftClassId: string, { exclude = [], nocache = false }: FetchLikeCoinNFTClassAggregatedMetadataOptions = {}) {
     const excludedOptions: LikeCoinNFTClassAggregatedMetadataOptionKey[] = exclude
-    if (getNFTClassMetadataById.value(nftClassId)) {
+    if (!nocache && getNFTClassMetadataById.value(nftClassId)) {
       excludedOptions.push('class_chain')
     }
-    if (bookstoreStore.getBookstoreInfoByNFTClassId(nftClassId)) {
+    if (!nocache && bookstoreStore.getBookstoreInfoByNFTClassId(nftClassId)) {
       excludedOptions.push('bookstore')
     }
-    return fetchNFTClassAggregatedMetadataById(nftClassId, { exclude: excludedOptions })
+    return fetchNFTClassAggregatedMetadataById(nftClassId, { exclude: excludedOptions, nocache })
   }
 
   async function fetchNFTClassChainMetadataById(nftClassId: string) {

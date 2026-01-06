@@ -38,17 +38,17 @@ export const useMetadataStore = defineStore('metadata', () => {
     return likerInfoByIdMap.value[likerId]
   })
 
-  async function fetchLikerInfoById(likerId: string) {
-    const data = await fetchLikerPublicInfoById(likerId)
+  async function fetchLikerInfoById(likerId: string, options?: { nocache?: boolean }) {
+    const data = await fetchLikerPublicInfoById(likerId, options)
     if (data.evmWallet) {
       likerIdByWalletAddressMap.value[data.evmWallet] = likerId
     }
     likerInfoByIdMap.value[likerId] = normalizeLikerInfoFromResponseData(data)
   }
 
-  async function lazyFetchLikerInfoById(likerId: string) {
-    if (getLikerInfoById.value(likerId)) return
-    await fetchLikerInfoById(likerId)
+  async function lazyFetchLikerInfoById(likerId: string, options?: { nocache?: boolean }) {
+    if (getLikerInfoById.value(likerId) && !options?.nocache) return
+    await fetchLikerInfoById(likerId, options)
   }
 
   async function fetchLikerInfoByWalletAddress(walletAddress: string) {

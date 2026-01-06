@@ -76,7 +76,7 @@ export interface FetchLikeCoinNFTClassAggregatedMetadataResponseData {
 
 export function fetchLikeCoinNFTClassAggregatedMetadataById(
   nftClassId: string,
-  options: FetchLikeCoinNFTClassAggregatedMetadataOptions = { exclude: [] },
+  options: FetchLikeCoinNFTClassAggregatedMetadataOptions = { exclude: [], nocache: false },
 ) {
   const fetch = getLikeCoinAPIFetch()
   const includedOptionSet = new Set(options.include || likeCoinNFTClassAggregatedMetadataOptions)

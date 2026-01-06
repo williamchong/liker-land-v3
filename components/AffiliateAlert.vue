@@ -21,6 +21,7 @@
 const metadataStore = useMetadataStore()
 const { t: $t } = useI18n()
 const getRouteQuery = useRouteQuery()
+const isCacheDisabled = useNoCache()
 
 const from = computed(() => getRouteQuery('from'))
 
@@ -31,7 +32,7 @@ const affiliateId = computed(() => {
 async function fetchInfo() {
   if (!affiliateId.value) return
   try {
-    await metadataStore.lazyFetchLikerInfoById(affiliateId.value)
+    await metadataStore.lazyFetchLikerInfoById(affiliateId.value, { nocache: isCacheDisabled.value })
   }
   catch {
     console.warn(`Failed to fetch Liker info of the affiliate ID [${affiliateId.value}]`)
@@ -56,5 +57,24 @@ const affiliateName = computed(() => {
   return affiliateInfo.value?.displayName || affiliateInfo.value?.likerId || ''
 })
 
-const affiliateAvatarSrc = computed(() => affiliateInfo.value?.avatarSrc)
+const cacheTs = ref('')
+
+watch([isCacheDisabled, affiliateInfo], () => {
+  cacheTs.value = `${Math.round(Date.now() / 1000)}`
+}, { immediate: true })
+
+const affiliateAvatarSrc = computed(() => {
+  const src = affiliateInfo.value?.avatarSrc
+  if (isCacheDisabled.value && src) {
+    try {
+      const url = new URL(src)
+      url.searchParams.set('ts', cacheTs.value)
+      return url.toString()
+    }
+    catch {
+      // No-op
+    }
+  }
+  return src
+})
 </script>

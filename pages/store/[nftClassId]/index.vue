@@ -706,9 +706,13 @@ if (nftClassId.value !== nftClassId.value.toLowerCase()) {
   }), { replace: true })
 }
 
+const isCacheDisabled = useNoCache()
+
 await callOnce(async () => {
   try {
-    await nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value)
+    await nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value, {
+      nocache: isCacheDisabled.value,
+    })
   }
   catch (error) {
     await handleError(error, {
