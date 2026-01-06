@@ -3,7 +3,7 @@ import type { PricingCurrency } from '~/utils/pricing'
 
 export type PaymentCurrency = 'auto' | 'hkd' | 'twd' | 'usd'
 
-function getDefaultCurrencyFromCountry(country: string): PricingCurrency {
+function getDefaultCurrencyFromCountry(country: string | null): PricingCurrency {
   switch (country) {
     case 'HK':
       return 'hkd'
@@ -15,7 +15,7 @@ function getDefaultCurrencyFromCountry(country: string): PricingCurrency {
 }
 
 export function usePaymentCurrency() {
-  const { detectedCountry, initializeGeolocation } = useGeolocation()
+  const { detectedCountry, initializeClientGeolocation } = useDetectedGeolocation()
   const currency = useState<PaymentCurrency>('payment-currency', () => 'auto')
   const storedCurrency = useStorage<PaymentCurrency>('payment_currency', 'auto')
 
@@ -43,14 +43,13 @@ export function usePaymentCurrency() {
 
   function initializePaymentCurrency() {
     if (!detectedCountry.value) {
-      initializeGeolocation()
+      initializeClientGeolocation()
     }
     setCurrency(storedCurrency.value)
   }
 
   return {
     currency: readonly(currency),
-    detectedCountry,
     detectedCurrency: readonly(detectedCurrency),
     displayCurrency: readonly(displayCurrency),
     setCurrency,

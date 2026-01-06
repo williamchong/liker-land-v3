@@ -24,17 +24,17 @@ function getDetectedCountryFromBrowserLocale(): string {
   return 'US'
 }
 
-export function useGeolocation() {
-  const detectedCountry = useState<string>('detected-country')
+export function useDetectedGeolocation() {
+  const detectedCountry = useState<string | null>('detected-country', () => null)
 
-  function initializeDetectedCountry() {
+  function initializeServerGeolocation() {
     const countryFromHeaders = getDetectedCountryFromHeaders()
     if (countryFromHeaders) {
       detectedCountry.value = countryFromHeaders
     }
   }
 
-  function initializeGeolocation() {
+  function initializeClientGeolocation() {
     if (!detectedCountry.value) {
       detectedCountry.value = getDetectedCountryFromBrowserLocale()
     }
@@ -42,7 +42,7 @@ export function useGeolocation() {
 
   return {
     detectedCountry: readonly(detectedCountry),
-    initializeDetectedCountry,
-    initializeGeolocation,
+    initializeServerGeolocation,
+    initializeClientGeolocation,
   }
 }

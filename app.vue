@@ -22,13 +22,15 @@ const isTestnet = !!config.public.isTestnet
 
 const { memberProgramData } = useMemberProgramStructuredData()
 
-const { initializeDetectedCountry, initializeGeolocation } = useGeolocation()
+const { initializeServerGeolocation, initializeClientGeolocation } = useDetectedGeolocation()
 const { initializePaymentCurrency } = usePaymentCurrency()
 
-initializeDetectedCountry()
+callOnce(() => {
+  initializeServerGeolocation()
+})
 
 onMounted(() => {
-  initializeGeolocation()
+  initializeClientGeolocation()
   initializePaymentCurrency()
 })
 

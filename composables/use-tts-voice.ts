@@ -49,7 +49,7 @@ export function useTTSVoice(options: TTSVoiceOptions = {}) {
   function getDefaultTTSVoiceByLocale(): string {
     let voice: string = ttsLanguageVoiceValues[0] as string
 
-    const { detectedCountry } = useGeolocation()
+    const { detectedCountry } = useDetectedGeolocation()
     const country = detectedCountry.value?.toUpperCase()
 
     if (country === 'HK') {
