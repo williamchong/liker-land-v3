@@ -45,13 +45,15 @@ export function useTTSVoice(options: TTSVoiceOptions = {}) {
     return ttsLanguageVoiceOptions
   })
 
-  const ttsLanguageVoiceValues = availableTTSLanguageVoiceOptions.value.map(option => option.value)
+  const ttsLanguageVoiceValues = computed(() =>
+    availableTTSLanguageVoiceOptions.value.map(option => option.value),
+  )
 
   function getDefaultTTSVoiceByLocale(): string {
     const country = detectedCountry.value
-    const voice = ttsLanguageVoiceValues.find((voice) => {
+    const voice = ttsLanguageVoiceValues.value.find((voice) => {
       return country === 'HK' ? voice.startsWith('zh-HK') : !voice.startsWith('zh-HK')
-    }) || (ttsLanguageVoiceValues[0] as string)
+    }) || (ttsLanguageVoiceValues.value[0] as string)
 
     return voice
   }
