@@ -12,6 +12,7 @@ export function useTTSVoice(options: TTSVoiceOptions = {}) {
   const { bookLanguage } = options
 
   const config = useRuntimeConfig()
+  const { detectedCountry } = useDetectedGeolocation()
 
   const ttsConfigCacheKey = computed(() =>
     [
@@ -44,23 +45,15 @@ export function useTTSVoice(options: TTSVoiceOptions = {}) {
     return ttsLanguageVoiceOptions
   })
 
-  const ttsLanguageVoiceValues = availableTTSLanguageVoiceOptions.value.map(option => option.value)
+  const ttsLanguageVoiceValues = computed(() =>
+    availableTTSLanguageVoiceOptions.value.map(option => option.value),
+  )
 
   function getDefaultTTSVoiceByLocale(): string {
-    let voice: string = ttsLanguageVoiceValues[0] as string
-
-    if (import.meta.client && typeof navigator !== 'undefined') {
-      const locales = Array.isArray(navigator.languages) && navigator.languages.length > 0
-        ? navigator.languages.map(l => l.toLowerCase())
-        : [navigator.language?.toLowerCase()].filter(Boolean)
-
-      if (locales.some(locale => locale.includes('-hk'))) {
-        voice = ttsLanguageVoiceValues.find(value => value.startsWith('zh-HK')) || voice
-      }
-      else if (locales.some(locale => locale.startsWith('zh') && !locale.includes('-hk'))) {
-        voice = ttsLanguageVoiceValues.find(value => value.startsWith('zh-TW')) || voice
-      }
-    }
+    const country = detectedCountry.value
+    const voice = ttsLanguageVoiceValues.value.find((voice) => {
+      return country === 'HK' ? voice.startsWith('zh-HK') : !voice.startsWith('zh-HK')
+    }) || (ttsLanguageVoiceValues.value[0] as string)
 
     return voice
   }

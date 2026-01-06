@@ -8,7 +8,7 @@ const CURRENCY_PREFIXES: Record<PricingCurrency, string> = {
 
 export default function () {
   const { t: $t } = useI18n()
-  const { getDisplayCurrency } = usePaymentCurrency()
+  const { displayCurrency } = usePaymentCurrency()
 
   function getCurrencyPrefix(currency: PricingCurrency) {
     return CURRENCY_PREFIXES[currency] ?? 'US$'
@@ -33,27 +33,23 @@ export default function () {
   }
 
   function formatPrice(price: number) {
-    const displayCurrency = getDisplayCurrency()
-    const convertedPrice = convertUSDPriceToCurrency(price, displayCurrency)
-    return formatCurrencyAmount(convertedPrice, displayCurrency)
+    const convertedPrice = convertUSDPriceToCurrency(price, displayCurrency.value)
+    return formatCurrencyAmount(convertedPrice, displayCurrency.value)
   }
 
   function formatDiscountedPrice(usdPrice: number, discountRate: number): string {
-    const displayCurrency = getDisplayCurrency()
-    const convertedPrice = convertUSDPriceToCurrency(usdPrice, displayCurrency)
+    const convertedPrice = convertUSDPriceToCurrency(usdPrice, displayCurrency.value)
     const discountedPrice = convertedPrice * (1 - discountRate)
-    return formatCurrencyAmount(discountedPrice, displayCurrency)
+    return formatCurrencyAmount(discountedPrice, displayCurrency.value)
   }
 
   function convertPrice(usdPrice: number): number {
-    const displayCurrency = getDisplayCurrency()
-    return convertUSDPriceToCurrency(usdPrice, displayCurrency)
+    return convertUSDPriceToCurrency(usdPrice, displayCurrency.value)
   }
 
   return {
     formatPrice,
     formatDiscountedPrice,
     convertPrice,
-    getDisplayCurrency,
   }
 }

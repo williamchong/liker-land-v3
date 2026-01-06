@@ -22,6 +22,18 @@ const isTestnet = !!config.public.isTestnet
 
 const { memberProgramData } = useMemberProgramStructuredData()
 
+const { initializeServerGeolocation, initializeClientGeolocation } = useDetectedGeolocation()
+const { initializePaymentCurrency } = usePaymentCurrency()
+
+callOnce(() => {
+  initializeServerGeolocation()
+})
+
+onMounted(() => {
+  initializeClientGeolocation()
+  initializePaymentCurrency()
+})
+
 const i18nHead = useLocaleHead()
 
 const { user } = useUserSession()

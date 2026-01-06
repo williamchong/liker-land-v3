@@ -246,8 +246,8 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
   async function startTextToSpeech(index: number | null = null) {
     isShowTextToSpeechOptions.value = true
-    if (!ttsLanguageVoiceValues.includes(ttsLanguageVoice.value)) {
-      ttsLanguageVoice.value = ttsLanguageVoiceValues[0]
+    if (!ttsLanguageVoiceValues.value.includes(ttsLanguageVoice.value)) {
+      ttsLanguageVoice.value = ttsLanguageVoiceValues.value[0]
     }
 
     if (index !== null) {
