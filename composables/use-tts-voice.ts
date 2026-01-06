@@ -12,6 +12,7 @@ export function useTTSVoice(options: TTSVoiceOptions = {}) {
   const { bookLanguage } = options
 
   const config = useRuntimeConfig()
+  const { detectedCountry } = useDetectedGeolocation()
 
   const ttsConfigCacheKey = computed(() =>
     [
@@ -47,17 +48,10 @@ export function useTTSVoice(options: TTSVoiceOptions = {}) {
   const ttsLanguageVoiceValues = availableTTSLanguageVoiceOptions.value.map(option => option.value)
 
   function getDefaultTTSVoiceByLocale(): string {
-    let voice: string = ttsLanguageVoiceValues[0] as string
-
-    const { detectedCountry } = useDetectedGeolocation()
-    const country = detectedCountry.value?.toUpperCase()
-
-    if (country === 'HK') {
-      voice = ttsLanguageVoiceValues.find(value => value.startsWith('zh-HK')) || voice
-    }
-    else if (country === 'TW') {
-      voice = ttsLanguageVoiceValues.find(value => value.startsWith('zh-TW')) || voice
-    }
+    const country = detectedCountry.value
+    const voice = ttsLanguageVoiceValues.find((voice) => {
+      return country === 'HK' ? voice.startsWith('zh-HK') : !voice.startsWith('zh-HK')
+    }) || (ttsLanguageVoiceValues[0] as string)
 
     return voice
   }
