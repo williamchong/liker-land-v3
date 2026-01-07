@@ -1,4 +1,3 @@
-import type { Ref } from 'vue'
 import type { BookSettingsData, BookSettingKey } from '~/types/book-settings'
 
 interface UseSyncedBookSettingsOptions<T> {
@@ -14,7 +13,7 @@ export function useSyncedBookSettings<T>({
   defaultValue,
   namespace,
 }: UseSyncedBookSettingsOptions<T>): Ref<T> {
-  const { loggedIn } = useUserSession()
+  const { loggedIn: hasLoggedIn } = useUserSession()
   const bookSettingsStore = useBookSettingsStore()
 
   const namespacePrefix = namespace ? `${namespace}-` : ''
@@ -39,14 +38,14 @@ export function useSyncedBookSettings<T>({
     }
   })
 
-  watch(loggedIn, (isLoggedIn) => {
+  watch(hasLoggedIn, (isLoggedIn) => {
     if (isLoggedIn && !bookSettingsStore.isInitialized(nftClassId)) {
       loadFromServer()
     }
   })
 
   onMounted(() => {
-    if (loggedIn.value && !bookSettingsStore.isInitialized(nftClassId)) {
+    if (hasLoggedIn.value && !bookSettingsStore.isInitialized(nftClassId)) {
       loadFromServer()
     }
   })

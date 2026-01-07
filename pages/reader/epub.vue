@@ -375,12 +375,12 @@ const activeNavItemLabel = computed(() => {
   return item?.label || ''
 })
 const activeNavItemHref = ref<string | undefined>()
-const activeTTSElementIndex = useSyncedBookSettings({
+const activeTTSElementIndex = useSyncedBookSettings<number | undefined>({
   nftClassId: nftClassId.value,
   key: 'activeTTSElementIndex',
   defaultValue: undefined,
   namespace: 'epub',
-}) as Ref<number | undefined>
+})
 
 const { setTTSSegments, setChapterTitles, openPlayer } = useTTSPlayerModal({
   nftClassId: nftClassId.value,

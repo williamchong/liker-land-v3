@@ -7,7 +7,7 @@ interface BookSettingsEntry {
 }
 
 export const useBookSettingsStore = defineStore('book-settings', () => {
-  const { loggedIn } = useUserSession()
+  const { loggedIn: hasLoggedIn } = useUserSession()
   const settingsMap = ref<Record<string, BookSettingsEntry>>({})
   const fetchPromisesMap = ref<Record<string, Promise<BookSettingsData>>>({})
 
@@ -58,7 +58,7 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
   }
 
   async function ensureInitialized(nftClassId: string): Promise<void> {
-    if (!loggedIn.value) return
+    if (!hasLoggedIn.value) return
     if (isInitialized(nftClassId)) return
 
     try {
@@ -91,7 +91,7 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
   }
 
   async function flushBatch(nftClassId: string) {
-    if (!loggedIn.value) return
+    if (!hasLoggedIn.value) return
 
     const key = getKey(nftClassId)
     const queue = batchQueuesMap.value[key]
