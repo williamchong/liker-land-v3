@@ -757,10 +757,41 @@ const coupon = computed(() => getRouteQuery('coupon') || undefined)
 const quantity = computed(() => Math.max(parseInt(getRouteQuery('quantity'), 10) || 1, 1))
 const isRedirectedFromUpsell = computed(() => getRouteQuery('upsell') === '1')
 
+const descriptionTags = computed(() => {
+  const tags: string[] = []
+
+  if (bookInfo.keywords.value) {
+    tags.push(...bookInfo.keywords.value)
+  }
+
+  const bookFormatValue = $t('product_page_book_format_value')
+  if (!bookInfo.keywords.value?.includes('電子書') && !tags.includes(bookFormatValue)) {
+    tags.push(bookFormatValue)
+  }
+
+  if (bookInfo.contentTypes.value) {
+    tags.push(...bookInfo.contentTypes.value.map(type => type.toUpperCase()))
+  }
+
+  tags.push($t('reading_method_read_online'))
+
+  if (bookInfo.isDownloadable.value) {
+    tags.push($t('reading_method_download_file'))
+  }
+
+  if (!bookInfo.isAudioHidden.value) {
+    tags.push($t('product_page_support_tts_label'))
+  }
+
+  return [...new Set(tags)]
+})
+
 const ogTitle = computed(() => {
   const title = bookInfo.name.value
   const author = bookInfo.authorName.value
-  return author ? `${title} - ${author}` : title
+  const hasEbookTag = descriptionTags.value.includes($t('product_page_book_format_value'))
+  const ebookSuffix = hasEbookTag ? ` - ${$t('product_page_book_format_value')}` : ''
+  return author ? `${title} - ${author}${ebookSuffix}` : `${title}${ebookSuffix}`
 })
 const ogDescription = computed(() => {
   const description = bookInfo.description.value || ''
@@ -906,35 +937,6 @@ const selectedPricingItem = computed(() => {
 const priceIndex = computed(() => selectedPricingItem.value?.index || 0)
 
 const bookName = computed(() => bookInfo.name.value)
-
-const descriptionTags = computed(() => {
-  const tags: string[] = []
-
-  if (bookInfo.keywords.value) {
-    tags.push(...bookInfo.keywords.value)
-  }
-
-  const bookFormatValue = $t('product_page_book_format_value')
-  if (!bookInfo.keywords.value?.includes('電子書') && !tags.includes(bookFormatValue)) {
-    tags.push(bookFormatValue)
-  }
-
-  if (bookInfo.contentTypes.value) {
-    tags.push(...bookInfo.contentTypes.value.map(type => type.toUpperCase()))
-  }
-
-  tags.push($t('reading_method_read_online'))
-
-  if (bookInfo.isDownloadable.value) {
-    tags.push($t('reading_method_download_file'))
-  }
-
-  if (!bookInfo.isAudioHidden.value) {
-    tags.push($t('product_page_support_tts_label'))
-  }
-
-  return [...new Set(tags)]
-})
 
 const bookReviewURLWithUTM = computed(() => {
   const url = bookInfo.bookReviewInfo.value?.url
