@@ -1,108 +1,95 @@
 <template>
-  <div>
-    <main class="space-y-4">
-      <section
-        v-if="hasLoggedIn"
-        class="space-y-3"
-      >
-        <h2
-          class="px-4 pt-4 text-lg font-bold"
-          v-text="$t('burn_page_title')"
-        />
+  <main class="space-y-4">
+    <section
+      v-if="hasLoggedIn"
+      class="space-y-3"
+    >
+      <h2
+        class="px-4 pt-4 text-lg font-bold"
+        v-text="$t('burn_page_title')"
+      />
 
-        <UCard
-          :ui="{
-            body: [
-              '!p-0',
-              'divide-y-1',
-              'divide-(--ui-border)',
-              '[&>*:not(:first-child)]:rounded-t-none',
-              '[&>*:not(:last-child)]:rounded-b-none',
-            ].join(' '),
-          }"
-        >
-          <div
-            v-if="isLoading"
-            class="flex justify-center py-12"
-          >
-            <UIcon
-              class="animate-spin"
-              name="material-symbols-progress-activity"
-              size="48"
-            />
-          </div>
-
-          <div
-            v-else-if="isEmpty"
-            class="flex flex-col items-center py-12"
-          >
-            <UIcon
-              class="opacity-20"
-              name="i-material-symbols-menu-book-outline-rounded"
-              size="64"
-            />
-            <p
-              class="mt-4 text-muted"
-              v-text="$t('burn_page_no_books')"
-            />
-          </div>
-
-          <div
-            v-else
-            class="divide-y-1 divide-(--ui-border)"
-          >
-            <div
-              v-for="item in items"
-              :key="`${item.nftClassId}-${item.nftId}`"
-              class="flex items-center gap-3 px-4 py-3"
-            >
-              <div class="min-w-0 flex-1">
-                <p
-                  class="text-sm font-medium text-highlighted truncate"
-                  v-text="item.bookTitle"
-                />
-                <p
-                  class="text-xs text-muted font-mono truncate"
-                  v-text="`${$t('burn_page_class_id')}: ${item.nftClassId}`"
-                />
-                <p
-                  class="text-xs text-muted font-mono truncate"
-                  v-text="`${$t('burn_page_nft_id')}: ${item.nftId}`"
-                />
-              </div>
-
-              <UButton
-                :label="$t('burn_page_burn_button')"
-                color="error"
-                variant="outline"
-                size="sm"
-                :disabled="isBurning"
-                @click="handleBurnClick(item)"
-              />
-            </div>
-          </div>
-        </UCard>
-
-        <UAlert
-          icon="i-material-symbols-warning-outline-rounded"
-          color="error"
-          variant="subtle"
-          :title="$t('burn_page_warning_title')"
-          :description="$t('burn_page_warning_description')"
-        />
-      </section>
+      <UAlert
+        icon="i-material-symbols-warning-outline-rounded"
+        color="error"
+        variant="subtle"
+        :title="$t('burn_page_warning_title')"
+        :description="$t('burn_page_warning_description')"
+      />
 
       <UCard
-        v-else
-        class="w-full max-w-sm mx-auto mt-8"
-        :ui="{ footer: 'flex justify-end' }"
+        :ui="{
+          body: [
+            '!p-0',
+            'divide-y-1',
+            'divide-(--ui-border)',
+            '[&>*:not(:first-child)]:rounded-t-none',
+            '[&>*:not(:last-child)]:rounded-b-none',
+          ].join(' '),
+        }"
       >
-        <p v-text="$t('burn_page_please_login')" />
-        <template #footer>
-          <LoginButton />
-        </template>
+        <div
+          v-if="isLoading"
+          class="flex justify-center py-12"
+        >
+          <UIcon
+            class="animate-spin"
+            name="material-symbols-progress-activity"
+            size="48"
+          />
+        </div>
+
+        <div
+          v-else-if="isEmpty"
+          class="flex flex-col items-center py-12"
+        >
+          <UIcon
+            class="opacity-20"
+            name="i-material-symbols-menu-book-outline-rounded"
+            size="64"
+          />
+          <p
+            class="mt-4 text-muted"
+            v-text="$t('burn_page_no_books')"
+          />
+        </div>
+
+        <div
+          v-else
+          class="divide-y-1 divide-(--ui-border)"
+        >
+          <div
+            v-for="item in items"
+            :key="`${item.nftClassId}-${item.nftId}`"
+            class="flex items-center gap-3 px-4 py-3"
+          >
+            <div class="min-w-0 flex-1">
+              <p
+                class="text-sm font-medium text-highlighted truncate"
+                v-text="item.bookTitle"
+              />
+              <p
+                class="text-xs text-muted font-mono truncate"
+                v-text="`${$t('burn_page_class_id')}: ${item.nftClassId}`"
+              />
+              <p
+                class="text-xs text-muted font-mono truncate"
+                v-text="`${$t('burn_page_nft_id')}: ${item.nftId}`"
+              />
+            </div>
+
+            <UButton
+              :label="$t('burn_page_burn_button')"
+              color="error"
+              variant="outline"
+              size="sm"
+              :disabled="isBurning"
+              @click="handleBurnClick(item)"
+            />
+          </div>
+        </div>
       </UCard>
-    </main>
+    </section>
 
     <UModal
       v-model:open="isConfirmDialogOpen"
@@ -157,7 +144,7 @@
         />
       </template>
     </UModal>
-  </div>
+  </main>
 </template>
 
 <script setup lang="ts">

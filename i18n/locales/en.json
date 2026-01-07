@@ -129,7 +129,6 @@
   "burn_page_error_title": "Burn Failed",
   "burn_page_nft_id": "NFT ID",
   "burn_page_no_books": "No books to burn",
-  "burn_page_please_login": "Please login to burn books",
   "burn_page_success_description": "{book} has been burned",
   "burn_page_success_title": "Book Burned",
   "burn_page_title": "Burn Books",
