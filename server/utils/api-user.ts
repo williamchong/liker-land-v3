@@ -1,5 +1,6 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
-import type { BookSettingsData as ClientBookSettingsData } from '~/types/book-settings'
+import type { BookSettingsData } from '~/types/book-settings'
+import type { BookSettingsFirestoreData } from '~/server/types/book-settings'
 
 export interface UserDocData {
   ttsCharactersUsed?: number
@@ -8,24 +9,6 @@ export interface UserDocData {
   loginTimestamp?: typeof FieldValue.serverTimestamp
   accessTimestamp?: typeof FieldValue.serverTimestamp
   loginMethod?: string
-}
-
-interface BookSettingsFirestoreData {
-  // EPUB settings (namespace: 'epub')
-  'epub-cfi'?: string
-  'epub-fontSize'?: number
-  'epub-activeTTSElementIndex'?: number
-
-  // PDF settings (namespace: 'pdf')
-  'pdf-currentPage'?: number
-  'pdf-scale'?: number
-  'pdf-isDualPageMode'?: boolean
-  'pdf-isRightToLeft'?: boolean
-
-  // Common settings (no namespace)
-  'progress'?: number
-  'lastOpenedTime'?: number
-  'updatedAt'?: Timestamp
 }
 
 export async function getUserDoc(
@@ -49,7 +32,7 @@ export async function updateUserTTSCharacterUsage(
 export async function getBookSettings(
   userWallet: string,
   nftClassId: string,
-): Promise<ClientBookSettingsData | undefined> {
+): Promise<BookSettingsData | undefined> {
   const bookDocRef = await getUserCollection()
     .doc(userWallet)
     .collection('books')
@@ -62,13 +45,13 @@ export async function getBookSettings(
   return {
     ...data,
     updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toMillis() : undefined,
-  } as ClientBookSettingsData
+  } as BookSettingsData
 }
 
 export async function updateBookSettings(
   userWallet: string,
   nftClassId: string,
-  settings: Partial<ClientBookSettingsData>,
+  settings: Partial<BookSettingsData>,
 ): Promise<void> {
   const bookDocRef = getUserCollection()
     .doc(userWallet)
