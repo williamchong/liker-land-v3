@@ -1,9 +1,12 @@
 import { readContract } from '@wagmi/core'
+import { useWriteContract } from '@wagmi/vue'
+import type { Hash } from 'viem'
 
 import likeCoinNFTClassABI from '~/contracts/like-nft-class.json'
 
 export function useLikeNFTClassContract() {
   const { $wagmiConfig } = useNuxtApp()
+  const { writeContractAsync } = useWriteContract()
 
   async function fetchNFTClassMetadataById(nftClassId: string) {
     const nftClassMetadataURI = await readContract($wagmiConfig, {
@@ -44,10 +47,20 @@ export function useLikeNFTClassContract() {
     return nftId?.toString()
   }
 
+  async function burnNFT(nftClassId: string, nftId: string): Promise<Hash> {
+    return writeContractAsync({
+      address: nftClassId as `0x${string}`,
+      abi: likeCoinNFTClassABI,
+      functionName: 'burn',
+      args: [nftId],
+    })
+  }
+
   return {
     fetchNFTClassMetadataById,
     fetchNFTMetadataByNFTClassIdAndNFTId,
     fetchNFTBalanceOf,
     fetchNFTIdByNFTClassIdAndWalletAddressAndIndex,
+    burnNFT,
   }
 }
