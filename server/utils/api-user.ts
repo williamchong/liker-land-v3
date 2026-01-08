@@ -1,4 +1,6 @@
-import { FieldValue } from 'firebase-admin/firestore'
+import { FieldValue, Timestamp } from 'firebase-admin/firestore'
+import type { BookSettingsData } from '~/types/book-settings'
+import type { BookSettingsFirestoreData } from '~/server/types/book-settings'
 
 export interface UserDocData {
   ttsCharactersUsed?: number
@@ -24,5 +26,42 @@ export async function updateUserTTSCharacterUsage(
   await userDocRef.set({
     ttsCharactersUsed: FieldValue.increment(charactersUsed),
     ttsLastUsed: FieldValue.serverTimestamp(),
+  }, { merge: true })
+}
+
+export async function getBookSettings(
+  userWallet: string,
+  nftClassId: string,
+): Promise<BookSettingsData | undefined> {
+  const bookDocRef = await getUserCollection()
+    .doc(userWallet)
+    .collection('books')
+    .doc(nftClassId.toLowerCase())
+    .get()
+
+  const data = bookDocRef.data() as BookSettingsFirestoreData | undefined
+  if (!data) return undefined
+
+  return {
+    ...data,
+    updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toMillis() : undefined,
+  } as BookSettingsData
+}
+
+export async function updateBookSettings(
+  userWallet: string,
+  nftClassId: string,
+  settings: Partial<BookSettingsData>,
+): Promise<void> {
+  const bookDocRef = getUserCollection()
+    .doc(userWallet)
+    .collection('books')
+    .doc(nftClassId.toLowerCase())
+
+  const { updatedAt, ...restSettings } = settings
+
+  await bookDocRef.set({
+    ...restSettings,
+    updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true })
 }

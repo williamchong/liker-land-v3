@@ -252,7 +252,7 @@
 </template>
 
 <script setup lang="ts">
-import { useStorage, type UseSwipeDirection } from '@vueuse/core'
+import type { UseSwipeDirection } from '@vueuse/core'
 import ePub, {
   type Rendition as RenditionBase,
   type NavItem,
@@ -284,6 +284,7 @@ const toast = useToast()
 
 const { t: $t } = useI18n()
 const nftStore = useNFTStore()
+const bookSettingsStore = useBookSettingsStore()
 const {
   nftClassId,
   bookInfo,
@@ -299,7 +300,6 @@ const {
 } = useTTSTryModal()
 const {
   readingProgress,
-  getProgressKeyWithSuffix,
 } = useReaderProgress({
   nftClassId: nftClassId.value,
   bookProgressKeyPrefix: bookProgressKeyPrefix.value,
@@ -337,7 +337,10 @@ const { loadingLabel, loadFileAsBuffer } = useBookFileLoader()
 onMounted(async () => {
   isReaderLoading.value = true
   try {
-    await nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value)
+    await Promise.all([
+      nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value),
+      bookSettingsStore.ensureInitialized(nftClassId.value),
+    ])
   }
   catch (error) {
     await handleError(error, {
@@ -372,8 +375,12 @@ const activeNavItemLabel = computed(() => {
   return item?.label || ''
 })
 const activeNavItemHref = ref<string | undefined>()
-// TODO: Should hide this index into TTS (player?) composable?
-const activeTTSElementIndex = useStorage(getCacheKeyWithSuffix('tts-index'), undefined) as Ref<number | undefined>
+const activeTTSElementIndex = useSyncedBookSettings<number | undefined>({
+  nftClassId: nftClassId.value,
+  key: 'activeTTSElementIndex',
+  defaultValue: undefined,
+  namespace: 'epub',
+})
 
 const { setTTSSegments, setChapterTitles, openPlayer } = useTTSPlayerModal({
   nftClassId: nftClassId.value,
@@ -407,13 +414,23 @@ const isRightToLeft = ref(false)
 const currentPageStartCfi = ref<string>('')
 const currentPageEndCfi = ref<string>('')
 const currentPageHref = ref<string>('')
-const currentCfi = useStorage(getProgressKeyWithSuffix('cfi'), '')
+const currentCfi = useSyncedBookSettings({
+  nftClassId: nftClassId.value,
+  key: 'cfi',
+  defaultValue: '',
+  namespace: 'epub',
+})
 
 const FONT_SIZE_OPTIONS = [
   6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72,
 ]
 const DEFAULT_FONT_SIZE_INDEX = 8 // Default to 24px
-const fontSize = ref(FONT_SIZE_OPTIONS[DEFAULT_FONT_SIZE_INDEX])
+const fontSize = useSyncedBookSettings({
+  nftClassId: nftClassId.value,
+  key: 'fontSize',
+  defaultValue: FONT_SIZE_OPTIONS[DEFAULT_FONT_SIZE_INDEX],
+  namespace: 'epub',
+})
 watch(fontSize, (size) => {
   rendition.value?.themes.fontSize(`${size}px`)
 })
