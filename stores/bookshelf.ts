@@ -1,5 +1,3 @@
-import { getBookProgressData } from '~/utils/reader'
-
 export interface BookshelfItem {
   nftClassId: string
   nftIds: string[]
@@ -11,11 +9,10 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
   const { loggedIn: hasLoggedIn } = useUserSession()
   const nftStore = useNFTStore()
   const likeNFTClassContract = useLikeNFTClassContract()
-  const { cacheKeyPrefix } = useRuntimeConfig().public
+  const bookSettingsStore = useBookSettingsStore()
 
   const nftClassIds = ref<Set<string>>(new Set())
   const tokenIdsByNFTClassId = ref<Record<string, string[]>>({})
-  const progressByNFTClassId = ref<Record<string, { lastOpenedTime: number, progress: number }>>({})
   const isFetching = ref(false)
   const hasFetched = ref(false)
   const nextKey = ref<number | undefined>(undefined)
@@ -37,7 +34,11 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
       })
       .map((nftClassId) => {
         const nftIds = tokenIdsByNFTClassId.value[nftClassId] || []
-        const progressData = progressByNFTClassId.value[nftClassId] || { lastOpenedTime: 0, progress: 0 }
+        const settings = bookSettingsStore.getSettings(nftClassId)
+        const progressData = {
+          lastOpenedTime: settings?.lastOpenedTime || 0,
+          progress: settings?.progress || 0,
+        }
 
         return {
           nftClassId,
@@ -71,6 +72,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
         limit,
       })
 
+      const nftClassIdsToFetchProgress: string[] = []
       res.data.forEach((nftClass) => {
         const nftClassId = nftClass.address.toLowerCase() as `0x${string}`
 
@@ -81,9 +83,10 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
           nftStore.addNFTClassMetadata(nftClassId, nftClass.metadata)
         }
 
-        const progressData = getBookProgressData({ nftClassId, cacheKeyPrefix })
-        progressByNFTClassId.value[nftClassId] = progressData
+        nftClassIdsToFetchProgress.push(nftClassId)
       })
+
+      await bookSettingsStore.fetchBatchSettings(nftClassIdsToFetchProgress)
 
       nextKey.value = res.pagination.count < limit ? undefined : res.pagination.next_key
     }
@@ -140,17 +143,14 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
         tokenIdsByNFTClassId.value[normalizedNFTClassId] = [tokenId]
       }
 
-      const progressData = getBookProgressData({ nftClassId: normalizedNFTClassId, cacheKeyPrefix })
-      progressByNFTClassId.value[normalizedNFTClassId] = progressData
+      await bookSettingsStore.ensureInitialized(normalizedNFTClassId)
     }
   }
 
   function updateProgress(nftClassId: string, progress: number, lastOpenedTime: number) {
     const normalizedNFTClassId = nftClassId.toLowerCase()
-    progressByNFTClassId.value[normalizedNFTClassId] = {
-      progress,
-      lastOpenedTime,
-    }
+    bookSettingsStore.queueUpdate(normalizedNFTClassId, 'progress', progress)
+    bookSettingsStore.queueUpdate(normalizedNFTClassId, 'lastOpenedTime', lastOpenedTime)
   }
 
   function reset() {
@@ -158,12 +158,10 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     hasFetched.value = false
     nftClassIds.value.clear()
     tokenIdsByNFTClassId.value = {}
-    progressByNFTClassId.value = {}
     nextKey.value = undefined
   }
 
   watch(hasLoggedIn, (value, oldValue) => {
-    // NOTE: Reset the store when user logs out
     if (oldValue && !value) {
       reset()
     }

@@ -6,10 +6,13 @@ interface BookSettingsEntry {
   fetchedAt: number
 }
 
+const MAX_BATCH_SIZE = 30
+
 export const useBookSettingsStore = defineStore('book-settings', () => {
   const { loggedIn: hasLoggedIn } = useUserSession()
   const settingsMap = ref<Record<string, BookSettingsEntry>>({})
   const fetchPromisesMap = ref<Record<string, Promise<BookSettingsData>>>({})
+  const batchFetchPromise = ref<Promise<void> | null>(null)
 
   // Batch update queues per nftClassId
   const batchQueuesMap = ref<Record<string, Map<string, unknown>>>({})
@@ -31,7 +34,7 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
       return fetchPromisesMap.value[key]
     }
 
-    const fetchPromise = $fetch<BookSettingsData>(`/api/books/${nftClassId}/settings`)
+    const fetchPromise = $fetch<BookSettingsData>(`/api/books/settings?nftClassId=${nftClassId}`)
       .then((settings) => {
         settingsMap.value[key] = {
           data: settings,
@@ -55,6 +58,60 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
 
     fetchPromisesMap.value[key] = fetchPromise
     return fetchPromise
+  }
+
+  async function fetchBatchSettings(nftClassIds: string[]): Promise<void> {
+    if (!hasLoggedIn.value || nftClassIds.length === 0) {
+      return
+    }
+
+    if (batchFetchPromise.value) {
+      await batchFetchPromise.value
+    }
+
+    const nftClassIdsToFetch = nftClassIds.filter(id => !isInitialized(id))
+    if (nftClassIdsToFetch.length === 0) {
+      return
+    }
+
+    batchFetchPromise.value = (async () => {
+      try {
+        for (let i = 0; i < nftClassIdsToFetch.length; i += MAX_BATCH_SIZE) {
+          const chunk = nftClassIdsToFetch.slice(i, i + MAX_BATCH_SIZE)
+          const settings = await $fetch<Record<string, BookSettingsData>>('/api/books/settings', {
+            params: {
+              nftClassIds: chunk,
+            },
+          })
+
+          Object.entries(settings).forEach(([nftClassId, data]) => {
+            const key = getKey(nftClassId)
+            settingsMap.value[key] = {
+              data,
+              fetchedAt: Date.now(),
+            }
+          })
+
+          chunk.forEach((nftClassId) => {
+            const key = getKey(nftClassId)
+            if (!settingsMap.value[key]) {
+              settingsMap.value[key] = {
+                data: {} as BookSettingsData,
+                fetchedAt: Date.now(),
+              }
+            }
+          })
+        }
+      }
+      catch (error) {
+        console.warn('Failed to fetch batch book settings:', error)
+      }
+      finally {
+        batchFetchPromise.value = null
+      }
+    })()
+
+    await batchFetchPromise.value
   }
 
   async function ensureInitialized(nftClassId: string): Promise<void> {
@@ -131,6 +188,7 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
 
   return {
     fetchSettings,
+    fetchBatchSettings,
     getSettings,
     clearSettings,
     ensureInitialized,

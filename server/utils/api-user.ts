@@ -1,4 +1,4 @@
-import { FieldValue, Timestamp } from 'firebase-admin/firestore'
+import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import type { BookSettingsData } from '~/types/book-settings'
 import type { BookSettingsFirestoreData } from '~/server/types/book-settings'
 
@@ -64,4 +64,41 @@ export async function updateBookSettings(
     ...restSettings,
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true })
+}
+
+const BATCH_SIZE_LIMIT = 30
+
+export async function getBatchBookSettings(
+  userWallet: string,
+  nftClassIds: string[],
+): Promise<Record<string, BookSettingsData>> {
+  if (nftClassIds.length === 0) {
+    return {}
+  }
+
+  const result: Record<string, BookSettingsData> = {}
+
+  // Firestore 'in' operator supports up to 30 values, so we need to chunk
+  for (let i = 0; i < nftClassIds.length; i += BATCH_SIZE_LIMIT) {
+    const chunk = nftClassIds.slice(i, i + BATCH_SIZE_LIMIT)
+    const snapshot = await getUserCollection()
+      .doc(userWallet)
+      .collection('books')
+      .where(
+        FieldPath.documentId(),
+        'in',
+        chunk.map(id => id.toLowerCase()),
+      )
+      .get()
+
+    snapshot.forEach((doc) => {
+      const data = doc.data() as BookSettingsFirestoreData
+      result[doc.id] = {
+        ...data,
+        updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toMillis() : undefined,
+      } as BookSettingsData
+    })
+  }
+
+  return result
 }
