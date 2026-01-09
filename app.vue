@@ -114,7 +114,7 @@ useHead({
       name: 'fc:miniapp',
       content: JSON.stringify({
         version: 'next',
-        imageUrl: ogURL,
+        imageUrl: ogImage,
         button: {
           title: 'Start Reading',
           action: {
