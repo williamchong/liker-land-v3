@@ -72,7 +72,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
         limit,
       })
 
-      const nftClassIdsToFetchProgress: string[] = []
+      const nftClassIdsForProgressFetch: string[] = []
       res.data.forEach((nftClass) => {
         const nftClassId = nftClass.address.toLowerCase() as `0x${string}`
 
@@ -83,10 +83,10 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
           nftStore.addNFTClassMetadata(nftClassId, nftClass.metadata)
         }
 
-        nftClassIdsToFetchProgress.push(nftClassId)
+        nftClassIdsForProgressFetch.push(nftClassId)
       })
 
-      await bookSettingsStore.fetchBatchSettings(nftClassIdsToFetchProgress)
+      await bookSettingsStore.fetchBatchSettings(nftClassIdsForProgressFetch)
 
       nextKey.value = res.pagination.count < limit ? undefined : res.pagination.next_key
     }
@@ -162,6 +162,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
   }
 
   watch(hasLoggedIn, (value, oldValue) => {
+    // NOTE: Reset the store when user logs out
     if (oldValue && !value) {
       reset()
     }

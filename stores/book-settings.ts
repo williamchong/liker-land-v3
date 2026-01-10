@@ -1,12 +1,11 @@
 import { useDebounceFn } from '@vueuse/core'
 import type { BookSettingsData } from '~/types/book-settings'
+import { FIRESTORE_IN_OPERATOR_LIMIT } from '~/constants/api'
 
 interface BookSettingsEntry {
   data: BookSettingsData
   fetchedAt: number
 }
-
-const MAX_BATCH_SIZE = 30
 
 export const useBookSettingsStore = defineStore('book-settings', () => {
   const { loggedIn: hasLoggedIn } = useUserSession()
@@ -34,27 +33,26 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
       return fetchPromisesMap.value[key]
     }
 
-    const fetchPromise = $fetch<BookSettingsData>(`/api/books/settings?nftClassId=${nftClassId}`)
-      .then((settings) => {
-        settingsMap.value[key] = {
-          data: settings,
-          fetchedAt: Date.now(),
-        }
-        return settings
-      })
-      .catch((error) => {
-        console.warn(`Failed to fetch book settings for ${nftClassId}:`, error)
-        // Store empty entry to mark as initialized (prevents retry)
-        settingsMap.value[key] = {
-          data: {} as BookSettingsData,
-          fetchedAt: Date.now(),
-        }
-        throw error
-      })
-      .finally(() => {
-        const { [key]: _, ...rest } = fetchPromisesMap.value
-        fetchPromisesMap.value = rest
-      })
+    const fetchPromise = $fetch<BookSettingsData>('/api/books/settings', {
+      params: { nftClassId },
+    }).then((settings) => {
+      settingsMap.value[key] = {
+        data: settings,
+        fetchedAt: Date.now(),
+      }
+      return settings
+    }).catch((error) => {
+      console.warn(`Failed to fetch book settings for ${nftClassId}:`, error)
+      // Store empty entry to mark as initialized (prevents retry)
+      settingsMap.value[key] = {
+        data: {} as BookSettingsData,
+        fetchedAt: Date.now(),
+      }
+      throw error
+    }).finally(() => {
+      const { [key]: _, ...rest } = fetchPromisesMap.value
+      fetchPromisesMap.value = rest
+    })
 
     fetchPromisesMap.value[key] = fetchPromise
     return fetchPromise
@@ -76,8 +74,8 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
 
     batchFetchPromise.value = (async () => {
       try {
-        for (let i = 0; i < nftClassIdsToFetch.length; i += MAX_BATCH_SIZE) {
-          const chunk = nftClassIdsToFetch.slice(i, i + MAX_BATCH_SIZE)
+        for (let i = 0; i < nftClassIdsToFetch.length; i += FIRESTORE_IN_OPERATOR_LIMIT) {
+          const chunk = nftClassIdsToFetch.slice(i, i + FIRESTORE_IN_OPERATOR_LIMIT)
           const settings = await $fetch<Record<string, BookSettingsData>>('/api/books/settings', {
             params: {
               nftClassIds: chunk,

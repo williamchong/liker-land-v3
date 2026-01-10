@@ -1,6 +1,7 @@
 import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import type { BookSettingsData } from '~/types/book-settings'
 import type { BookSettingsFirestoreData } from '~/server/types/book-settings'
+import { FIRESTORE_IN_OPERATOR_LIMIT } from '~/constants/api'
 
 export interface UserDocData {
   ttsCharactersUsed?: number
@@ -66,8 +67,6 @@ export async function updateBookSettings(
   }, { merge: true })
 }
 
-const BATCH_SIZE_LIMIT = 30
-
 export async function getBatchBookSettings(
   userWallet: string,
   nftClassIds: string[],
@@ -79,8 +78,8 @@ export async function getBatchBookSettings(
   const result: Record<string, BookSettingsData> = {}
 
   // Firestore 'in' operator supports up to 30 values, so we need to chunk
-  for (let i = 0; i < nftClassIds.length; i += BATCH_SIZE_LIMIT) {
-    const chunk = nftClassIds.slice(i, i + BATCH_SIZE_LIMIT)
+  for (let i = 0; i < nftClassIds.length; i += FIRESTORE_IN_OPERATOR_LIMIT) {
+    const chunk = nftClassIds.slice(i, i + FIRESTORE_IN_OPERATOR_LIMIT)
     const snapshot = await getUserCollection()
       .doc(userWallet)
       .collection('books')
