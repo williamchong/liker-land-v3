@@ -259,42 +259,75 @@
           </div>
         </UCard>
 
-        <UCard class="overflow-hidden">
-          <div class="flex flex-col md:flex-row gap-6 md:gap-8">
-            <div class="flex-1 space-y-4 flex flex-col justify-center">
-              <div class="flex items-center gap-3">
-                <UAvatar
-                  icon="i-material-symbols-person-rounded"
-                  size="md"
+        <div class="grid md:grid-cols-2 gap-6">
+          <UCard
+            class="overflow-hidden"
+            :ui="{ body: 'space-y-4' }"
+          >
+            <div class="flex items-center gap-3">
+              <UAvatar
+                icon="i-material-symbols-person-rounded"
+                size="md"
+              />
+              <h3 class="text-xl font-bold text-gray-900">
+                <UButton
+                  :to="localeRoute({ name: 'store', query: { author: '高重建' } })"
+                  variant="link"
+                  :label="$t('about_page_author_kin_ko')"
                 />
-                <h3 class="text-xl font-bold text-gray-900">
-                  <UButton
-                    :to="localeRoute({ name: 'store', query: { author: '傅月庵' } })"
-                    variant="link"
-                    :label="$t('about_page_author_fu_yue_an')"
-                  />
-                </h3>
-              </div>
-              <p class="text-gray-600 leading-relaxed">
-                {{ $t('about_page_author_fu_yue_an_desc') }}
-              </p>
+              </h3>
             </div>
+            <p class="text-gray-600 leading-relaxed">
+              {{ $t('about_page_author_kin_ko_desc') }}
+            </p>
 
-            <div class="flex-shrink-0 mx-auto md:mx-0">
-              <div class="aspect-[9/16] w-[200px] md:w-[240px] rounded-xl overflow-hidden bg-gray-900 shadow-inner">
-                <ClientOnly>
-                  <ScriptYouTubePlayer
-                    video-id="3nsPGnqdoIk"
-                    :width="9"
-                    :height="16"
-                    :aria-label="$t('about_page_author_fu_yue_an')"
-                    :title="$t('about_page_author_fu_yue_an')"
-                  />
-                </ClientOnly>
-              </div>
+            <div class="w-[180px] aspect-[9/16] rounded-xl overflow-hidden bg-gray-900 shadow-inner mx-auto">
+              <ClientOnly>
+                <ScriptYouTubePlayer
+                  video-id="llHnvvDyzns"
+                  :width="9"
+                  :height="16"
+                  :aria-label="$t('about_page_author_kin_ko')"
+                  :title="$t('about_page_author_kin_ko')"
+                />
+              </ClientOnly>
             </div>
-          </div>
-        </UCard>
+          </UCard>
+
+          <UCard
+            class="overflow-hidden"
+            :ui="{ body: 'space-y-4' }"
+          >
+            <div class="flex items-center gap-3">
+              <UAvatar
+                icon="i-material-symbols-person-rounded"
+                size="md"
+              />
+              <h3 class="text-xl font-bold text-gray-900">
+                <UButton
+                  :to="localeRoute({ name: 'store', query: { author: '傅月庵' } })"
+                  variant="link"
+                  :label="$t('about_page_author_fu_yue_an')"
+                />
+              </h3>
+            </div>
+            <p class="text-gray-600 leading-relaxed">
+              {{ $t('about_page_author_fu_yue_an_desc') }}
+            </p>
+
+            <div class="w-[180px] aspect-[9/16] rounded-xl overflow-hidden bg-gray-900 shadow-inner mx-auto">
+              <ClientOnly>
+                <ScriptYouTubePlayer
+                  video-id="3nsPGnqdoIk"
+                  :width="9"
+                  :height="16"
+                  :aria-label="$t('about_page_author_fu_yue_an')"
+                  :title="$t('about_page_author_fu_yue_an')"
+                />
+              </ClientOnly>
+            </div>
+          </UCard>
+        </div>
       </section>
     </div>
 
