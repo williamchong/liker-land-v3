@@ -1,4 +1,4 @@
-import type { UserSettingKey } from '~/types/user-settings'
+import type { UserSettingKey } from '~/shared/types/user-settings'
 
 const ALLOWED_KEYS = ['locale', 'currency'] as const satisfies readonly UserSettingKey[]
 

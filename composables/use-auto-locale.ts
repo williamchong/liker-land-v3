@@ -35,9 +35,7 @@ export function useAutoLocale() {
     if (hasLoggedIn.value) {
       syncedLocale.value = locale
     }
-    else {
-      localStorageLocale.value = locale
-    }
+    localStorageLocale.value = locale
     i18n.setLocale(locale)
   }
 

@@ -1,7 +1,6 @@
 import { useStorage } from '@vueuse/core'
+import type { PaymentCurrency } from '~/shared/types/user-settings'
 import type { PricingCurrency } from '~/utils/pricing'
-
-export type PaymentCurrency = 'auto' | 'hkd' | 'twd' | 'usd'
 
 function getDefaultCurrencyFromCountry(country: string | null): PricingCurrency {
   switch (country) {

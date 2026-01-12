@@ -88,9 +88,17 @@ export const useUserSettingsStore = defineStore('user-settings', () => {
   const debouncedFlush = useDebounceFn(() => flushBatch(), 1000)
 
   function queueUpdate(key: string, value: unknown) {
+    if (!hasLoggedIn.value) return
     batchQueue.value.set(key, value)
     debouncedFlush()
   }
+
+  watch(hasLoggedIn, (value, oldValue) => {
+    if (oldValue && !value) {
+      clearSettings()
+      batchQueue.value.clear()
+    }
+  })
 
   return {
     fetchSettings,
