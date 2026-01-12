@@ -1,5 +1,6 @@
 import { useDebounceFn } from '@vueuse/core'
 import type { BookSettingsData } from '~/types/book-settings'
+import { FIRESTORE_IN_OPERATOR_LIMIT } from '~/constants/api'
 
 interface BookSettingsEntry {
   data: BookSettingsData
@@ -10,6 +11,7 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
   const { loggedIn: hasLoggedIn } = useUserSession()
   const settingsMap = ref<Record<string, BookSettingsEntry>>({})
   const fetchPromisesMap = ref<Record<string, Promise<BookSettingsData>>>({})
+  const batchFetchPromise = ref<Promise<void> | null>(null)
 
   // Batch update queues per nftClassId
   const batchQueuesMap = ref<Record<string, Map<string, unknown>>>({})
@@ -31,30 +33,83 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
       return fetchPromisesMap.value[key]
     }
 
-    const fetchPromise = $fetch<BookSettingsData>(`/api/books/${nftClassId}/settings`)
-      .then((settings) => {
-        settingsMap.value[key] = {
-          data: settings,
-          fetchedAt: Date.now(),
-        }
-        return settings
-      })
-      .catch((error) => {
-        console.warn(`Failed to fetch book settings for ${nftClassId}:`, error)
-        // Store empty entry to mark as initialized (prevents retry)
-        settingsMap.value[key] = {
-          data: {} as BookSettingsData,
-          fetchedAt: Date.now(),
-        }
-        throw error
-      })
-      .finally(() => {
-        const { [key]: _, ...rest } = fetchPromisesMap.value
-        fetchPromisesMap.value = rest
-      })
+    const fetchPromise = $fetch<BookSettingsData>('/api/books/settings', {
+      params: { nftClassId },
+    }).then((settings) => {
+      settingsMap.value[key] = {
+        data: settings,
+        fetchedAt: Date.now(),
+      }
+      return settings
+    }).catch((error) => {
+      console.warn(`Failed to fetch book settings for ${nftClassId}:`, error)
+      // Store empty entry to mark as initialized (prevents retry)
+      settingsMap.value[key] = {
+        data: {} as BookSettingsData,
+        fetchedAt: Date.now(),
+      }
+      throw error
+    }).finally(() => {
+      const { [key]: _, ...rest } = fetchPromisesMap.value
+      fetchPromisesMap.value = rest
+    })
 
     fetchPromisesMap.value[key] = fetchPromise
     return fetchPromise
+  }
+
+  async function fetchBatchSettings(nftClassIds: string[]): Promise<void> {
+    if (!hasLoggedIn.value || nftClassIds.length === 0) {
+      return
+    }
+
+    if (batchFetchPromise.value) {
+      await batchFetchPromise.value
+    }
+
+    const nftClassIdsToFetch = nftClassIds.filter(id => !isInitialized(id))
+    if (nftClassIdsToFetch.length === 0) {
+      return
+    }
+
+    batchFetchPromise.value = (async () => {
+      try {
+        for (let i = 0; i < nftClassIdsToFetch.length; i += FIRESTORE_IN_OPERATOR_LIMIT) {
+          const chunk = nftClassIdsToFetch.slice(i, i + FIRESTORE_IN_OPERATOR_LIMIT)
+          const settings = await $fetch<Record<string, BookSettingsData>>('/api/books/settings', {
+            params: {
+              nftClassIds: chunk,
+            },
+          })
+
+          Object.entries(settings).forEach(([nftClassId, data]) => {
+            const key = getKey(nftClassId)
+            settingsMap.value[key] = {
+              data,
+              fetchedAt: Date.now(),
+            }
+          })
+
+          chunk.forEach((nftClassId) => {
+            const key = getKey(nftClassId)
+            if (!settingsMap.value[key]) {
+              settingsMap.value[key] = {
+                data: {} as BookSettingsData,
+                fetchedAt: Date.now(),
+              }
+            }
+          })
+        }
+      }
+      catch (error) {
+        console.warn('Failed to fetch batch book settings:', error)
+      }
+      finally {
+        batchFetchPromise.value = null
+      }
+    })()
+
+    await batchFetchPromise.value
   }
 
   async function ensureInitialized(nftClassId: string): Promise<void> {
@@ -131,6 +186,7 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
 
   return {
     fetchSettings,
+    fetchBatchSettings,
     getSettings,
     clearSettings,
     ensureInitialized,

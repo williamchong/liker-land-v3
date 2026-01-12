@@ -1,4 +1,3 @@
-import { useStorage } from '@vueuse/core'
 import type { ReaderCacheKeySuffix } from '~/utils/reader'
 
 export function useReaderProgress({
@@ -14,21 +13,27 @@ export function useReaderProgress({
     return getReaderCacheKeyWithSuffix(bookProgressKeyPrefix, suffix)
   }
 
-  const readingProgress = useStorage(
-    computed(() => getProgressKeyWithSuffix('progress')),
-    0,
-  )
-  const lastOpenedTime = useStorage(
-    computed(() => getProgressKeyWithSuffix('last-opened')),
-    0,
-  )
+  const readingProgress = useSyncedBookSettings({
+    nftClassId,
+    key: 'progress',
+    defaultValue: 0,
+  })
+  const lastOpenedTime = useSyncedBookSettings({
+    nftClassId,
+    key: 'lastOpenedTime',
+    defaultValue: 0,
+  })
 
   onMounted(() => {
     lastOpenedTime.value = Date.now()
   })
 
   onBeforeUnmount(() => {
-    bookshelfStore.updateProgress(nftClassId, readingProgress.value, lastOpenedTime.value)
+    bookshelfStore.updateProgress(
+      nftClassId,
+      readingProgress.value,
+      lastOpenedTime.value,
+    )
   })
 
   return {

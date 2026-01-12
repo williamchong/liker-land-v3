@@ -17,26 +17,26 @@ export function useSyncedBookSettings<T>({
   const bookSettingsStore = useBookSettingsStore()
 
   const namespacePrefix = namespace ? `${namespace}-` : ''
-  const stateKey = `book-settings:${nftClassId.toLowerCase()}:${namespacePrefix}${String(key)}`
   const dbKey = `${namespacePrefix}${String(key)}`
 
-  const state = useState<T>(stateKey, () => defaultValue)
+  const state = computed({
+    get: () => {
+      const settings = bookSettingsStore.getSettings(nftClassId)
+      if (settings && dbKey in settings) {
+        return settings[dbKey as keyof BookSettingsData] as T
+      }
+      return defaultValue
+    },
+    set: (newValue) => {
+      if (bookSettingsStore.isInitialized(nftClassId)) {
+        bookSettingsStore.queueUpdate(nftClassId, dbKey, newValue)
+      }
+    },
+  })
 
-  // Load value from server after initialization
   async function loadFromServer() {
     await bookSettingsStore.ensureInitialized(nftClassId)
-    const settings = bookSettingsStore.getSettings(nftClassId)
-    if (settings && dbKey in settings) {
-      const apiValue = settings[dbKey as keyof BookSettingsData]
-      state.value = apiValue as T
-    }
   }
-
-  watch(state, (newValue) => {
-    if (bookSettingsStore.isInitialized(nftClassId)) {
-      bookSettingsStore.queueUpdate(nftClassId, dbKey, newValue)
-    }
-  })
 
   watch(hasLoggedIn, (isLoggedIn) => {
     if (isLoggedIn && !bookSettingsStore.isInitialized(nftClassId)) {
@@ -56,5 +56,5 @@ export function useSyncedBookSettings<T>({
     }
   })
 
-  return state
+  return state as Ref<T>
 }
