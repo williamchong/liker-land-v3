@@ -42,12 +42,19 @@
               orientation="landscape"
             />
             <div :class="['p-12', { 'pt-30': !campaignContent }]">
-              <img
+              <div
                 v-if="!campaignContent"
-                :src="plusLogo"
-                :alt="$t('pricing_page_title')"
-                class="w-full max-w-[300px] laptop:max-h-[200px] mb-12 object-contain"
+                class="relative flex justify-center items-center mb-12"
               >
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                  <div class="logo-glow rounded-full blur-3xl opacity-60" />
+                </div>
+                <img
+                  :src="plusLogo"
+                  :alt="$t('pricing_page_title')"
+                  class="relative w-full max-w-[300px] laptop:max-h-[200px] object-contain"
+                >
+              </div>
 
               <PricingPageIntroSection
                 class="w-full max-w-[420px]"
@@ -85,11 +92,16 @@
           v-else
           class="relative flex justify-center items-center max-laptop:shrink-0 w-full p-12 bg-theme-black overflow-hidden"
         >
-          <img
-            :src="plusLogo"
-            :alt="$t('pricing_page_title')"
-            class="w-full max-w-[300px] laptop:max-h-[200px] object-contain"
-          >
+          <div class="relative flex justify-center items-center">
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+              <div class="logo-glow rounded-full blur-3xl opacity-60" />
+            </div>
+            <img
+              :src="plusLogo"
+              :alt="$t('pricing_page_title')"
+              class="relative w-full max-w-[300px] laptop:max-h-[200px] object-contain"
+            >
+          </div>
         </aside>
       </template>
 
@@ -286,3 +298,29 @@ function handleSubscribeButtonClick() {
   })
 }
 </script>
+
+<style scoped>
+.logo-glow {
+  background: conic-gradient(
+    from 0deg,
+    rgba(83, 131, 139, 0.6) 0deg,
+    rgba(40, 100, 110, 0.3) 120deg,
+    transparent 180deg,
+    rgba(40, 100, 110, 0.3) 240deg,
+    rgba(83, 131, 139, 0.6) 360deg
+  );
+  width: min(60vw, 280px);
+  height: min(60vw, 280px);
+  animation: rotate-glow 8s linear infinite;
+  will-change: transform;
+}
+
+@keyframes rotate-glow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>
