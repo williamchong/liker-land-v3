@@ -30,10 +30,10 @@ callOnce(() => {
   initializeServerGeolocation()
 })
 
-onMounted(() => {
+onMounted(async () => {
   initializeClientGeolocation()
-  initializePaymentCurrency()
-  initializeLocale()
+  await initializePaymentCurrency()
+  await initializeLocale()
 })
 
 const i18nHead = useLocaleHead()
