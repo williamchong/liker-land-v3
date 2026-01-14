@@ -259,10 +259,10 @@
           </div>
         </UCard>
 
-        <div class="grid md:grid-cols-2 gap-6">
+        <div class="grid md:grid-cols-2 gap-6 items-stretch">
           <UCard
-            class="overflow-hidden"
-            :ui="{ body: 'space-y-4' }"
+            class="overflow-hidden h-full"
+            :ui="{ body: 'flex flex-col gap-4 h-full' }"
           >
             <div class="flex items-center gap-3">
               <UAvatar
@@ -281,7 +281,7 @@
               {{ $t('about_page_author_kin_ko_desc') }}
             </p>
 
-            <div class="w-[180px] aspect-[9/16] rounded-xl overflow-hidden bg-gray-900 shadow-inner mx-auto">
+            <div class="w-[180px] aspect-[9/16] rounded-xl overflow-hidden bg-gray-900 shadow-inner mx-auto mt-auto">
               <ClientOnly>
                 <ScriptYouTubePlayer
                   video-id="llHnvvDyzns"
@@ -295,8 +295,8 @@
           </UCard>
 
           <UCard
-            class="overflow-hidden"
-            :ui="{ body: 'space-y-4' }"
+            class="overflow-hidden h-full"
+            :ui="{ body: 'flex flex-col gap-4 h-full' }"
           >
             <div class="flex items-center gap-3">
               <UAvatar
@@ -315,7 +315,7 @@
               {{ $t('about_page_author_fu_yue_an_desc') }}
             </p>
 
-            <div class="w-[180px] aspect-[9/16] rounded-xl overflow-hidden bg-gray-900 shadow-inner mx-auto">
+            <div class="w-[180px] aspect-[9/16] rounded-xl overflow-hidden bg-gray-900 shadow-inner mx-auto mt-auto">
               <ClientOnly>
                 <ScriptYouTubePlayer
                   video-id="3nsPGnqdoIk"
