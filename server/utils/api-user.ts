@@ -1,7 +1,21 @@
+import type { H3Event } from 'h3'
 import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import type { BookSettingsData } from '~/types/book-settings'
 import type { BookSettingsFirestoreData } from '~/server/types/book-settings'
+import type { UserSettingsData } from '~/types/user-settings'
 import { FIRESTORE_IN_OPERATOR_LIMIT } from '~/constants/api'
+
+export async function requireUserWallet(event: H3Event): Promise<string> {
+  const session = await requireUserSession(event)
+  const wallet = session.user.evmWallet
+  if (!wallet) {
+    throw createError({
+      statusCode: 401,
+      message: 'WALLET_NOT_FOUND',
+    })
+  }
+  return wallet
+}
 
 export interface UserDocData {
   ttsCharactersUsed?: number
@@ -100,4 +114,29 @@ export async function getBatchBookSettings(
   }
 
   return result
+}
+
+export async function getUserSettings(
+  userWallet: string,
+): Promise<UserSettingsData> {
+  const doc = await getUserCollection().doc(userWallet).get()
+  const data = doc.data()
+  if (!data) return {}
+  return {
+    locale: data.locale,
+    currency: data.currency,
+    updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toMillis() : undefined,
+  }
+}
+
+export async function updateUserSettings(
+  userWallet: string,
+  settings: Partial<UserSettingsData>,
+): Promise<void> {
+  const { updatedAt: _, ...restSettings } = settings
+
+  await getUserCollection().doc(userWallet).set({
+    ...restSettings,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true })
 }

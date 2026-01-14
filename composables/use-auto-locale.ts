@@ -1,6 +1,6 @@
 import { useStorage } from '@vueuse/core'
 
-type LocaleCode = 'en' | 'zh-Hant'
+export type LocaleCode = 'en' | 'zh-Hant'
 
 function getDefaultLocaleFromCountry(country: string | null): LocaleCode {
   switch (country) {
@@ -18,29 +18,37 @@ function getDefaultLocaleFromCountry(country: string | null): LocaleCode {
 
 export function useAutoLocale() {
   const i18n = useI18n()
+  const userSettingsStore = useUserSettingsStore()
+  const { loggedIn: hasLoggedIn } = useUserSession()
   const { detectedCountry, initializeClientGeolocation } = useDetectedGeolocation()
 
-  const storedLocale = useStorage<LocaleCode | null>('user_locale', null)
+  const syncedLocale = useSyncedUserSettings<LocaleCode | null>({
+    key: 'locale',
+    defaultValue: null,
+  })
+
+  const localStorageLocale = useStorage<LocaleCode | null>('user_locale', null)
 
   const detectedLocale = computed(() => getDefaultLocaleFromCountry(detectedCountry.value))
 
-  const effectiveLocale = computed(() => {
-    if (storedLocale.value) {
-      return storedLocale.value
-    }
-    return detectedLocale.value
-  })
-
   function setLocale(locale: LocaleCode) {
-    storedLocale.value = locale
+    if (hasLoggedIn.value) {
+      syncedLocale.value = locale
+    }
+    localStorageLocale.value = locale
     i18n.setLocale(locale)
   }
 
-  function initializeLocale() {
+  async function initializeLocale() {
     if (!detectedCountry.value) {
       initializeClientGeolocation()
     }
-    setLocale(effectiveLocale.value)
+
+    if (hasLoggedIn.value) {
+      await userSettingsStore.ensureInitialized()
+    }
+
+    setLocale(syncedLocale.value || localStorageLocale.value || detectedLocale.value)
   }
 
   return {
