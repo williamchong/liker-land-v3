@@ -12,11 +12,17 @@
         :to="localeRoute({ name: 'store' })"
         class="w-full max-w-lg"
       >
-        <AppLogo
-          height="auto"
-          :is-icon="false"
-          :is-padded="false"
-        />
+        <div class="relative flex justify-center items-center">
+          <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+            <div class="logo-glow rounded-full blur-3xl" />
+          </div>
+          <AppLogo
+            height="auto"
+            :is-icon="false"
+            :is-padded="false"
+            class="relative"
+          />
+        </div>
       </NuxtLink>
 
       <div class="space-y-4 text-gray-100">
@@ -451,3 +457,38 @@ useHead({
   ],
 })
 </script>
+
+<style scoped>
+.logo-glow {
+  background: conic-gradient(
+    from 0deg,
+    rgba(83, 131, 139, 0.6) 0deg,
+    rgba(40, 100, 110, 0.3) 120deg,
+    transparent 180deg,
+    rgba(40, 100, 110, 0.3) 240deg,
+    rgba(83, 131, 139, 0.6) 360deg
+  );
+  width: min(60vw, 280px);
+  height: min(60vw, 280px);
+  animation: rotate-glow 8s linear infinite, pulse-glow 3s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes rotate-glow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+</style>
