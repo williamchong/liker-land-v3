@@ -306,6 +306,7 @@ declare interface Rendition extends RenditionBase {
   }
 }
 
+const config = useRuntimeConfig()
 const { loggedIn: hasLoggedIn } = useUserSession()
 const route = useRoute()
 const localeRoute = useLocaleRoute()
@@ -457,6 +458,7 @@ const FONT_SIZE_OPTIONS = [
   6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72,
 ]
 const DEFAULT_FONT_SIZE_INDEX = 8 // Default to 24px
+const COPY_CHAR_LIMIT = 100
 const fontSize = useSyncedBookSettings({
   nftClassId: nftClassId.value,
   key: 'fontSize',
@@ -485,6 +487,7 @@ watch(lineHeight, (height) => {
 let cleanUpClickListener: (() => void) | undefined
 let removeSwipeListener: (() => void) | undefined
 let removeSelectAllByHotkeyListener: (() => void) | undefined
+let removeCopyListener: (() => void) | undefined
 const renditionElement = useTemplateRef<HTMLDivElement>('reader')
 const renditionViewWindow = ref<Window | undefined>(undefined)
 
@@ -683,6 +686,27 @@ async function loadEPub() {
         event.preventDefault()
       }
     }, { target: view.window })
+
+    if (removeCopyListener) {
+      removeCopyListener()
+    }
+    removeCopyListener = useEventListener(view.window, 'copy', (event: ClipboardEvent) => {
+      const selection = view.window.getSelection()
+      const selectedText = selection?.toString() || ''
+
+      if (selectedText.length > 0) {
+        event.preventDefault()
+        event.stopPropagation()
+
+        const limitedText = selectedText.slice(0, COPY_CHAR_LIMIT)
+        const productPageURL = `${config.public.baseURL}${localeRoute({ name: 'store-nftClassId', params: { nftClassId: nftClassId.value } })?.path || ''}`
+        const textWithAttribution = `${limitedText}\n\n${bookInfo.name.value}\n${productPageURL}`
+
+        if (event.clipboardData) {
+          event.clipboardData.setData('text/plain', textWithAttribution)
+        }
+      }
+    }, { capture: true })
   })
 
   rendition.value.on('relocated', (location: Location) => {
