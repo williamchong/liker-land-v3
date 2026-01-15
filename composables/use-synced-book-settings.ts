@@ -21,10 +21,14 @@ export function useSyncedBookSettings<T>({
 
   const localState = ref<T>(defaultValue)
 
-  function syncFromStore() {
+  const storeValue = computed(() => {
     const settings = bookSettingsStore.getSettings(nftClassId)
-    if (settings && dbKey in settings) {
-      localState.value = settings[dbKey as keyof BookSettingsData] as T
+    return settings?.[dbKey as keyof BookSettingsData] as T | undefined
+  })
+
+  function syncFromStore() {
+    if (storeValue.value !== undefined) {
+      localState.value = storeValue.value
     }
   }
 
@@ -43,7 +47,11 @@ export function useSyncedBookSettings<T>({
     syncFromStore()
   }
 
-  watch(() => bookSettingsStore.getSettings(nftClassId), syncFromStore, { deep: true })
+  watch(storeValue, (newValue) => {
+    if (newValue !== undefined) {
+      localState.value = newValue
+    }
+  })
 
   watch(hasLoggedIn, (isLoggedIn) => {
     if (isLoggedIn && !bookSettingsStore.isInitialized(nftClassId)) {

@@ -15,6 +15,11 @@ export function useSyncedUserSettings<T>({
 
   const localState = ref<T>(defaultValue)
 
+  const storeValue = computed(() => {
+    const settings = userSettingsStore.getSettings()
+    return settings?.[key as keyof UserSettingsData] as T | undefined
+  })
+
   function ensureInitialized() {
     if (hasLoggedIn.value && !userSettingsStore.isInitialized()) {
       userSettingsStore.ensureInitialized()
@@ -22,9 +27,8 @@ export function useSyncedUserSettings<T>({
   }
 
   function syncFromStore() {
-    const settings = userSettingsStore.getSettings()
-    if (settings && key in settings) {
-      localState.value = settings[key as keyof UserSettingsData] as T
+    if (storeValue.value !== undefined) {
+      localState.value = storeValue.value
     }
   }
 
@@ -39,7 +43,11 @@ export function useSyncedUserSettings<T>({
     },
   })
 
-  watch(() => userSettingsStore.getSettings(), syncFromStore, { deep: true })
+  watch(storeValue, (newValue) => {
+    if (newValue !== undefined) {
+      localState.value = newValue
+    }
+  })
 
   watch(hasLoggedIn, (isLoggedIn, wasLoggedIn) => {
     if (!isLoggedIn && wasLoggedIn) {
@@ -53,10 +61,10 @@ export function useSyncedUserSettings<T>({
   })
 
   onMounted(() => {
-    if (hasLoggedIn.value && !userSettingsStore.isInitialized()) {
-      ensureInitialized()
-    }
-    else {
+    if (hasLoggedIn.value) {
+      if (!userSettingsStore.isInitialized()) {
+        ensureInitialized()
+      }
       syncFromStore()
     }
   })
