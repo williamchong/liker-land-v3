@@ -19,15 +19,19 @@ export function useSyncedBookSettings<T>({
   const namespacePrefix = namespace ? `${namespace}-` : ''
   const dbKey = `${namespacePrefix}${String(key)}`
 
+  const localState = ref<T>(defaultValue)
+
+  function syncFromStore() {
+    const settings = bookSettingsStore.getSettings(nftClassId)
+    if (settings && dbKey in settings) {
+      localState.value = settings[dbKey as keyof BookSettingsData] as T
+    }
+  }
+
   const state = computed({
-    get: () => {
-      const settings = bookSettingsStore.getSettings(nftClassId)
-      if (settings && dbKey in settings) {
-        return settings[dbKey as keyof BookSettingsData] as T
-      }
-      return defaultValue
-    },
+    get: () => localState.value,
     set: (newValue) => {
+      localState.value = newValue
       if (bookSettingsStore.isInitialized(nftClassId)) {
         bookSettingsStore.queueUpdate(nftClassId, dbKey, newValue)
       }
@@ -36,7 +40,10 @@ export function useSyncedBookSettings<T>({
 
   async function loadFromServer() {
     await bookSettingsStore.ensureInitialized(nftClassId)
+    syncFromStore()
   }
+
+  watch(() => bookSettingsStore.getSettings(nftClassId), syncFromStore, { deep: true })
 
   watch(hasLoggedIn, (isLoggedIn) => {
     if (isLoggedIn && !bookSettingsStore.isInitialized(nftClassId)) {
@@ -47,6 +54,9 @@ export function useSyncedBookSettings<T>({
   onMounted(() => {
     if (hasLoggedIn.value && !bookSettingsStore.isInitialized(nftClassId)) {
       loadFromServer()
+    }
+    else {
+      syncFromStore()
     }
   })
 

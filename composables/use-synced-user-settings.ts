@@ -13,21 +13,25 @@ export function useSyncedUserSettings<T>({
   const { loggedIn: hasLoggedIn } = useUserSession()
   const userSettingsStore = useUserSettingsStore()
 
+  const localState = ref<T>(defaultValue)
+
   function ensureInitialized() {
     if (hasLoggedIn.value && !userSettingsStore.isInitialized()) {
       userSettingsStore.ensureInitialized()
     }
   }
 
+  function syncFromStore() {
+    const settings = userSettingsStore.getSettings()
+    if (settings && key in settings) {
+      localState.value = settings[key as keyof UserSettingsData] as T
+    }
+  }
+
   const state = computed({
-    get: () => {
-      const settings = userSettingsStore.getSettings()
-      if (settings && key in settings) {
-        return settings[key as keyof UserSettingsData] as T
-      }
-      return defaultValue
-    },
+    get: () => localState.value,
     set: (newValue) => {
+      localState.value = newValue
       if (!hasLoggedIn.value) {
         return
       }
@@ -35,17 +39,27 @@ export function useSyncedUserSettings<T>({
     },
   })
 
+  watch(() => userSettingsStore.getSettings(), syncFromStore, { deep: true })
+
   watch(hasLoggedIn, (isLoggedIn, wasLoggedIn) => {
     if (!isLoggedIn && wasLoggedIn) {
       userSettingsStore.flushBatch()
       userSettingsStore.$reset()
+      localState.value = defaultValue
     }
     else {
       ensureInitialized()
     }
   })
 
-  onMounted(() => ensureInitialized())
+  onMounted(() => {
+    if (hasLoggedIn.value && !userSettingsStore.isInitialized()) {
+      ensureInitialized()
+    }
+    else {
+      syncFromStore()
+    }
+  })
 
   onBeforeUnmount(() => {
     userSettingsStore.flushBatch()
