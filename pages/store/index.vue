@@ -68,7 +68,7 @@
           :to="localeRoute({ name: 'store' })"
           variant="link"
           :ui="{
-            base: ['shrink-0'],
+            base: ['shrink-0', 'p-0 sm:p-0'],
           }"
           :title="'3ook.com'"
           @click="handleLogoClick"
