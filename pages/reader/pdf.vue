@@ -1,12 +1,14 @@
 <template>
   <main>
-    <BookLoadingScreen
-      v-if="isReaderLoading"
-      :book-name="bookInfo.name.value"
-      :book-cover-src="bookCoverSrc"
-      :loading-label="loadingLabel"
-    />
-    <ClientOnly v-else-if="fileBuffer">
+    <Transition name="reader-load">
+      <BookLoadingScreen
+        v-if="isReaderLoading"
+        :book-name="bookInfo.name.value"
+        :book-cover-src="bookCoverSrc"
+        :loading-label="loadingLabel"
+      />
+    </Transition>
+    <ClientOnly v-if="!isReaderLoading && fileBuffer">
       <PDFReader
         ref="pdfReaderRef"
         class="grow w-full"

@@ -1,13 +1,21 @@
 <template>
   <main>
-    <BookLoadingScreen
-      v-if="isReaderLoading"
-      class="absolute inset-0"
-      :book-name="bookInfo.name.value"
-      :book-cover-src="bookCoverSrc"
-      :loading-label="loadingLabel"
-    />
-    <div class="relative flex flex-col w-full grow">
+    <Transition
+      name="reader-load"
+    >
+      <BookLoadingScreen
+        v-if="isReaderLoading"
+        class="absolute inset-0"
+        :book-name="bookInfo.name.value"
+        :book-cover-src="bookCoverSrc"
+        :loading-label="loadingLabel"
+      />
+    </Transition>
+    <div
+      class="relative flex flex-col w-full grow transition-opacity ease-out duration-[600ms] delay-[400ms]"
+      :class="{ 'opacity-0 pointer-events-none': isReaderLoading }"
+      :aria-hidden="isReaderLoading"
+    >
       <ReaderHeader
         :book-name="bookInfo.name.value"
         :chapter-title="activeNavItemLabel"
