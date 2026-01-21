@@ -1,15 +1,16 @@
 <template>
-  <main>
+  <main class="relative">
     <Transition name="reader-load">
       <BookLoadingScreen
         v-if="isReaderLoading"
+        class="absolute inset-0 z-10 bg-background"
         :book-name="bookInfo.name.value"
         :book-cover-src="bookCoverSrc"
         :loading-label="loadingLabel"
-        :loading-percentage="loadingPercentage"
+        :loading-progress="loadingPercentage"
       />
     </Transition>
-    <ClientOnly v-if="!isReaderLoading && fileBuffer">
+    <ClientOnly v-if="fileBuffer && !isReaderLoading">
       <PDFReader
         ref="pdfReaderRef"
         class="grow w-full"
