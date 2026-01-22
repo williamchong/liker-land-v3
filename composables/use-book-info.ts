@@ -199,6 +199,14 @@ export default function (
     return bookstoreInfo.value?.keywords.filter(keyword => !!keyword) || []
   })
 
+  const promotionalImages = computed(() => {
+    return bookstoreInfo.value?.promotionalImages || []
+  })
+
+  const promotionalVideos = computed(() => {
+    return bookstoreInfo.value?.promotionalVideos || []
+  })
+
   const pricingItems = computed(() => {
     return (bookstoreInfo.value?.prices || [])
       .filter(item => !item.isUnlisted)
@@ -306,6 +314,8 @@ export default function (
     formattedTTSSupportLabel,
     formattedReadingMethods,
     keywords,
+    promotionalImages,
+    promotionalVideos,
 
     pricingItems,
     minPrice,

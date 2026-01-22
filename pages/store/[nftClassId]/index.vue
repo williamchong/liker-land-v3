@@ -34,11 +34,12 @@
         <AffiliateAlert class="mb-6" />
 
         <div class="flex flex-col laptop:flex-row gap-6 laptop:gap-8">
-          <BookCover
+          <BookCoverCarousel
             class="w-[150px] tablet:w-[130px] laptop:w-[220px] shrink-0"
-            :src="bookCoverSrc"
+            :cover-src="bookCoverSrc"
             :alt="bookName"
-            :is-vertical-center="true"
+            :promotional-images="bookInfo.promotionalImages.value"
+            :promotional-videos="bookInfo.promotionalVideos.value"
             :has-shadow="true"
           />
 

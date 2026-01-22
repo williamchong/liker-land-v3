@@ -76,6 +76,8 @@ declare interface BookstoreInfo {
   thumbnailUrl: string
   usageInfo: string
   recommendedClassIds?: string[]
+  promotionalImages?: string[]
+  promotionalVideos?: string[]
   timestamp: number
 }
 
