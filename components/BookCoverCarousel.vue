@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="carouselItems.length > 1"
-    :class="['relative', props.class]"
+    class="relative"
   >
     <UCarousel
       v-slot="{ item }"
@@ -10,11 +10,11 @@
       loop
       fade
       auto-height
-      :autoplay="{ delay: 5000, stopOnInteraction: true }"
+      :autoplay="{ delay: 3000, stopOnInteraction: true }"
       :ui="{
         item: 'basis-full aspect-2/3 cursor-pointer',
         dots: 'mt-2 mb-6 gap-2',
-        dot: 'size-2 bg-gray-300 data-[active]:bg-gray-500',
+        dot: 'size-2 bg-muted data-[active]:bg-(--ui-text-muted)',
       }"
     >
       <div
@@ -42,43 +42,17 @@
           ]"
         >
 
-        <div
+        <BookCoverCarouselVideoThumbnail
           v-else-if="item.type === 'youtube' && item.videoId"
-          class="relative w-full h-full flex items-center justify-center bg-black rounded-lg overflow-hidden"
-        >
-          <img
-            :src="getYouTubeThumbnailUrl(item.videoId)"
-            :alt="props.alt"
-            class="w-full h-full object-cover"
-          >
-          <div class="absolute inset-0 flex items-center justify-center">
-            <div class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center">
-              <UIcon
-                name="i-material-symbols-play-arrow-rounded"
-                class="w-8 h-8 text-white ml-1"
-              />
-            </div>
-          </div>
-        </div>
+          :src="getYouTubeThumbnailUrl(item.videoId)"
+          :alt="props.alt"
+        />
 
-        <div
+        <BookCoverCarouselVideoThumbnail
           v-else-if="item.type === 'video'"
-          class="relative w-full h-full flex items-center justify-center bg-black rounded-lg overflow-hidden"
-        >
-          <video
-            :src="item.src"
-            :poster="props.coverSrc"
-            class="w-full h-full object-contain"
-          />
-          <div class="absolute inset-0 flex items-center justify-center">
-            <div class="w-16 h-16 bg-black/70 rounded-full flex items-center justify-center">
-              <UIcon
-                name="i-material-symbols-play-arrow-rounded"
-                class="w-8 h-8 text-white ml-1"
-              />
-            </div>
-          </div>
-        </div>
+          :src="props.coverSrc"
+          :alt="props.alt"
+        />
       </div>
     </UCarousel>
 
@@ -121,7 +95,6 @@
 
   <BookCover
     v-else
-    :class="props.class"
     :src="props.coverSrc"
     :alt="props.alt"
     :is-vertical-center="true"
@@ -162,10 +135,6 @@ const props = defineProps({
   hasShadow: {
     type: Boolean,
     default: false,
-  },
-  class: {
-    type: [String, Array, Object],
-    default: undefined,
   },
 })
 
