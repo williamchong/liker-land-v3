@@ -13,7 +13,7 @@
       :autoplay="{ delay: 3000, stopOnInteraction: true }"
       :ui="{
         item: 'basis-full aspect-2/3 cursor-pointer',
-        dots: 'mt-2 mb-6 gap-2',
+        dots: 'relative bottom-0 gap-2 mt-2',
         dot: 'size-2 bg-muted data-[active]:bg-(--ui-text-muted)',
       }"
     >
