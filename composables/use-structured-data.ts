@@ -368,6 +368,27 @@ export function useStructuredData(
         content: inLanguage,
       })
     }
+
+    const promotionalImages = bookInfo.promotionalImages.value || []
+    for (const imageUrl of promotionalImages) {
+      if (imageUrl) {
+        meta.push({
+          property: 'og:image',
+          content: imageUrl,
+        })
+      }
+    }
+
+    const promotionalVideos = bookInfo.promotionalVideos.value || []
+    for (const videoUrl of promotionalVideos) {
+      if (videoUrl) {
+        meta.push({
+          property: 'og:video',
+          content: videoUrl,
+        })
+      }
+    }
+
     return meta
   }
 
@@ -382,7 +403,10 @@ export function useStructuredData(
     const name = bookInfo.name.value
     const alternativeHeadline = bookInfo.alternativeHeadline.value
     const description = bookInfo.description.value
-    const image = bookInfo.coverSrc.value
+    const coverImage = bookInfo.coverSrc.value
+    const promotionalImages = bookInfo.promotionalImages.value || []
+    const promotionalVideos = bookInfo.promotionalVideos.value || []
+    const image = [coverImage, ...promotionalImages].filter(Boolean)
     const authorName = bookInfo.authorName.value
     const publisherName = bookInfo.publisherName.value
     const datePublished = bookInfo.formattedPublishedDate.value
@@ -419,6 +443,12 @@ export function useStructuredData(
         keywords,
         'bookFormat': 'https://schema.org/EBook',
         'bookEdition': pricing?.name,
+        ...(promotionalVideos.length > 0 && {
+          video: promotionalVideos.map(url => ({
+            '@type': 'VideoObject',
+            'contentUrl': url,
+          })),
+        }),
         'offers': [
           // Regular offer for all users
           generateBookOffer({
@@ -482,6 +512,12 @@ export function useStructuredData(
       datePublished,
       keywords,
       'bookFormat': 'https://schema.org/EBook',
+      ...(promotionalVideos.length > 0 && {
+        video: promotionalVideos.map(url => ({
+          '@type': 'VideoObject',
+          'contentUrl': url,
+        })),
+      }),
       'productGroupID': nftClassIdValue,
       'workExample': workExamples,
       'hasVariant': workExamples,
