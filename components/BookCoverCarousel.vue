@@ -77,6 +77,8 @@
         >
           <ScriptYouTubePlayer
             :video-id="modalItem.videoId"
+            :player-vars="{ autoplay: 1, rel: 0, playsinline: 1 }"
+            trigger="visible"
             class="w-full h-full"
           />
         </div>
