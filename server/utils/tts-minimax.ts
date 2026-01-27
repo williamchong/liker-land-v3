@@ -86,7 +86,7 @@ export class MinimaxTTSProvider implements BaseTTSProvider {
       stream_options: {
         exclude_aggregated_audio: true,
       },
-      model: 'speech-2.6-hd',
+      model: 'speech-2.8-hd',
       voice_setting: {
         voice_id: VOICE_MAPPING[voiceId],
         speed: 0.95,
