@@ -209,5 +209,5 @@ export const TWD_PRICE_TIER_LIST = [
 ]
 
 export const DEFAULT_TRIAL_PERIOD_DAYS = 7
-export const PAID_TRIAL_PERIOD_DAYS_THRESHOLD = 30
+export const PAID_TRIAL_PERIOD_DAYS_THRESHOLD = 14
 export const PAID_TRIAL_PRICE = 1
