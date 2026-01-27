@@ -44,10 +44,19 @@
             <div :class="['p-12', { 'pt-30': !campaignContent }]">
               <div
                 v-if="!campaignContent"
-                class="relative flex justify-center items-center mb-12"
+                class="relative flex justify-center items-center mb-12 overflow-hidden"
               >
-                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                  <div class="logo-glow rounded-full blur-3xl opacity-60" />
+                <div class="absolute inset-0 h-[200%] flex flex-col store-bg-scroll">
+                  <img
+                    :src="storeBg"
+                    :alt="$t('pricing_page_title')"
+                    class="w-full h-1/2 object-cover blur-[1px] opacity-60"
+                  >
+                  <img
+                    :src="storeBg"
+                    :alt="$t('pricing_page_title')"
+                    class="w-full h-1/2 object-cover blur-[1px] opacity-60"
+                  >
                 </div>
                 <img
                   :src="plusLogo"
@@ -92,10 +101,19 @@
           v-else
           class="relative flex justify-center items-center max-laptop:shrink-0 w-full p-12 bg-theme-black overflow-hidden"
         >
+          <div class="absolute inset-0 h-[200%] flex flex-col store-bg-scroll">
+            <img
+              :src="storeBg"
+              :alt="$t('pricing_page_title')"
+              class="w-full h-1/2 object-cover blur-[1px] opacity-60"
+            >
+            <img
+              :src="storeBg"
+              :alt="$t('pricing_page_title')"
+              class="w-full h-1/2 object-cover blur-[1px] opacity-60"
+            >
+          </div>
           <div class="relative flex justify-center items-center">
-            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-              <div class="logo-glow rounded-full blur-3xl opacity-60" />
-            </div>
             <img
               :src="plusLogo"
               :alt="$t('pricing_page_title')"
@@ -164,6 +182,7 @@ import type { PaywallModalProps } from './PaywallModal.props'
 import { PAID_TRIAL_PERIOD_DAYS_THRESHOLD } from '~/constants/pricing'
 
 import plusLogo from '~/assets/images/paywall/plus-logo.png'
+import storeBg from '~/assets/images/paywall/bg-store.png'
 
 const isDesktopScreen = useDesktopScreen()
 
@@ -298,3 +317,18 @@ function handleSubscribeButtonClick() {
   })
 }
 </script>
+
+<style scoped>
+.store-bg-scroll {
+  animation: scrollUp 60s linear infinite;
+}
+
+@keyframes scrollUp {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+</style>
