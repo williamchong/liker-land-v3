@@ -206,7 +206,7 @@
               />
               <h3 class="text-xl font-semibold text-gray-900">
                 <NuxtLink
-                  :to="affiliateURL"
+                  to="https://docs.3ook.com/zh-TW/articles/13515071-%E5%A6%82%E4%BD%95%E5%8A%A0%E5%85%A5-3ook-com-%E6%9B%B8%E5%BA%97%E6%8E%A8%E5%BB%A3%E8%A8%88%E5%8A%83"
                   target="_blank"
                   rel="noopener"
                   class="hover:text-primary hover:underline"
@@ -459,10 +459,6 @@ const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 const config = useRuntimeConfig()
 const baseURL = config.public.baseURL
-const isTestnet = !!config.public.isTestnet
-
-const publishURL = computed(() => isTestnet ? 'https://publish.sepolia.3ook.com' : 'https://publish.3ook.com')
-const affiliateURL = computed(() => `${publishURL.value}/sales-report`)
 
 const pageTitle = computed(() => $t('about_page_title'))
 const pageDescription = computed(() => $t('about_page_hero_subtitle'))
