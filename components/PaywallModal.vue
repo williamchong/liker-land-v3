@@ -27,8 +27,9 @@
         @click="handleCloseButtonClick"
       />
       <template v-if="isDesktopScreen && isShowTTSSamples">
-        <aside class="relative flex justify-end w-full bg-theme-cyan min-h-max">
-          <div class="flex flex-col justify-center items-center relative w-full max-w-[512px] min-h-max bg-theme-black">
+        <aside class="relative flex justify-end w-full bg-theme-black min-h-max overflow-hidden">
+          <PaywallBookstoreBackdrop class="!opacity-20" />
+          <div class="flex flex-col justify-center items-center relative w-full max-w-[512px] min-h-max">
             <PlusBlocktrendBundleBanner
               v-if="isBlocktrendCampaign"
               class="w-full shrink-0"
@@ -44,20 +45,17 @@
             <div :class="['p-12', { 'pt-30': !campaignContent }]">
               <div
                 v-if="!campaignContent"
-                class="relative flex justify-center items-center mb-12"
+                class="relative flex items-center mb-12"
               >
-                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                  <div class="logo-glow rounded-full blur-3xl opacity-60" />
-                </div>
-                <img
-                  :src="plusLogo"
-                  :alt="$t('pricing_page_title')"
-                  class="relative w-full max-w-[300px] laptop:max-h-[200px] object-contain"
-                >
+                <AppLogo
+                  height="48"
+                  :is-icon="false"
+                  :is-padded="false"
+                />
               </div>
 
               <PricingPageIntroSection
-                class="w-full max-w-[420px]"
+                class="relative w-full max-w-[420px]"
                 :is-dark-background="true"
                 :title="campaignContent?.title"
                 :description="campaignContent?.description"
@@ -92,15 +90,14 @@
           v-else
           class="relative flex justify-center items-center max-laptop:shrink-0 w-full p-12 bg-theme-black overflow-hidden"
         >
+          <PaywallBookstoreBackdrop />
           <div class="relative flex justify-center items-center">
-            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-              <div class="logo-glow rounded-full blur-3xl opacity-60" />
-            </div>
-            <img
-              :src="plusLogo"
-              :alt="$t('pricing_page_title')"
-              class="relative w-full max-w-[300px] laptop:max-h-[200px] object-contain"
-            >
+            <AppLogo
+              class="max-w-2/3"
+              height="128"
+              :is-icon="false"
+              :is-padded="false"
+            />
           </div>
         </aside>
       </template>
@@ -119,7 +116,8 @@
             'max-w-[512px]',
             'max-laptop:mx-auto',
             'p-5 laptop:p-12',
-            campaignContent ? 'max-laptop:pt-8' : 'laptop:pt-30',
+            'pt-12',
+            { 'laptop:pt-30': !campaignContent },
           ]"
         >
           <PricingPageIntroSection
@@ -162,8 +160,6 @@
 <script setup lang="ts">
 import type { PaywallModalProps } from './PaywallModal.props'
 import { PAID_TRIAL_PERIOD_DAYS_THRESHOLD } from '~/constants/pricing'
-
-import plusLogo from '~/assets/images/paywall/plus-logo.png'
 
 const isDesktopScreen = useDesktopScreen()
 
