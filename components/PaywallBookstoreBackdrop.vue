@@ -34,6 +34,7 @@ useHead({
 <style scoped>
 .paywall-bookstore-backdrop-scroll-animation {
   animation: paywall-bookstore-backdrop-scroll 90s linear infinite;
+  will-change: transform;
 }
 
 @keyframes paywall-bookstore-backdrop-scroll {
