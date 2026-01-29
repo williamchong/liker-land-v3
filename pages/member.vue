@@ -5,6 +5,8 @@
 <script setup lang="ts">
 import { DEFAULT_TRIAL_PERIOD_DAYS } from '~/constants/pricing'
 
+import backdrop from '~/assets/images/paywall/bg-bookstore.jpg'
+
 const localeRoute = useLocaleRoute()
 const getRouteQuery = useRouteQuery()
 const subscription = useSubscription()
@@ -119,6 +121,12 @@ useHead({
   ],
   link: [
     { rel: 'canonical', href: canonicalURL.value },
+    {
+      rel: 'preload',
+      as: 'image',
+      href: backdrop,
+      key: 'preload-paywall-bookstore-backdrop',
+    },
   ],
   script: [
     { type: 'application/ld+json', innerHTML: JSON.stringify(structuredData.value) },

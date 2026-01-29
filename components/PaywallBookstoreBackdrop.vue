@@ -18,17 +18,6 @@
 
 <script lang="ts" setup>
 import backdrop from '~/assets/images/paywall/bg-bookstore.jpg'
-
-useHead({
-  link: [
-    {
-      rel: 'preload',
-      as: 'image',
-      href: backdrop,
-      key: 'preload-paywall-bookstore-backdrop',
-    },
-  ],
-})
 </script>
 
 <style scoped>
