@@ -5,7 +5,7 @@
       'top-0',
       'inset-x-0',
       // NOTE: Approx. 2x actual height of the backdrop image
-      'h-[8000px]',
+      'h-[4000px]',
       'bg-repeat-y',
       'bg-top',
       'opacity-50',
