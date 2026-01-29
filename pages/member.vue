@@ -3,6 +3,8 @@
 </template>
 
 <script setup lang="ts">
+import type { ResolvableArray, ResolvableLink } from '@unhead/vue'
+
 import { DEFAULT_TRIAL_PERIOD_DAYS } from '~/constants/pricing'
 
 import backdrop from '~/assets/images/paywall/bg-bookstore.jpg'
@@ -119,15 +121,21 @@ useHead({
     { property: 'product:item_group_id', content: productGroup },
     { property: 'product:category', content: 6028 }, // Media Viewing Software
   ],
-  link: [
-    { rel: 'canonical', href: canonicalURL.value },
-    {
-      rel: 'preload',
-      as: 'image',
-      href: backdrop,
-      key: 'preload-paywall-bookstore-backdrop',
-    },
-  ],
+  link: computed(() => {
+    const hasCampaignId = !!(getRouteQuery('utm_term') || getRouteQuery('utm_campaign'))
+    const links: ResolvableArray<ResolvableLink> = [
+      { rel: 'canonical', href: canonicalURL.value },
+    ]
+    if (hasCampaignId) {
+      links.push({
+        rel: 'preload',
+        as: 'image',
+        href: backdrop,
+        key: 'preload-paywall-bookstore-backdrop',
+      })
+    }
+    return links
+  }),
   script: [
     { type: 'application/ld+json', innerHTML: JSON.stringify(structuredData.value) },
   ],
