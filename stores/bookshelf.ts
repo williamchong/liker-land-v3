@@ -77,7 +77,15 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
         const nftClassId = nftClass.address.toLowerCase() as `0x${string}`
 
         nftClassIds.value.add(nftClassId)
-        tokenIdsByNFTClassId.value[nftClassId] ??= []
+        if (nftClass.token_id) {
+          const existing = tokenIdsByNFTClassId.value[nftClassId] ?? []
+          if (!existing.includes(nftClass.token_id)) {
+            tokenIdsByNFTClassId.value[nftClassId] = [...existing, nftClass.token_id]
+          }
+        }
+        else {
+          tokenIdsByNFTClassId.value[nftClassId] ??= []
+        }
 
         if (nftClass.metadata) {
           nftStore.addNFTClassMetadata(nftClassId, nftClass.metadata)
