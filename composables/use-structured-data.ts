@@ -444,10 +444,17 @@ export function useStructuredData(
         'bookFormat': 'https://schema.org/EBook',
         'bookEdition': pricing?.name,
         ...(promotionalVideos.length > 0 && {
-          video: promotionalVideos.map(url => ({
-            '@type': 'VideoObject',
-            'contentUrl': url,
-          })),
+          video: promotionalVideos.map((url) => {
+            const youtubeId = extractYouTubeVideoId(url)
+            return {
+              '@type': 'VideoObject',
+              'name': name,
+              'description': description,
+              'contentUrl': url,
+              'thumbnailUrl': youtubeId ? getYouTubeThumbnailUrl(youtubeId) : coverImage,
+              'uploadDate': datePublished,
+            }
+          }),
         }),
         'offers': [
           // Regular offer for all users
@@ -513,10 +520,17 @@ export function useStructuredData(
       keywords,
       'bookFormat': 'https://schema.org/EBook',
       ...(promotionalVideos.length > 0 && {
-        video: promotionalVideos.map(url => ({
-          '@type': 'VideoObject',
-          'contentUrl': url,
-        })),
+        video: promotionalVideos.map((url) => {
+          const youtubeId = extractYouTubeVideoId(url)
+          return {
+            '@type': 'VideoObject',
+            'name': name,
+            'description': description,
+            'contentUrl': url,
+            'thumbnailUrl': youtubeId ? getYouTubeThumbnailUrl(youtubeId) : coverImage,
+            'uploadDate': datePublished,
+          }
+        }),
       }),
       'productGroupID': nftClassIdValue,
       'workExample': workExamples,
