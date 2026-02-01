@@ -117,19 +117,19 @@
             'max-laptop:mx-auto',
             'p-5 laptop:p-12',
             'pt-12',
-            { 'laptop:pt-30': !campaignContent },
+            { 'laptop:pt-16': !campaignContent },
           ]"
         >
           <PricingPageIntroSection
             v-if="!(isShowTTSSamples && isDesktopScreen)"
-            class="mb-8"
+            class="mb-4 laptop:mb-6"
             :title="campaignContent?.title"
             :description="campaignContent?.description"
           />
           <TTSSamplesSection v-if="isShowTTSSamples" />
 
           <!-- Price Select -->
-          <div class="flex flex-col w-full mt-12">
+          <div class="flex flex-col w-full mt-6 laptop:mt-8">
             <PricingLimitedOfferAlert
               class="laptop:pt-5 rounded-xl"
               :is-hidden="!isPaidTrial"
