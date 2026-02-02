@@ -3,8 +3,12 @@ export interface PaginationResponse {
   count: number
 }
 
+export interface NFTClassWithTokenId extends NFTClass {
+  token_id?: string
+}
+
 export interface FetchNFTClassesByOwnerWalletAddressResponseData {
-  data: NFTClass[]
+  data: NFTClassWithTokenId[]
   pagination: PaginationResponse
 }
 
