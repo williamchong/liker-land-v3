@@ -59,7 +59,7 @@
     <UModal
       v-model:open="isModalOpen"
       :ui="{
-        content: 'max-w-4xl bg-black',
+        content: 'relative max-w-4xl bg-black',
       }"
       :close="{ color: 'neutral', variant: 'ghost', class: 'text-white' }"
     >
@@ -91,6 +91,25 @@
           playsinline
           class="w-full max-h-[80vh]"
         />
+
+        <template v-if="carouselItems.length > 1">
+          <UButton
+            icon="i-material-symbols-chevron-left"
+            color="neutral"
+            variant="ghost"
+            aria-label="Previous"
+            class="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 text-white hover:bg-black/70 cursor-pointer"
+            @click="navigateModal(-1)"
+          />
+          <UButton
+            icon="i-material-symbols-chevron-right"
+            color="neutral"
+            variant="ghost"
+            aria-label="Next"
+            class="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 text-white hover:bg-black/70 cursor-pointer"
+            @click="navigateModal(1)"
+          />
+        </template>
       </template>
     </UModal>
   </div>
@@ -141,11 +160,18 @@ const props = defineProps({
 })
 
 const isModalOpen = ref(false)
-const modalItem = ref<CarouselItem | null>(null)
+const modalItemIndex = ref(0)
+const modalItem = computed(() => carouselItems.value[modalItemIndex.value] || null)
 
 function openModal(item: CarouselItem) {
-  modalItem.value = item
+  const index = carouselItems.value.indexOf(item)
+  modalItemIndex.value = index >= 0 ? index : 0
   isModalOpen.value = true
+}
+
+function navigateModal(direction: number) {
+  const len = carouselItems.value.length
+  modalItemIndex.value = (modalItemIndex.value + direction + len) % len
 }
 
 const carouselItems = computed<CarouselItem[]>(() => {
