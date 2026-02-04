@@ -242,6 +242,22 @@
             <CurrencySwitcher :is-icon-hidden="true" />
           </template>
         </AccountSettingsItem>
+
+        <AccountSettingsItem
+          icon="i-material-symbols-dark-mode-outline-rounded"
+          :label="$t('account_page_color_mode')"
+        >
+          <template #right>
+            <ColorModeSwitcher v-if="user?.isLikerPlus" />
+            <UButton
+              v-else
+              :label="$t('account_page_upgrade_to_plus')"
+              variant="solid"
+              color="primary"
+              :to="localeRoute({ name: 'member', query: { ll_medium: 'color-mode' } })"
+            />
+          </template>
+        </AccountSettingsItem>
       </UCard>
     </section>
 

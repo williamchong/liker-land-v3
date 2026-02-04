@@ -1,9 +1,15 @@
-import type { UserSettingKey } from '~/shared/types/user-settings'
-
-const ALLOWED_KEYS = ['locale', 'currency'] as const satisfies readonly UserSettingKey[]
+const ALLOWED_KEYS = ['locale', 'currency', 'colorMode'] as const satisfies readonly UserSettingKey[]
 
 export default defineEventHandler(async (event) => {
-  const wallet = await requireUserWallet(event)
+  const session = await requireUserSession(event)
+  const wallet = session.user.evmWallet
+  if (!wallet) {
+    throw createError({
+      statusCode: 401,
+      message: 'WALLET_NOT_FOUND',
+    })
+  }
+
   const body = await readBody(event)
 
   const invalidKeys = Object.keys(body).filter(key => !ALLOWED_KEYS.includes(key as UserSettingKey))
@@ -12,6 +18,13 @@ export default defineEventHandler(async (event) => {
       statusCode: 400,
       message: `INVALID_KEYS: ${invalidKeys.join(', ')}`,
     })
+  }
+
+  // Enforce color mode restriction for non-Plus users
+  const isLikerPlus = session.user.isLikerPlus || false
+  if ('colorMode' in body && !isLikerPlus) {
+    // Non-Plus users can only use light mode
+    body.colorMode = 'light'
   }
 
   try {
