@@ -1,35 +1,45 @@
-# liker-land-v3
+# 3ook.com
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+A Nuxt 3 PWA providing an AI reading companion and decentralized bookstore on Base blockchain. Features NFT book trading, text-to-speech, wallet integration, and subscription features.
+
+**Tech stack:** Nuxt 3.20+ (Vue 3, TypeScript 5.8), Tailwind CSS via @nuxt/ui, wagmi/viem (Base chain), Pinia, TanStack Query, Firebase Admin, Airtable CMS.
 
 ## Setup
-
-Make sure to install dependencies:
 
 ```bash
 npm install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+## Development
 
 ```bash
-npm run dev
+npm run dev              # Dev server on http://localhost:3000
+npm run lint             # ESLint
+npm run lint:fix         # Auto-fix lint issues
+npm run typecheck        # Type check via vue-tsc
 ```
 
-## Production
-
-Build the application for production:
+## Production Build
 
 ```bash
-npm run build
+NODE_OPTIONS=--max-old-space-size=8192 npm run build
+npm run preview          # Preview production build
 ```
 
-Locally preview production build:
+> **Note:** Always set `NODE_OPTIONS=--max-old-space-size=8192` for builds to avoid OOM.
 
-```bash
-npm run preview
-```
+## Environment
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+- 45+ env vars — see `apphosting.mainnet.yaml` and `apphosting.sepolia.yaml` for full lists
+- **Testnet:** `IS_TESTNET=TRUE` targets Base Sepolia with separate API endpoints
+- **Mainnet:** `IS_TESTNET` omitted/false targets Base mainnet with production endpoints
+
+## Deployment
+
+Firebase App Hosting (Cloud Run):
+- `apphosting.mainnet.yaml` — 3ook.com
+- `apphosting.sepolia.yaml` — sepolia.3ook.com
+
+## Documentation
+
+See [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) for framework details.
