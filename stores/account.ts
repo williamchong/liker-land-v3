@@ -324,10 +324,12 @@ export const useAccountStore = defineStore('account', () => {
         if (error instanceof FetchError) {
           switch (error.data?.message) {
             case 'INVALID_USER_ID': {
+              useLogEvent('register_invalid_account_id')
               await errorModal.open({ description: $t('account_register_error_invalid_account_id', { id: payload?.accountId }) }).result
               continue
             }
             case 'EMAIL_ALREADY_USED': {
+              useLogEvent('register_email_already_used')
               await errorModal.open(getEmailAlreadyUsedErrorData({
                 email: payload?.email as string,
                 walletAddress,
@@ -373,17 +375,19 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   async function login(preferredConnectorId?: string) {
+    let connectorId: string | undefined = preferredConnectorId
     try {
       isLoggingIn.value = true
 
       // Disconnect any existing connection
       await disconnectAsync()
-
-      let connectorId: string | undefined = preferredConnectorId
       if (!connectorId || !connectors.some((c: { id: string }) => c.id === connectorId)) {
         connectorId = await loginModal.open().result
       }
-      if (!connectorId) return
+      if (!connectorId) {
+        useLogEvent('login_panel_dismiss')
+        return
+      }
 
       const connector = connectors.find(
         (c: { id: string }) => c.id === connectorId,
@@ -397,6 +401,8 @@ export const useAccountStore = defineStore('account', () => {
           chainId: chainId.value,
         })
       }
+
+      useLogEvent('login_wallet_connected', { method: connector.id })
 
       blockingModal.open({ title: $t('account_logging_in') })
 
@@ -438,6 +444,7 @@ export const useAccountStore = defineStore('account', () => {
         isRegistered = await register({ walletAddress, email, loginMethod, magicUserId, magicDIDToken })
         if (!isRegistered) {
           // User canceled the registration
+          useLogEvent('login_register_cancelled', { method: connector.id })
           return
         }
         useLogEvent('sign_up', {
@@ -492,11 +499,14 @@ export const useAccountStore = defineStore('account', () => {
       })
 
       if (error instanceof UserRejectedRequestError) {
+        useLogEvent('login_wallet_rejected', { method: connectorId })
         return
       }
       if (error instanceof FetchError && error.data?.message === 'EMAIL_ALREADY_USED') {
+        useLogEvent('login_email_already_used', { method: connectorId })
         return
       }
+      useLogEvent('login_error', { method: connectorId })
       await handleError(error)
       return login()
     }

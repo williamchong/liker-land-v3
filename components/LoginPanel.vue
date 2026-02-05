@@ -77,6 +77,6 @@ const othersConnectors = computed(() => connectors.filter(c => !['magic', 'injec
 
 function handleConnect(connectorId = '') {
   emit('connect', connectorId)
-  useLogEvent('login_panel_connect', { connector_id: connectorId })
+  useLogEvent('login_panel_connect', { method: connectorId })
 }
 </script>
