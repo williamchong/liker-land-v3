@@ -1,3 +1,5 @@
+import { EventSourceParserStream } from 'eventsource-parser/stream'
+
 export interface MinimaxTTSChunk {
   data: {
     audio: string
@@ -107,14 +109,9 @@ export class MinimaxTTSProvider implements BaseTTSProvider {
     })
   }
 
-  processEventData(eventData: string): Buffer | null {
-    const dataMatch = eventData.match(/^data:\s*(.+)$/m)
-    if (!dataMatch) return null
-
-    const jsonStr = dataMatch[1]?.trim()
-    if (!jsonStr) return null
-
-    const parsed: MinimaxTTSChunk = JSON.parse(jsonStr) // this might throw if the JSON is malformed
+  processEventData(data: string): Buffer | null {
+    if (!data.trim()) return null
+    const parsed: MinimaxTTSChunk = JSON.parse(data)
 
     if (parsed.base_resp?.status_code !== 0) {
       throw createError({
@@ -132,68 +129,31 @@ export class MinimaxTTSProvider implements BaseTTSProvider {
 
   createProcessStream(cacheWriteOptions: { isCacheEnabled: boolean, audioChunks: Buffer[], handleCacheWrite: () => void }): ReadableWritablePair {
     const { isCacheEnabled, audioChunks, handleCacheWrite } = cacheWriteOptions
-    let buffer = ''
     const processEventData = this.processEventData.bind(this)
     const decodeStream = new TextDecoderStream()
-    const transformStream = new TransformStream({
-      start() {
-        buffer = ''
-      },
-      transform(chunk, controller) {
+    const sseStream = new EventSourceParserStream()
+    const audioStream = new TransformStream({
+      transform(event, controller) {
         try {
-          buffer += chunk
-          let eventEndIndex = buffer.indexOf('\n\n')
-          while (eventEndIndex !== -1) {
-            const event = buffer.substring(0, eventEndIndex).trim()
-            buffer = buffer.substring(eventEndIndex + 2) // '\n\n' is 2 characters long - Minimax SSE specific
-            if (event) {
-              try {
-                const audioBuffer = processEventData(event)
-                if (audioBuffer) {
-                  if (isCacheEnabled) {
-                    audioChunks.push(audioBuffer)
-                  }
-                  controller.enqueue(audioBuffer)
-                }
-              }
-              catch (error) {
-                console.error('[Speech] Error processing Minimax event:', error)
-                controller.error((error as Error).message || 'TTS_PROCESSING_ERROR')
-                return
-              }
-            }
-            eventEndIndex = buffer.indexOf('\n\n')
-          }
-        }
-        catch (error) {
-          console.error('[Speech] Error processing Minimax chunk:', error)
-          controller.error('TTS_PROCESSING_ERROR: Failed to process text-to-speech data')
-          return
-        }
-      },
-      flush(controller) {
-        if (!buffer.trim()) {
-          handleCacheWrite()
-          return
-        }
-        try {
-          const audioBuffer = processEventData(buffer)
+          const audioBuffer = processEventData(event.data)
           if (audioBuffer) {
             if (isCacheEnabled) {
               audioChunks.push(audioBuffer)
             }
             controller.enqueue(audioBuffer)
           }
-          handleCacheWrite()
         }
         catch (error) {
-          console.warn('[Speech] Error in Minimax flush:', error)
-          handleCacheWrite()
+          console.error('[Speech] Error processing Minimax event:', error)
+          controller.error((error as Error).message || 'TTS_PROCESSING_ERROR')
         }
+      },
+      flush() {
+        handleCacheWrite()
       },
     })
     return {
-      readable: decodeStream.readable.pipeThrough(transformStream),
+      readable: decodeStream.readable.pipeThrough(sseStream).pipeThrough(audioStream),
       writable: decodeStream.writable,
     }
   }
