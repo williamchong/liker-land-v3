@@ -6,20 +6,20 @@ export function splitTextIntoSegments(text: string): string[] {
 
   let currentSegment = ''
   for (let i = 0; i < segments.length; i++) {
-    const segment = sanitizeTTSText(segments[i]?.trim() || '')
+    const segment = segments[i]?.trim() || ''
     if (!segment) continue
     if (segment.length === 1 || currentSegment.length + segment.length < 100) {
       currentSegment += segment
     }
     else {
-      if (currentSegment) {
+      if (sanitizeTTSText(currentSegment)) {
         result.push(currentSegment)
       }
       currentSegment = segment
     }
   }
 
-  if (currentSegment) {
+  if (sanitizeTTSText(currentSegment)) {
     result.push(currentSegment)
   }
 
