@@ -192,7 +192,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     if (element.audioSrc) return element.audioSrc
     const [language, ...voiceIdParts] = ttsLanguageVoice.value.split('_')
     const params = new URLSearchParams({
-      text: element.text,
+      text: sanitizeTTSText(element.text),
       language: language || 'zh-HK',
       voice_id: voiceIdParts.join('_') || '0',
     })
