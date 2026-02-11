@@ -1,3 +1,5 @@
+import { getGenreI18nKey } from '~/constants/book-categories'
+
 export default function (
   { nftClassId }: { nftClassId: string | Ref<string> | ComputedRef<string> },
 ) {
@@ -199,6 +201,16 @@ export default function (
     return bookstoreInfo.value?.tableOfContents || ''
   })
 
+  const genre = computed(() => {
+    return bookstoreInfo.value?.genre
+  })
+
+  const localizedGenre = computed(() => {
+    if (!genre.value) return ''
+    const i18nKey = getGenreI18nKey(genre.value)
+    return i18nKey ? $t(i18nKey) : genre.value
+  })
+
   const keywords = computed(() => {
     return bookstoreInfo.value?.keywords.filter(keyword => !!keyword) || []
   })
@@ -318,6 +330,8 @@ export default function (
     formattedTTSSupportLabel,
     formattedReadingMethods,
     tableOfContents,
+    genre,
+    localizedGenre,
     keywords,
     promotionalImages,
     promotionalVideos,

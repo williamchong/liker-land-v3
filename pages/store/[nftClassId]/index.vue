@@ -134,6 +134,28 @@
                 />
               </NuxtLink>
             </template>
+            <div
+              v-if="bookInfo.genre.value"
+              :class="[
+                'mt-[48px]',
+                { 'max-tablet:hidden': isStakingTabActive },
+              ]"
+            >
+              <UButton
+                :label="bookInfo.localizedGenre.value"
+                :to="localeRoute({
+                  name: 'store',
+                  query: {
+                    genre: bookInfo.genre.value,
+                    ll_medium: 'genre',
+                    ll_source: 'product-page',
+                  },
+                })"
+                variant="soft"
+                :ui="{ base: 'rounded-full' }"
+                @click="handleGenreClick"
+              />
+            </div>
             <ul
               v-if="descriptionTags.length"
               :class="[
@@ -141,7 +163,7 @@
                 'flex-wrap',
                 'gap-x-2',
                 'gap-y-4',
-                'mt-[48px]',
+                bookInfo.genre.value ? 'mt-4' : 'mt-[48px]',
                 { 'max-tablet:hidden': isStakingTabActive },
               ]"
             >
@@ -1471,6 +1493,10 @@ function calculateCustomPrice(editionPrice: number, tippingAmount: number | unde
   const tip = Number(tippingAmount) || 0
   const base = Number(editionPrice) || 0
   return Number((tip + base).toFixed(2))
+}
+
+function handleGenreClick() {
+  useLogEvent('genre_click', { genre: bookInfo.genre.value })
 }
 
 function handleKeywordClick(keyword: string) {

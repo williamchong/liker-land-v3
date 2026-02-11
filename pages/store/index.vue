@@ -56,6 +56,7 @@
           <span v-if="querySearchTerm">{{ $t('store_search_prefix') }}{{ querySearchTerm }}</span>
           <span v-else-if="queryAuthorName">{{ $t('store_author_prefix') }}{{ queryAuthorName }}</span>
           <span v-else-if="queryPublisherName">{{ $t('store_publisher_prefix') }}{{ queryPublisherName }}</span>
+          <span v-else-if="queryGenre">{{ $t('store_genre_prefix') }}{{ localizedGenreName }}</span>
         </h1>
       </div>
 
@@ -346,6 +347,7 @@
 
 <script setup lang="ts">
 import { formatUnits } from 'viem'
+import { getGenreI18nKey } from '~/constants/book-categories'
 
 const { likeCoinTokenDecimals } = useRuntimeConfig().public
 const { t: $t, locale } = useI18n()
@@ -370,6 +372,7 @@ const querySearchTerm = computed(() => getRouteQuery('q', ''))
 const queryAuthorName = computed(() => getRouteQuery('author', ''))
 const queryPublisherName = computed(() => getRouteQuery('publisher', ''))
 const queryOwnerWallet = computed(() => getRouteQuery('owner_wallet', ''))
+const queryGenre = computed(() => getRouteQuery('genre', ''))
 
 const ownerWalletInfo = computed(() => {
   if (!queryOwnerWallet.value) return null
@@ -388,7 +391,14 @@ const searchQuery = computed(() => {
   if (queryAuthorName.value) return `author:${queryAuthorName.value}`
   if (queryPublisherName.value) return `publisher:${queryPublisherName.value}`
   if (queryOwnerWallet.value) return `owner_wallet:${queryOwnerWallet.value}`
+  if (queryGenre.value) return `genre:${queryGenre.value}`
   return ''
+})
+
+const localizedGenreName = computed(() => {
+  if (!queryGenre.value) return ''
+  const i18nKey = getGenreI18nKey(queryGenre.value)
+  return i18nKey ? $t(i18nKey) : queryGenre.value
 })
 
 const isSearchMode = computed(() => !!searchQuery.value)
@@ -564,6 +574,9 @@ const canonicalURL = computed(() => {
   if (queryOwnerWallet.value) {
     canonicalParams.set('owner_wallet', queryOwnerWallet.value)
   }
+  if (queryGenre.value) {
+    canonicalParams.set('genre', queryGenre.value)
+  }
 
   const queryString = canonicalParams.toString()
   return `${baseURL}${path}${queryString ? `?${queryString}` : ''}`
@@ -584,6 +597,9 @@ const ogTitle = computed(() => {
     else if (queryOwnerWallet.value) {
       const displayName = ownerWalletDisplayName.value || queryOwnerWallet.value
       title = `${$t('store_owner_wallet_prefix')}${displayName} - ${$t('store_page_title')}`
+    }
+    else if (queryGenre.value) {
+      title = `${$t('store_genre_prefix')}${localizedGenreName.value} - ${$t('store_page_title')}`
     }
   }
   else if (tagName.value) {
@@ -778,7 +794,7 @@ watch(
 )
 
 // Watch for changes in search parameters
-watch([querySearchTerm, queryAuthorName, queryPublisherName, queryOwnerWallet], async () => {
+watch([querySearchTerm, queryAuthorName, queryPublisherName, queryOwnerWallet, queryGenre], async () => {
   if (isSearchMode.value) {
     await fetchItems({ lazy: true })
   }
@@ -857,7 +873,7 @@ async function fetchItems({ lazy = false, isRefresh = false } = {}) {
     try {
       const [type, searchTerm] = searchQuery.value.split(':', 2)
       if (type && searchTerm) {
-        await bookstoreStore.fetchSearchResults(type as 'q' | 'author' | 'publisher' | 'owner_wallet', searchTerm, { isRefresh })
+        await bookstoreStore.fetchSearchResults(type as 'q' | 'author' | 'publisher' | 'owner_wallet' | 'genre', searchTerm, { isRefresh })
       }
     }
     catch (error) {
