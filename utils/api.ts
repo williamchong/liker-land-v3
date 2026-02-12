@@ -40,6 +40,27 @@ export function fetchBookstoreCMSPublicationsBySearchTerm(searchTerm: string, {
   })
 }
 
+export function fetchBookstoreCMSPublicationsByGenre(genre: string, {
+  offset,
+  limit = 100,
+  ts,
+}: {
+  offset?: string
+  limit?: number
+  ts?: number
+} = {}) {
+  return $fetch<FetchBookstoreCMSProductsResponseData>('/api/store/genre', {
+    query: {
+      q: genre,
+      offset,
+      limit,
+      ts,
+    },
+    credentials: 'include',
+    mode: 'no-cors',
+  })
+}
+
 export function fetchBookstoreCMSTagsForAll({
   offset,
   limit,

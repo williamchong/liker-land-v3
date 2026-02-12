@@ -72,6 +72,7 @@ declare interface BookstoreInfo {
     name: string
     description: string
   }
+  genre?: string
   keywords: string[]
   thumbnailUrl: string
   usageInfo: string

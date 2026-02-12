@@ -209,6 +209,25 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     updateSearchResults(queryKey, mappedItems, result.offset, isRefresh)
   }
 
+  async function fetchGenreSearch(genre: string, queryKey: string, isRefresh: boolean) {
+    const result = await fetchBookstoreCMSPublicationsByGenre(genre, {
+      offset: isRefresh ? undefined : bookstoreSearchResultsByQueryMap.value[queryKey]?.nextKey,
+      limit: 100,
+      ts: getTimestampRoundedToMinute(),
+    })
+
+    const mappedItems = result.records
+      .filter(item => item.classId && item.title && item.imageUrl)
+      .map(item => ({
+        classId: normalizeNFTClassId(item.classId),
+        title: item.title!,
+        imageUrl: item.imageUrl!,
+        minPrice: item.minPrice,
+      }))
+
+    updateSearchResults(queryKey, mappedItems, result.offset, isRefresh)
+  }
+
   async function fetchMetadataSearch(type: 'author' | 'publisher', searchTerm: string, queryKey: string, isRefresh: boolean) {
     const options = {
       limit: 100,
@@ -262,7 +281,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     }
   }
 
-  async function fetchSearchResults(type: 'q' | 'author' | 'publisher' | 'owner_wallet', searchTerm: string, {
+  async function fetchSearchResults(type: 'q' | 'author' | 'publisher' | 'owner_wallet' | 'genre', searchTerm: string, {
     isRefresh = false,
   }: {
     isRefresh?: boolean
@@ -276,6 +295,9 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     try {
       if (type === 'q') {
         await fetchTextSearch(searchTerm, queryKey, isRefresh)
+      }
+      else if (type === 'genre') {
+        await fetchGenreSearch(searchTerm, queryKey, isRefresh)
       }
       else if (type === 'owner_wallet') {
         if (checkIsEVMAddress(searchTerm)) {

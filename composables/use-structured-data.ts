@@ -410,6 +410,7 @@ export function useStructuredData(
     const authorName = bookInfo.authorName.value
     const publisherName = bookInfo.publisherName.value
     const datePublished = bookInfo.formattedPublishedDate.value
+    const genre = bookInfo.genre.value
     const rawKeywords = bookInfo.keywords.value
     const keywords = Array.isArray(rawKeywords) ? rawKeywords.join(',') : rawKeywords
     const isbn = bookInfo.isbn.value
@@ -441,6 +442,7 @@ export function useStructuredData(
         inLanguage,
         datePublished,
         keywords,
+        genre,
         'bookFormat': 'https://schema.org/EBook',
         'bookEdition': pricing?.name,
         ...(promotionalVideos.length > 0 && {
@@ -519,6 +521,7 @@ export function useStructuredData(
       inLanguage,
       datePublished,
       keywords,
+      genre,
       'bookFormat': 'https://schema.org/EBook',
       ...(promotionalVideos.length > 0 && {
         video: promotionalVideos.map((url) => {

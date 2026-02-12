@@ -73,6 +73,7 @@ const SEARCH_FIELDS = [
   'Author',
   'Publisher',
   'Keywords Text',
+  'Genre',
 ]
 
 function getFormulaForSearchTerm(searchTerm: string) {
@@ -82,6 +83,25 @@ function getFormulaForSearchTerm(searchTerm: string) {
   )
   const formula = `OR(${formulas.join(', ')})`
   return formula
+}
+
+function normalizeProductRecord({ id, fields }: FetchAirtableCMSProductsByTagIdResponseData['records'][number]): BookstoreCMSProduct {
+  const classIds = fields.IDs
+  const isMultiple = classIds && classIds.length > 1
+  return {
+    id,
+    classId: fields.ID,
+    classIds: isMultiple ? classIds : undefined,
+    title: fields.Name,
+    titles: isMultiple ? fields.Names : undefined,
+    imageUrl: fields['Image URL'],
+    imageUrls: isMultiple ? fields['Image URLs'] : undefined,
+    locales: fields.Locales,
+    isDRMFree: !!fields['DRM-free'],
+    isMultiple: isMultiple ? true : undefined,
+    minPrice: fields['Min Price'],
+    timestamp: fields.Timestamp,
+  }
 }
 
 export async function fetchAirtableCMSPublicationsBySearchTerm(
@@ -103,33 +123,35 @@ export async function fetchAirtableCMSPublicationsBySearchTerm(
     },
   )
 
-  const normalizedRecords: BookstoreCMSProduct[] = results.records.map(({ id, fields }) => {
-    const classId = fields.ID
-    const classIds = fields.IDs
-    const title = fields.Name
-    const titles = fields.Names
-    const imageUrl = fields['Image URL']
-    const imageUrls = fields['Image URLs']
-    const locales = fields.Locales
-    const isDRMFree = !!fields['DRM-free']
-    const timestamp = fields.Timestamp
-    const minPrice = fields['Min Price']
-    const isMultiple = classIds && classIds.length > 1
-    return {
-      id,
-      classId,
-      classIds: isMultiple ? classIds : undefined,
-      title,
-      titles: isMultiple ? titles : undefined,
-      imageUrl,
-      imageUrls: isMultiple ? imageUrls : undefined,
-      locales,
-      isDRMFree,
-      isMultiple: isMultiple ? true : undefined,
-      minPrice,
-      timestamp,
-    }
-  })
+  const normalizedRecords = results.records.map(normalizeProductRecord)
+
+  return {
+    records: normalizedRecords,
+    offset: results.offset,
+  }
+}
+
+export async function fetchAirtableCMSPublicationsByGenre(
+  genre: string,
+  { pageSize = 100, offset }: { pageSize?: number, offset?: string } = {},
+): Promise<FetchBookstoreCMSProductsResponseData> {
+  const config = useRuntimeConfig()
+  const fetch = getAirtableCMSFetch()
+  const sanitizedGenre = genre.replaceAll('"', '')
+  const filterByFormula = `{Genre}="${sanitizedGenre}"`
+  const results = await fetch<FetchAirtableCMSProductsByTagIdResponseData>(
+    `/${config.public.airtableCMSPublicationsTableId}`,
+    {
+      params: {
+        view: 'search',
+        pageSize,
+        filterByFormula,
+        offset,
+      },
+    },
+  )
+
+  const normalizedRecords = results.records.map(normalizeProductRecord)
 
   return {
     records: normalizedRecords,
@@ -154,33 +176,7 @@ export async function fetchAirtableCMSProductsByTagId(
     },
   )
 
-  const normalizedRecords: BookstoreCMSProduct[] = results.records.map(({ id, fields }) => {
-    const classId = fields.ID
-    const classIds = fields.IDs
-    const title = fields.Name
-    const titles = fields.Names
-    const imageUrl = fields['Image URL']
-    const imageUrls = fields['Image URLs']
-    const locales = fields.Locales
-    const isDRMFree = !!fields['DRM-free']
-    const timestamp = fields.Timestamp
-    const minPrice = fields['Min Price']
-    const isMultiple = classIds && classIds.length > 1
-    return {
-      id,
-      classId,
-      classIds: isMultiple ? classIds : undefined,
-      title,
-      titles: isMultiple ? titles : undefined,
-      imageUrl,
-      imageUrls: isMultiple ? imageUrls : undefined,
-      locales,
-      isDRMFree,
-      isMultiple: isMultiple ? true : undefined,
-      minPrice,
-      timestamp,
-    }
-  })
+  const normalizedRecords = results.records.map(normalizeProductRecord)
 
   return {
     records: normalizedRecords,
