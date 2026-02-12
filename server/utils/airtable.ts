@@ -85,6 +85,25 @@ function getFormulaForSearchTerm(searchTerm: string) {
   return formula
 }
 
+function normalizeProductRecord({ id, fields }: FetchAirtableCMSProductsByTagIdResponseData['records'][number]): BookstoreCMSProduct {
+  const classIds = fields.IDs
+  const isMultiple = classIds && classIds.length > 1
+  return {
+    id,
+    classId: fields.ID,
+    classIds: isMultiple ? classIds : undefined,
+    title: fields.Name,
+    titles: isMultiple ? fields.Names : undefined,
+    imageUrl: fields['Image URL'],
+    imageUrls: isMultiple ? fields['Image URLs'] : undefined,
+    locales: fields.Locales,
+    isDRMFree: !!fields['DRM-free'],
+    isMultiple: isMultiple ? true : undefined,
+    minPrice: fields['Min Price'],
+    timestamp: fields.Timestamp,
+  }
+}
+
 export async function fetchAirtableCMSPublicationsBySearchTerm(
   searchTerm: string,
   { pageSize = 100, offset }: { pageSize?: number, offset?: string } = {},
@@ -104,33 +123,7 @@ export async function fetchAirtableCMSPublicationsBySearchTerm(
     },
   )
 
-  const normalizedRecords: BookstoreCMSProduct[] = results.records.map(({ id, fields }) => {
-    const classId = fields.ID
-    const classIds = fields.IDs
-    const title = fields.Name
-    const titles = fields.Names
-    const imageUrl = fields['Image URL']
-    const imageUrls = fields['Image URLs']
-    const locales = fields.Locales
-    const isDRMFree = !!fields['DRM-free']
-    const timestamp = fields.Timestamp
-    const minPrice = fields['Min Price']
-    const isMultiple = classIds && classIds.length > 1
-    return {
-      id,
-      classId,
-      classIds: isMultiple ? classIds : undefined,
-      title,
-      titles: isMultiple ? titles : undefined,
-      imageUrl,
-      imageUrls: isMultiple ? imageUrls : undefined,
-      locales,
-      isDRMFree,
-      isMultiple: isMultiple ? true : undefined,
-      minPrice,
-      timestamp,
-    }
-  })
+  const normalizedRecords = results.records.map(normalizeProductRecord)
 
   return {
     records: normalizedRecords,
@@ -158,33 +151,7 @@ export async function fetchAirtableCMSPublicationsByGenre(
     },
   )
 
-  const normalizedRecords: BookstoreCMSProduct[] = results.records.map(({ id, fields }) => {
-    const classId = fields.ID
-    const classIds = fields.IDs
-    const title = fields.Name
-    const titles = fields.Names
-    const imageUrl = fields['Image URL']
-    const imageUrls = fields['Image URLs']
-    const locales = fields.Locales
-    const isDRMFree = !!fields['DRM-free']
-    const timestamp = fields.Timestamp
-    const minPrice = fields['Min Price']
-    const isMultiple = classIds && classIds.length > 1
-    return {
-      id,
-      classId,
-      classIds: isMultiple ? classIds : undefined,
-      title,
-      titles: isMultiple ? titles : undefined,
-      imageUrl,
-      imageUrls: isMultiple ? imageUrls : undefined,
-      locales,
-      isDRMFree,
-      isMultiple: isMultiple ? true : undefined,
-      minPrice,
-      timestamp,
-    }
-  })
+  const normalizedRecords = results.records.map(normalizeProductRecord)
 
   return {
     records: normalizedRecords,
@@ -209,33 +176,7 @@ export async function fetchAirtableCMSProductsByTagId(
     },
   )
 
-  const normalizedRecords: BookstoreCMSProduct[] = results.records.map(({ id, fields }) => {
-    const classId = fields.ID
-    const classIds = fields.IDs
-    const title = fields.Name
-    const titles = fields.Names
-    const imageUrl = fields['Image URL']
-    const imageUrls = fields['Image URLs']
-    const locales = fields.Locales
-    const isDRMFree = !!fields['DRM-free']
-    const timestamp = fields.Timestamp
-    const minPrice = fields['Min Price']
-    const isMultiple = classIds && classIds.length > 1
-    return {
-      id,
-      classId,
-      classIds: isMultiple ? classIds : undefined,
-      title,
-      titles: isMultiple ? titles : undefined,
-      imageUrl,
-      imageUrls: isMultiple ? imageUrls : undefined,
-      locales,
-      isDRMFree,
-      isMultiple: isMultiple ? true : undefined,
-      minPrice,
-      timestamp,
-    }
-  })
+  const normalizedRecords = results.records.map(normalizeProductRecord)
 
   return {
     records: normalizedRecords,

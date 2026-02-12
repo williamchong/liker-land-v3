@@ -134,39 +134,33 @@
                 />
               </NuxtLink>
             </template>
-            <div
-              v-if="bookInfo.genre.value"
-              :class="[
-                'mt-[48px]',
-                { 'max-tablet:hidden': isStakingTabActive },
-              ]"
-            >
-              <UButton
-                :label="bookInfo.localizedGenre.value"
-                :to="localeRoute({
-                  name: 'store',
-                  query: {
-                    genre: bookInfo.genre.value,
-                    ll_medium: 'genre',
-                    ll_source: 'product-page',
-                  },
-                })"
-                variant="soft"
-                :ui="{ base: 'rounded-full' }"
-                @click="handleGenreClick"
-              />
-            </div>
             <ul
-              v-if="descriptionTags.length"
+              v-if="bookInfo.genre.value || descriptionTags.length"
               :class="[
                 'flex',
                 'flex-wrap',
                 'gap-x-2',
                 'gap-y-4',
-                bookInfo.genre.value ? 'mt-4' : 'mt-[48px]',
+                'mt-[48px]',
                 { 'max-tablet:hidden': isStakingTabActive },
               ]"
             >
+              <li v-if="bookInfo.genre.value">
+                <UButton
+                  :label="bookInfo.localizedGenre.value"
+                  :to="localeRoute({
+                    name: 'store',
+                    query: {
+                      genre: bookInfo.genre.value,
+                      ll_medium: 'genre',
+                      ll_source: 'product-page',
+                    },
+                  })"
+                  variant="soft"
+                  :ui="{ base: 'rounded-full' }"
+                  @click="handleGenreClick"
+                />
+              </li>
               <li
                 v-for="tag in descriptionTags"
                 :key="tag"
