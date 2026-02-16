@@ -40,8 +40,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     setTTSLanguageVoice,
   } = useTTSVoice({ bookLanguage, customVoice: options.customVoice })
 
-  // Audio player
-  const player: TTSAudioPlayer = useWebAudioPlayer()
+  // Pick player implementation
+  const { isNativeBridge } = useNativeAudioBridge()
+  const player: TTSAudioPlayer = isNativeBridge.value
+    ? useNativeAudioPlayer()
+    : useWebAudioPlayer()
 
   // Playback rate options and storage
   const ttsConfigCacheKey = computed(() =>
@@ -210,6 +213,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   })
 
   function setupMediaSession() {
+    if (isNativeBridge.value) return
     try {
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -277,7 +281,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   }
 
   watch(isTextToSpeechPlaying, () => {
-    if ('mediaSession' in navigator) {
+    if (!isNativeBridge.value && 'mediaSession' in navigator) {
       navigator.mediaSession.playbackState = isTextToSpeechPlaying.value ? 'playing' : 'paused'
     }
   })
@@ -471,7 +475,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     isTextToSpeechLoading.value = false
     isShowTextToSpeechOptions.value = false
 
-    if ('mediaSession' in navigator) {
+    if (!isNativeBridge.value && 'mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'none'
     }
   }
