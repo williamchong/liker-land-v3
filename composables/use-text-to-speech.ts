@@ -39,6 +39,9 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     setTTSLanguageVoice,
   } = useTTSVoice({ bookLanguage, customVoice: options.customVoice })
 
+  // Audio player
+  const player: TTSAudioPlayer = useWebAudioPlayer()
+
   // Playback rate options and storage
   const ttsConfigCacheKey = computed(() =>
     [
@@ -59,16 +62,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   const isTextToSpeechOn = ref(false)
   const isTextToSpeechPlaying = ref(false)
   const isStartingTextToSpeech = ref(false)
-  const activeAudio = ref<HTMLAudioElement | null>(null)
-  const preloadAudio = ref<HTMLAudioElement | null>(null)
   const isOffline = ref(false)
   const showOfflineModal = ref(false)
   const shouldResumeWhenOnline = ref(false)
   const consecutiveAudioErrors = ref(0)
   const MAX_CONSECUTIVE_ERRORS = 3
-  const MAX_AUTO_RESUME_RETRIES = 3
-  let autoResumeRetries = 0
-  let pausedInternally = false
   const currentTTSSegmentIndex = ref(0)
   const ttsSegments = ref<TTSSegment[]>([])
   const currentTTSSegment = computed(() => {
@@ -76,6 +74,62 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   })
   const currentTTSSegmentText = computed(() => {
     return currentTTSSegment.value?.text || ''
+  })
+
+  // Wire player events
+  player.on('play', () => {
+    isTextToSpeechPlaying.value = true
+  })
+
+  player.on('pause', () => {
+    isTextToSpeechPlaying.value = false
+  })
+
+  player.on('ended', () => {
+    isTextToSpeechPlaying.value = false
+    consecutiveAudioErrors.value = 0
+    playNextElement()
+  })
+
+  player.on('trackChanged', (index) => {
+    currentTTSSegmentIndex.value = index
+    consecutiveAudioErrors.value = 0
+  })
+
+  player.on('allEnded', () => {
+    isTextToSpeechPlaying.value = false
+    options.onAllSegmentsPlayed?.()
+  })
+
+  player.on('error', (error) => {
+    console.warn('Audio playback error:', error)
+
+    // Check if this is a network error (require both error code AND offline status to avoid misjudgment)
+    const isNetworkError = error instanceof MediaError
+      && error.code === MediaError.MEDIA_ERR_NETWORK
+      && !navigator.onLine
+
+    if (isNetworkError && hasMoreTracks()) {
+      // Network issue detected, handle similar to offline event
+      isOffline.value = true
+      shouldResumeWhenOnline.value = true
+      showOfflineModal.value = true
+      pauseTextToSpeech()
+      return
+    }
+
+    options.onError?.(error)
+    consecutiveAudioErrors.value += 1
+    if (consecutiveAudioErrors.value >= MAX_CONSECUTIVE_ERRORS) {
+      console.warn(`TTS paused after ${MAX_CONSECUTIVE_ERRORS} consecutive audio errors`)
+      pauseTextToSpeech()
+      return
+    }
+    setTimeout(() => {
+      if (isTextToSpeechOn.value && isTextToSpeechPlaying.value) {
+        playNextElement()
+      }
+    }, 1000)
   })
 
   function hasMoreTracks(): boolean {
@@ -156,14 +210,10 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     }
   }
 
-  function updateMediaSessionPlaybackState() {
+  watch(isTextToSpeechPlaying, () => {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = isTextToSpeechPlaying.value ? 'playing' : 'paused'
     }
-  }
-
-  watch (isTextToSpeechPlaying, () => {
-    updateMediaSessionPlaybackState()
   })
 
   watch(ttsLanguageVoice, (newLanguage, oldLanguage) => {
@@ -176,24 +226,12 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   })
 
   watch(ttsPlaybackRate, (newRate) => {
-    if (activeAudio.value) {
-      activeAudio.value.playbackRate = newRate
-      activeAudio.value.defaultPlaybackRate = newRate
-    }
+    player.setRate(newRate)
     useLogEvent('tts_playback_rate_change', {
       nft_class_id: nftClassId,
       value: newRate,
     })
   })
-
-  function pauseTextToSpeech() {
-    if (isTextToSpeechOn.value) {
-      stopActiveAudio()
-      useLogEvent('tts_pause', {
-        nft_class_id: nftClassId,
-      })
-    }
-  }
 
   function getAudioSrc(element: TTSSegment): string {
     if (element.audioSrc) return element.audioSrc
@@ -223,154 +261,13 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     return `/api/reader/tts?${params.toString()}`
   }
 
-  function createAudio(element: TTSSegment) {
-    let audio = activeAudio.value
-    if (audio?.getAttribute('data-text') === element.text) {
-      return audio
-    }
-
-    if (!audio) {
-      audio = new Audio()
-      activeAudio.value = audio
-      audio.preload = 'auto'
-
-      audio.onplay = () => {
-        isTextToSpeechPlaying.value = true
-        autoResumeRetries = 0
-      }
-
-      audio.onpause = () => {
-        isTextToSpeechPlaying.value = false
-        if (pausedInternally) {
-          pausedInternally = false
-          return
-        }
-        // Unexpected pause (OS interruption: phone call, other app audio, etc.)
-        // Attempt auto-resume after a short delay, with a retry limit
-        if (isTextToSpeechOn.value && autoResumeRetries < MAX_AUTO_RESUME_RETRIES) {
-          autoResumeRetries += 1
-          setTimeout(() => {
-            if (isTextToSpeechOn.value && !isTextToSpeechPlaying.value && activeAudio.value) {
-              activeAudio.value.play()?.catch((e: unknown) => {
-                if (e instanceof DOMException && e.name === 'NotAllowedError') {
-                  options.onError?.(TTS_ERROR_NOT_ALLOWED)
-                }
-              })
-            }
-          }, 1000)
-        }
-      }
-
-      audio.onended = () => {
-        isTextToSpeechPlaying.value = false
-        consecutiveAudioErrors.value = 0
-        playNextElement()
-      }
-
-      audio.onstalled = () => {
-        if (audio) {
-          console.warn(`Audio playback stalled at ${ttsPlaybackRate.value}x for text: "${audio.getAttribute('data-text')}"`)
-          if (audio.currentTime < 0.00001) {
-            // Safari on iOS sometimes gets stuck at 0.000001 for rate > 1.0
-            audio.playbackRate = 1.0
-          }
-        }
-      }
-
-      audio.onerror = (e) => {
-        const error = audio?.error || e
-        console.warn('Audio playback error:', error)
-
-        // Check if this is a network error (require both error code AND offline status to avoid misjudgment)
-        const isNetworkError = error instanceof MediaError
-          && error.code === MediaError.MEDIA_ERR_NETWORK
-          && !navigator.onLine
-
-        if (isNetworkError && hasMoreTracks()) {
-          // Network issue detected, handle similar to offline event
-          isOffline.value = true
-          shouldResumeWhenOnline.value = true
-          showOfflineModal.value = true
-          pauseTextToSpeech()
-          return
-        }
-
-        options.onError?.(error)
-        consecutiveAudioErrors.value += 1
-        if (consecutiveAudioErrors.value >= MAX_CONSECUTIVE_ERRORS) {
-          console.warn(`TTS paused after ${MAX_CONSECUTIVE_ERRORS} consecutive audio errors`)
-          pauseTextToSpeech()
-          return
-        }
-        setTimeout(() => {
-          if (isTextToSpeechOn.value && isTextToSpeechPlaying.value) {
-            playNextElement()
-          }
-        }, 1000) // Try next element after 1 second
-      }
-    }
-
-    audio.src = getAudioSrc(element)
-    audio.playbackRate = ttsPlaybackRate.value
-    audio.defaultPlaybackRate = ttsPlaybackRate.value
-    audio.setAttribute('data-text', element.text)
-    audio.load()
-
-    return audio
-  }
-
-  function preloadNextSegment() {
-    const nextElement = ttsSegments.value[currentTTSSegmentIndex.value + 1]
-    if (!nextElement) return
-
-    if (!preloadAudio.value) {
-      preloadAudio.value = new Audio()
-      preloadAudio.value.preload = 'auto'
-    }
-
-    const src = getAudioSrc(nextElement)
-    if (preloadAudio.value.getAttribute('data-src') !== src) {
-      preloadAudio.value.setAttribute('data-src', src)
-      preloadAudio.value.src = src
-      preloadAudio.value.load()
-    }
-  }
-
-  function playCurrentElement() {
-    const currentElement = ttsSegments.value[currentTTSSegmentIndex.value]
-    if (!currentElement) return
-
-    stopActiveAudio()
-    const audio = createAudio(currentElement)
-    audio?.play()?.catch((e: unknown) => {
-      if (e instanceof DOMException && e.name === 'AbortError') return
-      console.warn('Play rejected:', e)
-      if (e instanceof DOMException && e.name === 'NotAllowedError') {
-        // Autoplay blocked — need user gesture to resume
-        isTextToSpeechPlaying.value = false
-        options.onError?.(TTS_ERROR_NOT_ALLOWED)
-        return
-      }
-      consecutiveAudioErrors.value += 1
-      if (consecutiveAudioErrors.value >= MAX_CONSECUTIVE_ERRORS) {
-        pauseTextToSpeech()
-        return
-      }
-      setTimeout(() => {
-        if (isTextToSpeechOn.value) playCurrentElement()
-      }, 1000)
-    })
-
-    preloadNextSegment()
-  }
-
   function playNextElement() {
     if (currentTTSSegmentIndex.value + 1 >= ttsSegments.value.length) {
       options.onAllSegmentsPlayed?.()
       return
     }
     currentTTSSegmentIndex.value += 1
-    playCurrentElement()
+    player.skipTo(currentTTSSegmentIndex.value)
   }
 
   async function startTextToSpeech(index: number | null = null) {
@@ -387,15 +284,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         currentTTSSegmentIndex.value = Math.max(Math.min(index, ttsSegments.value.length - 1), 0)
       }
       else if (isTextToSpeechOn.value) {
-        if (activeAudio.value) {
-          activeAudio.value.play()?.catch((e: unknown) => {
-            if (e instanceof DOMException && e.name === 'AbortError') return
-            console.warn('Resume play rejected:', e)
-            if (e instanceof DOMException && e.name === 'NotAllowedError') {
-              isTextToSpeechPlaying.value = false
-              options.onError?.(TTS_ERROR_NOT_ALLOWED)
-            }
-          })
+        if (player.resume()) {
           useLogEvent('tts_resume', {
             nft_class_id: nftClassId,
           })
@@ -406,9 +295,8 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         currentTTSSegmentIndex.value = 0
       }
 
-      resetAudio()
+      consecutiveAudioErrors.value = 0
       isTextToSpeechOn.value = true
-      setupMediaSession()
 
       useLogEvent('tts_start', {
         nft_class_id: nftClassId,
@@ -417,7 +305,20 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       if (ttsSegments.value.length === 0) {
         return
       }
-      playCurrentElement()
+
+      player.load({
+        segments: ttsSegments.value,
+        getAudioSrc,
+        startIndex: currentTTSSegmentIndex.value,
+        rate: ttsPlaybackRate.value,
+        metadata: {
+          bookTitle: toValue(bookName) || '',
+          authorName: toValue(bookAuthorName) || '',
+          coverUrl: toValue(bookCoverSrc) || '',
+        },
+      })
+
+      setupMediaSession()
     }
     catch (error) {
       isTextToSpeechOn.value = false
@@ -428,61 +329,33 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     }
   }
 
-  function resetAudio() {
-    consecutiveAudioErrors.value = 0
-    if (activeAudio.value) {
-      pausedInternally = true
-      activeAudio.value.pause()
-      activeAudio.value.src = ''
-      activeAudio.value.load()
-      activeAudio.value.onplay = null
-      activeAudio.value.onpause = null
-      activeAudio.value.onended = null
-      activeAudio.value.onerror = null
-      activeAudio.value.onstalled = null
+  function pauseTextToSpeech() {
+    if (isTextToSpeechOn.value) {
+      player.pause()
+      useLogEvent('tts_pause', {
+        nft_class_id: nftClassId,
+      })
     }
-    activeAudio.value = null
-    if (preloadAudio.value) {
-      preloadAudio.value.src = ''
-      preloadAudio.value.load()
-    }
-    preloadAudio.value = null
   }
 
   function setTTSSegments(elements: TTSSegment[]) {
     ttsSegments.value = elements
   }
 
-  const playCurrentElementDebounced = useDebounceFn(() => {
-    playCurrentElement()
+  const debouncedSkipTo = useDebounceFn((index: number) => {
+    player.skipTo(index)
   }, 500)
-
-  function stopActiveAudio() {
-    if (activeAudio.value) {
-      pausedInternally = true
-      activeAudio.value.pause()
-      activeAudio.value.currentTime = 0
-    }
-  }
-
-  function cancelPreload() {
-    if (preloadAudio.value) {
-      preloadAudio.value.src = ''
-      preloadAudio.value.load()
-    }
-  }
 
   function skipForward() {
     if (!isTextToSpeechOn.value) return
     useLogEvent('tts_skip_forward', {
       nft_class_id: nftClassId,
     })
-    stopActiveAudio()
-    cancelPreload()
+    player.pause()
     if (currentTTSSegmentIndex.value + 1 < ttsSegments.value.length) {
       currentTTSSegmentIndex.value += 1
     }
-    playCurrentElementDebounced()
+    debouncedSkipTo(currentTTSSegmentIndex.value)
   }
 
   function skipToIndex(segmentIndex: number) {
@@ -490,10 +363,9 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     useLogEvent('tts_skip_to_index', {
       nft_class_id: nftClassId,
     })
-    stopActiveAudio()
-    cancelPreload()
+    player.pause()
     currentTTSSegmentIndex.value = Math.max(Math.min(segmentIndex, ttsSegments.value.length - 1), 0)
-    playCurrentElementDebounced()
+    debouncedSkipTo(currentTTSSegmentIndex.value)
   }
 
   function skipBackward() {
@@ -501,12 +373,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     useLogEvent('tts_skip_backward', {
       nft_class_id: nftClassId,
     })
-    stopActiveAudio()
-    cancelPreload()
+    player.pause()
     if (currentTTSSegmentIndex.value > 0) {
       currentTTSSegmentIndex.value -= 1
     }
-    playCurrentElementDebounced()
+    debouncedSkipTo(currentTTSSegmentIndex.value)
   }
 
   function restartTextToSpeech() {
@@ -521,7 +392,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   function stopTextToSpeech() {
     showOfflineModal.value = false
     shouldResumeWhenOnline.value = false
-    resetAudio()
+    player.stop()
     isTextToSpeechOn.value = false
     isTextToSpeechPlaying.value = false
     isShowTextToSpeechOptions.value = false
