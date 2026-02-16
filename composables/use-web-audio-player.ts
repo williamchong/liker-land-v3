@@ -1,0 +1,206 @@
+const MAX_AUTO_RESUME_RETRIES = 3
+
+export function useWebAudioPlayer(): TTSAudioPlayer {
+  const activeAudio = ref<HTMLAudioElement | null>(null)
+  const preloadAudio = ref<HTMLAudioElement | null>(null)
+
+  let segments: TTSSegment[] = []
+  let getAudioSrc: (segment: TTSSegment) => string = () => ''
+  let currentIndex = 0
+  let currentRate = 1.0
+  let pausedInternally = false
+  let autoResumeRetries = 0
+  let playing = false
+  let active = false
+
+  const handlers: Partial<{ [K in keyof TTSAudioPlayerEvents]: TTSAudioPlayerEvents[K] }> = {}
+
+  function on<K extends keyof TTSAudioPlayerEvents>(event: K, handler: TTSAudioPlayerEvents[K]) {
+    handlers[event] = handler
+  }
+
+  function resetAudio() {
+    if (activeAudio.value) {
+      pausedInternally = true
+      activeAudio.value.pause()
+      activeAudio.value.src = ''
+      activeAudio.value.load()
+      activeAudio.value.onplay = null
+      activeAudio.value.onpause = null
+      activeAudio.value.onended = null
+      activeAudio.value.onerror = null
+      activeAudio.value.onstalled = null
+    }
+    activeAudio.value = null
+    if (preloadAudio.value) {
+      preloadAudio.value.src = ''
+      preloadAudio.value.load()
+    }
+    preloadAudio.value = null
+  }
+
+  function createAudio(element: TTSSegment): HTMLAudioElement {
+    const audio = new Audio()
+    activeAudio.value = audio
+    audio.preload = 'auto'
+
+    audio.onplay = () => {
+      playing = true
+      autoResumeRetries = 0
+      handlers.play?.()
+    }
+
+    audio.onpause = () => {
+      playing = false
+      if (pausedInternally) {
+        pausedInternally = false
+        handlers.pause?.()
+        return
+      }
+      handlers.pause?.()
+      // Unexpected pause (OS interruption: phone call, other app audio, etc.)
+      // Attempt auto-resume after a short delay, with a retry limit
+      if (active && autoResumeRetries < MAX_AUTO_RESUME_RETRIES) {
+        autoResumeRetries += 1
+        setTimeout(() => {
+          if (!playing && activeAudio.value) {
+            activeAudio.value.play()?.catch((e: unknown) => {
+              if (e instanceof DOMException && e.name === 'NotAllowedError') {
+                handlers.error?.('NotAllowedError')
+              }
+            })
+          }
+        }, 1000)
+      }
+    }
+
+    audio.onended = () => {
+      if (currentIndex >= segments.length - 1) {
+        handlers.allEnded?.()
+      }
+      else {
+        handlers.ended?.()
+      }
+    }
+
+    audio.onstalled = () => {
+      console.warn(`Audio playback stalled at ${currentRate}x`)
+      if (audio.currentTime < 0.00001) {
+        // Safari on iOS sometimes gets stuck at 0.000001 for rate > 1.0
+        audio.playbackRate = 1.0
+      }
+    }
+
+    audio.onerror = (e) => {
+      const error = audio.error || e
+      handlers.error?.(error)
+    }
+
+    audio.src = getAudioSrc(element)
+    audio.playbackRate = currentRate
+    audio.defaultPlaybackRate = currentRate
+    audio.load()
+
+    return audio
+  }
+
+  function preloadNextSegment() {
+    const nextElement = segments[currentIndex + 1]
+    if (!nextElement) return
+
+    if (!preloadAudio.value) {
+      preloadAudio.value = new Audio()
+      preloadAudio.value.preload = 'auto'
+    }
+
+    const src = getAudioSrc(nextElement)
+    if (preloadAudio.value.getAttribute('data-src') !== src) {
+      preloadAudio.value.setAttribute('data-src', src)
+      preloadAudio.value.src = src
+      preloadAudio.value.load()
+    }
+  }
+
+  function playAtIndex(index: number) {
+    currentIndex = index
+    resetAudio()
+
+    const element = segments[index]
+    if (!element) return
+
+    handlers.trackChanged?.(index)
+    const audio = createAudio(element)
+    audio.play()?.catch((e: unknown) => {
+      if (e instanceof DOMException && e.name === 'AbortError') return
+      console.warn('Play rejected:', e)
+      if (e instanceof DOMException && e.name === 'NotAllowedError') {
+        playing = false
+        handlers.error?.('NotAllowedError')
+      }
+    })
+
+    preloadNextSegment()
+  }
+
+  function load(options: {
+    segments: TTSSegment[]
+    getAudioSrc: (segment: TTSSegment) => string
+    startIndex: number
+    rate: number
+    metadata: { bookTitle: string, authorName: string, coverUrl: string }
+  }) {
+    active = true
+    segments = options.segments
+    getAudioSrc = options.getAudioSrc
+    currentRate = options.rate
+    playAtIndex(options.startIndex)
+  }
+
+  function resume(): boolean {
+    if (!activeAudio.value) return false
+    activeAudio.value.play()?.catch((e: unknown) => {
+      if (e instanceof DOMException && e.name === 'AbortError') return
+      console.warn('Resume play rejected:', e)
+      if (e instanceof DOMException && e.name === 'NotAllowedError') {
+        playing = false
+        handlers.error?.('NotAllowedError')
+      }
+    })
+    return true
+  }
+
+  function pause() {
+    if (activeAudio.value) {
+      pausedInternally = true
+      activeAudio.value.pause()
+      activeAudio.value.currentTime = 0
+    }
+  }
+
+  function stop() {
+    active = false
+    resetAudio()
+  }
+
+  function skipTo(index: number) {
+    playAtIndex(index)
+  }
+
+  function setRate(rate: number) {
+    currentRate = rate
+    if (activeAudio.value) {
+      activeAudio.value.playbackRate = rate
+      activeAudio.value.defaultPlaybackRate = rate
+    }
+  }
+
+  return {
+    load,
+    resume,
+    pause,
+    stop,
+    skipTo,
+    setRate,
+    on,
+  }
+}
