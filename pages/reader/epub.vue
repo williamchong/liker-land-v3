@@ -302,7 +302,7 @@ import ePub, {
 declare interface EpubView {
   window: Window
   settings: {
-    direction: 'ltr' | 'rtl'
+    direction?: string
   }
 }
 
