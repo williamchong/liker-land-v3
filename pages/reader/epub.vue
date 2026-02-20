@@ -582,6 +582,7 @@ async function loadEPub() {
   }
 
   book.spine!.each((section: Section) => {
+    if (!section.href) return
     const directories = section.href.split('/')
     const filename = directories.pop()
     if (!filename) return
@@ -590,8 +591,8 @@ async function loadEPub() {
   navItems.value = toc.filter((item): item is NavItem => item !== null)
 
   activeNavItemHref.value = book.spine!.first()!.href
-  currentPageHref.value = activeNavItemHref.value
-  lastSectionIndex.value = book.spine!.last()!.index
+  currentPageHref.value = activeNavItemHref.value ?? ''
+  lastSectionIndex.value = book.spine!.last()!.index ?? 0
 
   if (!renditionElement.value) {
     return
@@ -629,7 +630,7 @@ async function loadEPub() {
   activeTTSElementIndex.value = undefined
 
   rendition.value.on('rendered', (section: Section, view: EpubView) => {
-    currentSectionIndex.value = section.index
+    currentSectionIndex.value = section.index ?? 0
     isRightToLeft.value = view.settings.direction === 'rtl'
     renditionViewWindow.value = view.window
     isPageLoading.value = false
@@ -773,11 +774,12 @@ async function extractTTSSegments(book: Book) {
   book.spine!.each((section: Section) => {
     const sectionPromise = (async () => {
       try {
+        if (!section.href) return { segments: [], chapterTitle: '', sectionIndex: section.index ?? 0 }
         const chapter = await book.load(section.href)
 
         if (!(chapter instanceof Document)) {
           console.warn(`No document found for section ${section.href}`)
-          return { segments: [], chapterTitle: '', sectionIndex: section.index }
+          return { segments: [], chapterTitle: '', sectionIndex: section.index ?? 0 }
         }
 
         const chapterTitle = chapter.querySelector('title')?.textContent?.trim() || ''
@@ -795,16 +797,16 @@ async function extractTTSSegments(book: Book) {
               text: segment,
               id: `${section.index}-${elIndex}-${segIndex}`,
               cfi,
-              sectionIndex: section.index,
+              sectionIndex: section.index ?? 0,
             })),
           )
         })
 
-        return { segments, chapterTitle, sectionIndex: section.index }
+        return { segments, chapterTitle, sectionIndex: section.index ?? 0 }
       }
       catch (err) {
         console.warn(`Failed to load section ${section.href}`, err)
-        return { segments: [], chapterTitle: '', sectionIndex: section.index }
+        return { segments: [], chapterTitle: '', sectionIndex: section.index ?? 0 }
       }
     })()
 
