@@ -1,6 +1,8 @@
 import { useDebounceFn, useEventListener, useStorage } from '@vueuse/core'
 import type { CustomVoiceData } from '~/shared/types/custom-voice'
 
+export const TTS_ERROR_NOT_ALLOWED = 'NotAllowedError'
+
 interface TTSOptions {
   nftClassId?: string
   onError?: (error: string | Event | MediaError) => void
@@ -64,6 +66,9 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   const shouldResumeWhenOnline = ref(false)
   const consecutiveAudioErrors = ref(0)
   const MAX_CONSECUTIVE_ERRORS = 3
+  const MAX_AUTO_RESUME_RETRIES = 3
+  let autoResumeRetries = 0
+  let pausedInternally = false
   const currentTTSSegmentIndex = ref(0)
   const ttsSegments = ref<TTSSegment[]>([])
   const currentTTSSegment = computed(() => {
@@ -231,10 +236,29 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
       audio.onplay = () => {
         isTextToSpeechPlaying.value = true
+        autoResumeRetries = 0
       }
 
       audio.onpause = () => {
         isTextToSpeechPlaying.value = false
+        if (pausedInternally) {
+          pausedInternally = false
+          return
+        }
+        // Unexpected pause (OS interruption: phone call, other app audio, etc.)
+        // Attempt auto-resume after a short delay, with a retry limit
+        if (isTextToSpeechOn.value && autoResumeRetries < MAX_AUTO_RESUME_RETRIES) {
+          autoResumeRetries += 1
+          setTimeout(() => {
+            if (isTextToSpeechOn.value && !isTextToSpeechPlaying.value && activeAudio.value) {
+              activeAudio.value.play()?.catch((e: unknown) => {
+                if (e instanceof DOMException && e.name === 'NotAllowedError') {
+                  options.onError?.(TTS_ERROR_NOT_ALLOWED)
+                }
+              })
+            }
+          }, 1000)
+        }
       }
 
       audio.onended = () => {
@@ -319,7 +343,22 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     stopActiveAudio()
     const audio = createAudio(currentElement)
     audio?.play()?.catch((e: unknown) => {
+      if (e instanceof DOMException && e.name === 'AbortError') return
       console.warn('Play rejected:', e)
+      if (e instanceof DOMException && e.name === 'NotAllowedError') {
+        // Autoplay blocked — need user gesture to resume
+        isTextToSpeechPlaying.value = false
+        options.onError?.(TTS_ERROR_NOT_ALLOWED)
+        return
+      }
+      consecutiveAudioErrors.value += 1
+      if (consecutiveAudioErrors.value >= MAX_CONSECUTIVE_ERRORS) {
+        pauseTextToSpeech()
+        return
+      }
+      setTimeout(() => {
+        if (isTextToSpeechOn.value) playCurrentElement()
+      }, 1000)
     })
 
     preloadNextSegment()
@@ -350,7 +389,12 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       else if (isTextToSpeechOn.value) {
         if (activeAudio.value) {
           activeAudio.value.play()?.catch((e: unknown) => {
+            if (e instanceof DOMException && e.name === 'AbortError') return
             console.warn('Resume play rejected:', e)
+            if (e instanceof DOMException && e.name === 'NotAllowedError') {
+              isTextToSpeechPlaying.value = false
+              options.onError?.(TTS_ERROR_NOT_ALLOWED)
+            }
           })
           useLogEvent('tts_resume', {
             nft_class_id: nftClassId,
@@ -387,6 +431,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   function resetAudio() {
     consecutiveAudioErrors.value = 0
     if (activeAudio.value) {
+      pausedInternally = true
       activeAudio.value.pause()
       activeAudio.value.src = ''
       activeAudio.value.load()
@@ -414,6 +459,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
   function stopActiveAudio() {
     if (activeAudio.value) {
+      pausedInternally = true
       activeAudio.value.pause()
       activeAudio.value.currentTime = 0
     }
