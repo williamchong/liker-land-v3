@@ -60,6 +60,7 @@ export default defineNuxtConfig({
     azureSubscriptionKey: process.env.AZURE_SUBSCRIPTION_KEY,
     azureServiceRegion: process.env.AZURE_SERVICE_REGION || 'southeastasia',
     ttsCacheBucketPrefix: process.env.TTS_CACHE_BUCKET_PREFIX,
+    customVoiceBucketPrefix: process.env.CUSTOM_VOICE_BUCKET_PREFIX,
     public: {
       scripts: {
         intercom: {
@@ -313,6 +314,9 @@ export default defineNuxtConfig({
       // NOTE: Allow Magic Link/PDF.js iframes
       crossOriginEmbedderPolicy: 'unsafe-none',
       crossOriginOpenerPolicy: 'same-origin-allow-popups',
+      permissionsPolicy: {
+        microphone: ['self'],
+      },
     },
     rateLimiter: false,
   },

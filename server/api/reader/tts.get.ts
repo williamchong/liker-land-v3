@@ -71,10 +71,31 @@ export default defineEventHandler(async (event) => {
       message: 'INVALID_VOICE_ID',
     })
   }
-  const provider = getTTSProvider(validVoiceId)
+
+  const isCustomVoice = validVoiceId === 'custom'
+  let customMiniMaxVoiceId: string | undefined
+  let provider: BaseTTSProvider
+
+  if (isCustomVoice) {
+    const isLikerPlus = session.user.isLikerPlus || false
+    if (!isLikerPlus) {
+      throw createError({ status: 402, message: 'REQUIRE_LIKER_PLUS' })
+    }
+    const customVoice = await getCustomVoice(session.user.evmWallet)
+    if (!customVoice?.voiceId) {
+      throw createError({ status: 404, message: 'NO_CUSTOM_VOICE' })
+    }
+    customMiniMaxVoiceId = customVoice.voiceId
+    provider = new MinimaxTTSProvider()
+  }
+  else {
+    provider = getTTSProvider(validVoiceId)
+  }
+
   const language = rawLanguage as keyof typeof LANG_MAPPING
+  const customVoiceWallet = isCustomVoice ? session.user.evmWallet : undefined
   const logText = text.replace(/(\r\n|\n|\r)/gm, ' ')
-  console.log(`[Speech] User ${session.user.evmWallet} requested conversion. Language: ${language}, Text: "${logText.substring(0, 50)}${logText.length > 50 ? '...' : ''}", Voice: ${validVoiceId}, Provider: ${VOICE_PROVIDER_MAPPING[validVoiceId]}`)
+  console.log(`[Speech] User ${session.user.evmWallet} requested conversion. Language: ${language}, Text: "${logText.substring(0, 50)}${logText.length > 50 ? '...' : ''}", Voice: ${validVoiceId}${isCustomVoice ? ` (${customMiniMaxVoiceId})` : ''}, Provider: ${isCustomVoice ? 'minimax' : VOICE_PROVIDER_MAPPING[validVoiceId]}`)
 
   if (!await getUserTTSAvailable(event)) {
     throw createError({
@@ -87,16 +108,21 @@ export default defineEventHandler(async (event) => {
 
   const bucket = getTTSCacheBucket()
   const isCacheEnabled = !!bucket
+  const cacheKey = isCacheEnabled
+    ? (customVoiceWallet
+        ? generateCustomVoiceTTSCacheKey(customVoiceWallet, language, text)
+        : generateTTSCacheKey(language, validVoiceId, text))
+    : null
+
   if (isCacheEnabled) {
-    const cacheKey = generateTTSCacheKey(language, validVoiceId, text)
-    const file = bucket.file(cacheKey)
+    const file = bucket.file(cacheKey!)
 
     try {
       const [exists] = await file.exists()
       if (exists) {
         const metadata = await file.getMetadata()
         setHeader(event, 'content-type', metadata[0].contentType || provider.format)
-        setHeader(event, 'cache-control', 'public, max-age=604800')
+        setHeader(event, 'cache-control', isCustomVoice ? 'private, max-age=604800' : 'public, max-age=604800')
         if (Number(metadata[0].size)) {
           setHeader(event, 'content-length', Number(metadata[0].size))
         }
@@ -115,16 +141,15 @@ export default defineEventHandler(async (event) => {
       text,
       language,
       voiceId: validVoiceId,
+      customMiniMaxVoiceId,
       session,
       config,
     })
 
     let cacheWriteStream: Writable | null = null
-    let cacheKey: string | null = null
 
     if (isCacheEnabled) {
-      cacheKey = generateTTSCacheKey(language, validVoiceId, text)
-      const cacheFile = bucket.file(cacheKey)
+      const cacheFile = bucket.file(cacheKey!)
       // Firebase Storage metadata has a 2KB limit per key
       const truncatedText = text.length > 1800 ? text.substring(0, 1800) + '...' : text
       cacheWriteStream = cacheFile.createWriteStream({
@@ -164,7 +189,7 @@ export default defineEventHandler(async (event) => {
     })
     const processResponse = response.pipeThrough(processStream)
     setHeader(event, 'content-type', provider.format)
-    setHeader(event, 'cache-control', 'public, max-age=604800')
+    setHeader(event, 'cache-control', isCustomVoice ? 'private, max-age=604800' : 'public, max-age=604800')
     return sendStream(event, processResponse)
   }
   catch (error) {
