@@ -384,6 +384,7 @@ function formatSeconds(sec: number): string {
 
 onMounted(() => {
   hasMicrophone.value = !!navigator.mediaDevices?.getUserMedia
+  if (hasMicrophone.value) import('@breezystack/lamejs')
 })
 
 async function startRecording() {
@@ -406,12 +407,12 @@ async function startRecording() {
       }
       const rawBlob = new Blob(recordingChunks.value, { type: recorder.mimeType })
       try {
-        const wavBlob = await convertBlobToWav(rawBlob)
-        const file = new File([wavBlob], 'recording.wav', { type: 'audio/wav' })
+        const mp3Blob = await convertBlobToMp3(rawBlob)
+        const file = new File([mp3Blob], 'recording.mp3', { type: 'audio/mpeg' })
         setAudioFile(file)
       }
       catch (error) {
-        console.error('[CustomVoice] WAV conversion failed:', error)
+        console.error('[CustomVoice] MP3 conversion failed:', error)
         errorMessage.value = $t('tts_custom_voice_error_recording_failed')
       }
     }
