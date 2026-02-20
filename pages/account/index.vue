@@ -445,9 +445,9 @@ const { customVoice, hasCustomVoice, fetchCustomVoice } = useCustomVoice()
 const overlay = useOverlay()
 const customVoiceModal = overlay.create(CustomVoiceUploadModal)
 
-watch(hasLoggedIn, (loggedIn) => {
+watchImmediate(hasLoggedIn, (loggedIn) => {
   if (loggedIn) fetchCustomVoice()
-}, { immediate: true })
+})
 
 const walletAddress = computed(() => user.value?.evmWallet)
 const {

@@ -333,7 +333,9 @@ const isRecording = ref(false)
 const mediaRecorder = ref<MediaRecorder | null>(null)
 const recordingChunks = ref<Blob[]>([])
 const recordingDuration = ref(0)
-const recordingTimer = ref<ReturnType<typeof setInterval> | null>(null)
+const { pause: pauseRecordingTimer, resume: resumeRecordingTimer } = useIntervalFn(() => {
+  recordingDuration.value++
+}, 1000, { immediate: false })
 
 const audioPreviewUrl = ref<string | null>(null)
 const audioPreviewEl = ref<HTMLAudioElement | null>(null)
@@ -395,10 +397,7 @@ async function startRecording() {
 
     recorder.onstop = async () => {
       stream.getTracks().forEach(t => t.stop())
-      if (recordingTimer.value) {
-        clearInterval(recordingTimer.value)
-        recordingTimer.value = null
-      }
+      pauseRecordingTimer()
       const rawBlob = new Blob(recordingChunks.value, { type: recorder.mimeType })
       try {
         const wavBlob = await convertBlobToWav(rawBlob)
@@ -414,9 +413,7 @@ async function startRecording() {
     mediaRecorder.value = recorder
     recorder.start()
     isRecording.value = true
-    recordingTimer.value = setInterval(() => {
-      recordingDuration.value++
-    }, 1000)
+    resumeRecordingTimer()
   }
   catch {
     errorMessage.value = $t('tts_custom_voice_error_mic_denied')

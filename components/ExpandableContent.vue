@@ -42,14 +42,15 @@ const shouldShowExpandToggle = ref(false)
 const content = ref(null)
 const contentHeight = ref(0)
 
-let resizeObserver = null
-
 const updateHeight = () => {
   if (content.value) {
     contentHeight.value = content.value.scrollHeight
     shouldShowExpandToggle.value = contentHeight.value > props.height
   }
 }
+
+onMounted(updateHeight)
+useResizeObserver(content, updateHeight)
 
 const containerStyle = computed(() => {
   if (isExpanded.value || !shouldShowExpandToggle.value) {
@@ -70,21 +71,4 @@ const toggleButtonLabel = computed(() => {
 const toggleButtonIcon = computed(() => {
   return isExpanded.value ? 'i-material-symbols-keyboard-arrow-up-rounded' : 'i-material-symbols-keyboard-arrow-down-rounded'
 })
-
-onMounted(() => {
-  updateHeight()
-  resizeObserver = new ResizeObserver(updateHeight)
-  if (content.value) {
-    resizeObserver.observe(content.value)
-  }
-})
-
-onBeforeUnmount(() => {
-  if (resizeObserver && content.value) {
-    resizeObserver.unobserve(content.value)
-    resizeObserver.disconnect()
-  }
-})
-
-watch(content, updateHeight)
 </script>
