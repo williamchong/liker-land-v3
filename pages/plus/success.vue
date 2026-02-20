@@ -138,7 +138,7 @@ onMounted(async () => {
     }
 
     if (giftNFTClassId && giftCartId && giftPaymentId && giftClaimToken) {
-      accountStore.clearPlusRedirectRoute()
+      accountStore.plusRedirectRoute = null
       await navigateTo(localeRoute({
         name: 'claim-page',
         query: {
@@ -150,10 +150,10 @@ onMounted(async () => {
       }), { replace: true })
     }
     else {
-      const redirectRoute = accountStore.getPlusRedirectRoute()
+      const redirectRoute = accountStore.plusRedirectRoute
 
       if (redirectRoute && redirectRoute.name) {
-        accountStore.clearPlusRedirectRoute()
+        accountStore.plusRedirectRoute = null
         await navigateTo(localeRoute(redirectRoute), { replace: true })
       }
       else {

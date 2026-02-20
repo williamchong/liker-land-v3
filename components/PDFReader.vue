@@ -611,13 +611,7 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
-  window.addEventListener('keydown', handleKeydown)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', handleKeydown)
-})
+useEventListener('keydown', handleKeydown)
 
 function handleMobileTTSClick() {
   if (props.isAudioHidden) {
