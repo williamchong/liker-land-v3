@@ -339,6 +339,20 @@ const {
       })
       return
     }
+    if (error instanceof MediaError) {
+      const codeNames: Record<number, string> = {
+        1: 'MEDIA_ERR_ABORTED',
+        2: 'MEDIA_ERR_NETWORK',
+        3: 'MEDIA_ERR_DECODE',
+        4: 'MEDIA_ERR_SRC_NOT_SUPPORTED',
+      }
+      handleError(new Error(`MediaError ${codeNames[error.code] || error.code}: ${error.message}`))
+      return
+    }
+    if (error instanceof Event) {
+      handleError(new Error(`Audio error event: ${error.type}`))
+      return
+    }
     handleError(error)
   },
   onAllSegmentsPlayed: () => {
