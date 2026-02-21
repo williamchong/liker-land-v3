@@ -595,6 +595,7 @@
   "tts_custom_voice_audio_source_label": "Voice sample",
   "tts_custom_voice_authorization_warning": "Please only use voice recordings you are authorized to use. Uploading another person's voice without their consent is prohibited.",
   "tts_custom_voice_avatar_upload_button": "Upload avatar",
+  "tts_custom_voice_change_button": "Change voice",
   "tts_custom_voice_default_name": "My private voice artist",
   "tts_custom_voice_delete_button": "Delete voice",
   "tts_custom_voice_delete_confirm_description": "Once deleted, you can re-upload anytime",
