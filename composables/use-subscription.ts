@@ -199,7 +199,7 @@ export function useSubscription() {
           coupon,
         })
         if (redirectRoute && redirectRoute?.name) {
-          accountStore.plusRedirectRoute = redirectRoute
+          accountStore.savePlusRedirectRoute(redirectRoute)
         }
         await navigateTo(url, { external: true })
       }

@@ -551,7 +551,7 @@ export const useAccountStore = defineStore('account', () => {
       await $fetch('/api/logout', { method: 'POST' })
       await refreshSession()
       clearCaches()
-      plusRedirectRoute.value = null
+      savePlusRedirectRoute(null)
       blockingModal.patch({ title: $t('account_logged_out') })
       // Wait for a moment to show the logged out message
       await sleep(500)
@@ -599,6 +599,10 @@ export const useAccountStore = defineStore('account', () => {
 
   const plusRedirectRoute = useLocalStorage<RouteLocationAsRelativeGeneric | null>('plus_redirect_route', null)
 
+  function savePlusRedirectRoute(route: RouteLocationAsRelativeGeneric | null) {
+    plusRedirectRoute.value = route
+  }
+
   return {
     likeWallet,
     isLoggingIn,
@@ -613,5 +617,6 @@ export const useAccountStore = defineStore('account', () => {
     exportPrivateKey,
     clearCaches,
     plusRedirectRoute,
+    savePlusRedirectRoute,
   }
 })
