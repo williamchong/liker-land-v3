@@ -59,9 +59,9 @@ const affiliateName = computed(() => {
 
 const cacheTs = ref('')
 
-watch([isCacheDisabled, affiliateInfo], () => {
+watchImmediate([isCacheDisabled, affiliateInfo], () => {
   cacheTs.value = `${Math.round(Date.now() / 1000)}`
-}, { immediate: true })
+})
 
 const affiliateAvatarSrc = computed(() => {
   const src = affiliateInfo.value?.avatarSrc

@@ -260,11 +260,10 @@ const modalContentClass = computed(() => {
 })
 
 // NOTE: This could be simplified by computed, but props not updated after `open()` in `useOverlay()`
-const selectedPlan = ref(props.modelValue || 'yearly')
-watch(
-  selectedPlan,
-  value => emit('update:modelValue', value),
-)
+const selectedPlan = useVModel(props, 'modelValue', emit, {
+  passive: true,
+  defaultValue: 'yearly',
+})
 
 const isPaidTrial = computed(() => props.trialPeriodDays && props.trialPeriodDays >= PAID_TRIAL_PERIOD_DAYS_THRESHOLD)
 
@@ -301,7 +300,7 @@ const handleCloseButtonClick = () => {
 
 function handleSubscribeButtonClick() {
   emit('subscribe', {
-    selectedPlan: selectedPlan.value,
+    selectedPlan: selectedPlan.value ?? 'yearly',
     mustCollectPaymentMethod: props.mustCollectPaymentMethod,
     trialPeriodDays: props.trialPeriodDays,
     utmCampaign: utmCampaign.value,

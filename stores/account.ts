@@ -551,7 +551,7 @@ export const useAccountStore = defineStore('account', () => {
       await $fetch('/api/logout', { method: 'POST' })
       await refreshSession()
       clearCaches()
-      clearPlusRedirectRoute()
+      savePlusRedirectRoute(null)
       blockingModal.patch({ title: $t('account_logged_out') })
       // Wait for a moment to show the logged out message
       await sleep(500)
@@ -597,37 +597,10 @@ export const useAccountStore = defineStore('account', () => {
     }
   }
 
-  function savePlusRedirectRoute(route: RouteLocationAsRelativeGeneric) {
-    if (!window.localStorage) return
-    try {
-      localStorage.setItem('plus_redirect_route', JSON.stringify(route))
-    }
-    catch (error) {
-      console.warn('Failed to store redirect route:', error)
-    }
-  }
+  const plusRedirectRoute = useLocalStorage<RouteLocationAsRelativeGeneric | null>('plus_redirect_route', null)
 
-  function getPlusRedirectRoute() {
-    if (!window.localStorage) return null
-    try {
-      const strRoute = localStorage.getItem('plus_redirect_route')
-      return strRoute ? JSON.parse(strRoute) : null
-    }
-    catch (error) {
-      console.error('Failed to parse stored redirect route:', error)
-      clearPlusRedirectRoute()
-      return null
-    }
-  }
-
-  function clearPlusRedirectRoute() {
-    if (!window.localStorage) return
-    try {
-      localStorage.removeItem('plus_redirect_route')
-    }
-    catch (error) {
-      console.warn('Failed to clear stored redirect route:', error)
-    }
+  function savePlusRedirectRoute(route: RouteLocationAsRelativeGeneric | null) {
+    plusRedirectRoute.value = route
   }
 
   return {
@@ -643,8 +616,7 @@ export const useAccountStore = defineStore('account', () => {
     restoreConnection,
     exportPrivateKey,
     clearCaches,
-    clearPlusRedirectRoute,
-    getPlusRedirectRoute,
+    plusRedirectRoute,
     savePlusRedirectRoute,
   }
 })
