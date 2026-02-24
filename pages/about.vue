@@ -441,6 +441,45 @@
         </div>
       </section>
 
+      <!-- Featured Authors Section -->
+      <section
+        id="featured-authors"
+        class="space-y-6"
+      >
+        <div class="text-center space-y-2">
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
+            {{ $t('about_page_featured_authors_title') }}
+          </h2>
+          <p class="text-lg text-muted leading-relaxed max-w-2xl mx-auto">
+            {{ $t('about_page_featured_authors_content') }}
+          </p>
+        </div>
+
+        <div
+          v-gsap.whenVisible.once.stagger.from="{ y: 20, opacity: 0, duration: 0.4, stagger: 0.05 }"
+          class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-6"
+        >
+          <NuxtLink
+            v-for="author in featuredAuthors"
+            :key="author.name"
+            :to="getEntityStoreRoute(author.name, 'author', author.likerId)"
+            class="flex flex-col items-center gap-2 group"
+            @click="onClickFeaturedAuthor"
+          >
+            <UAvatar
+              :src="author.avatar || (author.likerId ? getAvatarSrc(author.likerId) : undefined)"
+              :alt="author.name"
+              icon="i-material-symbols-person-2-rounded"
+              size="xl"
+              class="transition-transform group-hover:scale-110"
+            />
+            <span class="text-sm text-center text-gray-700 group-hover:text-primary transition-colors">
+              {{ author.name }}
+            </span>
+          </NuxtLink>
+        </div>
+      </section>
+
       <!-- Featured Publishers & Media Section -->
       <section
         id="featured-publishers"
@@ -600,6 +639,38 @@ const isLikerPlus = computed(() => Boolean(user.value?.isLikerPlus))
 
 const metadataStore = useMetadataStore()
 
+const authorAvatars = import.meta.glob<{ default: string }>('~/assets/images/about/avatars/*.png', { eager: true })
+function getLocalAvatar(filename: string) {
+  const key = Object.keys(authorAvatars).find(k => k.endsWith(`/${filename}`))
+  return key ? authorAvatars[key]!.default : undefined
+}
+
+const featuredAuthors = [
+  { name: '高重建', likerId: 'ckxpress' },
+  { name: 'H醫生', avatar: getLocalAvatar('dr-h.png') },
+  { name: '胡境陽', likerId: 'lakeviewsun' },
+  { name: '董啟章', likerId: 'nghengsun' },
+  { name: '邵家臻', avatar: getLocalAvatar('shiu-ka-chun.png') },
+  { name: 'Pazu 薯伯伯', avatar: getLocalAvatar('pazu.png') },
+  { name: '譚蕙芸', avatar: getLocalAvatar('tam-wai-wan.png') },
+  { name: '畢明', avatar: getLocalAvatar('budming.png') },
+  { name: '陳滅', likerId: 'chanmit', avatar: getLocalAvatar('chan-mit.png') },
+  { name: '法庭線', likerId: 'thewitness' },
+  { name: '庭刊', likerId: 'hkcourtnews2023' },
+  { name: 'Wave流行文化誌', avatar: getLocalAvatar('wave-zinehk.png') },
+  { name: '吳靄儀', avatar: getLocalAvatar('margaret-ng.png') },
+  { name: '徐賁', avatar: getLocalAvatar('xu-ben.png') },
+  { name: 'Ms Yu' },
+  { name: '馬菲', avatar: getLocalAvatar('ma-fei.png') },
+  { name: '馬傑偉', avatar: getLocalAvatar('ma-kit-wai.png') },
+  { name: '蔣曉薇', avatar: getLocalAvatar('cheung-hiu-mei.png') },
+  { name: '游欣妮', avatar: getLocalAvatar('yau-yan-nei.png') },
+  { name: '梁柏堅', avatar: getLocalAvatar('leung-pak-kin.png') },
+  { name: '傅月庵', avatar: getLocalAvatar('fu-yue-an.png') },
+  { name: '蔡錦源', avatar: getLocalAvatar('tsoi-kam-yuen.png') },
+  { name: '亞然', avatar: getLocalAvatar('tommy-kwan.png') },
+]
+
 const featuredPublishers = [
   { name: '突破出版', likerId: 'breakthrough_publish' },
   { name: '風簷出版', likerId: '0xpioneer' },
@@ -637,11 +708,16 @@ onMounted(async () => {
   const likerIds = [
     'nghengsun',
     'ckxpress',
+    ...featuredAuthors.filter(a => a.likerId).map(a => a.likerId!),
     ...featuredPublishers.map(p => p.likerId),
   ]
   const uniqueLikerIds = [...new Set(likerIds)]
   await Promise.allSettled(uniqueLikerIds.map(id => metadataStore.lazyFetchLikerInfoById(id)))
 })
+
+function onClickFeaturedAuthor() {
+  useLogEvent('about_featured_author_click')
+}
 
 function onClickFeaturedPublisher() {
   useLogEvent('about_featured_publisher_click')
