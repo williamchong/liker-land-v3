@@ -8,6 +8,12 @@ export default defineEventHandler(async (event) => {
       message: 'MISSING_LIKER_ID',
     })
   }
+  if (!evmWallet) {
+    throw createError({
+      status: 400,
+      message: 'MISSING_EVM_WALLET',
+    })
+  }
 
   const body = await readBody<{
     wallet: string
@@ -17,11 +23,18 @@ export default defineEventHandler(async (event) => {
     deleteSignature: string
     deleteMessage: string
   }>(event)
-  if (!body?.authorizeSignature || !body?.authorizeMessage
+  if (!body?.wallet || !body?.signMethod
+    || !body?.authorizeSignature || !body?.authorizeMessage
     || !body?.deleteSignature || !body?.deleteMessage) {
     throw createError({
       status: 400,
       message: 'MISSING_SIGNATURE',
+    })
+  }
+  if (body.wallet.toLowerCase() !== evmWallet.toLowerCase()) {
+    throw createError({
+      status: 403,
+      message: 'WALLET_MISMATCH',
     })
   }
 
@@ -83,4 +96,5 @@ export default defineEventHandler(async (event) => {
   }
 
   await clearUserSession(event)
+  return { success: true }
 })
