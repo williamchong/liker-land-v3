@@ -8,6 +8,7 @@ export interface BookstoreCMSProduct {
   imageUrls?: string[]
   locales?: string[]
   isDRMFree: boolean
+  isAdultOnly?: boolean
   isMultiple?: boolean
   minPrice?: number
   timestamp?: number

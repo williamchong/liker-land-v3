@@ -61,6 +61,7 @@ export interface FetchAirtableCMSProductsByTagIdResponseData {
       'Sales Count'?: number
       'Chain'?: string[]
       'Calculation'?: boolean
+      'Adult Only'?: boolean
     }
   }>
   offset?: string
@@ -98,6 +99,7 @@ function normalizeProductRecord({ id, fields }: FetchAirtableCMSProductsByTagIdR
     imageUrls: isMultiple ? fields['Image URLs'] : undefined,
     locales: fields.Locales,
     isDRMFree: !!fields['DRM-free'],
+    isAdultOnly: !!fields['Adult Only'] || undefined,
     isMultiple: isMultiple ? true : undefined,
     minPrice: fields['Min Price'],
     timestamp: fields.Timestamp,

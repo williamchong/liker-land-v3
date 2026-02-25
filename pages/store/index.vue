@@ -709,6 +709,10 @@ const products = computed<BookstoreItemList>(() => {
     }
   }
 
+  if (!isAdultContentEnabled.value) {
+    const filtered = cmsProducts.value.items.filter(item => !item.isAdultOnly)
+    return { ...cmsProducts.value, items: filtered }
+  }
   return cmsProducts.value
 })
 
