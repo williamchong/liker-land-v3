@@ -1,4 +1,29 @@
+import { createHash } from 'node:crypto'
 import { AzureTTSProvider } from '~/server/utils/tts-azure'
+
+function parseRangeHeader(rangeHeader: string, totalSize: number): { start: number, end: number } | null {
+  const match = rangeHeader.match(/^bytes=(\d*)-(\d*)$/)
+  if (!match) return null
+
+  let start = match[1] ? Number.parseInt(match[1], 10) : NaN
+  let end = match[2] ? Number.parseInt(match[2], 10) : NaN
+
+  if (Number.isNaN(start) && Number.isNaN(end)) return null
+
+  // Suffix range: bytes=-500 means last 500 bytes
+  if (Number.isNaN(start)) {
+    start = Math.max(0, totalSize - end)
+    end = totalSize - 1
+  }
+  else if (Number.isNaN(end)) {
+    end = totalSize - 1
+  }
+
+  if (start > end || start >= totalSize) return null
+  end = Math.min(end, totalSize - 1)
+
+  return { start, end }
+}
 
 const LANG_MAPPING = {
   'en-US': 'English',
@@ -123,12 +148,33 @@ export default defineEventHandler(async (event) => {
       const [exists] = await file.exists()
       if (exists) {
         const metadata = await file.getMetadata()
-        setHeader(event, 'content-type', metadata[0].contentType || provider.format)
+        const totalSize = Number(metadata[0].size)
+        const contentType = metadata[0].contentType || provider.format
+        const rangeHeader = getHeader(event, 'range')
+
+        const etag = `"${createHash('sha256').update(cacheKey!).digest('hex').substring(0, 16)}"`
+        setHeader(event, 'content-type', contentType)
         setHeader(event, 'cache-control', isCustomVoice ? 'private, max-age=604800' : 'public, max-age=604800')
-        if (Number(metadata[0].size)) {
-          setHeader(event, 'content-length', Number(metadata[0].size))
-        }
+        setHeader(event, 'accept-ranges', 'bytes')
+        setHeader(event, 'vary', 'Range')
+        setHeader(event, 'etag', etag)
+
         console.log(`[Speech] Cache hit for user ${session.user.evmWallet}: ${cacheKey}`)
+
+        if (rangeHeader && totalSize) {
+          const range = parseRangeHeader(rangeHeader, totalSize)
+          if (range) {
+            const { start, end } = range
+            setResponseStatus(event, 206)
+            setHeader(event, 'content-range', `bytes ${start}-${end}/${totalSize}`)
+            setHeader(event, 'content-length', end - start + 1)
+            return sendStream(event, file.createReadStream({ start, end }))
+          }
+        }
+
+        if (totalSize) {
+          setHeader(event, 'content-length', totalSize)
+        }
         return sendStream(event, file.createReadStream())
       }
     }
@@ -147,9 +193,14 @@ export default defineEventHandler(async (event) => {
       config,
     })
 
+    const etag = cacheKey
+      ? `"${createHash('sha256').update(cacheKey).digest('hex').substring(0, 16)}"`
+      : `"${createHash('sha256').update(buffer).digest('hex').substring(0, 16)}"`
     setHeader(event, 'content-type', provider.format)
     setHeader(event, 'cache-control', isCustomVoice ? 'private, max-age=604800' : 'public, max-age=604800')
-    setHeader(event, 'content-length', buffer.length)
+    setHeader(event, 'accept-ranges', 'bytes')
+    setHeader(event, 'vary', 'Range')
+    setHeader(event, 'etag', etag)
 
     if (isCacheEnabled) {
       const cacheFile = bucket.file(cacheKey!)
@@ -170,6 +221,20 @@ export default defineEventHandler(async (event) => {
         console.warn(`[Speech] Cache write failed for user ${session.user.evmWallet}:`, error)
       })
     }
+
+    const rangeHeader = getHeader(event, 'range')
+    if (rangeHeader) {
+      const range = parseRangeHeader(rangeHeader, buffer.length)
+      if (range) {
+        const { start, end } = range
+        setResponseStatus(event, 206)
+        setHeader(event, 'content-range', `bytes ${start}-${end}/${buffer.length}`)
+        setHeader(event, 'content-length', end - start + 1)
+        return buffer.subarray(start, end + 1)
+      }
+    }
+
+    setHeader(event, 'content-length', buffer.length)
 
     return buffer
   }
