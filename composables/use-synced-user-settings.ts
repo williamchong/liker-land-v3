@@ -51,7 +51,7 @@ export function useSyncedUserSettings<T>({
   watch(hasLoggedIn, (isLoggedIn, wasLoggedIn) => {
     if (!isLoggedIn && wasLoggedIn) {
       userSettingsStore.flushBatch()
-      userSettingsStore.$reset()
+      userSettingsStore.clearSettings()
       localState.value = defaultValue
     }
     else {

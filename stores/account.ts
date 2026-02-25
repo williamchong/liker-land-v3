@@ -520,7 +520,7 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   async function clearCaches() {
-    if (!window.caches) return
+    if (!import.meta.client || !window.caches) return
     try {
       isClearingCaches.value = true
       const keys = await window.caches.keys()
