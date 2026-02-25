@@ -7,6 +7,7 @@ export interface BaseUserSettingsData {
   locale?: LocaleCode | null
   currency?: PaymentCurrency
   colorMode?: ColorMode
+  isAdultContentEnabled?: boolean
 }
 
-export type UserSettingKey = 'locale' | 'currency' | 'colorMode'
+export type UserSettingKey = 'locale' | 'currency' | 'colorMode' | 'isAdultContentEnabled'

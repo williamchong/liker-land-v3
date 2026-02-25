@@ -363,6 +363,7 @@ const { handleError } = useErrorHandler()
 const storePageState = useStorePageState()
 const isTablet = useMediaQuery('(max-width: 768px)')
 const isMobile = useMediaQuery('(max-width: 425px)')
+const isAdultContentEnabled = useAdultContentSetting()
 
 const TAG_BUTTON_CLASS_BASE = 'rounded-full hover:-translate-y-0.5 transition-all'
 const TAG_BUTTON_CLASS_LIGHT = 'bg-(--app-bg) hover:bg-accented/80 hover:dark:bg-muted/80'
@@ -665,9 +666,20 @@ const isSearchResultEmpty = computed(() => (
   && searchResults.value.hasFetchedItems
 ))
 
+function shouldFilterAdultOnly(bookstoreInfo: BookstoreInfo | null | undefined): boolean {
+  return !isAdultContentEnabled.value && !!bookstoreInfo?.isAdultOnly
+}
+
 const products = computed<BookstoreItemList>(() => {
   if (searchResults.value && !isSearchResultEmpty.value) {
-    return searchResults.value
+    const filtered = searchResults.value.items.filter((item) => {
+      const bookstoreInfo = bookstoreStore.getBookstoreInfoByNFTClassId(item.classId || '')
+      return !shouldFilterAdultOnly(bookstoreInfo)
+    })
+    return {
+      ...searchResults.value,
+      items: filtered,
+    }
   }
 
   // Return staking books when viewing staking tag
@@ -678,6 +690,7 @@ const products = computed<BookstoreItemList>(() => {
     staking.items.forEach((item) => {
       const bookInfo = bookstoreStore.getBookstoreInfoByNFTClassId(item.nftClassId)
       if (bookInfo?.isHidden) return
+      if (shouldFilterAdultOnly(bookInfo)) return
       items.push({
         id: item.nftClassId,
         classId: item.nftClassId,

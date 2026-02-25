@@ -58,6 +58,7 @@ declare interface BookstoreInfo {
   isApprovedForSale: boolean
   isApprovedForIndexing: boolean
   isApprovedForAds: boolean
+  isAdultOnly?: boolean
   hideDownload: boolean
   hideAudio: boolean
   hideUpsell: boolean
