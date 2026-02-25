@@ -31,14 +31,20 @@ export function usePricingPageCampaign(options: {
   campaignId: MaybeRefOrGetter<string | undefined>
 } = { campaignId: undefined }) {
   const { $posthog } = useNuxtApp()
+  const { locale } = useI18n()
   const campaignId = computed(() => toValue(options.campaignId))
-  const { variant: experimentVariant } = useABTest({ experimentKey: 'pricing-page-campaign' })
+  const isChineseLocale = computed(() => locale.value === 'zh-Hant')
+
+  // Only run campaign A/B test for Chinese locale users
+  const abTest = isChineseLocale.value
+    ? useABTest({ experimentKey: 'pricing-page-campaign' })
+    : undefined
 
   const resolvedCampaignId = computed(() => {
     // If campaign ID is explicitly provided, use it
     if (campaignId.value) return campaignId.value
-    // Otherwise, use the experiment variant if available
-    return experimentVariant.value
+    // Otherwise, use the experiment variant if available (Chinese locale only)
+    return abTest?.variant.value ?? null
   })
 
   const campaignContent = computed(() => {

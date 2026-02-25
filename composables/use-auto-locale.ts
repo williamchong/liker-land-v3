@@ -50,6 +50,13 @@ export function useAutoLocale() {
     )
     if (hasExplicitLocalePrefix) return
 
+    // Force Chinese locale when UTM campaign is set (campaign content is Chinese)
+    const hasCampaignUtm = !!(route.query.utm_campaign || route.query.utm_term)
+    if (hasCampaignUtm) {
+      setLocale('zh-Hant')
+      return
+    }
+
     if (!detectedCountry.value) {
       initializeClientGeolocation()
     }
