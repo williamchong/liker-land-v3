@@ -94,7 +94,7 @@
       </div>
     </section>
 
-    <div class="w-full max-w-4xl mx-auto px-4 pt-12 py-16 space-y-12">
+    <div class="w-full max-w-4xl mx-auto px-4 pt-12 py-16 space-y-20">
       <p
         class="text-lg text-gray-700 leading-relaxed max-w-3xl mx-auto text-center"
         v-text="$t('about_page_what_is_content')"
@@ -518,6 +518,47 @@
           </NuxtLink>
         </div>
       </section>
+
+      <!-- Media Coverage Section -->
+      <section
+        id="media-coverage"
+        class="space-y-6"
+      >
+        <div class="text-center space-y-2">
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
+            {{ $t('about_page_media_coverage_title') }}
+          </h2>
+          <p class="text-lg text-muted leading-relaxed max-w-2xl mx-auto">
+            {{ $t('about_page_media_coverage_content') }}
+          </p>
+        </div>
+
+        <div class="flex flex-wrap justify-center items-center gap-8 md:gap-12">
+          <NuxtLink
+            v-for="item in mediaCoverage"
+            :key="item.url"
+            :to="item.url"
+            :title="item.title"
+            target="_blank"
+            rel="noopener"
+            class="opacity-70 hover:opacity-100 transition-opacity"
+            @click="onClickMediaCoverage"
+          >
+            <img
+              v-if="item.logo"
+              :src="item.logo"
+              :alt="item.source"
+              class="h-8 md:h-10 w-auto object-contain"
+            >
+            <span
+              v-else
+              class="text-lg md:text-xl font-bold text-gray-800 whitespace-nowrap"
+            >
+              {{ item.source }}
+            </span>
+          </NuxtLink>
+        </div>
+      </section>
     </div>
 
     <!-- 3ook Plus Membership Section -->
@@ -625,6 +666,12 @@
 </template>
 
 <script setup lang="ts">
+import shoppingDesignLogo from '~/assets/images/about/media/shopping-design.png'
+import trensseLogo from '~/assets/images/about/media/trensse.png'
+import glassesOnLogo from '~/assets/images/about/media/glasses-on.png'
+import scmpLogo from '~/assets/images/about/media/scmp.png'
+import unwireLogo from '~/assets/images/about/media/unwire.png'
+
 definePageMeta({
   layout: false,
   colorMode: 'light',
@@ -669,6 +716,39 @@ const featuredAuthors = [
   { name: '傅月庵', avatar: getLocalAvatar('fu-yue-an.png') },
   { name: '蔡錦源', avatar: getLocalAvatar('tsoi-kam-yuen.png') },
   { name: '亞然', avatar: getLocalAvatar('tommy-kwan.png') },
+]
+
+const mediaCoverage = [
+  {
+    title: '當人人都能為好書代言：3ook.com 打造正向閱讀迴圈',
+    source: 'Shopping Design',
+    url: 'https://www.shoppingdesign.com.tw/post/view/13140',
+    logo: shoppingDesignLogo,
+  },
+  {
+    title: '演算法決定不了的浪漫：拒絕被標準化的一本書，與一場名為 3ook.com 的出版實驗',
+    source: 'TRENSSE',
+    url: 'https://www.trensse.com/2026/02/26/3ook/',
+    logo: trensseLogo,
+  },
+  {
+    title: '3ook.com 分散式出版 — Web3 金融外的應用場景',
+    source: '借鏡集 Glasses On',
+    url: 'https://www.youtube.com/watch?v=DzQqXHEU-Bo',
+    logo: glassesOnLogo,
+  },
+  {
+    title: 'GenAI Pioneers Tackle Hong Kong\'s Challenges at the First AWS AI Hackathon',
+    source: 'South China Morning Post',
+    url: 'https://www.scmp.com/presented/tech/topics/generative-ai-and-cloud-services/article/3330885/genai-pioneers-tackle-hong-kongs-challenges-first-aws-ai-hackathon',
+    logo: scmpLogo,
+  },
+  {
+    title: 'GenAI 創新力量　AWS AI Hackathon 三大香港實戰方案出爐',
+    source: 'unwire.hk',
+    url: 'https://unwire.hk/2025/10/31/aws-ai-hackathon-2/genai-and-cloud',
+    logo: unwireLogo,
+  },
 ]
 
 const featuredPublishers = [
@@ -721,6 +801,10 @@ function onClickFeaturedAuthor() {
 
 function onClickFeaturedPublisher() {
   useLogEvent('about_featured_publisher_click')
+}
+
+function onClickMediaCoverage() {
+  useLogEvent('about_media_coverage_click')
 }
 
 function onClickHeroLogo() {
