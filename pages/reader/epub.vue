@@ -204,6 +204,23 @@
                 </div>
               </template>
             </BottomSlideover>
+
+            <BottomSlideover
+              v-model:open="isAnnotationsListOpen"
+              :title="$t('reader_annotations_title')"
+            >
+              <UButton
+                icon="i-material-symbols-edit-note-rounded"
+                variant="ghost"
+              />
+
+              <template #body>
+                <AnnotationsList
+                  :annotations="annotations"
+                  @navigate="handleAnnotationNavigate"
+                />
+              </template>
+            </BottomSlideover>
           </div>
         </template>
       </ReaderHeader>
@@ -286,18 +303,37 @@
         />
       </div>
     </div>
+
+    <AnnotationMenu
+      :is-visible="isAnnotationMenuVisible"
+      :position="annotationMenuPosition"
+      @select="handleAnnotationColorSelect"
+      @create-note="handleAnnotationAddNote"
+    />
+
+    <AnnotationModal
+      v-model:open="isAnnotationModalOpen"
+      :annotation="editingAnnotation"
+      :text="editingAnnotation?.text || selectedText"
+      :initial-color="editingAnnotation?.color || pendingAnnotationColor"
+      :is-new-annotation="isNewAnnotation"
+      @save="handleAnnotationModalSave"
+      @delete="handleAnnotationModalDelete"
+    />
   </main>
 </template>
 
 <script setup lang="ts">
 import type { UseSwipeDirection } from '@vueuse/core'
 import ePub, {
+  EpubCFI,
   type Book,
   type Rendition,
   type NavItem,
   type Location,
   type Section,
 } from '@likecoin/epub-ts'
+import { ANNOTATION_COLORS_MAP, ANNOTATION_TEXT_MAX_LENGTH } from '~/constants/annotations'
 
 declare interface EpubView {
   window: Window
@@ -338,6 +374,16 @@ const {
   bookProgressKeyPrefix: bookProgressKeyPrefix.value,
 })
 
+const {
+  annotations,
+  fetchAnnotations,
+  createAnnotation,
+  saveAnnotation,
+  updateAnnotation,
+  deleteAnnotation,
+  getAnnotationById,
+} = useAnnotations({ nftClassId })
+
 function getCacheKeyWithSuffix(suffix: ReaderCacheKeySuffix) {
   return getReaderCacheKeyWithSuffix(bookFileCacheKey.value, suffix)
 }
@@ -365,6 +411,20 @@ const isMobileTocOpen = computed({
 
 const isPageLoading = ref(false)
 
+const isAnnotationMenuVisible = ref(false)
+const annotationMenuPosition = ref({ x: 0, y: 0, yBottom: 0 })
+const selectedText = ref('')
+const selectedCfi = ref('')
+const selectedChapterTitle = ref('')
+const isAnnotationModalOpen = ref(false)
+const editingAnnotation = ref<Annotation | null>(null)
+const isNewAnnotation = ref(false)
+const pendingAnnotationColor = ref<AnnotationColor>('yellow')
+const isAnnotationsListOpen = ref(false)
+const isAnnotationClickInProgress = ref(false)
+const pendingSavePromise = ref<Promise<Annotation | null> | null>(null)
+const renderedHighlights = new Set<string>()
+
 const { loadingLabel, loadingPercentage, loadFileAsBuffer } = useBookFileLoader()
 
 onMounted(async () => {
@@ -373,6 +433,7 @@ onMounted(async () => {
     await Promise.all([
       nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value),
       bookSettingsStore.ensureInitialized(nftClassId.value),
+      fetchAnnotations(),
     ])
   }
   catch (error) {
@@ -516,6 +577,8 @@ let cleanUpClickListener: (() => void) | undefined
 let removeSwipeListener: (() => void) | undefined
 let removeSelectAllByHotkeyListener: (() => void) | undefined
 let removeCopyListener: (() => void) | undefined
+let removeMouseUpListener: (() => void) | undefined
+let removeTouchEndListener: (() => void) | undefined
 const renditionElement = useTemplateRef<HTMLDivElement>('reader')
 const renditionViewWindow = ref<Window | undefined>(undefined)
 
@@ -536,6 +599,7 @@ async function displayRendition(href?: string, { isSilentError = false } = {}) {
 }
 
 async function loadEPub() {
+  renderedHighlights.clear()
   const buffer = await loadFileAsBuffer(bookFileURLWithCORS.value, bookFileCacheKey.value)
   if (!buffer) {
     return
@@ -646,6 +710,11 @@ async function loadEPub() {
         }
       }
 
+      // NOTE: Ignore page-turn if annotation was clicked
+      if (isAnnotationClickInProgress.value) {
+        return
+      }
+
       if (!checkIsSelectingText() && view.window && window.innerWidth < 1024) {
         const width = rendition.value?.manager?.container.clientWidth || 0
         const range = width * 0.45
@@ -727,6 +796,32 @@ async function loadEPub() {
         }
       }
     }, { capture: true })
+
+    if (removeMouseUpListener) {
+      removeMouseUpListener()
+    }
+    removeMouseUpListener = useEventListener(view.window, 'mouseup', (event: MouseEvent) => {
+      // Delay for window.getSelection() reflects the final selection state
+      setTimeout(() => {
+        handleTextSelection(event, view.window)
+      }, 10)
+    })
+
+    if (removeTouchEndListener) {
+      removeTouchEndListener()
+    }
+    removeTouchEndListener = useEventListener(view.window, 'touchend', (event: TouchEvent) => {
+      // Delay for touch selection to allow the browser's native selection UI (drag handles) to stabilize
+      setTimeout(() => {
+        const touch = event.changedTouches[0]
+        if (touch) {
+          const mouseEvent = { clientX: touch.clientX, clientY: touch.clientY } as MouseEvent
+          handleTextSelection(mouseEvent, view.window)
+        }
+      }, 300)
+    })
+
+    renderAnnotations()
   })
 
   rendition.value.on('relocated', (location: Location) => {
@@ -853,12 +948,14 @@ async function setActiveNavItem(item: NavItem, { isSilentError = false } = {}) {
 function nextPage() {
   activeTTSElementIndex.value = undefined
   isPageLoading.value = true
+  isAnnotationMenuVisible.value = false
   rendition.value?.next()
 }
 
 function prevPage() {
   activeTTSElementIndex.value = undefined
   isPageLoading.value = true
+  isAnnotationMenuVisible.value = false
   rendition.value?.prev()
 }
 
@@ -969,6 +1066,331 @@ function checkIsSelectingText() {
   return !!selection && selection.toString().length > 0
 }
 
+function addAnnotationHighlight(annotation: Annotation) {
+  if (!rendition.value) return
+  if (renderedHighlights.has(annotation.cfi)) return
+
+  try {
+    rendition.value.annotations.highlight(
+      annotation.cfi,
+      { id: annotation.id },
+      (e: Event) => {
+        e.stopPropagation()
+        e.preventDefault()
+        isAnnotationClickInProgress.value = true
+        handleAnnotationClick(annotation.id)
+        setTimeout(() => {
+          isAnnotationClickInProgress.value = false
+        }, 100)
+      },
+      'highlight',
+      { 'fill': ANNOTATION_COLORS_MAP[annotation.color], 'fill-opacity': '1' },
+    )
+    renderedHighlights.add(annotation.cfi)
+  }
+  catch (error) {
+    console.warn(`Failed to render annotation ${annotation.id}:`, error)
+  }
+}
+
+function removeAnnotationHighlight(cfi: string) {
+  if (!rendition.value) return
+  try {
+    rendition.value.annotations.remove(cfi, 'highlight')
+  }
+  catch {
+    // Ignore error if highlight doesn't exist
+  }
+  renderedHighlights.delete(cfi)
+}
+
+function renderAnnotations() {
+  if (!rendition.value) return
+
+  const activeCfiSet = new Set(annotations.value.map(a => a.cfi))
+
+  // Remove highlights that no longer exist in annotations
+  for (const cfi of renderedHighlights) {
+    if (!activeCfiSet.has(cfi)) {
+      removeAnnotationHighlight(cfi)
+    }
+  }
+
+  // Add new highlights
+  annotations.value.forEach(addAnnotationHighlight)
+}
+
+watch(annotations, renderAnnotations)
+
+function handleAnnotationClick(annotationId: string) {
+  const annotation = getAnnotationById(annotationId)
+  if (annotation) {
+    editingAnnotation.value = annotation
+    selectedText.value = annotation.text
+    pendingAnnotationColor.value = annotation.color
+    isNewAnnotation.value = false
+    isAnnotationModalOpen.value = true
+  }
+}
+
+function handleTextSelection(_event: MouseEvent, viewWindow: Window) {
+  const selection = viewWindow.getSelection()
+  if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+    isAnnotationMenuVisible.value = false
+    return
+  }
+
+  const text = selection.toString().trim()
+  if (!text) {
+    isAnnotationMenuVisible.value = false
+    return
+  }
+
+  try {
+    const range = selection.getRangeAt(0)
+    // Access via manager to get Contents array
+    const contents = rendition.value?.manager?.getContents()
+    const content = contents?.[0]
+    if (!content) {
+      isAnnotationMenuVisible.value = false
+      return
+    }
+
+    const cfiRange = content.cfiFromRange(range)
+    if (!cfiRange) {
+      isAnnotationMenuVisible.value = false
+      return
+    }
+
+    selectedText.value = text.slice(0, ANNOTATION_TEXT_MAX_LENGTH)
+    selectedCfi.value = cfiRange
+    selectedChapterTitle.value = activeNavItemLabel.value
+
+    const rect = range.getBoundingClientRect()
+    const iframe = renditionElement.value?.querySelector('iframe')
+    const iframeRect = iframe?.getBoundingClientRect()
+
+    if (iframeRect) {
+      annotationMenuPosition.value = {
+        x: iframeRect.left + rect.left + rect.width / 2,
+        y: iframeRect.top + rect.top,
+        yBottom: iframeRect.top + rect.bottom,
+      }
+    }
+    else {
+      annotationMenuPosition.value = {
+        x: rect.left + rect.width / 2,
+        y: rect.top,
+        yBottom: rect.bottom,
+      }
+    }
+
+    isAnnotationMenuVisible.value = true
+  }
+  catch (error) {
+    console.warn('Failed to get CFI range:', error)
+    isAnnotationMenuVisible.value = false
+  }
+}
+
+async function handleAnnotationColorSelect(color: AnnotationColor) {
+  isAnnotationMenuVisible.value = false
+
+  const existingAnnotation = annotations.value.find(a => a.cfi === selectedCfi.value)
+  if (existingAnnotation) {
+    // Re-render with new color immediately
+    removeAnnotationHighlight(existingAnnotation.cfi)
+    addAnnotationHighlight({ ...existingAnnotation, color })
+
+    const updated = await updateAnnotation(existingAnnotation.id, { color })
+    if (!updated) {
+      // Revert to original color
+      removeAnnotationHighlight(existingAnnotation.cfi)
+      addAnnotationHighlight(existingAnnotation)
+      toast.add({
+        title: $t('reader_annotations_update_failed'),
+        color: 'error',
+      })
+    }
+  }
+  else {
+    const createData: AnnotationCreateData = {
+      cfi: selectedCfi.value,
+      text: selectedText.value,
+      color,
+      chapterTitle: selectedChapterTitle.value,
+    }
+    const newAnnotation = createAnnotation(createData)
+    addAnnotationHighlight(newAnnotation)
+
+    const saved = await saveAnnotation(newAnnotation.id, createData)
+    if (saved) {
+      // Re-render with server-assigned ID
+      removeAnnotationHighlight(newAnnotation.cfi)
+      addAnnotationHighlight(saved)
+    }
+    else {
+      removeAnnotationHighlight(newAnnotation.cfi)
+      toast.add({
+        title: $t('reader_annotations_create_failed'),
+        color: 'error',
+      })
+    }
+  }
+
+  renditionViewWindow.value?.getSelection()?.removeAllRanges()
+}
+
+async function handleAnnotationAddNote() {
+  isAnnotationMenuVisible.value = false
+
+  const existingAnnotation = annotations.value.find(a => a.cfi === selectedCfi.value)
+  if (existingAnnotation) {
+    editingAnnotation.value = existingAnnotation
+    pendingAnnotationColor.value = existingAnnotation.color
+    isNewAnnotation.value = false
+  }
+  else {
+    const newAnnotation = createAnnotation({
+      cfi: selectedCfi.value,
+      text: selectedText.value,
+      color: pendingAnnotationColor.value,
+      chapterTitle: selectedChapterTitle.value,
+    })
+    addAnnotationHighlight(newAnnotation)
+    editingAnnotation.value = newAnnotation
+    isNewAnnotation.value = true
+  }
+
+  isAnnotationModalOpen.value = true
+  renditionViewWindow.value?.getSelection()?.removeAllRanges()
+
+  if (!isNewAnnotation.value || !editingAnnotation.value) return
+
+  const newAnnotation = editingAnnotation.value
+  pendingSavePromise.value = saveAnnotation(newAnnotation.id, {
+    cfi: newAnnotation.cfi,
+    text: newAnnotation.text,
+    color: newAnnotation.color,
+    chapterTitle: newAnnotation.chapterTitle,
+  })
+  const saved = await pendingSavePromise.value
+  pendingSavePromise.value = null
+  if (saved) {
+    removeAnnotationHighlight(newAnnotation.cfi)
+    addAnnotationHighlight(saved)
+    if (editingAnnotation.value?.id === newAnnotation.id) {
+      editingAnnotation.value = saved
+    }
+  }
+  else {
+    removeAnnotationHighlight(newAnnotation.cfi)
+    isAnnotationModalOpen.value = false
+    editingAnnotation.value = null
+    isNewAnnotation.value = false
+    toast.add({
+      title: $t('reader_annotations_create_failed'),
+      color: 'error',
+    })
+  }
+}
+
+async function handleAnnotationModalSave(data: { color: AnnotationColor, note: string }) {
+  if (!editingAnnotation.value) return
+
+  const { cfi } = editingAnnotation.value
+
+  // Re-render highlight with new color immediately
+  removeAnnotationHighlight(cfi)
+  addAnnotationHighlight({ ...editingAnnotation.value, color: data.color })
+
+  // Close modal immediately for better UX
+  isAnnotationModalOpen.value = false
+  setTimeout(() => {
+    editingAnnotation.value = null
+    isNewAnnotation.value = false
+  }, 300)
+
+  // Wait for initial save to complete so we have the server-assigned ID
+  if (pendingSavePromise.value) {
+    await pendingSavePromise.value
+  }
+
+  // Look up by CFI to get the server-assigned ID
+  const current = annotations.value.find(a => a.cfi === cfi)
+  if (!current) return
+
+  const result = await updateAnnotation(current.id, {
+    color: data.color,
+    note: data.note,
+  })
+  if (!result) {
+    removeAnnotationHighlight(cfi)
+    const reverted = annotations.value.find(a => a.cfi === cfi)
+    if (reverted) addAnnotationHighlight(reverted)
+    toast.add({
+      title: $t('reader_annotations_update_failed'),
+      color: 'error',
+    })
+  }
+}
+
+async function handleAnnotationModalDelete() {
+  if (!editingAnnotation.value) return
+
+  const { cfi } = editingAnnotation.value
+  removeAnnotationHighlight(cfi)
+
+  isAnnotationModalOpen.value = false
+  setTimeout(() => {
+    editingAnnotation.value = null
+    isNewAnnotation.value = false
+  }, 300)
+
+  // Wait for initial save to complete so we have the server-assigned ID
+  if (pendingSavePromise.value) {
+    await pendingSavePromise.value
+  }
+
+  const current = annotations.value.find(a => a.cfi === cfi)
+  if (!current) return
+
+  const success = await deleteAnnotation(current.id)
+  if (!success) {
+    addAnnotationHighlight(current)
+    toast.add({
+      title: $t('reader_annotations_delete_failed'),
+      color: 'error',
+      duration: 3000,
+      progress: false,
+    })
+  }
+}
+
+async function handleAnnotationNavigate(annotation: Annotation) {
+  isAnnotationsListOpen.value = false
+  isPageLoading.value = true
+  try {
+    const cfi = new EpubCFI(annotation.cfi)
+    if (cfi.range) {
+      cfi.collapse(true)
+    }
+    await rendition.value?.display(cfi.toString())
+  }
+  catch (error) {
+    console.error('Failed to navigate to annotation:', error)
+    toast.add({
+      title: $t('reader_annotations_navigate_failed'),
+      color: 'error',
+      duration: 3000,
+      progress: false,
+    })
+  }
+  finally {
+    isPageLoading.value = false
+  }
+}
+
 const isShiftPressed = useKeyModifier('Shift')
 onKeyStroke('ArrowRight', () => {
   turnPageRight()
@@ -994,6 +1416,18 @@ onKeyStroke('Space', () => {
     nextPage()
   }
   useLogEvent('reader_navigate_key_space')
+})
+
+onBeforeUnmount(() => {
+  cleanUpClickListener?.()
+  removeSwipeListener?.()
+  removeSelectAllByHotkeyListener?.()
+  removeCopyListener?.()
+  removeMouseUpListener?.()
+  removeTouchEndListener?.()
+  renderedHighlights.clear()
+  renditionViewWindow.value = undefined
+  rendition.value?.destroy()
 })
 </script>
 
