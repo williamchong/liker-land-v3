@@ -5,6 +5,7 @@ declare interface TTSAudioPlayerEvents {
   trackChanged: (index: number) => void
   allEnded: () => void
   error: (error: string | Event | MediaError) => void
+  positionState: (state: { position: number, duration: number }) => void
 }
 
 declare interface TTSAudioPlayer {
@@ -20,5 +21,7 @@ declare interface TTSAudioPlayer {
   stop(): void
   skipTo(index: number): void
   setRate(rate: number): void
+  seek(time: number): void
+  getPosition(): { position: number, duration: number } | null
   on<K extends keyof TTSAudioPlayerEvents>(event: K, handler: TTSAudioPlayerEvents[K]): void
 }

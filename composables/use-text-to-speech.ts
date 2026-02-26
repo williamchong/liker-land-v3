@@ -168,6 +168,28 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     isOffline.value = !navigator.onLine
   })
 
+  // Media Session (web only)
+  function updatePositionState() {
+    if (!('mediaSession' in navigator)) return
+    const pos = player.getPosition()
+    if (pos) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: pos.duration,
+          playbackRate: ttsPlaybackRate.value,
+          position: pos.position,
+        })
+      }
+      catch {
+        // Some browsers throw if duration is not finite
+      }
+    }
+  }
+
+  player.on('positionState', () => {
+    updatePositionState()
+  })
+
   function setupMediaSession() {
     try {
       if ('mediaSession' in navigator) {
@@ -202,6 +224,31 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
         navigator.mediaSession.setActionHandler('stop', () => {
           stopTextToSpeech()
+        })
+
+        navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+          const pos = player.getPosition()
+          if (pos) {
+            const offset = details.seekOffset || 10
+            player.seek(pos.position - offset)
+            updatePositionState()
+          }
+        })
+
+        navigator.mediaSession.setActionHandler('seekforward', (details) => {
+          const pos = player.getPosition()
+          if (pos) {
+            const offset = details.seekOffset || 10
+            player.seek(pos.position + offset)
+            updatePositionState()
+          }
+        })
+
+        navigator.mediaSession.setActionHandler('seekto', (details) => {
+          if (details.seekTime != null) {
+            player.seek(details.seekTime)
+            updatePositionState()
+          }
         })
       }
     }
