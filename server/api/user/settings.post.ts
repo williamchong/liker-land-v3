@@ -1,6 +1,6 @@
 import { jwtDecode } from 'jwt-decode'
 
-const ALLOWED_KEYS = ['locale', 'currency', 'colorMode'] as const satisfies readonly UserSettingKey[]
+const ALLOWED_KEYS = ['locale', 'currency', 'colorMode', 'isAdultContentEnabled'] as const satisfies readonly UserSettingKey[]
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)

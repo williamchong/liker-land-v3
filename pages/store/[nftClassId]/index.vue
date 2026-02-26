@@ -45,10 +45,19 @@
           />
 
           <div class="flex flex-col justify-center">
-            <h1
-              class="text-[24px] text-highlighted laptop:text-[32px] desktop:text-[40px] font-bold leading-[1.2]"
-              v-text="bookName"
-            />
+            <div class="flex items-center gap-2">
+              <h1
+                class="text-[24px] text-highlighted laptop:text-[32px] desktop:text-[40px] font-bold leading-[1.2]"
+                v-text="bookName"
+              />
+              <UBadge
+                v-if="bookInfo.isAdultOnly.value"
+                color="error"
+                variant="solid"
+                size="sm"
+                :label="$t('product_page_adult_only_label')"
+              />
+            </div>
             <p
               v-if="bookInfo.alternativeHeadline.value"
               class="text-[16px] text-muted laptop:text-[20px] desktop:text-[24px] leading-[1.3] mt-2"
@@ -725,6 +734,7 @@ const { getAnalyticsParameters } = useAnalytics()
 
 const isDesktopScreen = useDesktopScreen()
 const { isApp } = useAppDetection()
+const isAdultContentEnabled = useAdultContentSetting()
 
 const nftClassId = computed(() => getRouteParam('nftClassId'))
 const { isOwner: isUserBookOwner } = useUserBookOwnership(nftClassId)
@@ -1147,7 +1157,9 @@ const filteredRecommendedClassIds = computed(() => {
   return recommendedClassIds.value
     .filter((classId) => {
       const bookstoreInfo = bookstoreStore.getBookstoreInfoByNFTClassId(classId)
-      return bookstoreInfo !== null && !bookstoreInfo?.isHidden
+      if (bookstoreInfo === null || bookstoreInfo?.isHidden) return false
+      if (!isAdultContentEnabled.value && bookstoreInfo?.isAdultOnly) return false
+      return true
     })
 })
 

@@ -344,6 +344,23 @@
             />
           </template>
         </AccountSettingsItem>
+
+        <AccountSettingsItem
+          icon="i-material-symbols-18-up-rating-outline-rounded"
+          :label="$t('account_page_adult_content')"
+        >
+          <div
+            class="text-sm text-muted"
+            v-text="$t('account_page_adult_content_description')"
+          />
+
+          <template #right>
+            <USwitch
+              :model-value="isAdultContentEnabled"
+              @update:model-value="handleAdultContentToggle"
+            />
+          </template>
+        </AccountSettingsItem>
       </UCard>
     </section>
 
@@ -426,6 +443,30 @@
     </template>
 
     <UModal
+      v-model:open="isAdultContentConfirmOpen"
+      :title="$t('account_page_adult_content_confirm_title')"
+      :description="$t('account_page_adult_content_confirm_description')"
+      :ui="{
+        title: 'text-lg font-bold',
+        footer: 'flex justify-end gap-3',
+      }"
+    >
+      <template #footer>
+        <UButton
+          :label="$t('common_cancel')"
+          variant="outline"
+          color="neutral"
+          @click="isAdultContentConfirmOpen = false"
+        />
+        <UButton
+          :label="$t('account_page_adult_content_confirm_button')"
+          color="error"
+          @click="confirmAdultContent"
+        />
+      </template>
+    </UModal>
+
+    <UModal
       v-model:open="isDeleteAccountDialogOpen"
       :dismissible="!isDeletingAccount"
       :close="!isDeletingAccount"
@@ -495,6 +536,23 @@ const toast = useToast()
 const isWindowFocused = useDocumentVisibility()
 const { copy: copyToClipboard } = useClipboard()
 const { isApp } = useAppDetection()
+
+const isAdultContentEnabled = useAdultContentSetting()
+const isAdultContentConfirmOpen = ref(false)
+
+function handleAdultContentToggle(value: boolean) {
+  if (value) {
+    isAdultContentConfirmOpen.value = true
+  }
+  else {
+    isAdultContentEnabled.value = false
+  }
+}
+
+function confirmAdultContent() {
+  isAdultContentEnabled.value = true
+  isAdultContentConfirmOpen.value = false
+}
 
 const { customVoice, hasCustomVoice, fetchCustomVoice } = useCustomVoice()
 const overlay = useOverlay()

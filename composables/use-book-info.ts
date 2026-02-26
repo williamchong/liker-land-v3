@@ -157,6 +157,10 @@ export default function (
     return bookstoreInfo.value?.isHidden || false
   })
 
+  const isAdultOnly = computed(() => {
+    return bookstoreInfo.value?.isAdultOnly || false
+  })
+
   const isApprovedForSale = computed(() => {
     return bookstoreInfo.value?.isApprovedForSale || false
   })
@@ -321,6 +325,7 @@ export default function (
     bookstoreInfo,
     isCustomMessageEnabled,
     isHidden,
+    isAdultOnly,
     isApprovedForSale,
     isApprovedForIndexing,
     isApprovedForAds,
