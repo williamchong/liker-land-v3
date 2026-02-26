@@ -97,6 +97,12 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
       }
     }
 
+    audio.ontimeupdate = () => {
+      if (audio.duration && Number.isFinite(audio.duration)) {
+        handlers.positionState?.({ position: audio.currentTime, duration: audio.duration })
+      }
+    }
+
     audio.onerror = (e) => {
       errored = true
       const error = audio.error || e
@@ -201,6 +207,17 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     }
   }
 
+  function seek(time: number) {
+    if (activeAudio.value && Number.isFinite(activeAudio.value.duration)) {
+      activeAudio.value.currentTime = Math.max(0, Math.min(time, activeAudio.value.duration))
+    }
+  }
+
+  function getPosition(): { position: number, duration: number } | null {
+    if (!activeAudio.value || !Number.isFinite(activeAudio.value.duration)) return null
+    return { position: activeAudio.value.currentTime, duration: activeAudio.value.duration }
+  }
+
   return {
     load,
     resume,
@@ -208,6 +225,8 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     stop,
     skipTo,
     setRate,
+    seek,
+    getPosition,
     on,
   }
 }
