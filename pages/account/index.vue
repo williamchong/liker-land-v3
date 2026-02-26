@@ -444,22 +444,13 @@
 
     <UModal
       v-model:open="isAdultContentConfirmOpen"
+      :title="$t('account_page_adult_content_confirm_title')"
+      :description="$t('account_page_adult_content_confirm_description')"
       :ui="{
         title: 'text-lg font-bold',
         footer: 'flex justify-end gap-3',
       }"
     >
-      <template #title>
-        <span v-text="$t('account_page_adult_content_confirm_title')" />
-      </template>
-
-      <template #body>
-        <p
-          class="text-sm"
-          v-text="$t('account_page_adult_content_confirm_description')"
-        />
-      </template>
-
       <template #footer>
         <UButton
           :label="$t('common_cancel')"
