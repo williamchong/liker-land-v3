@@ -86,6 +86,14 @@ export function useNativeAudioPlayer(): TTSAudioPlayer {
     postToNative({ type: 'setRate', rate })
   }
 
+  function seek(_time: number) {
+    // Native app handles seeking via its own media session
+  }
+
+  function getPosition() {
+    return null
+  }
+
   return {
     load,
     resume,
@@ -93,6 +101,8 @@ export function useNativeAudioPlayer(): TTSAudioPlayer {
     stop,
     skipTo,
     setRate,
+    seek,
+    getPosition,
     on,
   }
 }
