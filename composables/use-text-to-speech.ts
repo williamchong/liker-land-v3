@@ -40,11 +40,27 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     setTTSLanguageVoice,
   } = useTTSVoice({ bookLanguage, customVoice: options.customVoice })
 
-  // Pick player implementation
+  // Pick player implementation — both are created upfront (inert until load()),
+  // and the proxy delegates to the correct one based on the reactive flag.
   const { isNativeBridge } = useNativeAudioBridge()
-  const player: TTSAudioPlayer = isNativeBridge.value
-    ? useNativeAudioPlayer()
-    : useWebAudioPlayer()
+  const nativePlayer = useNativeAudioPlayer()
+  const webPlayer = useWebAudioPlayer()
+  const activePlayer = () => isNativeBridge.value ? nativePlayer : webPlayer
+  const player: TTSAudioPlayer = {
+    load: options => activePlayer().load(options),
+    resume: () => activePlayer().resume(),
+    pause: () => activePlayer().pause(),
+    stop: () => activePlayer().stop(),
+    skipTo: index => activePlayer().skipTo(index),
+    setRate: rate => activePlayer().setRate(rate),
+    seek: time => activePlayer().seek(time),
+    getPosition: () => activePlayer().getPosition(),
+    on(event, handler) {
+      // Register on both — the inactive player won't fire events
+      nativePlayer.on(event, handler)
+      webPlayer.on(event, handler)
+    },
+  }
 
   // Playback rate options and storage
   const ttsConfigCacheKey = computed(() =>
