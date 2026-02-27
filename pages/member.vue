@@ -1,5 +1,28 @@
 <template>
-  <AppHeader :is-connect-hidden="false" />
+  <PricingPageContent
+    v-model="selectedPlan"
+    class="min-h-screen"
+    :is-processing-subscription="subscription.isProcessingSubscription.value"
+    :trial-period-days="trialPeriodDays"
+    :must-collect-payment-method="mustCollectPaymentMethod"
+    utm-campaign="pricing_page"
+    utm-source="website"
+    utm-medium="web"
+    :coupon="coupon"
+    @open="handleOpen"
+    @subscribe="handleSubscribe"
+  >
+    <template #header-action>
+      <UButton
+        class="absolute z-10 top-2 phone:top-4 left-2 phone:left-4 text-white cursor-pointer"
+        icon="i-material-symbols-arrow-back"
+        :to="localeRoute({ name: 'store' })"
+        variant="ghost"
+        color="neutral"
+        size="md"
+      />
+    </template>
+  </PricingPageContent>
 </template>
 
 <script setup lang="ts">
@@ -9,6 +32,8 @@ import { DEFAULT_TRIAL_PERIOD_DAYS } from '~/constants/pricing'
 
 import backdrop from '~/assets/images/paywall/bg-bookstore.jpg'
 
+definePageMeta({ layout: false })
+
 const localeRoute = useLocaleRoute()
 const getRouteQuery = useRouteQuery()
 const subscription = useSubscription()
@@ -16,8 +41,8 @@ const { t: $t } = useI18n()
 const config = useRuntimeConfig()
 const baseURL = config.public.baseURL
 
-const hasOpened = ref(false)
-const isUnmounting = ref(false)
+const selectedPlan = ref<SubscriptionPlan>('yearly')
+
 const {
   yearlyPrice,
   monthlyPrice,
@@ -155,6 +180,8 @@ const trialPeriodDays = computed(() => {
   }
 })
 
+const coupon = computed(() => getRouteQuery('coupon') as string | undefined)
+
 const mustCollectPaymentMethod = computed(() => {
   const value = getRouteQuery('collect_payment_method')
   if (value === '0') return false
@@ -162,35 +189,40 @@ const mustCollectPaymentMethod = computed(() => {
   return undefined
 })
 
+function handleOpen() {
+  useLogEvent('view_item', {
+    currency: currency.value,
+    value: selectedPlan.value === 'yearly' ? yearlyPrice.value : monthlyPrice.value,
+    items: [{
+      id: `plus-${selectedPlan.value}`,
+      name: `Plus (${selectedPlan.value})`,
+      price: selectedPlan.value === 'yearly' ? yearlyPrice.value : monthlyPrice.value,
+      currency: currency.value,
+      quantity: 1,
+    }],
+  })
+}
+
+async function handleSubscribe(payload: {
+  trialPeriodDays?: number
+  mustCollectPaymentMethod?: boolean
+  selectedPlan: SubscriptionPlan
+  utmCampaign?: string
+  utmMedium?: string
+  utmSource?: string
+}) {
+  await subscription.startSubscription({
+    plan: payload.selectedPlan,
+    trialPeriodDays: payload.trialPeriodDays,
+    mustCollectPaymentMethod: payload.mustCollectPaymentMethod,
+    utmCampaign: payload.utmCampaign,
+    utmMedium: payload.utmMedium,
+    utmSource: payload.utmSource,
+    coupon: coupon.value,
+  })
+}
+
 onMounted(async () => {
-  const isSubscribed = await subscription.redirectIfSubscribed()
-  if (isSubscribed) return
-
-  if (!hasOpened.value) {
-    hasOpened.value = true
-    await subscription.openPaywallModal({
-      isFullscreen: true,
-      isBackdropDismissible: false,
-      hasTransition: false,
-      trialPeriodDays: trialPeriodDays.value,
-      mustCollectPaymentMethod: mustCollectPaymentMethod.value,
-      utmCampaign: 'pricing_page',
-      utmSource: 'website',
-      utmMedium: 'web',
-      coupon: getRouteQuery('coupon') as string | undefined,
-    })
-    if (isUnmounting.value) return
-    navigateTo(localeRoute({ name: 'store' }))
-  }
-})
-
-onBeforeUnmount(() => {
-  isUnmounting.value = true
-  try {
-    subscription.closePaywallModal()
-  }
-  catch {
-    // do nothing
-  }
+  await subscription.redirectIfSubscribed()
 })
 </script>
