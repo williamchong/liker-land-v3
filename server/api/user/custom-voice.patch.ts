@@ -1,4 +1,4 @@
-const ALLOWED_LANGUAGES = ['zh-HK', 'zh-TW']
+import { CustomVoicePatchSchema } from '~/server/schemas/custom-voice'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
@@ -17,12 +17,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'NO_CUSTOM_VOICE' })
   }
 
-  const body = await readBody<{ voiceLanguage?: string }>(event)
-  if (!body.voiceLanguage || !ALLOWED_LANGUAGES.includes(body.voiceLanguage)) {
-    throw createError({ statusCode: 400, message: 'INVALID_VOICE_LANGUAGE' })
-  }
+  const { voiceLanguage } = await readValidatedBody(event, useValidation(CustomVoicePatchSchema))
 
-  await updateCustomVoiceLanguage(wallet, body.voiceLanguage)
+  await updateCustomVoiceLanguage(wallet, voiceLanguage)
 
-  return { voiceLanguage: body.voiceLanguage }
+  return { voiceLanguage }
 })

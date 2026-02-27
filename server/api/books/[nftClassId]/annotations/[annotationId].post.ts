@@ -1,6 +1,7 @@
 import { H3Error } from 'h3'
 
-import { ANNOTATION_COLORS, ANNOTATION_NOTE_MAX_LENGTH } from '~/constants/annotations'
+import { AnnotationParamsSchema } from '~/server/schemas/params'
+import { AnnotationUpdateSchema } from '~/shared/schemas/annotation'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
@@ -12,61 +13,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const nftClassId = getRouterParam(event, 'nftClassId')
-  if (!nftClassId) {
-    throw createError({
-      statusCode: 400,
-      message: 'MISSING_NFT_CLASS_ID',
-    })
-  }
-
-  const annotationId = getRouterParam(event, 'annotationId')
-  if (!annotationId) {
-    throw createError({
-      statusCode: 400,
-      message: 'MISSING_ANNOTATION_ID',
-    })
-  }
-
-  let body: AnnotationUpdateData
-  try {
-    body = await readBody(event)
-  }
-  catch (error) {
-    console.error(error)
-    throw createError({
-      statusCode: 400,
-      message: 'INVALID_BODY',
-    })
-  }
-
-  if (!body || typeof body !== 'object') {
-    throw createError({
-      statusCode: 400,
-      message: 'INVALID_BODY',
-    })
-  }
-
-  if (body.color === undefined && body.note === undefined) {
-    throw createError({
-      statusCode: 400,
-      message: 'MISSING_UPDATE_FIELDS',
-    })
-  }
-
-  if (body.color !== undefined && !ANNOTATION_COLORS.includes(body.color)) {
-    throw createError({
-      statusCode: 400,
-      message: 'INVALID_COLOR',
-    })
-  }
-
-  if (body.note !== undefined && (typeof body.note !== 'string' || body.note.length > ANNOTATION_NOTE_MAX_LENGTH)) {
-    throw createError({
-      statusCode: 400,
-      message: 'INVALID_NOTE',
-    })
-  }
+  const { nftClassId, annotationId } = await getValidatedRouterParams(event, useValidation(AnnotationParamsSchema))
+  const body = await readValidatedBody(event, useValidation(AnnotationUpdateSchema))
 
   try {
     const annotation = await updateAnnotation(walletAddress, nftClassId, annotationId, body)

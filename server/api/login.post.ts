@@ -1,54 +1,10 @@
 import { jwtDecode } from 'jwt-decode'
 import { FieldValue } from 'firebase-admin/firestore'
 
+import { LoginBodySchema } from '~/server/schemas/auth'
+
 export default defineEventHandler(async (event) => {
-  let body: {
-    walletAddress: string
-    message: string
-    signature: string
-    email?: string
-    loginMethod: string
-  } | undefined
-  try {
-    body = await readBody(event)
-  }
-  catch (error) {
-    console.error(error)
-    throw createError({
-      status: 400,
-      message: 'INVALID_BODY',
-    })
-  }
-  if (!body) {
-    throw createError({
-      status: 400,
-      message: 'MISSING_BODY',
-    })
-  }
-  if (!body.walletAddress) {
-    throw createError({
-      status: 400,
-      message: 'MISSING_ADDRESS',
-    })
-  }
-  if (!checkIsEVMAddress(body.walletAddress)) {
-    throw createError({
-      status: 400,
-      message: 'INVALID_ADDRESS',
-    })
-  }
-  if (!body.message) {
-    throw createError({
-      status: 400,
-      message: 'MISSING_MESSAGE',
-    })
-  }
-  if (!body.signature) {
-    throw createError({
-      status: 400,
-      message: 'MISSING_SIGNATURE',
-    })
-  }
+  const body = await readValidatedBody(event, useValidation(LoginBodySchema))
 
   let likeWallet: string | undefined
   let jwtId: string | undefined

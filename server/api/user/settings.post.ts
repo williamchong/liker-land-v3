@@ -1,6 +1,6 @@
 import { jwtDecode } from 'jwt-decode'
 
-const ALLOWED_KEYS = ['locale', 'currency', 'colorMode', 'isAdultContentEnabled'] as const satisfies readonly UserSettingKey[]
+import { UserSettingsUpdateSchema } from '~/shared/schemas/user-settings'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
@@ -12,15 +12,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const body = await readBody(event)
-
-  const invalidKeys = Object.keys(body).filter(key => !ALLOWED_KEYS.includes(key as UserSettingKey))
-  if (invalidKeys.length > 0) {
-    throw createError({
-      statusCode: 400,
-      message: `INVALID_KEYS: ${invalidKeys.join(', ')}`,
-    })
-  }
+  const body = await readValidatedBody(event, useValidation(UserSettingsUpdateSchema))
 
   // Enforce color mode restriction for non-Plus users
   const isLikerPlus = session.user.isLikerPlus || false

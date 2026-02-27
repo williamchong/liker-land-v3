@@ -1,6 +1,7 @@
 import { GrpcStatus } from 'firebase-admin/firestore'
 
-import { ANNOTATION_COLORS, ANNOTATION_NOTE_MAX_LENGTH, ANNOTATION_TEXT_MAX_LENGTH } from '~/constants/annotations'
+import { NftClassIdParamsSchema } from '~/server/schemas/params'
+import { AnnotationCreateSchema } from '~/shared/schemas/annotation'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
@@ -12,79 +13,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const nftClassId = getRouterParam(event, 'nftClassId')
-  if (!nftClassId) {
-    throw createError({
-      statusCode: 400,
-      message: 'MISSING_NFT_CLASS_ID',
-    })
-  }
-
-  let body: AnnotationCreateData
-  try {
-    body = await readBody(event)
-  }
-  catch (error) {
-    console.error(error)
-    throw createError({
-      statusCode: 400,
-      message: 'INVALID_BODY',
-    })
-  }
-
-  if (!body || typeof body !== 'object') {
-    throw createError({
-      statusCode: 400,
-      message: 'INVALID_BODY',
-    })
-  }
-
-  if (!body.cfi || typeof body.cfi !== 'string') {
-    throw createError({
-      statusCode: 400,
-      message: 'MISSING_OR_INVALID_CFI',
-    })
-  }
-
-  if (!body.text || typeof body.text !== 'string') {
-    throw createError({
-      statusCode: 400,
-      message: 'MISSING_OR_INVALID_TEXT',
-    })
-  }
-
-  if (body.text.length > ANNOTATION_TEXT_MAX_LENGTH) {
-    throw createError({
-      statusCode: 400,
-      message: 'TEXT_TOO_LONG',
-    })
-  }
-
-  if (!body.color || !ANNOTATION_COLORS.includes(body.color)) {
-    throw createError({
-      statusCode: 400,
-      message: 'MISSING_OR_INVALID_COLOR',
-    })
-  }
-
-  if (
-    body.note !== undefined && (
-      typeof body.note !== 'string'
-      || body.note.length > ANNOTATION_NOTE_MAX_LENGTH
-    )
-  ) {
-    throw createError({
-      statusCode: 400,
-      message: 'INVALID_NOTE',
-    })
-  }
-
-  if (body.chapterTitle !== undefined && typeof body.chapterTitle !== 'string') {
-    throw createError({
-      statusCode: 400,
-      message: 'INVALID_CHAPTER_TITLE',
-    })
-  }
+  const { nftClassId } = await getValidatedRouterParams(event, useValidation(NftClassIdParamsSchema))
+  const body = await readValidatedBody(event, useValidation(AnnotationCreateSchema))
 
   try {
     const annotation = await createAnnotation(walletAddress, nftClassId, {
