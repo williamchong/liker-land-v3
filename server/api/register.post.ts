@@ -4,7 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { RegisterBodySchema } from '~/server/schemas/auth'
 
 export default defineEventHandler(async (event) => {
-  const body = await readValidatedBody(event, useValidation(RegisterBodySchema))
+  const body = await readValidatedBody(event, createValidator(RegisterBodySchema))
 
   try {
     await getLikeCoinAPIFetch()('/users/new', {

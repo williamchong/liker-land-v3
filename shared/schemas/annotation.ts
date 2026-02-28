@@ -27,7 +27,10 @@ export const AnnotationCreateSchema = v.object({
 
 export const AnnotationUpdateSchema = v.pipe(
   v.object({
-    color: v.optional(AnnotationColorSchema),
+    color: v.optional(v.picklist(
+      ['yellow', 'red', 'green', 'blue'] as const,
+      'INVALID_COLOR',
+    )),
     note: v.optional(v.pipe(
       v.string('INVALID_NOTE'),
       v.maxLength(ANNOTATION_NOTE_MAX_LENGTH, 'INVALID_NOTE'),

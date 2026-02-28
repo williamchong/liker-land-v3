@@ -7,11 +7,11 @@ export default defineNitroPlugin(() => {
   }
 
   const optionalVars: Record<string, string | undefined> = {
-    minimaxApiKey: config.minimaxApiKey as string | undefined,
+    minimaxAPIKey: config.minimaxAPIKey as string | undefined,
     minimaxGroupId: config.minimaxGroupId as string | undefined,
-    azureSpeechKey: config.azureSpeechKey as string | undefined,
-    azureSpeechRegion: config.azureSpeechRegion as string | undefined,
-    airtableApiKey: config.airtableApiKey as string | undefined,
+    azureSubscriptionKey: config.azureSubscriptionKey as string | undefined,
+    azureServiceRegion: config.azureServiceRegion as string | undefined,
+    airtableAPISecret: config.airtableAPISecret as string | undefined,
   }
 
   for (const [name, value] of Object.entries(optionalVars)) {

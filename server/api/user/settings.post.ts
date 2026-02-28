@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const body = await readValidatedBody(event, useValidation(UserSettingsUpdateSchema))
+  const body = await readValidatedBody(event, createValidator(UserSettingsUpdateSchema))
 
   // Enforce color mode restriction for non-Plus users
   const isLikerPlus = session.user.isLikerPlus || false

@@ -68,7 +68,7 @@ export default defineEventHandler(async (event) => {
     })
   }
   const config = useRuntimeConfig()
-  const { text, language, voice_id: voiceId } = await getValidatedQuery(event, useValidation(TTSQuerySchema))
+  const { text, language, voice_id: voiceId } = await getValidatedQuery(event, createValidator(TTSQuerySchema))
 
   const isCustomVoice = voiceId === 'custom'
   let customMiniMaxVoiceId: string | undefined

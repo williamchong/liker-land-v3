@@ -11,8 +11,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { nftClassId } = await getValidatedRouterParams(event, useValidation(NFTClassIdParamsSchema))
-  const body = await readValidatedBody(event, useValidation(BookSettingsUpdateSchema))
+  const { nftClassId } = await getValidatedRouterParams(event, createValidator(NFTClassIdParamsSchema))
+  const body = await readValidatedBody(event, createValidator(BookSettingsUpdateSchema))
 
   try {
     await updateBookSettings(walletAddress, nftClassId, body)

@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'NO_CUSTOM_VOICE' })
   }
 
-  const { voiceLanguage } = await readValidatedBody(event, useValidation(CustomVoicePatchSchema))
+  const { voiceLanguage } = await readValidatedBody(event, createValidator(CustomVoicePatchSchema))
 
   await updateCustomVoiceLanguage(wallet, voiceLanguage)
 

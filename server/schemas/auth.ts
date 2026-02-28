@@ -42,27 +42,27 @@ export const RegisterBodySchema = v.object({
 
 export const AccountDeleteBodySchema = v.object({
   wallet: v.pipe(
-    v.string('MISSING_SIGNATURE'),
-    v.nonEmpty('MISSING_SIGNATURE'),
+    v.string('MISSING_WALLET'),
+    v.nonEmpty('MISSING_WALLET'),
   ),
   signMethod: v.pipe(
-    v.string('MISSING_SIGNATURE'),
-    v.nonEmpty('MISSING_SIGNATURE'),
+    v.string('MISSING_SIGN_METHOD'),
+    v.nonEmpty('MISSING_SIGN_METHOD'),
   ),
   authorizeSignature: v.pipe(
-    v.string('MISSING_SIGNATURE'),
-    v.nonEmpty('MISSING_SIGNATURE'),
+    v.string('MISSING_AUTHORIZE_SIGNATURE'),
+    v.nonEmpty('MISSING_AUTHORIZE_SIGNATURE'),
   ),
   authorizeMessage: v.pipe(
-    v.string('MISSING_SIGNATURE'),
-    v.nonEmpty('MISSING_SIGNATURE'),
+    v.string('MISSING_AUTHORIZE_MESSAGE'),
+    v.nonEmpty('MISSING_AUTHORIZE_MESSAGE'),
   ),
   deleteSignature: v.pipe(
-    v.string('MISSING_SIGNATURE'),
-    v.nonEmpty('MISSING_SIGNATURE'),
+    v.string('MISSING_DELETE_SIGNATURE'),
+    v.nonEmpty('MISSING_DELETE_SIGNATURE'),
   ),
   deleteMessage: v.pipe(
-    v.string('MISSING_SIGNATURE'),
-    v.nonEmpty('MISSING_SIGNATURE'),
+    v.string('MISSING_DELETE_MESSAGE'),
+    v.nonEmpty('MISSING_DELETE_MESSAGE'),
   ),
 })

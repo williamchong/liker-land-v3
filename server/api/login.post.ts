@@ -4,7 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { LoginBodySchema } from '~/server/schemas/auth'
 
 export default defineEventHandler(async (event) => {
-  const body = await readValidatedBody(event, useValidation(LoginBodySchema))
+  const body = await readValidatedBody(event, createValidator(LoginBodySchema))
 
   let likeWallet: string | undefined
   let jwtId: string | undefined

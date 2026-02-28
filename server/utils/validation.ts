@@ -5,7 +5,7 @@ import * as v from 'valibot'
  * Creates an h3-compatible validation function from a Valibot schema.
  * Use with `readValidatedBody()`, `getValidatedQuery()`, or `getValidatedRouterParams()`.
  */
-export function useValidation<T extends v.GenericSchema>(schema: T) {
+export function createValidator<T extends v.GenericSchema>(schema: T) {
   return (data: unknown): v.InferOutput<T> => {
     const result = v.safeParse(schema, data)
     if (result.success) {

@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { nftClassId, annotationId } = await getValidatedRouterParams(event, useValidation(AnnotationParamsSchema))
+  const { nftClassId, annotationId } = await getValidatedRouterParams(event, createValidator(AnnotationParamsSchema))
 
   try {
     const deleted = await deleteAnnotation(walletAddress, nftClassId, annotationId)

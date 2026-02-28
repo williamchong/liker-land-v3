@@ -13,8 +13,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { nftClassId, annotationId } = await getValidatedRouterParams(event, useValidation(AnnotationParamsSchema))
-  const body = await readValidatedBody(event, useValidation(AnnotationUpdateSchema))
+  const { nftClassId, annotationId } = await getValidatedRouterParams(event, createValidator(AnnotationParamsSchema))
+  const body = await readValidatedBody(event, createValidator(AnnotationUpdateSchema))
 
   try {
     const annotation = await updateAnnotation(walletAddress, nftClassId, annotationId, body)

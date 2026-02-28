@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { nftClassId } = await getValidatedRouterParams(event, useValidation(NFTClassIdParamsSchema))
+  const { nftClassId } = await getValidatedRouterParams(event, createValidator(NFTClassIdParamsSchema))
 
   setHeader(event, 'Cache-Control', 'private, no-cache, no-store, must-revalidate')
 

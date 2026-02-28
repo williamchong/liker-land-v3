@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   setHeader(event, 'cache-control', 'private')
   const userWallet = session.user.evmWallet
-  const query = await getValidatedQuery(event, useValidation(BookListQuerySchema))
+  const query = await getValidatedQuery(event, createValidator(BookListQuerySchema))
 
   let priceIndex = 0
   if (query.price_index !== undefined) {

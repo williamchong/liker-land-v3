@@ -61,7 +61,7 @@ export default defineEventHandler(async (event): Promise<CustomVoiceData> => {
   }
 
   // Validate text fields with schema
-  const { voiceName, voiceLanguage, promptText } = useValidation(CustomVoiceFieldsSchema)(textFields)
+  const { voiceName, voiceLanguage, promptText } = createValidator(CustomVoiceFieldsSchema)(textFields)
 
   // Validate file parts
   validateFilePart(audioPart, {

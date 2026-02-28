@@ -5,10 +5,7 @@ export const TTSQuerySchema = v.object({
     v.string('MISSING_TEXT'),
     v.nonEmpty('MISSING_TEXT'),
   ),
-  language: v.pipe(
-    v.string('INVALID_LANGUAGE'),
-    v.picklist(['en-US', 'zh-TW', 'zh-HK'], 'INVALID_LANGUAGE'),
-  ),
+  language: v.picklist(['en-US', 'zh-TW', 'zh-HK'], 'INVALID_LANGUAGE'),
   voice_id: v.pipe(
     v.string('INVALID_VOICE_ID'),
     v.nonEmpty('INVALID_VOICE_ID'),

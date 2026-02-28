@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const body = await readValidatedBody(event, useValidation(AccountDeleteBodySchema))
+  const body = await readValidatedBody(event, createValidator(AccountDeleteBodySchema))
 
   if (body.wallet.toLowerCase() !== evmWallet.toLowerCase()) {
     throw createError({

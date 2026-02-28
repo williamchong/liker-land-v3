@@ -5,7 +5,7 @@ import { TagIdParamsSchema } from '~/server/schemas/params'
 
 export default defineEventHandler(async (event) => {
   try {
-    const { id: tagId } = await getValidatedRouterParams(event, useValidation(TagIdParamsSchema))
+    const { id: tagId } = await getValidatedRouterParams(event, createValidator(TagIdParamsSchema))
 
     const result = await fetchAirtableCMSTagById(tagId)
     if (!result) {

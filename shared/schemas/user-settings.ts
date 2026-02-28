@@ -6,9 +6,6 @@ export const UserSettingsUpdateSchema = v.pipe(
     currency: v.optional(v.picklist(['auto', 'hkd', 'twd', 'usd'])),
     colorMode: v.optional(v.picklist(['light', 'dark', 'system'])),
     isAdultContentEnabled: v.optional(v.boolean()),
-  }, (issue) => {
-    const key = issue.path?.[0]?.key
-    return `INVALID_KEYS: ${key}`
-  }),
+  }, 'INVALID_KEYS'),
   v.check(input => Object.keys(input).length > 0, 'MISSING_BODY'),
 )

@@ -4,7 +4,7 @@ import { StoreProductsQuerySchema } from '~/server/schemas/store'
 
 export default defineEventHandler(async (event) => {
   try {
-    const query = await getValidatedQuery(event, useValidation(StoreProductsQuerySchema))
+    const query = await getValidatedQuery(event, createValidator(StoreProductsQuerySchema))
     const tagId = (Array.isArray(query.tag) ? query.tag[0] : query.tag) || 'latest'
     const pageSize = Number((Array.isArray(query.limit) ? query.limit[0] : query.limit)) || 100
     const offset = (Array.isArray(query.offset) ? query.offset[0] : query.offset) || undefined
