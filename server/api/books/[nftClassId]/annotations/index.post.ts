@@ -1,6 +1,6 @@
 import { GrpcStatus } from 'firebase-admin/firestore'
 
-import { NftClassIdParamsSchema } from '~/server/schemas/params'
+import { NFTClassIdParamsSchema } from '~/server/schemas/params'
 import { AnnotationCreateSchema } from '~/shared/schemas/annotation'
 
 export default defineEventHandler(async (event) => {
@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { nftClassId } = await getValidatedRouterParams(event, useValidation(NftClassIdParamsSchema))
+  const { nftClassId } = await getValidatedRouterParams(event, useValidation(NFTClassIdParamsSchema))
   const body = await readValidatedBody(event, useValidation(AnnotationCreateSchema))
 
   try {

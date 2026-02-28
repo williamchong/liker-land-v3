@@ -1,4 +1,4 @@
-import { NftClassIdParamsSchema } from '~/server/schemas/params'
+import { NFTClassIdParamsSchema } from '~/server/schemas/params'
 import { BookSettingsUpdateSchema } from '~/shared/schemas/book-settings'
 
 export default defineEventHandler(async (event) => {
@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { nftClassId } = await getValidatedRouterParams(event, useValidation(NftClassIdParamsSchema))
+  const { nftClassId } = await getValidatedRouterParams(event, useValidation(NFTClassIdParamsSchema))
   const body = await readValidatedBody(event, useValidation(BookSettingsUpdateSchema))
 
   try {

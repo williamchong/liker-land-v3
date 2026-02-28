@@ -1,4 +1,4 @@
-import { NftClassIdParamsSchema } from '~/server/schemas/params'
+import { NFTClassIdParamsSchema } from '~/server/schemas/params'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { nftClassId } = await getValidatedRouterParams(event, useValidation(NftClassIdParamsSchema))
+  const { nftClassId } = await getValidatedRouterParams(event, useValidation(NFTClassIdParamsSchema))
 
   setHeader(event, 'Cache-Control', 'private, no-cache, no-store, must-revalidate')
 

@@ -1,6 +1,6 @@
 import * as v from 'valibot'
 
-export const NftClassIdParamsSchema = v.object({
+export const NFTClassIdParamsSchema = v.object({
   nftClassId: v.pipe(
     v.string('MISSING_NFT_CLASS_ID'),
     v.nonEmpty('MISSING_NFT_CLASS_ID'),
