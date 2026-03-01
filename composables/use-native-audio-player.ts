@@ -39,6 +39,9 @@ export function useNativeAudioPlayer(): TTSAudioPlayer {
           handlers.trackChanged?.(detail.index)
         }
         break
+      case 'error':
+        handlers.error?.(detail.message || 'Native audio error')
+        break
     }
   }) as EventListener)
 
