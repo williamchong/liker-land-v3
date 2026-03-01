@@ -6,4 +6,10 @@ export default defineEventHandler(async (event) => {
   const { nftClassId, priceIndex } = await readValidatedBody(event, createValidator(BookListBodySchema))
 
   await deleteUserBookListItem(userWallet, nftClassId, priceIndex)
+
+  publishEvent(event, 'BookListRemove', {
+    evmWallet: userWallet,
+    nftClassId,
+    priceIndex,
+  })
 })

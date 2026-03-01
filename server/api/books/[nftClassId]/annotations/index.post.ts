@@ -24,6 +24,12 @@ export default defineEventHandler(async (event) => {
       note: body.note,
       chapterTitle: body.chapterTitle,
     })
+
+    publishEvent(event, 'AnnotationCreate', {
+      evmWallet: walletAddress,
+      nftClassId,
+    })
+
     return { annotation }
   }
   catch (error) {

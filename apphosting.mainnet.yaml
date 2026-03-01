@@ -97,6 +97,10 @@ env:
     value: https://07b4bd03c1d828f7e241ccc9e47a2f80@o149940.ingest.us.sentry.io/4509350693240832
   - variable: UET_TAG_ID
     value: 343221602
+  - variable: GCLOUD_PUBSUB_ENABLE
+    value: TRUE
+  - variable: APP_SERVER
+    value: 3ook-web
   - variable: WALLET_CONNECT_PROJECT_ID
     value: 526a2e1c9bf37fb75a7e0a4b11d6008e
   # Grant access to secrets in Cloud Secret Manager.

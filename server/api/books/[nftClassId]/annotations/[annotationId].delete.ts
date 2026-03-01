@@ -22,6 +22,13 @@ export default defineEventHandler(async (event) => {
         message: 'ANNOTATION_NOT_FOUND',
       })
     }
+
+    publishEvent(event, 'AnnotationDelete', {
+      evmWallet: walletAddress,
+      nftClassId,
+      annotationId,
+    })
+
     return { success: true }
   }
   catch (error) {

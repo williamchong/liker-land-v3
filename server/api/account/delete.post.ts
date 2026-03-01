@@ -83,6 +83,8 @@ export default defineEventHandler(async (event) => {
     console.error('Failed to delete user data from Firestore:', error)
   }
 
+  publishEvent(event, 'AccountDelete', { evmWallet, likerId })
+
   await clearUserSession(event)
   return { success: true }
 })

@@ -54,5 +54,10 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  publishEvent(event, 'UserSettingsUpdate', {
+    evmWallet: wallet,
+    changedKeys: Object.keys(body),
+  })
+
   return { success: true }
 })

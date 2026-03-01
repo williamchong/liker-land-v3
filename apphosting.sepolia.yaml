@@ -89,6 +89,10 @@ env:
     value: 2025-05-24
   - variable: PUBLISH_BOOK_ENDPOINT
     value: https://publish.sepolia.3ook.com
+  - variable: GCLOUD_PUBSUB_ENABLE
+    value: TRUE
+  - variable: APP_SERVER
+    value: 3ook-web-sepolia
   - variable: WALLET_CONNECT_PROJECT_ID
     value: 526a2e1c9bf37fb75a7e0a4b11d6008e
   # Grant access to secrets in Cloud Secret Manager.

@@ -6,5 +6,12 @@ export default defineEventHandler(async (event) => {
   const { nftClassId, priceIndex } = await readValidatedBody(event, createValidator(BookListBodySchema))
 
   const bookListItem = await addUserBookListItem(userWallet, nftClassId, priceIndex)
+
+  publishEvent(event, 'BookListAdd', {
+    evmWallet: userWallet,
+    nftClassId,
+    priceIndex,
+  })
+
   return bookListItem
 })
