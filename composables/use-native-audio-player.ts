@@ -1,7 +1,8 @@
 import { useEventListener } from '@vueuse/core'
 
-export function useNativeAudioPlayer(): TTSAudioPlayer {
+export function useNativeAudioPlayer(isActive: Ref<boolean | undefined>): TTSAudioPlayer {
   const handlers: Partial<{ [K in keyof TTSAudioPlayerEvents]: TTSAudioPlayerEvents[K] }> = {}
+  let loaded = false
 
   function on<K extends keyof TTSAudioPlayerEvents>(event: K, handler: TTSAudioPlayerEvents[K]) {
     handlers[event] = handler
@@ -11,8 +12,9 @@ export function useNativeAudioPlayer(): TTSAudioPlayer {
     window.ReactNativeWebView?.postMessage(JSON.stringify(data))
   }
 
-  // Listen for events dispatched by the native app
+  // Listen for events dispatched by the native app (gated on isActive)
   useEventListener(window, 'nativeAudioEvent' as keyof WindowEventMap, ((e: CustomEvent) => {
+    if (!isActive.value) return
     const detail = e.detail
     if (!detail?.type) return
 
@@ -66,9 +68,11 @@ export function useNativeAudioPlayer(): TTSAudioPlayer {
       rate: options.rate,
       metadata: options.metadata,
     })
+    loaded = true
   }
 
   function resume(): boolean {
+    if (!loaded) return false
     postToNative({ type: 'resume' })
     return true
   }
@@ -79,6 +83,7 @@ export function useNativeAudioPlayer(): TTSAudioPlayer {
 
   function stop() {
     postToNative({ type: 'stop' })
+    loaded = false
   }
 
   function skipTo(index: number) {
