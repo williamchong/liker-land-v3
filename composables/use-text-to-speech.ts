@@ -62,6 +62,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   const isShowTextToSpeechOptions = ref(false)
   const isTextToSpeechOn = ref(false)
   const isTextToSpeechPlaying = ref(false)
+  const isTextToSpeechLoading = ref(false)
   const isStartingTextToSpeech = ref(false)
   const isOffline = ref(false)
   const showOfflineModal = ref(false)
@@ -80,6 +81,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   // Wire player events
   player.on('play', () => {
     isTextToSpeechPlaying.value = true
+    isTextToSpeechLoading.value = false
   })
 
   player.on('pause', () => {
@@ -105,6 +107,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   })
 
   player.on('error', (error) => {
+    isTextToSpeechLoading.value = false
     console.warn('Audio playback error:', error)
 
     // Check if this is a network error (require both error code AND offline status to avoid misjudgment)
@@ -329,6 +332,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       options.onAllSegmentsPlayed?.()
       return
     }
+    isTextToSpeechLoading.value = true
     currentTTSSegmentIndex.value += 1
     player.skipTo(currentTTSSegmentIndex.value)
   }
@@ -358,6 +362,10 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         currentTTSSegmentIndex.value = 0
       }
 
+      if (ttsSegments.value.length === 0) {
+        return
+      }
+
       consecutiveAudioErrors.value = 0
       isTextToSpeechOn.value = true
 
@@ -365,10 +373,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         nft_class_id: nftClassId,
       })
 
-      if (ttsSegments.value.length === 0) {
-        return
-      }
-
+      isTextToSpeechLoading.value = true
       player.load({
         segments: ttsSegments.value,
         getAudioSrc,
@@ -394,6 +399,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
 
   function pauseTextToSpeech() {
     if (isTextToSpeechOn.value) {
+      isTextToSpeechLoading.value = false
       player.pause()
       useLogEvent('tts_pause', {
         nft_class_id: nftClassId,
@@ -406,6 +412,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   }
 
   const debouncedSkipTo = useDebounceFn((index: number) => {
+    if (!isTextToSpeechOn.value) return
     player.skipTo(index)
   }, 500)
 
@@ -414,6 +421,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     useLogEvent('tts_skip_forward', {
       nft_class_id: nftClassId,
     })
+    isTextToSpeechLoading.value = true
     player.pause()
     if (currentTTSSegmentIndex.value + 1 < ttsSegments.value.length) {
       currentTTSSegmentIndex.value += 1
@@ -426,6 +434,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     useLogEvent('tts_skip_to_index', {
       nft_class_id: nftClassId,
     })
+    isTextToSpeechLoading.value = true
     player.pause()
     currentTTSSegmentIndex.value = Math.max(Math.min(segmentIndex, ttsSegments.value.length - 1), 0)
     debouncedSkipTo(currentTTSSegmentIndex.value)
@@ -436,6 +445,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     useLogEvent('tts_skip_backward', {
       nft_class_id: nftClassId,
     })
+    isTextToSpeechLoading.value = true
     player.pause()
     if (currentTTSSegmentIndex.value > 0) {
       currentTTSSegmentIndex.value -= 1
@@ -458,6 +468,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     player.stop()
     isTextToSpeechOn.value = false
     isTextToSpeechPlaying.value = false
+    isTextToSpeechLoading.value = false
     isShowTextToSpeechOptions.value = false
 
     if ('mediaSession' in navigator) {
@@ -487,6 +498,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     isShowTextToSpeechOptions,
     isTextToSpeechOn,
     isTextToSpeechPlaying,
+    isTextToSpeechLoading,
     showOfflineModal,
     currentTTSSegment,
     currentTTSSegmentText,

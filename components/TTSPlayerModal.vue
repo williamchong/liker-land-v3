@@ -116,6 +116,7 @@
               icon="i-material-symbols-play-arrow-rounded"
               variant="ghost"
               color="neutral"
+              :loading="isTextToSpeechLoading"
               @click="startTextToSpeech(currentTTSSegmentIndex)"
             />
             <UButton
@@ -296,6 +297,7 @@ const {
   isTextToSpeechOn,
   isTextToSpeechPlaying,
   currentTTSSegment,
+  isTextToSpeechLoading,
   pauseTextToSpeech,
   startTextToSpeech,
   setTTSSegments,
