@@ -21,5 +21,11 @@ export default defineEventHandler(async (event) => {
 
   await updateCustomVoiceLanguage(wallet, voiceLanguage)
 
+  publishEvent(event, 'CustomVoiceUpdate', {
+    evmWallet: wallet,
+    voiceId: customVoice.voiceId,
+    voiceLanguage,
+  })
+
   return { voiceLanguage }
 })

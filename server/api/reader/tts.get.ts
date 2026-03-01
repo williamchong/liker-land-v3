@@ -104,6 +104,14 @@ export default defineEventHandler(async (event) => {
 
   await updateUserTTSCharacterUsage(session.user.evmWallet, text.length)
 
+  publishEvent(event, 'TTSRequest', {
+    evmWallet: session.user.evmWallet,
+    language,
+    voiceId,
+    isCustomVoice,
+    textLength: text.length,
+  })
+
   const ttsModel = isCustomVoice
     ? getMinimaxModel(customMiniMaxVoiceId, language)
     : (VOICE_PROVIDER_MAPPING[voiceId] === TTSProvider.MINIMAX ? getMinimaxModel() : 'azure')

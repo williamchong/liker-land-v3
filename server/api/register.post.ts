@@ -80,5 +80,12 @@ export default defineEventHandler(async (event) => {
     loginMethod: body.loginMethod,
   }, { merge: true })
 
+  publishEvent(event, 'UserRegister', {
+    evmWallet: body.walletAddress,
+    likerId: userInfoRes.user,
+    loginMethod: body.loginMethod,
+    locale: body.locale,
+  })
+
   return userInfo
 })

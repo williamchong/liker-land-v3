@@ -211,6 +211,13 @@ export default defineEventHandler(async (event): Promise<CustomVoiceData> => {
     avatarUrl,
   })
 
+  publishEvent(event, 'CustomVoiceCreate', {
+    evmWallet: wallet,
+    voiceId: minimaxVoiceId,
+    voiceName,
+    voiceLanguage: voiceLanguage || undefined,
+  })
+
   return {
     voiceId: minimaxVoiceId,
     voiceName,

@@ -54,6 +54,8 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    pubsubEnable: process.env.GCLOUD_PUBSUB_ENABLE || '',
+    appServer: process.env.APP_SERVER || '3ook-web',
     airtableAPISecret: process.env.AIRTABLE_API_SECRET,
     minimaxGroupId: process.env.MINIMAX_GROUP_ID,
     minimaxAPIKey: process.env.MINIMAX_API_KEY,

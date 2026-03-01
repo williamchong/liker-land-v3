@@ -54,5 +54,10 @@ export default defineEventHandler(async (event) => {
 
   await deleteCustomVoice(wallet)
 
+  publishEvent(event, 'CustomVoiceDelete', {
+    evmWallet: wallet,
+    voiceId: customVoice.voiceId,
+  })
+
   return { success: true }
 })
