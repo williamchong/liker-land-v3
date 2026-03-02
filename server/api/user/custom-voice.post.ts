@@ -1,13 +1,13 @@
 import type { CustomVoiceData } from '~/shared/types/custom-voice'
 import { LANG_MAPPING } from '~/server/utils/tts-minimax'
-
-const ALLOWED_VOICE_LANGUAGES = ['zh-HK', 'zh-TW', 'en-US']
-const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/x-m4a', 'audio/mp3']
-const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png']
-const MAX_AUDIO_SIZE = 20 * 1024 * 1024 // 20MB
-const MAX_PROMPT_AUDIO_SIZE = 2 * 1024 * 1024 // 2MB
-const MAX_PROMPT_TEXT_LENGTH = 500
-const MAX_AVATAR_SIZE = 2 * 1024 * 1024 // 2MB
+import {
+  CUSTOM_VOICE_ALLOWED_AUDIO_TYPES,
+  CUSTOM_VOICE_ALLOWED_AVATAR_TYPES,
+  CUSTOM_VOICE_MAX_AUDIO_SIZE,
+  CUSTOM_VOICE_MAX_AVATAR_SIZE,
+  CUSTOM_VOICE_MAX_PROMPT_AUDIO_SIZE,
+  CustomVoiceFieldsSchema,
+} from '~/server/schemas/custom-voice'
 
 function getExtFromMime(mime: string): string {
   const map: Record<string, string> = {
@@ -43,9 +43,7 @@ export default defineEventHandler(async (event): Promise<CustomVoiceData> => {
   let audioPart: { data: Buffer, type?: string, filename?: string } | undefined
   let avatarPart: { data: Buffer, type?: string, filename?: string } | undefined
   let promptAudioPart: { data: Buffer, type?: string, filename?: string } | undefined
-  let voiceName = ''
-  let voiceLanguage = ''
-  let promptText = ''
+  const textFields: Record<string, string> = {}
 
   for (const part of formData) {
     if (part.name === 'audio') {
@@ -57,61 +55,34 @@ export default defineEventHandler(async (event): Promise<CustomVoiceData> => {
     else if (part.name === 'promptAudio') {
       promptAudioPart = part
     }
-    else if (part.name === 'voiceName') {
-      voiceName = part.data.toString('utf-8')
-    }
-    else if (part.name === 'voiceLanguage') {
-      voiceLanguage = part.data.toString('utf-8')
-    }
-    else if (part.name === 'promptText') {
-      promptText = part.data.toString('utf-8').trim()
+    else if (part.name && ['voiceName', 'voiceLanguage', 'promptText'].includes(part.name)) {
+      textFields[part.name] = part.data.toString('utf-8').trim()
     }
   }
 
-  if (!audioPart?.data) {
-    throw createError({ statusCode: 400, message: 'MISSING_AUDIO' })
-  }
+  // Validate text fields with schema
+  const { voiceName, voiceLanguage, promptText } = createValidator(CustomVoiceFieldsSchema)(textFields)
 
-  if (!audioPart.type || !ALLOWED_AUDIO_TYPES.includes(audioPart.type)) {
-    throw createError({ statusCode: 400, message: 'INVALID_AUDIO_FORMAT' })
-  }
-
-  if (audioPart.data.length > MAX_AUDIO_SIZE) {
-    throw createError({ statusCode: 400, message: 'AUDIO_TOO_LARGE' })
-  }
-
-  if (avatarPart?.data) {
-    if (!avatarPart.type || !ALLOWED_AVATAR_TYPES.includes(avatarPart.type)) {
-      throw createError({ statusCode: 400, message: 'INVALID_AVATAR_FORMAT' })
-    }
-    if (avatarPart.data.length > MAX_AVATAR_SIZE) {
-      throw createError({ statusCode: 400, message: 'AVATAR_TOO_LARGE' })
-    }
-  }
-
-  if (!voiceName) {
-    throw createError({ statusCode: 400, message: 'MISSING_VOICE_NAME' })
-  }
-
-  if (voiceLanguage && !ALLOWED_VOICE_LANGUAGES.includes(voiceLanguage)) {
-    throw createError({ statusCode: 400, message: 'INVALID_VOICE_LANGUAGE' })
-  }
-
-  if (!promptAudioPart?.data) {
-    throw createError({ statusCode: 400, message: 'MISSING_PROMPT_AUDIO' })
-  }
-  if (!promptAudioPart.type || !ALLOWED_AUDIO_TYPES.includes(promptAudioPart.type)) {
-    throw createError({ statusCode: 400, message: 'INVALID_PROMPT_AUDIO_FORMAT' })
-  }
-  if (promptAudioPart.data.length > MAX_PROMPT_AUDIO_SIZE) {
-    throw createError({ statusCode: 400, message: 'PROMPT_AUDIO_TOO_LARGE' })
-  }
-  if (!promptText) {
-    throw createError({ statusCode: 400, message: 'MISSING_PROMPT_TEXT' })
-  }
-  if (promptText.length > MAX_PROMPT_TEXT_LENGTH) {
-    throw createError({ statusCode: 400, message: 'PROMPT_TEXT_TOO_LONG' })
-  }
+  // Validate file parts
+  validateFilePart(audioPart, {
+    fieldName: 'audio',
+    allowedTypes: CUSTOM_VOICE_ALLOWED_AUDIO_TYPES,
+    maxSize: CUSTOM_VOICE_MAX_AUDIO_SIZE,
+    errorMessages: { missing: 'MISSING_AUDIO', invalidFormat: 'INVALID_AUDIO_FORMAT', tooLarge: 'AUDIO_TOO_LARGE' },
+  })
+  validateFilePart(avatarPart, {
+    fieldName: 'avatar',
+    allowedTypes: CUSTOM_VOICE_ALLOWED_AVATAR_TYPES,
+    maxSize: CUSTOM_VOICE_MAX_AVATAR_SIZE,
+    required: false,
+    errorMessages: { invalidFormat: 'INVALID_AVATAR_FORMAT', tooLarge: 'AVATAR_TOO_LARGE' },
+  })
+  validateFilePart(promptAudioPart, {
+    fieldName: 'promptAudio',
+    allowedTypes: CUSTOM_VOICE_ALLOWED_AUDIO_TYPES,
+    maxSize: CUSTOM_VOICE_MAX_PROMPT_AUDIO_SIZE,
+    errorMessages: { missing: 'MISSING_PROMPT_AUDIO', invalidFormat: 'INVALID_PROMPT_AUDIO_FORMAT', tooLarge: 'PROMPT_AUDIO_TOO_LARGE' },
+  })
 
   const existingVoice = await getCustomVoice(wallet)
   if (existingVoice?.voiceId) {
@@ -154,11 +125,11 @@ export default defineEventHandler(async (event): Promise<CustomVoiceData> => {
   }
 
   const client = getMiniMaxSpeechClient()
-  const audioExt = getExtFromMime(audioPart.type!)
-  const audioBlob = new File([audioPart.data], `voice.${audioExt}`, { type: audioPart.type })
+  const audioExt = getExtFromMime(audioPart!.type!)
+  const audioBlob = new File([audioPart!.data], `voice.${audioExt}`, { type: audioPart!.type })
 
-  const promptExt = getExtFromMime(promptAudioPart.type!)
-  const promptBlob = new File([promptAudioPart.data], `prompt.${promptExt}`, { type: promptAudioPart.type })
+  const promptExt = getExtFromMime(promptAudioPart!.type!)
+  const promptBlob = new File([promptAudioPart!.data], `prompt.${promptExt}`, { type: promptAudioPart!.type })
 
   const [uploadResult, promptUploadResult] = await Promise.all([
     client.uploadFile(audioBlob, 'voice_clone'),
@@ -194,16 +165,16 @@ export default defineEventHandler(async (event): Promise<CustomVoiceData> => {
   if (bucket) {
     audioPath = getCustomVoiceAudioPath(wallet, audioExt)
     const audioFile = bucket.file(audioPath)
-    await audioFile.save(audioPart.data, {
-      metadata: { contentType: audioPart.type },
+    await audioFile.save(audioPart!.data, {
+      metadata: { contentType: audioPart!.type },
     })
 
     try {
-      const promptStorageExt = getExtFromMime(promptAudioPart.type!)
+      const promptStorageExt = getExtFromMime(promptAudioPart!.type!)
       const promptPath = getCustomVoicePromptAudioPath(wallet, promptStorageExt)
       const promptStorageFile = bucket.file(promptPath)
-      await promptStorageFile.save(promptAudioPart.data, {
-        metadata: { contentType: promptAudioPart.type },
+      await promptStorageFile.save(promptAudioPart!.data, {
+        metadata: { contentType: promptAudioPart!.type },
       })
     }
     catch (error) {

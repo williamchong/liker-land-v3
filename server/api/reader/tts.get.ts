@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { AzureTTSProvider } from '~/server/utils/tts-azure'
+import { TTSQuerySchema } from '~/server/schemas/tts'
 
 function parseRangeHeader(rangeHeader: string, totalSize: number): { start: number, end: number } | null {
   const match = rangeHeader.match(/^bytes=(\d*)-(\d*)$/)
@@ -25,15 +26,8 @@ function parseRangeHeader(rangeHeader: string, totalSize: number): { start: numb
   return { start, end }
 }
 
-const LANG_MAPPING = {
-  'en-US': 'English',
-  'zh-TW': 'Chinese',
-  'zh-HK': 'Chinese,Yue',
-}
-
 // Voice mapping with provider information
 const VOICE_PROVIDER_MAPPING: Record<string, TTSProvider> = {
-  // Minimax voices
   0: TTSProvider.MINIMAX,
   1: TTSProvider.MINIMAX,
   aurora: TTSProvider.MINIMAX,
@@ -74,30 +68,9 @@ export default defineEventHandler(async (event) => {
     })
   }
   const config = useRuntimeConfig()
-  const { text, language: rawLanguage, voice_id: voiceId } = getQuery(event)
+  const { text, language, voice_id: voiceId } = await getValidatedQuery(event, createValidator(TTSQuerySchema))
 
-  if (!text || typeof text !== 'string') {
-    throw createError({
-      status: 400,
-      message: 'MISSING_TEXT',
-    })
-  }
-  if (!rawLanguage || typeof rawLanguage !== 'string' || !(rawLanguage in LANG_MAPPING)) {
-    throw createError({
-      status: 400,
-      message: 'INVALID_LANGUAGE',
-    })
-  }
-
-  const validVoiceId = voiceId as string
-  if (!voiceId) {
-    throw createError({
-      status: 400,
-      message: 'INVALID_VOICE_ID',
-    })
-  }
-
-  const isCustomVoice = validVoiceId === 'custom'
+  const isCustomVoice = voiceId === 'custom'
   let customMiniMaxVoiceId: string | undefined
   let provider: BaseTTSProvider
 
@@ -114,13 +87,12 @@ export default defineEventHandler(async (event) => {
     provider = new MinimaxTTSProvider()
   }
   else {
-    provider = getTTSProvider(validVoiceId)
+    provider = getTTSProvider(voiceId)
   }
 
-  const language = rawLanguage as keyof typeof LANG_MAPPING
   const customVoiceWallet = isCustomVoice ? session.user.evmWallet : undefined
   const logText = text.replace(/(\r\n|\n|\r)/gm, ' ')
-  console.log(`[Speech] User ${session.user.evmWallet} requested conversion. Language: ${language}, Text: "${logText.substring(0, 50)}${logText.length > 50 ? '...' : ''}", Voice: ${validVoiceId}${isCustomVoice ? ` (${customMiniMaxVoiceId})` : ''}, Provider: ${isCustomVoice ? 'minimax' : VOICE_PROVIDER_MAPPING[validVoiceId]}`)
+  console.log(`[Speech] User ${session.user.evmWallet} requested conversion. Language: ${language}, Text: "${logText.substring(0, 50)}${logText.length > 50 ? '...' : ''}", Voice: ${voiceId}${isCustomVoice ? ` (${customMiniMaxVoiceId})` : ''}, Provider: ${isCustomVoice ? 'minimax' : VOICE_PROVIDER_MAPPING[voiceId]}`)
 
   if (!await getUserTTSAvailable(event)) {
     throw createError({
@@ -133,13 +105,13 @@ export default defineEventHandler(async (event) => {
 
   const ttsModel = isCustomVoice
     ? getMinimaxModel(customMiniMaxVoiceId, language)
-    : (VOICE_PROVIDER_MAPPING[validVoiceId] === TTSProvider.MINIMAX ? getMinimaxModel() : 'azure')
+    : (VOICE_PROVIDER_MAPPING[voiceId] === TTSProvider.MINIMAX ? getMinimaxModel() : 'azure')
   const bucket = getTTSCacheBucket()
   const isCacheEnabled = !!bucket
   const cacheKey = isCacheEnabled
     ? (customVoiceWallet
         ? generateCustomVoiceTTSCacheKey(customVoiceWallet, language, text, ttsModel)
-        : generateTTSCacheKey(language, validVoiceId, text, ttsModel))
+        : generateTTSCacheKey(language, voiceId, text, ttsModel))
     : null
 
   if (isCacheEnabled) {
@@ -188,7 +160,7 @@ export default defineEventHandler(async (event) => {
     const buffer = await provider.processRequest({
       text,
       language,
-      voiceId: validVoiceId,
+      voiceId,
       customMiniMaxVoiceId,
       session,
       config,
@@ -211,7 +183,7 @@ export default defineEventHandler(async (event) => {
           contentType: provider.format,
           customMetadata: {
             language,
-            voiceId: validVoiceId,
+            voiceId,
             provider: provider.provider,
             text: truncatedText,
             textLength: text.length.toString(),

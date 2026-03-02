@@ -1,5 +1,7 @@
 import { H3Error } from 'h3'
 
+import { AnnotationParamsSchema } from '~/server/schemas/params'
+
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   const walletAddress = session.user.evmWallet || session.user.likeWallet
@@ -10,21 +12,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const nftClassId = getRouterParam(event, 'nftClassId')
-  if (!nftClassId) {
-    throw createError({
-      statusCode: 400,
-      message: 'MISSING_NFT_CLASS_ID',
-    })
-  }
-
-  const annotationId = getRouterParam(event, 'annotationId')
-  if (!annotationId) {
-    throw createError({
-      statusCode: 400,
-      message: 'MISSING_ANNOTATION_ID',
-    })
-  }
+  const { nftClassId, annotationId } = await getValidatedRouterParams(event, createValidator(AnnotationParamsSchema))
 
   try {
     const deleted = await deleteAnnotation(walletAddress, nftClassId, annotationId)

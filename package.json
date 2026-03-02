@@ -52,6 +52,7 @@
     "pdfjs-dist": "^5.3.31",
     "pinia": "^3.0.1",
     "unstorage": "^1.17.1",
+    "valibot": "^1.2.0",
     "v-gsap-nuxt": "^1.4.4",
     "viem": "^2.39.3",
     "vue": "^3.5.13",

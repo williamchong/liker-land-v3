@@ -1,20 +1,14 @@
+import { BookListQuerySchema } from '~/server/schemas/book-list'
 import { fetchUserBookListItem } from '~/server/utils/book-list'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   setHeader(event, 'cache-control', 'private')
   const userWallet = session.user.evmWallet
-  const query = getQuery(event)
-  const nftClassId = query.nft_class_id as string
-  if (!nftClassId) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'nft_class_id is required in query',
-    })
-  }
+  const query = await getValidatedQuery(event, createValidator(BookListQuerySchema))
 
   let priceIndex = 0
-  if (typeof query.price_index !== 'undefined') {
+  if (query.price_index !== undefined) {
     priceIndex = Number(query.price_index)
     if (isNaN(priceIndex)) {
       throw createError({
@@ -27,7 +21,7 @@ export default defineEventHandler(async (event) => {
   try {
     const bookListItem = await fetchUserBookListItem(
       userWallet,
-      nftClassId,
+      query.nft_class_id,
       priceIndex,
     )
 

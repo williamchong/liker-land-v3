@@ -1,15 +1,11 @@
 import { H3Error } from 'h3'
 import { FetchError } from 'ofetch'
 
+import { TagIdParamsSchema } from '~/server/schemas/params'
+
 export default defineEventHandler(async (event) => {
   try {
-    const tagId = getRouterParams(event).id
-    if (!tagId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'MISSING_TAG_ID',
-      })
-    }
+    const { id: tagId } = await getValidatedRouterParams(event, createValidator(TagIdParamsSchema))
 
     const result = await fetchAirtableCMSTagById(tagId)
     if (!result) {

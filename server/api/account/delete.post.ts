@@ -1,3 +1,5 @@
+import { AccountDeleteBodySchema } from '~/server/schemas/auth'
+
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   const { evmWallet, likerId } = session.user
@@ -15,22 +17,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const body = await readBody<{
-    wallet: string
-    signMethod: string
-    authorizeSignature: string
-    authorizeMessage: string
-    deleteSignature: string
-    deleteMessage: string
-  }>(event)
-  if (!body?.wallet || !body?.signMethod
-    || !body?.authorizeSignature || !body?.authorizeMessage
-    || !body?.deleteSignature || !body?.deleteMessage) {
-    throw createError({
-      status: 400,
-      message: 'MISSING_SIGNATURE',
-    })
-  }
+  const body = await readValidatedBody(event, createValidator(AccountDeleteBodySchema))
+
   if (body.wallet.toLowerCase() !== evmWallet.toLowerCase()) {
     throw createError({
       status: 403,

@@ -1,3 +1,5 @@
+import { NFTClassIdParamsSchema } from '~/server/schemas/params'
+
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   const walletAddress = session.user.evmWallet || session.user.likeWallet
@@ -8,13 +10,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const nftClassId = getRouterParam(event, 'nftClassId')
-  if (!nftClassId) {
-    throw createError({
-      statusCode: 400,
-      message: 'MISSING_NFT_CLASS_ID',
-    })
-  }
+  const { nftClassId } = await getValidatedRouterParams(event, createValidator(NFTClassIdParamsSchema))
 
   setHeader(event, 'Cache-Control', 'private, no-cache, no-store, must-revalidate')
 
