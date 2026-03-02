@@ -447,8 +447,8 @@ export const useAccountStore = defineStore('account', () => {
       let magicUserId: string | undefined
       let magicDIDToken: string | undefined
       const loginMethod = connector.id
-      if (loginMethod === 'magic' && 'magic' in connector) {
-        const magic = connector.magic as Magic
+      if (loginMethod === 'magic' && 'getMagic' in connector) {
+        const magic = await (connector as unknown as { getMagic: () => Promise<Magic> }).getMagic()
         try {
           const userInfo = await magic.user.getInfo()
           if (userInfo.email) {
@@ -607,7 +607,7 @@ export const useAccountStore = defineStore('account', () => {
 
     try {
       const connector = connectors.find((c: { id: string }) => c.id === 'magic')
-      if (!connector || !('magic' in connector)) {
+      if (!connector || !('getMagic' in connector)) {
         throw createError({
           statusCode: 400,
           message: $t('error_connect_wallet_failed'),
@@ -615,8 +615,8 @@ export const useAccountStore = defineStore('account', () => {
         })
       }
 
-      const magic = connector.magic as Magic
-      await magic.user.revealPrivateKey()
+      const magic = await (connector as unknown as { getMagic: () => Promise<Magic> }).getMagic()
+      await magic.user.revealEVMPrivateKey()
     }
     catch (error) {
       if (error instanceof Error && error.message.includes('User canceled action.')) {
