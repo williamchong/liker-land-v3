@@ -162,16 +162,21 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     const nextElement = segments[currentIndex + 1]
     if (!nextElement) return
 
-    const idle = getIdleAudio()
-    if (!idle) return
-
     const src = getAudioSrc(nextElement)
-    if (idle.getAttribute('data-src') !== src) {
-      idle.setAttribute('data-src', src)
-      idle.src = src
-      idle.playbackRate = currentRate
-      idle.defaultPlaybackRate = currentRate
-      idle.load()
+
+    const idle = getIdleAudio()
+    if (idle) {
+      if (idle.getAttribute('data-src') !== src) {
+        idle.setAttribute('data-src', src)
+        idle.src = src
+        idle.playbackRate = currentRate
+        idle.defaultPlaybackRate = currentRate
+        idle.load()
+      }
+    }
+    else {
+      // Single mode — warm the HTTP cache so the next segment loads faster
+      fetch(src).catch(() => {})
     }
   }
 
