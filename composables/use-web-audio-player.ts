@@ -1,9 +1,16 @@
 const MAX_AUTO_RESUME_RETRIES = 3
 const STUCK_DETECTION_TIMEOUT_MS = 5000
 
+const SILENCE_WAV_DATA_URI
+  = 'data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEARKwAABCxAgACABAAZGF0YQIAAAAAAA=='
+
 export function useWebAudioPlayer(): TTSAudioPlayer {
-  const activeAudio = ref<HTMLAudioElement | null>(null)
-  const preloadAudio = ref<HTMLAudioElement | null>(null)
+  const audioA = ref<HTMLAudioElement | null>(null)
+  const audioB = ref<HTMLAudioElement | null>(null)
+
+  let activeSlot: 'A' | 'B' = 'A'
+  let swapping = false
+  let dualMode = true
 
   let segments: TTSSegment[] = []
   let getAudioSrc: (segment: TTSSegment) => string = () => ''
@@ -23,39 +30,22 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     handlers[event] = handler
   }
 
-  function resetAudio() {
-    if (activeAudio.value) {
-      if (!activeAudio.value.paused) {
-        pausedInternally = true
-        activeAudio.value.pause()
-      }
-      activeAudio.value.src = ''
-      activeAudio.value.load()
-      activeAudio.value.onplay = null
-      activeAudio.value.onpause = null
-      activeAudio.value.onended = null
-      activeAudio.value.onerror = null
-      activeAudio.value.onstalled = null
-    }
-    activeAudio.value = null
-    if (preloadAudio.value) {
-      preloadAudio.value.src = ''
-      preloadAudio.value.load()
-    }
-    preloadAudio.value = null
+  function getActiveAudio(): HTMLAudioElement | null {
+    return activeSlot === 'A' ? audioA.value : audioB.value
   }
 
-  // Ensure a single Audio element exists and has event handlers attached.
-  // Reusing the same element across segments preserves the iOS audio session
-  // and user-gesture association, allowing background playback to continue.
-  function ensureAudio(): HTMLAudioElement {
-    if (activeAudio.value) return activeAudio.value
+  function getIdleAudio(): HTMLAudioElement | null {
+    if (!dualMode) return null
+    return activeSlot === 'A' ? audioB.value : audioA.value
+  }
 
-    const audio = new Audio()
-    activeAudio.value = audio
-    audio.preload = 'auto'
+  function swapSlots() {
+    activeSlot = activeSlot === 'A' ? 'B' : 'A'
+  }
 
+  function installHandlers(audio: HTMLAudioElement) {
     audio.onplay = () => {
+      if (audio !== getActiveAudio() || swapping) return
       playing = true
       errored = false
       autoResumeRetries = 0
@@ -64,6 +54,7 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     }
 
     audio.onpause = () => {
+      if (audio !== getActiveAudio() || swapping) return
       playing = false
       if (pausedInternally) {
         pausedInternally = false
@@ -78,14 +69,16 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
       if (active && autoResumeRetries < MAX_AUTO_RESUME_RETRIES) {
         autoResumeRetries += 1
         setTimeout(() => {
-          if (!playing && activeAudio.value && !activeAudio.value.ended) {
-            activeAudio.value.play()?.catch(handlePlayError)
+          const current = getActiveAudio()
+          if (!playing && current && !current.ended) {
+            current.play()?.catch(handlePlayError)
           }
         }, 1000)
       }
     }
 
     audio.onended = () => {
+      if (audio !== getActiveAudio() || swapping) return
       if (currentIndex >= segments.length - 1) {
         handlers.allEnded?.()
       }
@@ -95,6 +88,7 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     }
 
     audio.onstalled = () => {
+      if (audio !== getActiveAudio() || swapping) return
       console.warn(`Audio playback stalled at ${currentRate}x`)
       if (audio.currentTime < 0.00001) {
         // Safari on iOS sometimes gets stuck at 0.000001 for rate > 1.0
@@ -106,34 +100,78 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     }
 
     audio.ontimeupdate = () => {
+      if (audio !== getActiveAudio() || swapping) return
       if (audio.duration && Number.isFinite(audio.duration)) {
         handlers.positionState?.({ position: audio.currentTime, duration: audio.duration })
       }
     }
 
     audio.onerror = (e) => {
+      if (audio !== getActiveAudio() || swapping) return
       errored = true
       const error = audio.error || e
       handlers.error?.(error)
     }
+  }
 
-    return audio
+  function ensureAudioPool() {
+    if (audioA.value) return
+
+    const a = new Audio()
+    a.preload = 'auto'
+    installHandlers(a)
+    audioA.value = a
+
+    const b = new Audio()
+    b.preload = 'auto'
+    installHandlers(b)
+    audioB.value = b
+
+    activeSlot = 'A'
+  }
+
+  function cleanupElement(audio: HTMLAudioElement | null) {
+    if (!audio) return
+    if (!audio.paused) {
+      audio.pause()
+    }
+    audio.src = ''
+    audio.removeAttribute('data-src')
+    audio.load()
+    audio.onplay = null
+    audio.onpause = null
+    audio.onended = null
+    audio.onerror = null
+    audio.onstalled = null
+    audio.ontimeupdate = null
+  }
+
+  function resetAudio() {
+    swapping = true
+    pausedInternally = true
+    cleanupElement(audioA.value)
+    cleanupElement(audioB.value)
+    audioA.value = null
+    audioB.value = null
+    playing = false
+    swapping = false
+    pausedInternally = false
   }
 
   function preloadNextSegment() {
     const nextElement = segments[currentIndex + 1]
     if (!nextElement) return
 
-    if (!preloadAudio.value) {
-      preloadAudio.value = new Audio()
-      preloadAudio.value.preload = 'auto'
-    }
+    const idle = getIdleAudio()
+    if (!idle) return
 
     const src = getAudioSrc(nextElement)
-    if (preloadAudio.value.getAttribute('data-src') !== src) {
-      preloadAudio.value.setAttribute('data-src', src)
-      preloadAudio.value.src = src
-      preloadAudio.value.load()
+    if (idle.getAttribute('data-src') !== src) {
+      idle.setAttribute('data-src', src)
+      idle.src = src
+      idle.playbackRate = currentRate
+      idle.defaultPlaybackRate = currentRate
+      idle.load()
     }
   }
 
@@ -165,30 +203,85 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     errored = false
     stuckRetried = false
     clearStuckTimer()
+    ensureAudioPool()
 
     const element = segments[index]
     if (!element) return
 
-    // Stop current playback without destroying the audio element
-    if (activeAudio.value && !activeAudio.value.paused) {
+    const targetSrc = getAudioSrc(element)
+
+    swapping = true
+    playing = false
+    const currentActive = getActiveAudio()
+    if (currentActive && !currentActive.paused) {
       pausedInternally = true
-      activeAudio.value.pause()
-      activeAudio.value.currentTime = 0
+      currentActive.pause()
+      // onpause handler early-returns while swapping, so clear the flag manually
+      pausedInternally = false
+      currentActive.currentTime = 0
     }
 
     handlers.trackChanged?.(index)
-    const audio = ensureAudio()
-    audio.src = getAudioSrc(element)
+
+    if (dualMode) {
+      const idle = getIdleAudio()!
+      const idleReady = idle.getAttribute('data-src') === targetSrc
+
+      if (idleReady) {
+        swapSlots()
+        swapping = false
+        const audio = getActiveAudio()!
+        audio.playbackRate = currentRate
+        audio.defaultPlaybackRate = currentRate
+        audio.play()?.catch((e) => {
+          if (e instanceof DOMException && e.name === 'NotAllowedError') {
+            dualMode = false
+            console.warn('Swap play() NotAllowedError — falling back to single element')
+            swapSlots()
+            clearStuckTimer()
+            playSingleElement(targetSrc)
+            armStuckTimer()
+          }
+          else {
+            handlePlayError(e, { clearStuck: true })
+          }
+        })
+      }
+      else {
+        // Idle element doesn't have the target src preloaded — no gapless benefit
+        // from swapping; stay on the current (gesture-unlocked) element to avoid
+        // NotAllowedError on iOS.
+        swapping = false
+        playSingleElement(targetSrc)
+      }
+    }
+    else {
+      swapping = false
+      playSingleElement(targetSrc)
+    }
+
+    armStuckTimer()
+    preloadNextSegment()
+  }
+
+  function playSingleElement(targetSrc: string) {
+    const audio = getActiveAudio()!
+    audio.setAttribute('data-src', targetSrc)
+    audio.src = targetSrc
     audio.playbackRate = currentRate
     audio.defaultPlaybackRate = currentRate
     audio.load()
     audio.play()?.catch(e => handlePlayError(e, { clearStuck: true }))
+  }
 
-    // Stuck detection: if onplay never fires within timeout, retry once then error
+  // Stuck detection: if onplay never fires within timeout, retry once then error
+  function armStuckTimer() {
     stuckTimer = setTimeout(() => {
       if (playing || !active || errored || stuckRetried) return
       console.warn(`Audio stuck — retrying playback`)
       stuckRetried = true
+      const audio = getActiveAudio()
+      if (!audio) return
       audio.load()
       audio.play()?.catch(e => handlePlayError(e, { clearStuck: true }))
       stuckTimer = setTimeout(() => {
@@ -198,8 +291,6 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
         handlers.error?.(audio.error || 'STUCK_TIMEOUT')
       }, STUCK_DETECTION_TIMEOUT_MS)
     }, STUCK_DETECTION_TIMEOUT_MS)
-
-    preloadNextSegment()
   }
 
   function load(options: {
@@ -213,23 +304,43 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     segments = options.segments
     getAudioSrc = options.getAudioSrc
     currentRate = options.rate
+
+    dualMode = true
+    ensureAudioPool()
+
+    const idle = getIdleAudio()
+    if (idle) {
+      idle.src = SILENCE_WAV_DATA_URI
+      idle.play()
+        ?.then(() => idle.pause())
+        ?.catch((err) => {
+          // AbortError is expected — playAtIndex() interrupts the silence priming
+          if (err instanceof DOMException && err.name === 'AbortError') return
+          console.error('Error priming audio element for dual mode:', err)
+          dualMode = false
+          console.warn('Dual audio element not supported, falling back to single element')
+        })
+    }
+
     playAtIndex(options.startIndex)
   }
 
   function resume(): boolean {
-    if (!activeAudio.value) return false
-    activeAudio.value.play()?.catch(handlePlayError)
+    const audio = getActiveAudio()
+    if (!audio) return false
+    audio.play()?.catch(handlePlayError)
     return true
   }
 
   function pause() {
     clearStuckTimer()
-    if (activeAudio.value) {
-      if (!activeAudio.value.paused) {
+    const audio = getActiveAudio()
+    if (audio) {
+      if (!audio.paused) {
         pausedInternally = true
-        activeAudio.value.pause()
+        audio.pause()
       }
-      activeAudio.value.currentTime = 0
+      audio.currentTime = 0
     }
     handlers.pause?.()
   }
@@ -246,21 +357,29 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
 
   function setRate(rate: number) {
     currentRate = rate
-    if (activeAudio.value) {
-      activeAudio.value.playbackRate = rate
-      activeAudio.value.defaultPlaybackRate = rate
+    const act = getActiveAudio()
+    if (act) {
+      act.playbackRate = rate
+      act.defaultPlaybackRate = rate
+    }
+    const idle = getIdleAudio()
+    if (idle) {
+      idle.playbackRate = rate
+      idle.defaultPlaybackRate = rate
     }
   }
 
   function seek(time: number) {
-    if (activeAudio.value && Number.isFinite(activeAudio.value.duration)) {
-      activeAudio.value.currentTime = Math.max(0, Math.min(time, activeAudio.value.duration))
+    const audio = getActiveAudio()
+    if (audio && Number.isFinite(audio.duration)) {
+      audio.currentTime = Math.max(0, Math.min(time, audio.duration))
     }
   }
 
   function getPosition(): { position: number, duration: number } | null {
-    if (!activeAudio.value || !Number.isFinite(activeAudio.value.duration)) return null
-    return { position: activeAudio.value.currentTime, duration: activeAudio.value.duration }
+    const audio = getActiveAudio()
+    if (!audio || !Number.isFinite(audio.duration)) return null
+    return { position: audio.currentTime, duration: audio.duration }
   }
 
   return {
