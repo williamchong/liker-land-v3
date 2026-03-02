@@ -1,7 +1,12 @@
 import { createHash } from 'node:crypto'
 import type { Writable } from 'node:stream'
+import type { H3Event } from 'h3'
 import { AzureTTSProvider } from '~/server/utils/tts-azure'
 import { TTSQuerySchema } from '~/server/schemas/tts'
+
+// Coalesces concurrent identical TTS requests (e.g. browser range probes)
+const inFlightWrites = new Map<string, Promise<void>>()
+const IN_FLIGHT_TIMEOUT_MS = 120_000
 
 function parseRangeHeader(rangeHeader: string, totalSize: number): { start: number, end: number } | null {
   const match = rangeHeader.match(/^bytes=(\d*)-(\d*)$/)
@@ -60,6 +65,46 @@ function getTTSProvider(voiceId: string): BaseTTSProvider {
   }
 }
 
+async function serveCachedTTS(
+  event: H3Event,
+  bucket: NonNullable<ReturnType<typeof getTTSCacheBucket>>,
+  cacheKey: string,
+  contentFormat: string,
+  isCustomVoice: boolean,
+  wallet: string,
+) {
+  const file = bucket.file(cacheKey)
+  const metadata = await file.getMetadata()
+  const totalSize = Number(metadata[0].size)
+  const contentType = metadata[0].contentType || contentFormat
+  const rangeHeader = getHeader(event, 'range')
+
+  const etag = `"${createHash('sha256').update(cacheKey).digest('hex').substring(0, 16)}"`
+  setHeader(event, 'content-type', contentType)
+  setHeader(event, 'cache-control', isCustomVoice ? 'private, max-age=604800' : 'public, max-age=604800')
+  setHeader(event, 'accept-ranges', 'bytes')
+  setHeader(event, 'vary', 'Range')
+  setHeader(event, 'etag', etag)
+
+  console.log(`[Speech] Cache hit for user ${wallet}: ${cacheKey}`)
+
+  if (rangeHeader && totalSize) {
+    const range = parseRangeHeader(rangeHeader, totalSize)
+    if (range) {
+      const { start, end } = range
+      setResponseStatus(event, 206)
+      setHeader(event, 'content-range', `bytes ${start}-${end}/${totalSize}`)
+      setHeader(event, 'content-length', end - start + 1)
+      return sendStream(event, file.createReadStream({ start, end }))
+    }
+  }
+
+  if (totalSize) {
+    setHeader(event, 'content-length', totalSize)
+  }
+  return sendStream(event, file.createReadStream())
+}
+
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   if (!session) {
@@ -102,16 +147,6 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  await updateUserTTSCharacterUsage(session.user.evmWallet, text.length)
-
-  publishEvent(event, 'TTSRequest', {
-    evmWallet: session.user.evmWallet,
-    language,
-    voiceId,
-    isCustomVoice,
-    textLength: text.length,
-  })
-
   const ttsModel = isCustomVoice
     ? getMinimaxModel(customMiniMaxVoiceId, language)
     : (VOICE_PROVIDER_MAPPING[voiceId] === TTSProvider.MINIMAX ? getMinimaxModel() : 'azure')
@@ -129,41 +164,53 @@ export default defineEventHandler(async (event) => {
     try {
       const [exists] = await file.exists()
       if (exists) {
-        const metadata = await file.getMetadata()
-        const totalSize = Number(metadata[0].size)
-        const contentType = metadata[0].contentType || provider.format
-        const rangeHeader = getHeader(event, 'range')
-
-        const etag = `"${createHash('sha256').update(cacheKey!).digest('hex').substring(0, 16)}"`
-        setHeader(event, 'content-type', contentType)
-        setHeader(event, 'cache-control', isCustomVoice ? 'private, max-age=604800' : 'public, max-age=604800')
-        setHeader(event, 'accept-ranges', 'bytes')
-        setHeader(event, 'vary', 'Range')
-        setHeader(event, 'etag', etag)
-
-        console.log(`[Speech] Cache hit for user ${session.user.evmWallet}: ${cacheKey}`)
-
-        if (rangeHeader && totalSize) {
-          const range = parseRangeHeader(rangeHeader, totalSize)
-          if (range) {
-            const { start, end } = range
-            setResponseStatus(event, 206)
-            setHeader(event, 'content-range', `bytes ${start}-${end}/${totalSize}`)
-            setHeader(event, 'content-length', end - start + 1)
-            return sendStream(event, file.createReadStream({ start, end }))
-          }
-        }
-
-        if (totalSize) {
-          setHeader(event, 'content-length', totalSize)
-        }
-        return sendStream(event, file.createReadStream())
+        return await serveCachedTTS(event, bucket, cacheKey!, provider.format, isCustomVoice, session.user.evmWallet)
       }
     }
     catch (error) {
       console.warn(`[Speech] Cache check failed for user ${session.user.evmWallet}:`, error)
     }
   }
+
+  let resolveInFlight: (() => void) | undefined
+  let rejectInFlight: ((error: unknown) => void) | undefined
+  if (cacheKey) {
+    const pending = inFlightWrites.get(cacheKey)
+    if (pending) {
+      console.log(`[Speech] In-flight dedup for user ${session.user.evmWallet}: ${cacheKey}`)
+      try {
+        await pending
+        return await serveCachedTTS(event, bucket!, cacheKey, provider.format, isCustomVoice, session.user.evmWallet)
+      }
+      catch {
+        console.warn(`[Speech] In-flight request failed, generating own for user ${session.user.evmWallet}`)
+      }
+    }
+
+    const inFlightPromise = new Promise<void>((resolve, reject) => {
+      resolveInFlight = resolve
+      rejectInFlight = reject
+    })
+    inFlightPromise.catch(() => {})
+    inFlightWrites.set(cacheKey, inFlightPromise)
+    const timeoutId = setTimeout(() => {
+      rejectInFlight?.(new Error('In-flight timeout'))
+    }, IN_FLIGHT_TIMEOUT_MS)
+    inFlightPromise.finally(() => {
+      clearTimeout(timeoutId)
+      inFlightWrites.delete(cacheKey!)
+    })
+  }
+
+  await updateUserTTSCharacterUsage(session.user.evmWallet, text.length)
+
+  publishEvent(event, 'TTSRequest', {
+    evmWallet: session.user.evmWallet,
+    language,
+    voiceId,
+    isCustomVoice,
+    textLength: text.length,
+  })
 
   const isBlocking = blocking === '1'
   const requestParams: TTSRequestParams = {
@@ -203,9 +250,15 @@ export default defineEventHandler(async (event) => {
 
       if (isCacheEnabled) {
         const cacheFile = bucket.file(cacheKey!)
-        cacheFile.save(buffer, { metadata: cacheMetadata }).catch((error: unknown) => {
-          console.warn(`[Speech] Cache write failed for user ${session.user.evmWallet}:`, error)
-        })
+        cacheFile.save(buffer, { metadata: cacheMetadata })
+          .then(() => resolveInFlight?.())
+          .catch((error: unknown) => {
+            console.warn(`[Speech] Cache write failed for user ${session.user.evmWallet}:`, error)
+            rejectInFlight?.(error)
+          })
+      }
+      else {
+        resolveInFlight?.()
       }
 
       const rangeHeader = getHeader(event, 'range')
@@ -238,8 +291,10 @@ export default defineEventHandler(async (event) => {
     if (isCacheEnabled) {
       const cacheFile = bucket.file(cacheKey!)
       cacheWriteStream = cacheFile.createWriteStream({ metadata: cacheMetadata })
+      cacheWriteStream.on('finish', () => resolveInFlight?.())
       cacheWriteStream.on('error', (error: unknown) => {
         console.warn(`[Speech] Cache write failed for user ${session.user.evmWallet}:`, error)
+        rejectInFlight?.(error)
         if (cacheWriteStream) {
           if (!cacheWriteStream.writableEnded) {
             cacheWriteStream.destroy()
@@ -255,6 +310,7 @@ export default defineEventHandler(async (event) => {
       if (cacheWriteStream && !cacheWriteStream.writableEnded) {
         cacheWriteStream.destroy()
         cacheWriteStream = null
+        rejectInFlight?.(new Error('Client disconnected'))
         bucket!.file(cacheKey!).delete({ ignoreNotFound: true }).catch(() => {})
       }
     })
@@ -277,6 +333,7 @@ export default defineEventHandler(async (event) => {
     return sendStream(event, stream.pipeThrough(cacheStream))
   }
   catch (error) {
+    rejectInFlight?.(error)
     console.error(`[Speech] Failed to convert text for user ${session.user.evmWallet}:`, error)
     throw error
   }
