@@ -1,3 +1,26 @@
+const PREFERRED_MIME_TYPES = [
+  'audio/mp4',
+  'audio/mpeg',
+]
+
+const PASSTHROUGH_TYPES = new Set([
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/mp4',
+  'audio/x-m4a',
+])
+
+const MIME_EXT: Record<string, string> = {
+  'audio/mpeg': 'mp3',
+  'audio/mp3': 'mp3',
+  'audio/mp4': 'm4a',
+  'audio/x-m4a': 'm4a',
+}
+
+function getRecorderMimeType(): string | undefined {
+  return PREFERRED_MIME_TYPES.find(t => MediaRecorder.isTypeSupported(t))
+}
+
 export function useAudioRecorder(options: {
   maxFileSize?: number
   fileTooLargeErrorKey?: string
@@ -13,7 +36,7 @@ export function useAudioRecorder(options: {
 
   const isRecording = ref(false)
   const mediaRecorder = ref<MediaRecorder | null>(null)
-  const recordingChunks = ref<Blob[]>([])
+  let recordingChunks: Blob[] = []
   const recordingDuration = ref(0)
   const { pause: pauseTimer, resume: resumeTimer } = useIntervalFn(() => {
     recordingDuration.value++
@@ -52,22 +75,33 @@ export function useAudioRecorder(options: {
   async function startRecording() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream)
-      recordingChunks.value = []
+
+      const mimeType = getRecorderMimeType()
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+      recordingChunks = []
       recordingDuration.value = 0
 
       recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) recordingChunks.value.push(e.data)
+        if (e.data.size > 0) recordingChunks.push(e.data)
       }
 
       recorder.onstop = async () => {
         stream.getTracks().forEach(t => t.stop())
         pauseTimer()
-        const rawBlob = new Blob(recordingChunks.value, { type: recorder.mimeType })
+
+        const rawMime = recorder.mimeType.split(';')[0]!
+        const rawBlob = new Blob(recordingChunks, { type: rawMime })
+        recordingChunks = []
+
         try {
-          const mp3Blob = await convertBlobToMp3(rawBlob)
-          const mp3File = new File([mp3Blob], 'recording.mp3', { type: 'audio/mpeg' })
-          setFile(mp3File)
+          if (PASSTHROUGH_TYPES.has(rawMime)) {
+            const ext = MIME_EXT[rawMime] || 'mp3'
+            setFile(new File([rawBlob], `recording.${ext}`, { type: rawMime }))
+          }
+          else {
+            const mp3Blob = await convertBlobToMp3(rawBlob)
+            setFile(new File([mp3Blob], 'recording.mp3', { type: 'audio/mpeg' }))
+          }
         }
         catch (error) {
           console.error('[AudioRecorder] MP3 conversion failed:', error)
