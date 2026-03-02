@@ -50,6 +50,10 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
       errored = false
       autoResumeRetries = 0
       clearStuckTimer()
+    }
+
+    audio.onplaying = () => {
+      if (audio !== getActiveAudio() || swapping) return
       handlers.play?.()
     }
 
@@ -139,6 +143,7 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     audio.removeAttribute('data-src')
     audio.load()
     audio.onplay = null
+    audio.onplaying = null
     audio.onpause = null
     audio.onended = null
     audio.onerror = null
