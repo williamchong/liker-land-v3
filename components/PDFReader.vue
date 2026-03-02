@@ -194,7 +194,7 @@ import type { PDFDocumentProxy } from 'pdfjs-dist'
 
 interface Props {
   bookName?: string
-  pdfBuffer: ArrayBuffer
+  pdfBuffer?: ArrayBuffer | null
   isAudioHidden?: boolean
   bookFileCacheKey: string
   bookProgressKeyPrefix: string
@@ -347,6 +347,12 @@ onMounted(async () => {
   }
 })
 
+onBeforeUnmount(() => {
+  renderQueue.value = []
+  pdfDocument.value?.destroy()
+  pdfDocument.value = undefined
+})
+
 watch(isMobile, async (value) => {
   if (value && isDualPageMode.value) {
     isDualPageMode.value = false
@@ -394,6 +400,12 @@ async function loadPDF() {
     console.error('PDF.js library not loaded')
     return
   }
+
+  if (pdfDocument.value) {
+    pdfDocument.value.destroy()
+    pdfDocument.value = undefined
+  }
+
   try {
     const loadingTask = pdfjsLib.value.getDocument({
       data: props.pdfBuffer,
@@ -472,6 +484,7 @@ async function renderSinglePage() {
   }
 
   await page.render(renderContext).promise
+  page.cleanup()
 }
 
 async function renderDualPages() {
@@ -497,13 +510,14 @@ async function renderDualPages() {
       leftCanvas.value.style.width = `${leftViewport.width}px`
       leftCanvas.value.style.height = `${leftViewport.height}px`
     }
-    return leftPage.render({
+    await leftPage.render({
       canvasContext: leftContext,
       transform: pixelRatio.value !== 1
         ? [pixelRatio.value, 0, 0, pixelRatio.value, 0, 0]
         : undefined,
       viewport: leftViewport,
     }).promise
+    leftPage.cleanup()
   })
   renderTasks.push(leftPageTask)
 
@@ -516,13 +530,14 @@ async function renderDualPages() {
         rightCanvas.value.style.width = `${rightViewport.width}px`
         rightCanvas.value.style.height = `${rightViewport.height}px`
       }
-      return rightPage.render({
+      await rightPage.render({
         canvasContext: rightContext,
         transform: pixelRatio.value !== 1
           ? [pixelRatio.value, 0, 0, pixelRatio.value, 0, 0]
           : undefined,
         viewport: rightViewport,
       }).promise
+      rightPage.cleanup()
     })
     renderTasks.push(rightPageTask)
   }
