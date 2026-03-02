@@ -72,13 +72,54 @@ export default function () {
     const streamReader = res?.body?.getReader()
     if (!streamReader) return
 
-    const contentLength = Number(res?.headers?.get('X-Original-Content-Length'))
+    const contentLength = Number(
+      res?.headers?.get('X-Original-Content-Length')
+      || res?.headers?.get('Content-Length'),
+    )
     if (contentLength) {
       loadingFilesize.value = contentLength
     }
 
+    // When content length is known, write directly into a pre-allocated buffer
+    // to avoid holding both chunks[] and combinedChunks simultaneously (~2x peak memory).
+    // Falls back to chunk accumulation if the header was unreliable.
+    if (contentLength) {
+      const buffer = new Uint8Array(contentLength)
+      let offset = 0
+      let overflow: Uint8Array[] | undefined
+      while (true) {
+        const { done, value } = await streamReader.read()
+        if (done) break
+        if (!overflow && offset + value.length <= buffer.length) {
+          buffer.set(value, offset)
+        }
+        else {
+          if (!overflow) {
+            overflow = [buffer.subarray(0, offset)]
+          }
+          overflow.push(value)
+        }
+        offset += value.length
+        loadedFilesize.value = offset
+      }
+      if (!overflow) {
+        return offset < buffer.length
+          ? buffer.buffer.slice(0, offset)
+          : buffer.buffer
+      }
+      // Content-Length was wrong — combine overflow chunks
+      const combined = new Uint8Array(offset)
+      let pos = 0
+      for (const chunk of overflow) {
+        combined.set(chunk, pos)
+        pos += chunk.length
+      }
+      return combined.buffer
+    }
+
+    // Fallback: accumulate chunks when content length is unknown
     let receivedLength = 0
-    const chunks = []
+    const chunks: Uint8Array[] = []
     while (true) {
       const { done, value } = await streamReader.read()
       if (done) break
@@ -89,10 +130,10 @@ export default function () {
 
     const combinedChunks = new Uint8Array(receivedLength)
     let position = 0
-    chunks.forEach((chunk) => {
+    for (const chunk of chunks) {
       combinedChunks.set(chunk, position)
       position += chunk.length
-    })
+    }
 
     return combinedChunks.buffer
   }

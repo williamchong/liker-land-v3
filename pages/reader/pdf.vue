@@ -10,7 +10,7 @@
         :loading-progress="loadingPercentage"
       />
     </Transition>
-    <ClientOnly v-if="fileBuffer && !isReaderLoading">
+    <ClientOnly v-if="(fileBuffer || isPDFReady) && !isReaderLoading">
       <PDFReader
         ref="pdfReaderRef"
         class="grow w-full"
@@ -53,6 +53,9 @@ const {
 const { handleError } = useErrorHandler()
 
 const fileBuffer = ref<ArrayBuffer | null>(null)
+const isPDFReady = ref(false)
+const loadedPDFDocument = shallowRef<PDFDocumentProxy>()
+const isTTSExtracted = ref(false)
 const activeTTSElementIndex = ref<number | undefined>()
 const currentPageIndex = ref(1)
 const pdfReaderRef = ref()
@@ -113,16 +116,12 @@ async function loadPDF() {
   fileBuffer.value = buffer
 }
 
-async function handlePDFLoaded(pdfDocument: PDFDocumentProxy) {
-  try {
-    const { segments, chapterTitles } = await extractTTSSegmentsFromPDF(pdfDocument)
-    setTTSSegments(segments)
-    setChapterTitles(chapterTitles)
-    currentPageIndex.value = pdfReaderRef.value?.currentPage || 1
-  }
-  catch (error) {
-    console.warn('Failed to extract TTS segments from PDF:', error)
-  }
+function handlePDFLoaded(pdfDocument: PDFDocumentProxy) {
+  isPDFReady.value = true
+  loadedPDFDocument.value = pdfDocument
+  currentPageIndex.value = pdfReaderRef.value?.currentPage || 1
+  // Release the ArrayBuffer — PDF.js has its own internal copy
+  fileBuffer.value = null
 }
 
 async function extractTTSSegmentsFromPDF(pdfDocument: PDFDocumentProxy) {
@@ -165,6 +164,8 @@ async function extractTTSSegmentsFromPDF(pdfDocument: PDFDocumentProxy) {
         // Use page number as chapter title for PDFs
         chapterTitles[pageNum] = `Page ${pageNum}`
       }
+
+      page.cleanup()
     }
     catch (error) {
       console.warn(`Failed to extract text from PDF page ${pageNum}:`, error)
@@ -179,7 +180,25 @@ function handlePageChanged(pageNumber: number) {
   activeTTSElementIndex.value = undefined
 }
 
-function handleTTSPlay() {
+let ttsExtractionPromise: Promise<void> | undefined
+async function handleTTSPlay() {
+  if (!isTTSExtracted.value && loadedPDFDocument.value) {
+    if (!ttsExtractionPromise) {
+      ttsExtractionPromise = extractTTSSegmentsFromPDF(loadedPDFDocument.value)
+        .then(({ segments, chapterTitles }) => {
+          setTTSSegments(segments)
+          setChapterTitles(chapterTitles)
+          isTTSExtracted.value = true
+        })
+        .catch((error) => {
+          console.warn('Failed to extract TTS segments from PDF:', error)
+        })
+        .finally(() => {
+          ttsExtractionPromise = undefined
+        })
+    }
+    await ttsExtractionPromise
+  }
   openPlayer({
     ttsIndex: activeTTSElementIndex.value,
     sectionIndex: currentPageIndex.value,
