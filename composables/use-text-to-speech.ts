@@ -40,8 +40,27 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     setTTSLanguageVoice,
   } = useTTSVoice({ bookLanguage, customVoice: options.customVoice })
 
-  // Audio player
-  const player: TTSAudioPlayer = useWebAudioPlayer()
+  // Pick player implementation — both are created upfront (inert until load()),
+  // and the proxy delegates to the correct one based on the reactive flag.
+  const { isNativeBridge } = useNativeAudioBridge()
+  const nativePlayer = useNativeAudioPlayer(isNativeBridge)
+  const webPlayer = useWebAudioPlayer()
+  const activePlayer = () => isNativeBridge.value ? nativePlayer : webPlayer
+  const player: TTSAudioPlayer = {
+    load: options => activePlayer().load(options),
+    resume: () => activePlayer().resume(),
+    pause: () => activePlayer().pause(),
+    stop: () => activePlayer().stop(),
+    skipTo: index => activePlayer().skipTo(index),
+    setRate: rate => activePlayer().setRate(rate),
+    seek: time => activePlayer().seek(time),
+    getPosition: () => activePlayer().getPosition(),
+    on(event, handler) {
+      // Register on both — the inactive player won't fire events
+      nativePlayer.on(event, handler)
+      webPlayer.on(event, handler)
+    },
+  }
 
   // Playback rate options and storage
   const ttsConfigCacheKey = computed(() =>
@@ -210,6 +229,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   })
 
   function setupMediaSession() {
+    if (isNativeBridge.value) return
     try {
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -277,7 +297,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   }
 
   watch(isTextToSpeechPlaying, () => {
-    if ('mediaSession' in navigator) {
+    if (!isNativeBridge.value && 'mediaSession' in navigator) {
       navigator.mediaSession.playbackState = isTextToSpeechPlaying.value ? 'playing' : 'paused'
     }
   })
@@ -471,7 +491,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     isTextToSpeechLoading.value = false
     isShowTextToSpeechOptions.value = false
 
-    if ('mediaSession' in navigator) {
+    if (!isNativeBridge.value && 'mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'none'
     }
   }
