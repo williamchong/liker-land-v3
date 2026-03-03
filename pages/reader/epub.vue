@@ -123,6 +123,7 @@
               trailing-icon="i-material-symbols-play-arrow-rounded"
               variant="ghost"
               color="neutral"
+              :loading="isTTSExtracting"
               @click="handleMobileTTSClick"
             />
             <UTooltip
@@ -142,6 +143,7 @@
                 :label="$t('reader_text_to_speech_button')"
                 variant="ghost"
                 color="neutral"
+                :loading="isTTSExtracting"
                 :disabled="isReaderLoading || bookInfo.isAudioHidden.value"
                 @click="onClickTTSPlay"
               />
@@ -463,7 +465,7 @@ onMounted(async () => {
 
 const rendition = ref<Rendition>()
 const loadedBook = shallowRef<Book>()
-const isTTSExtracted = ref(false)
+const isTTSExtracting = ref(false)
 const sectionHrefByFilename = ref<Record<string, string>>({})
 const navItems = ref<NavItem[]>([])
 const activeNavItemLabel = computed(() => {
@@ -1030,19 +1032,20 @@ async function handleMobileTocOpen(open: boolean) {
 
 let ttsExtractionPromise: Promise<void> | undefined
 async function ensureTTSExtracted() {
-  if (isTTSExtracted.value || !loadedBook.value) return
+  if (!loadedBook.value) return
   if (!ttsExtractionPromise) {
+    isTTSExtracting.value = true
     ttsExtractionPromise = extractTTSSegments(loadedBook.value)
       .then(({ segments, chapterTitles }) => {
         setTTSSegments(segments)
         setChapterTitles(chapterTitles)
-        isTTSExtracted.value = true
       })
       .catch((error) => {
         console.warn('Failed to extract TTS segments:', error)
+        ttsExtractionPromise = undefined
       })
       .finally(() => {
-        ttsExtractionPromise = undefined
+        isTTSExtracting.value = false
       })
   }
   await ttsExtractionPromise

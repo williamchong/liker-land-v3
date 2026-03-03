@@ -18,6 +18,7 @@
         :nft-class-id="nftClassId"
         :pdf-buffer="fileBuffer"
         :is-audio-hidden="bookInfo.isAudioHidden.value"
+        :is-tts-extracting="isTTSExtracting"
         :book-file-cache-key="bookFileCacheKey"
         :book-progress-key-prefix="bookProgressKeyPrefix"
         @error="handlePDFError"
@@ -55,7 +56,7 @@ const { handleError } = useErrorHandler()
 const fileBuffer = ref<ArrayBuffer | null>(null)
 const isPDFReady = ref(false)
 const loadedPDFDocument = shallowRef<PDFDocumentProxy>()
-const isTTSExtracted = ref(false)
+const isTTSExtracting = ref(false)
 const activeTTSElementIndex = ref<number | undefined>()
 const currentPageIndex = ref(1)
 const pdfReaderRef = ref()
@@ -181,24 +182,28 @@ function handlePageChanged(pageNumber: number) {
 }
 
 let ttsExtractionPromise: Promise<void> | undefined
-async function handleTTSPlay() {
-  if (!isTTSExtracted.value && loadedPDFDocument.value) {
-    if (!ttsExtractionPromise) {
-      ttsExtractionPromise = extractTTSSegmentsFromPDF(loadedPDFDocument.value)
-        .then(({ segments, chapterTitles }) => {
-          setTTSSegments(segments)
-          setChapterTitles(chapterTitles)
-          isTTSExtracted.value = true
-        })
-        .catch((error) => {
-          console.warn('Failed to extract TTS segments from PDF:', error)
-        })
-        .finally(() => {
-          ttsExtractionPromise = undefined
-        })
-    }
-    await ttsExtractionPromise
+async function ensureTTSExtracted() {
+  if (!loadedPDFDocument.value) return
+  if (!ttsExtractionPromise) {
+    isTTSExtracting.value = true
+    ttsExtractionPromise = extractTTSSegmentsFromPDF(loadedPDFDocument.value)
+      .then(({ segments, chapterTitles }) => {
+        setTTSSegments(segments)
+        setChapterTitles(chapterTitles)
+      })
+      .catch((error) => {
+        console.warn('Failed to extract TTS segments from PDF:', error)
+        ttsExtractionPromise = undefined
+      })
+      .finally(() => {
+        isTTSExtracting.value = false
+      })
   }
+  await ttsExtractionPromise
+}
+
+async function handleTTSPlay() {
+  await ensureTTSExtracted()
   openPlayer({
     ttsIndex: activeTTSElementIndex.value,
     sectionIndex: currentPageIndex.value,

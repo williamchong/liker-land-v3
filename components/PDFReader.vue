@@ -73,6 +73,7 @@
             trailing-icon="i-material-symbols-play-arrow-rounded"
             variant="ghost"
             color="neutral"
+            :loading="isTTSExtracting"
             @click="handleMobileTTSClick"
           />
           <UTooltip
@@ -92,6 +93,7 @@
               :label="$t('reader_text_to_speech_button')"
               variant="ghost"
               color="neutral"
+              :loading="isTTSExtracting"
               :disabled="isAudioHidden"
               @click="onClickTTSPlay"
             />
@@ -196,6 +198,7 @@ interface Props {
   bookName?: string
   pdfBuffer?: ArrayBuffer | null
   isAudioHidden?: boolean
+  isTTSExtracting?: boolean
   bookFileCacheKey: string
   bookProgressKeyPrefix: string
   nftClassId: string
