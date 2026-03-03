@@ -180,14 +180,16 @@ export async function setCustomVoice(
   }, { merge: true })
 }
 
-export async function updateCustomVoiceLanguage(
+export async function updateCustomVoice(
   userWallet: string,
-  voiceLanguage: string,
+  fields: { voiceName?: string, voiceLanguage?: string },
 ): Promise<void> {
-  await getUserCollection().doc(userWallet).update({
-    'customVoice.voiceLanguage': voiceLanguage,
+  const update: Record<string, unknown> = {
     'customVoice.updatedAt': FieldValue.serverTimestamp(),
-  })
+  }
+  if (fields.voiceName !== undefined) update['customVoice.voiceName'] = fields.voiceName
+  if (fields.voiceLanguage !== undefined) update['customVoice.voiceLanguage'] = fields.voiceLanguage
+  await getUserCollection().doc(userWallet).update(update)
 }
 
 export async function deleteCustomVoice(
