@@ -462,6 +462,8 @@ onMounted(async () => {
 })
 
 const rendition = ref<Rendition>()
+const loadedBook = shallowRef<Book>()
+const isTTSExtracted = ref(false)
 const sectionHrefByFilename = ref<Record<string, string>>({})
 const navItems = ref<NavItem[]>([])
 const activeNavItemLabel = computed(() => {
@@ -612,6 +614,7 @@ async function loadEPub() {
 
   const book = ePub(buffer)
   await book.ready
+  loadedBook.value = book
   const toc = await book.loaded!.navigation.then(async (navigation) => {
     return navigation.toc.flatMap((item) => {
       if (item.subitems) {
@@ -843,10 +846,6 @@ async function loadEPub() {
     readingProgress.value = percentage.value
   })
 
-  const { segments: ttsSegments, chapterTitles } = await extractTTSSegments(book)
-  setTTSSegments(ttsSegments)
-  setChapterTitles(chapterTitles)
-
   if (shouldShowTTSTryModal.value && !bookInfo.isAudioHidden.value) {
     showTTSTryModal({
       nftClassId: nftClassId.value,
@@ -869,56 +868,49 @@ function findNextNavItemAfterTOC(navItems: NavItem[]): NavItem | undefined {
 }
 
 async function extractTTSSegments(book: Book) {
-  const sectionPromises: Promise<{ segments: TTSSegment[], chapterTitle: string, sectionIndex: number }>[] = []
-
+  const sections: Section[] = []
   book.spine!.each((section: Section) => {
-    const sectionPromise = (async () => {
-      try {
-        if (!section.href) return { segments: [], chapterTitle: '', sectionIndex: section.index ?? 0 }
-        const chapter = await book.load(section.href)
-
-        if (!(chapter instanceof Document)) {
-          console.warn(`No document found for section ${section.href}`)
-          return { segments: [], chapterTitle: '', sectionIndex: section.index ?? 0 }
-        }
-
-        const chapterTitle = chapter.querySelector('title')?.textContent?.trim() || ''
-
-        const elements = Array.from(
-          chapter.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li'),
-        ).filter(el => !!el.textContent?.trim())
-
-        const segments: TTSSegment[] = []
-        elements.forEach((el, elIndex) => {
-          const text = el.textContent?.trim() || ''
-          const cfi = section.cfiFromElement(el)
-          segments.push(
-            ...splitTextIntoSegments(text).map((segment, segIndex) => ({
-              text: segment,
-              id: `${section.index}-${elIndex}-${segIndex}`,
-              cfi,
-              sectionIndex: section.index ?? 0,
-            })),
-          )
-        })
-
-        return { segments, chapterTitle, sectionIndex: section.index ?? 0 }
-      }
-      catch (err) {
-        console.warn(`Failed to load section ${section.href}`, err)
-        return { segments: [], chapterTitle: '', sectionIndex: section.index ?? 0 }
-      }
-    })()
-
-    sectionPromises.push(sectionPromise)
+    sections.push(section)
   })
 
-  const sectionResults = await Promise.all(sectionPromises)
-  const segments = sectionResults.flatMap(result => result.segments)
-  const chapterTitles = sectionResults.reduce<Record<number, string>>((acc, result) => {
-    acc[result.sectionIndex] = result.chapterTitle
-    return acc
-  }, {})
+  const segments: TTSSegment[] = []
+  const chapterTitles: Record<number, string> = {}
+
+  for (const section of sections) {
+    if (!loadedBook.value) break
+    try {
+      if (!section.href) continue
+      const chapter = await book.load(section.href)
+
+      if (!(chapter instanceof Document)) {
+        console.warn(`No document found for section ${section.href}`)
+        continue
+      }
+
+      const chapterTitle = chapter.querySelector('title')?.textContent?.trim() || ''
+      chapterTitles[section.index ?? 0] = chapterTitle
+
+      const elements = Array.from(
+        chapter.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li'),
+      ).filter(el => !!el.textContent?.trim())
+
+      elements.forEach((el, elIndex) => {
+        const text = el.textContent?.trim() || ''
+        const cfi = section.cfiFromElement(el)
+        segments.push(
+          ...splitTextIntoSegments(text).map((segment, segIndex) => ({
+            text: segment,
+            id: `${section.index}-${elIndex}-${segIndex}`,
+            cfi,
+            sectionIndex: section.index ?? 0,
+          })),
+        )
+      })
+    }
+    catch (err) {
+      console.warn(`Failed to load section ${section.href}`, err)
+    }
+  }
 
   return { segments, chapterTitles }
 }
@@ -1036,7 +1028,28 @@ async function handleMobileTocOpen(open: boolean) {
   }
 }
 
-function onClickTTSPlay() {
+let ttsExtractionPromise: Promise<void> | undefined
+async function ensureTTSExtracted() {
+  if (isTTSExtracted.value || !loadedBook.value) return
+  if (!ttsExtractionPromise) {
+    ttsExtractionPromise = extractTTSSegments(loadedBook.value)
+      .then(({ segments, chapterTitles }) => {
+        setTTSSegments(segments)
+        setChapterTitles(chapterTitles)
+        isTTSExtracted.value = true
+      })
+      .catch((error) => {
+        console.warn('Failed to extract TTS segments:', error)
+      })
+      .finally(() => {
+        ttsExtractionPromise = undefined
+      })
+  }
+  await ttsExtractionPromise
+}
+
+async function onClickTTSPlay() {
+  await ensureTTSExtracted()
   openPlayer({
     ttsIndex: activeTTSElementIndex.value,
     sectionIndex: currentSectionIndex.value,
@@ -1433,6 +1446,7 @@ onBeforeUnmount(() => {
   renderedHighlights.clear()
   renditionViewWindow.value = undefined
   rendition.value?.destroy()
+  loadedBook.value = undefined
 })
 </script>
 
