@@ -17,15 +17,19 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'NO_CUSTOM_VOICE' })
   }
 
-  const { voiceLanguage } = await readValidatedBody(event, createValidator(CustomVoicePatchSchema))
+  const fields = await readValidatedBody(event, createValidator(CustomVoicePatchSchema))
 
-  await updateCustomVoiceLanguage(wallet, voiceLanguage)
+  if (fields.voiceName === undefined && fields.voiceLanguage === undefined) {
+    throw createError({ statusCode: 400, message: 'NO_FIELDS_TO_UPDATE' })
+  }
+
+  await updateCustomVoice(wallet, fields)
 
   publishEvent(event, 'CustomVoiceUpdate', {
     evmWallet: wallet,
     voiceId: customVoice.voiceId,
-    voiceLanguage,
+    ...fields,
   })
 
-  return { voiceLanguage }
+  return fields
 })

@@ -8,16 +8,21 @@ export const CUSTOM_VOICE_MAX_AUDIO_SIZE = 20 * 1024 * 1024 // 20MB
 export const CUSTOM_VOICE_MAX_PROMPT_AUDIO_SIZE = 2 * 1024 * 1024 // 2MB
 export const CUSTOM_VOICE_MAX_PROMPT_TEXT_LENGTH = 500
 export const CUSTOM_VOICE_MAX_AVATAR_SIZE = 2 * 1024 * 1024 // 2MB
+export const CUSTOM_VOICE_MAX_NAME_LENGTH = 100
+
+const VoiceNameSchema = v.pipe(
+  v.string('MISSING_VOICE_NAME'),
+  v.nonEmpty('MISSING_VOICE_NAME'),
+  v.maxLength(CUSTOM_VOICE_MAX_NAME_LENGTH, 'VOICE_NAME_TOO_LONG'),
+)
 
 export const CustomVoicePatchSchema = v.object({
-  voiceLanguage: v.picklist(CUSTOM_VOICE_ALLOWED_LANGUAGES, 'INVALID_VOICE_LANGUAGE'),
+  voiceName: v.optional(VoiceNameSchema),
+  voiceLanguage: v.optional(v.picklist(CUSTOM_VOICE_ALLOWED_LANGUAGES, 'INVALID_VOICE_LANGUAGE')),
 })
 
 export const CustomVoiceFieldsSchema = v.object({
-  voiceName: v.pipe(
-    v.string('MISSING_VOICE_NAME'),
-    v.nonEmpty('MISSING_VOICE_NAME'),
-  ),
+  voiceName: VoiceNameSchema,
   voiceLanguage: v.optional(v.picklist([...CUSTOM_VOICE_ALLOWED_VOICE_LANGUAGES], 'INVALID_VOICE_LANGUAGE')),
   promptText: v.optional(v.pipe(
     v.string('MISSING_PROMPT_TEXT'),

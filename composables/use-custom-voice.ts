@@ -3,7 +3,6 @@ import type { CustomVoiceData } from '~/shared/types/custom-voice'
 export function useCustomVoice() {
   const customVoice = useState<CustomVoiceData | null>('custom-voice', () => null)
   const isLoading = useState<boolean>('custom-voice-loading', () => false)
-  const isUploading = useState<boolean>('custom-voice-uploading', () => false)
 
   const hasCustomVoice = computed(() => !!customVoice.value?.voiceId)
 
@@ -22,8 +21,8 @@ export function useCustomVoice() {
   }
 
   async function uploadCustomVoice(params: { audio: File, voiceName: string, voiceLanguage?: string, avatar?: File, promptAudio?: File, promptText?: string }) {
-    if (isUploading.value) return
-    isUploading.value = true
+    if (isLoading.value) return
+    isLoading.value = true
     try {
       const formData = new FormData()
       formData.append('audio', params.audio)
@@ -48,33 +47,46 @@ export function useCustomVoice() {
       return data
     }
     finally {
-      isUploading.value = false
+      isLoading.value = false
     }
   }
 
-  async function updateVoiceLanguage(voiceLanguage: string) {
-    await $fetch('/api/user/custom-voice', {
-      method: 'PATCH',
-      body: { voiceLanguage },
-    })
-    if (customVoice.value) {
-      customVoice.value = { ...customVoice.value, voiceLanguage }
+  async function updateCustomVoiceInfo(fields: { voiceName?: string, voiceLanguage?: string }) {
+    if (isLoading.value) return
+    isLoading.value = true
+    try {
+      await $fetch('/api/user/custom-voice', {
+        method: 'PATCH',
+        body: fields,
+      })
+      if (customVoice.value) {
+        customVoice.value = { ...customVoice.value, ...fields }
+      }
+    }
+    finally {
+      isLoading.value = false
     }
   }
 
   async function removeCustomVoice() {
-    await $fetch('/api/user/custom-voice', { method: 'DELETE' })
-    customVoice.value = null
+    if (isLoading.value) return
+    isLoading.value = true
+    try {
+      await $fetch('/api/user/custom-voice', { method: 'DELETE' })
+      customVoice.value = null
+    }
+    finally {
+      isLoading.value = false
+    }
   }
 
   return {
     customVoice,
     hasCustomVoice,
     isLoading,
-    isUploading,
     fetchCustomVoice,
     uploadCustomVoice,
-    updateVoiceLanguage,
+    updateCustomVoiceInfo,
     removeCustomVoice,
   }
 }

@@ -42,7 +42,15 @@
             size="lg"
             :src="previewAvatarUrl || customDefaultAvatar"
           />
-          <span class="text-base font-medium">{{ previewVoiceName }}</span>
+          <UInput
+            v-model="previewVoiceNameInput"
+            class="flex-1"
+            :maxlength="100"
+            :placeholder="$t('tts_custom_voice_default_name')"
+            :loading="isLoading"
+            :disabled="isLoading"
+            @blur="handleVoiceNameBlur"
+          />
         </div>
 
         <div
@@ -56,6 +64,7 @@
           <URadioGroup
             :model-value="voiceLanguage"
             :items="voiceLanguageOptions"
+            :disabled="isLoading"
             orientation="horizontal"
             @update:model-value="handleVoiceLanguageChange"
           />
@@ -334,6 +343,7 @@
           block
           size="xl"
           color="error"
+          :loading="isLoading"
           @click="confirmDelete"
         />
         <UButton
@@ -341,6 +351,7 @@
           block
           size="xl"
           variant="link"
+          :disabled="isLoading"
           @click="showDeleteConfirm = false"
         />
       </template>
@@ -352,6 +363,7 @@
           block
           size="xl"
           variant="outline"
+          :disabled="isLoading"
           @click="showUploadForm = true"
         />
         <UButton
@@ -361,6 +373,7 @@
           size="xl"
           variant="link"
           color="error"
+          :disabled="isLoading"
           @click="handleDelete"
         />
         <UButton
@@ -382,8 +395,8 @@
           :label="existingVoice ? $t('tts_custom_voice_replace_button') : $t('tts_custom_voice_upload_button')"
           block
           size="xl"
-          :loading="isUploading"
-          :disabled="!mainAudio.file.value || isUploading || !isAudioDurationValid || !isPromptAudioDurationValid"
+          :loading="isLoading"
+          :disabled="!mainAudio.file.value || isLoading || !isAudioDurationValid || !isPromptAudioDurationValid"
           @click="handleUpload"
         />
         <UButton
@@ -393,6 +406,7 @@
           size="xl"
           variant="link"
           color="error"
+          :disabled="isLoading"
           @click="handleDelete"
         />
       </template>
@@ -415,7 +429,7 @@ const emit = defineEmits<{
 }>()
 
 const { t: $t, locale } = useI18n()
-const { isUploading, uploadCustomVoice, updateVoiceLanguage, removeCustomVoice } = useCustomVoice()
+const { customVoice, isLoading, uploadCustomVoice, updateCustomVoiceInfo, removeCustomVoice } = useCustomVoice()
 
 const voiceName = ref(props.existingVoice?.voiceName || '')
 const voiceLanguage = ref(props.existingVoice?.voiceLanguage || (locale.value === 'en' ? 'en-US' : 'zh-HK'))
@@ -428,7 +442,7 @@ const showUploadForm = ref(!props.existingVoice)
 const previewCacheBuster = ref(Date.now())
 
 const showPreview = computed(() => uploadSuccess.value || (!!props.existingVoice && !showUploadForm.value))
-const previewVoiceName = computed(() => voiceName.value || props.existingVoice?.voiceName || '')
+const previewVoiceNameInput = ref(props.existingVoice?.voiceName || '')
 const { getResizedImageURL } = useImageResize()
 const previewAvatarUrl = computed(() => {
   if (avatarPreview.value) return avatarPreview.value
@@ -598,14 +612,31 @@ async function handleAvatarChange(e: Event) {
 }
 
 async function handleVoiceLanguageChange(value: string) {
+  const prevLanguage = voiceLanguage.value
   voiceLanguage.value = value
   if (props.existingVoice && !showUploadForm.value) {
     try {
-      await updateVoiceLanguage(value)
+      await updateCustomVoiceInfo({ voiceLanguage: value })
     }
     catch (error) {
+      voiceLanguage.value = prevLanguage
       console.error('[CustomVoice] Failed to update language:', error)
     }
+  }
+}
+
+async function handleVoiceNameBlur() {
+  const newName = previewVoiceNameInput.value.trim()
+  previewVoiceNameInput.value = newName
+  if (!newName) return
+  if ((!props.existingVoice || showUploadForm.value) && !uploadSuccess.value) return
+  if (newName === customVoice.value?.voiceName) return
+  try {
+    await updateCustomVoiceInfo({ voiceName: newName })
+  }
+  catch (error) {
+    previewVoiceNameInput.value = customVoice.value?.voiceName || props.existingVoice?.voiceName || ''
+    console.error('[CustomVoice] Failed to update name:', error)
   }
 }
 
@@ -626,6 +657,7 @@ async function handleUpload() {
     if (data) {
       uploadSuccess.value = true
       previewCacheBuster.value = Date.now()
+      previewVoiceNameInput.value = data.voiceName
       emit('uploaded', data)
     }
   }
