@@ -114,7 +114,7 @@ export default defineEventHandler(async (event) => {
     })
   }
   const config = useRuntimeConfig()
-  const { text, language, voice_id: voiceId, blocking } = await getValidatedQuery(event, createValidator(TTSQuerySchema))
+  const { text, language, voice_id: voiceId, blocking, nft_class_id: nftClassId } = await getValidatedQuery(event, createValidator(TTSQuerySchema))
 
   const isCustomVoice = voiceId === 'custom'
   let customMiniMaxVoiceId: string | undefined
@@ -210,7 +210,13 @@ export default defineEventHandler(async (event) => {
     voiceId,
     isCustomVoice,
     textLength: text.length,
+    nftClassId,
   })
+
+  if (nftClassId) {
+    incrementBookTTSCharacterUsage(session.user.evmWallet, nftClassId, text.length)
+      .catch(err => console.warn('[TTS] Failed to increment per-book TTS usage:', err))
+  }
 
   const isBlocking = blocking === '1'
   const requestParams: TTSRequestParams = {

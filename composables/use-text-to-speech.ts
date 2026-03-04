@@ -332,6 +332,9 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         language,
         voice_id: 'custom',
       })
+      if (nftClassId) {
+        params.set('nft_class_id', nftClassId)
+      }
       if (customVoice?.updatedAt) {
         params.set('_t', customVoice.updatedAt.toString())
       }
@@ -347,6 +350,9 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       language: language || 'zh-HK',
       voice_id: voiceIdParts.join('_'),
     })
+    if (nftClassId) {
+      params.set('nft_class_id', nftClassId)
+    }
     if (isNativeBridge.value) {
       params.set('blocking', '1')
     }

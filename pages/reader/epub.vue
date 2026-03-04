@@ -499,6 +499,16 @@ const {
 })
 
 const currentSectionIndex = ref(0)
+
+const { isTTSPlaying } = useTTSPlayingState()
+useReadingSession({
+  nftClassId,
+  readerType: 'epub',
+  progress: computed(() => readingProgress.value * 100),
+  isTextToSpeechPlaying: isTTSPlaying,
+  chapterIndex: currentSectionIndex,
+})
+
 const lastSectionIndex = ref(0)
 const percentage = ref(0)
 const percentageLabel = computed(() => `${Math.round(percentage.value * 100)}%`)

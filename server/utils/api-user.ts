@@ -199,3 +199,110 @@ export async function deleteCustomVoice(
     customVoice: FieldValue.delete(),
   })
 }
+
+export async function incrementBookReadingTime(
+  userWallet: string,
+  nftClassId: string,
+  activeReadingTimeMs: number,
+  ttsActiveTimeMs: number,
+  options?: { countSession?: boolean },
+): Promise<void> {
+  const userDocRef = getUserCollection().doc(userWallet)
+  const bookDocRef = userDocRef.collection('books').doc(nftClassId.toLowerCase())
+
+  const batch = getFirestoreDb().batch()
+
+  batch.set(userDocRef, {
+    totalReadingTimeMs: FieldValue.increment(activeReadingTimeMs),
+    totalTTSListeningTimeMs: FieldValue.increment(ttsActiveTimeMs),
+  }, { merge: true })
+
+  batch.set(bookDocRef, {
+    totalReadingTimeMs: FieldValue.increment(activeReadingTimeMs),
+    totalTTSTimeMs: FieldValue.increment(ttsActiveTimeMs),
+    ...(options?.countSession && { sessionCount: FieldValue.increment(1) }),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true })
+
+  await batch.commit()
+}
+
+export async function updateReadingStreak(
+  userWallet: string,
+): Promise<void> {
+  const userDocRef = getUserCollection().doc(userWallet)
+  const today = new Date().toISOString().split('T')[0]
+
+  await getFirestoreDb().runTransaction(async (transaction) => {
+    const doc = await transaction.get(userDocRef)
+    const data = doc.data()
+    const streak = data?.readingStreak || { currentDays: 0, longestDays: 0, lastActiveDate: '' }
+
+    if (streak.lastActiveDate === today) return
+
+    const yesterday = new Date()
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+    const yesterdayStr = yesterday.toISOString().split('T')[0]
+
+    let newCurrentDays: number
+    if (streak.lastActiveDate === yesterdayStr) {
+      newCurrentDays = (streak.currentDays || 0) + 1
+    }
+    else {
+      newCurrentDays = 1
+    }
+
+    const newLongestDays = Math.max(newCurrentDays, streak.longestDays || 0)
+
+    transaction.set(userDocRef, {
+      readingStreak: {
+        currentDays: newCurrentDays,
+        longestDays: newLongestDays,
+        lastActiveDate: today,
+      },
+    }, { merge: true })
+  })
+}
+
+export async function markBookCompleted(
+  userWallet: string,
+  nftClassId: string,
+): Promise<boolean> {
+  const bookDocRef = getUserCollection()
+    .doc(userWallet)
+    .collection('books')
+    .doc(nftClassId.toLowerCase())
+  const userDocRef = getUserCollection().doc(userWallet)
+
+  let isNewCompletion = false
+  await getFirestoreDb().runTransaction(async (transaction) => {
+    isNewCompletion = false
+    const doc = await transaction.get(bookDocRef)
+    if (doc.data()?.completedAt) return
+    isNewCompletion = true
+    transaction.set(bookDocRef, {
+      completedAt: FieldValue.serverTimestamp(),
+    }, { merge: true })
+    transaction.set(userDocRef, {
+      totalBooksCompleted: FieldValue.increment(1),
+    }, { merge: true })
+  })
+
+  return isNewCompletion
+}
+
+export async function incrementBookTTSCharacterUsage(
+  userWallet: string,
+  nftClassId: string,
+  charactersUsed: number,
+): Promise<void> {
+  const bookDocRef = getUserCollection()
+    .doc(userWallet)
+    .collection('books')
+    .doc(nftClassId.toLowerCase())
+
+  await bookDocRef.set({
+    ttsCharactersUsed: FieldValue.increment(charactersUsed),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true })
+}

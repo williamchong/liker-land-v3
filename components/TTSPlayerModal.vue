@@ -358,6 +358,9 @@ const {
   },
 })
 
+const { isTTSPlaying } = useTTSPlayingState()
+watch(isTextToSpeechPlaying, playing => isTTSPlaying.value = playing, { immediate: true })
+
 const visibleSegments = computed(() => {
   const start = Math.max(currentTTSSegmentIndex.value - BUFFER_SIZE, 0)
   const end = Math.min(currentTTSSegmentIndex.value + BUFFER_SIZE, props.segments.length)
