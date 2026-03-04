@@ -345,14 +345,14 @@ export function useTextToSpeech(options: TTSOptions = {}) {
         language,
         voice_id: 'custom',
       })
+      if (nftClassId) {
+        params.set('nft_class_id', nftClassId)
+      }
       if (customVoice?.updatedAt) {
         params.set('_t', customVoice.updatedAt.toString())
       }
       if (isNativeBridge.value) {
         params.set('blocking', '1')
-      }
-      if (nftClassId) {
-        params.set('nft_class_id', nftClassId)
       }
       return `/api/reader/tts?${params.toString()}`
     }
@@ -363,11 +363,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       language: language || 'zh-HK',
       voice_id: voiceIdParts.join('_'),
     })
-    if (isNativeBridge.value) {
-      params.set('blocking', '1')
-    }
     if (nftClassId) {
       params.set('nft_class_id', nftClassId)
+    }
+    if (isNativeBridge.value) {
+      params.set('blocking', '1')
     }
     return `/api/reader/tts?${params.toString()}`
   }
