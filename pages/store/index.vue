@@ -112,7 +112,7 @@
             label: 'text-sm laptop:text-base',
           }"
           :to="fixedTag.value === 'local-histories'
-            ? localeRoute({ name: 'local-histories' })
+            ? localeRoute({ name: 'local-histories-taiwan' })
             : localeRoute({ name: 'store', query: { ...route.query, tag: fixedTag.value } })"
           @click.prevent="handleTagClick(fixedTag.value)"
         />
@@ -1013,7 +1013,7 @@ async function handleTagClick(tagValue?: string) {
 
   if (tagValue === 'local-histories') {
     useLogEvent('store_tag_click', { tag_id: tagValue })
-    await navigateTo(localeRoute({ name: 'local-histories' }))
+    await navigateTo(localeRoute({ name: 'local-histories-taiwan' }))
     return
   }
 

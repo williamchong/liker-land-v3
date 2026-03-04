@@ -84,3 +84,7 @@ export function getPercentageAmount<T extends number | bigint>(amount: T, percen
 export function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
+
+export function getStoreQueryLink(title: string) {
+  return `/store?q=${encodeURIComponent(title)}`
+}

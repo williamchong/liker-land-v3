@@ -305,8 +305,6 @@ const featuredByRegion = computed(() => {
   return map
 })
 
-const getStoreQueryLink = (title: string) => `/store?q=${encodeURIComponent(title)}`
-
 const searchTerm = ref('')
 const activeKeyword = ref('全部')
 

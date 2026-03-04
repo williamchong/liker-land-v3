@@ -1,0 +1,17 @@
+<svg width="1080" height="1350" viewBox="0 0 1080 1350" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0)">
+<g clip-path="url(#paint0_clip)" data-figma-skip-parse="true"><g transform="matrix(1.2635 0.5365 -0.636292 1.13288 1105.5 813.5)"><foreignObject x="-999.451" y="-999.451" width="1998.9" height="1998.9"><div xmlns="http://www.w3.org/1999/xhtml" style="background:conic-gradient(from 90deg,rgba(232, 121, 82, 1) 0deg,rgba(180, 70, 50, 1) 57deg,rgba(255, 228, 196, 1) 220deg,rgba(255, 160, 100, 1) 329deg,rgba(232, 121, 82, 1) 360deg);height:100%;width:100%;opacity:1"></div></foreignObject></g></g><rect width="1080" height="1350" fill="url(#paint1)" fill-opacity="0.2"/>
+<foreignObject x="-160.554" y="-160.554" width="1401.11" height="1671.11"><div xmlns="http://www.w3.org/1999/xhtml" style="backdrop-filter:blur(80.28px);clip-path:url(#bgblur_clip);height:100%;width:100%"></div></foreignObject><rect width="1080" height="1350" fill="white" fill-opacity="0.05"/>
+</g>
+<defs>
+<clipPath id="paint0_clip"><rect width="1080" height="1350"/></clipPath>
+<clipPath id="bgblur_clip" transform="translate(160.554 160.554)"><rect width="1080" height="1350"/></clipPath>
+<linearGradient id="paint1" x1="540" y1="974.375" x2="540" y2="1350" gradientUnits="userSpaceOnUse">
+<stop stop-color="white" stop-opacity="0"/>
+<stop offset="1" stop-color="white"/>
+</linearGradient>
+<clipPath id="clip0">
+<rect width="1080" height="1350" fill="white"/>
+</clipPath>
+</defs>
+</svg>
