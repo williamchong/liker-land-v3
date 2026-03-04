@@ -1,5 +1,5 @@
 <template>
-  <div class="aspect-[4/5] w-full overflow-hidden rounded-xl">
+  <div class="w-full overflow-hidden rounded-xl">
     <svg
       ref="svgRef"
       class="hk-map h-full w-full"

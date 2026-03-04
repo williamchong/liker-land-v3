@@ -12,7 +12,7 @@
           />
 
           <p
-            class="text-lg laptop:text-xl text-gray-300 mb-8 max-w-2xl"
+            class="text-lg laptop:text-xl text-white/90 mb-8 max-w-2xl"
             v-text="$t('hk_local_histories_hero_description')"
           />
         </div>
@@ -234,6 +234,10 @@
 
 <script setup lang="ts">
 import { featuredHKLocalHistories } from '@/constants/featured-hk-local-histories'
+
+definePageMeta({
+  colorMode: 'light',
+})
 
 const hoveredArea = ref<string | null>(null)
 const selectedArea = ref<string | null>('hk-island')
