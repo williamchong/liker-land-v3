@@ -28,6 +28,14 @@ export function useReaderProgress({
     lastOpenedTime.value = Date.now()
   })
 
+  if (import.meta.client) {
+    useEventListener(document, 'visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        useBookSettingsStore().flushBatch(nftClassId)
+      }
+    })
+  }
+
   onBeforeUnmount(() => {
     bookshelfStore.updateProgress(
       nftClassId,

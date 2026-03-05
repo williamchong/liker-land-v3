@@ -179,6 +179,14 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
   }
 
   function queueUpdate(nftClassId: string, dbKey: string, value: unknown) {
+    if (!hasLoggedIn.value) return
+
+    const key = getKey(nftClassId)
+    const entry = settingsMap.value[key]
+    if (entry) {
+      ;(entry.data as Record<string, unknown>)[dbKey] = value
+    }
+
     addToBatch(nftClassId, dbKey, value)
     const debouncedFlush = getDebouncedFlush(nftClassId)
     debouncedFlush()
