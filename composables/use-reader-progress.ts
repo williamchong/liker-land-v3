@@ -28,11 +28,13 @@ export function useReaderProgress({
     lastOpenedTime.value = Date.now()
   })
 
-  useEventListener(document, 'visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      useBookSettingsStore().flushBatch(nftClassId)
-    }
-  })
+  if (import.meta.client) {
+    useEventListener(document, 'visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        useBookSettingsStore().flushBatch(nftClassId)
+      }
+    })
+  }
 
   onBeforeUnmount(() => {
     bookshelfStore.updateProgress(
