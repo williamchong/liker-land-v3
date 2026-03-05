@@ -243,7 +243,7 @@
               />
               <h3 class="text-xl font-semibold text-gray-900">
                 <NuxtLink
-                  to="https://docs.3ook.com/zh-TW/articles/12507238-如何在-3ook-com-出版電子書"
+                  to="https://publish.3ook.com/about/"
                   target="_blank"
                   rel="noopener"
                   class="hover:text-primary hover:underline"
@@ -671,6 +671,40 @@
           />
         </div>
       </UCard>
+
+      <!-- Newsletter Subscribe Section -->
+      <section
+        id="newsletter"
+        class="space-y-4 text-center"
+      >
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
+          {{ $t('about_page_newsletter_title') }}
+        </h2>
+        <p class="text-lg text-muted leading-relaxed max-w-2xl mx-auto">
+          {{ $t('about_page_newsletter_content') }}
+        </p>
+        <form
+          class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
+          @submit.prevent="onSubmitNewsletter"
+        >
+          <UInput
+            v-model="newsletterEmail"
+            type="email"
+            :placeholder="$t('about_page_newsletter_placeholder')"
+            size="lg"
+            required
+            class="flex-1"
+            icon="i-material-symbols-mail-outline-rounded"
+          />
+          <UButton
+            type="submit"
+            :label="$t('about_page_newsletter_button')"
+            color="primary"
+            size="lg"
+            icon="i-material-symbols-send-rounded"
+          />
+        </form>
+      </section>
     </div>
   </NuxtLayout>
 </template>
@@ -693,6 +727,8 @@ const config = useRuntimeConfig()
 const baseURL = config.public.baseURL
 const { user } = useUserSession()
 const isLikerPlus = computed(() => Boolean(user.value?.isLikerPlus))
+
+const newsletterEmail = ref('')
 
 const metadataStore = useMetadataStore()
 const { isApp } = useAppDetection()
@@ -888,6 +924,13 @@ function onClickCtaStore() {
 
 function onClickPlusCta() {
   useLogEvent('about_plus_cta_click')
+}
+
+function onSubmitNewsletter() {
+  useLogEvent('about_newsletter_subscribe_click')
+  const url = new URL('https://review.3ook.com/subscribe')
+  url.searchParams.set('email', newsletterEmail.value)
+  window.open(url.toString(), '_blank', 'noopener')
 }
 
 const pageTitle = computed(() => $t('about_page_title'))
