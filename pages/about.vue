@@ -697,6 +697,7 @@
             icon="i-material-symbols-mail-outline-rounded"
           />
           <UButton
+            class="self-center"
             type="submit"
             :label="$t('about_page_newsletter_button')"
             color="primary"
@@ -929,8 +930,8 @@ function onClickPlusCta() {
 function onSubmitNewsletter() {
   useLogEvent('about_newsletter_subscribe_click')
   const url = new URL('https://review.3ook.com/subscribe')
-  url.searchParams.set('email', newsletterEmail.value)
-  window.open(url.toString(), '_blank', 'noopener')
+  url.searchParams.set('email', newsletterEmail.value.trim())
+  window.open(url.toString(), '_blank', 'noopener,noreferrer')
 }
 
 const pageTitle = computed(() => $t('about_page_title'))
