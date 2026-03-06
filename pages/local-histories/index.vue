@@ -17,8 +17,8 @@
       <div class="grid gap-8 sm:grid-cols-2">
         <NuxtLink
           v-for="region in regions"
-          :key="region.to"
-          :to="localePath(region.to)"
+          :key="region.routeName"
+          :to="localeRoute({ name: region.routeName })"
           class="group relative overflow-hidden rounded-2xl shadow-md transition-all duration-300 hover:shadow-xl hover:scale-[1.02]"
         >
           <div
@@ -57,18 +57,34 @@ definePageMeta({
   colorMode: 'light',
 })
 
-const localePath = useLocalePath()
+const { t } = useI18n()
+const runtimeConfig = useRuntimeConfig()
+const route = useRoute()
+
+useHead({
+  title: t('local_histories_index_title'),
+  meta: [
+    { name: 'description', content: t('local_histories_index_description') },
+    { property: 'og:title', content: t('local_histories_index_title') },
+    { property: 'og:description', content: t('local_histories_index_description') },
+  ],
+  link: [
+    { rel: 'canonical', href: `${runtimeConfig.public.baseURL}${route.path}` },
+  ],
+})
+
+const localeRoute = useLocaleRoute()
 
 const regions = [
   {
-    to: '/local-histories/taiwan',
+    routeName: 'local-histories-taiwan',
     titleKey: 'local_histories_index_tw_title',
     descKey: 'local_histories_index_tw_description',
     bgClass: 'bg-tw-card',
     minH: 'min-h-[280px] laptop:min-h-[360px]',
   },
   {
-    to: '/local-histories/hongkong',
+    routeName: 'local-histories-hongkong',
     titleKey: 'local_histories_index_hk_title',
     descKey: 'local_histories_index_hk_description',
     bgClass: 'bg-hk-card',

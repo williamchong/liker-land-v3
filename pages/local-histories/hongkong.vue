@@ -126,10 +126,16 @@
                 >
                   <span class="h-1.5 w-1.5 rounded-full bg-[#a08a78]" />
                   <NuxtLink
-                    :to="getStoreQueryLink(item.title)"
+                    v-if="item.isPublished"
+                    :to="localeRoute(getStoreQueryRoute(item.title))"
                     class="whitespace-nowrap text-[#4a2f1a] hover:text-[#2a1f1a]"
                     @click.stop
                   >{{ item.title }}</NuxtLink>
+                  <span
+                    v-else
+                    class="whitespace-nowrap text-[#b0a89b]"
+                    v-text="item.title"
+                  />
 
                   <span
                     class="min-w-0 flex-1 truncate text-xs text-[#b0a89b]"
@@ -190,13 +196,49 @@
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <NuxtLink
+          <template
             v-for="item in filteredFeatured"
             :key="item.title"
-            :to="getStoreQueryLink(item.title)"
-            class="rounded-2xl border border-[#f5e8d8] bg-white p-4 shadow-sm transition hover:border-[#d4a87a]"
           >
-            <div class="flex items-start justify-between gap-3">
+            <NuxtLink
+              v-if="item.isPublished"
+              :to="localeRoute(getStoreQueryRoute(item.title))"
+              class="rounded-2xl border border-[#f5e8d8] bg-white p-4 shadow-sm transition hover:border-[#d4a87a]"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex items-start gap-3">
+                  <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#f5e8d8] text-[#4a3628]">
+                    <UIcon name="i-material-symbols-auto-stories-outline" />
+                  </span>
+                  <div>
+                    <h3
+                      class="text-base font-semibold text-neutral-900"
+                      v-text="item.title"
+                    />
+                    <p
+                      class="mt-1 text-xs text-neutral-500"
+                      v-text="`${item.district} · ${item.region}`"
+                    />
+                  </div>
+                </div>
+              </div>
+              <p
+                class="mt-3 text-sm text-neutral-600"
+                v-text="item.summary"
+              />
+              <div class="mt-3 flex flex-wrap gap-2">
+                <span
+                  v-for="tag in item.tags"
+                  :key="tag"
+                  class="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-500"
+                  v-text="tag"
+                />
+              </div>
+            </NuxtLink>
+            <div
+              v-else
+              class="rounded-2xl border border-[#f5e8d8] bg-white p-4 opacity-60"
+            >
               <div class="flex items-start gap-3">
                 <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#f5e8d8] text-[#4a3628]">
                   <UIcon name="i-material-symbols-auto-stories-outline" />
@@ -212,20 +254,12 @@
                   />
                 </div>
               </div>
-            </div>
-            <p
-              class="mt-3 text-sm text-neutral-600"
-              v-text="item.summary"
-            />
-            <div class="mt-3 flex flex-wrap gap-2">
-              <span
-                v-for="tag in item.tags"
-                :key="tag"
-                class="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-500"
-                v-text="tag"
+              <p
+                class="mt-3 text-sm text-neutral-600"
+                v-text="item.summary"
               />
             </div>
-          </NuxtLink>
+          </template>
         </div>
       </section>
     </div>
@@ -234,6 +268,8 @@
 
 <script setup lang="ts">
 import { featuredHKLocalHistories } from '@/constants/featured-hk-local-histories'
+
+const localeRoute = useLocaleRoute()
 
 definePageMeta({
   colorMode: 'light',
@@ -300,6 +336,20 @@ const toggleKeyword = (tag: string) => {
 }
 
 const { t } = useI18n()
+const runtimeConfig = useRuntimeConfig()
+const route = useRoute()
+
+useHead({
+  title: t('hk_local_histories_page_title'),
+  meta: [
+    { name: 'description', content: t('hk_local_histories_page_description') },
+    { property: 'og:title', content: t('hk_local_histories_page_title') },
+    { property: 'og:description', content: t('hk_local_histories_page_description') },
+  ],
+  link: [
+    { rel: 'canonical', href: `${runtimeConfig.public.baseURL}${route.path}` },
+  ],
+})
 
 const heroStatTargets = [91, 10, 13]
 
