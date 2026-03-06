@@ -58,7 +58,7 @@
     </section>
     <div class="mx-auto w-full max-w-6xl px-4 py-12">
       <header class="mb-8 laptop:mb-12">
-        <h1
+        <h2
           class="text-2xl text-center font-semibold text-neutral-900"
           v-text="$t('local_histories_overview_title') "
         />
