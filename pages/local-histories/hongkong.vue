@@ -73,6 +73,7 @@
           <HKLocalHistoriesMap
             :active-area="activeArea"
             :selected-area="selectedArea"
+            :aria-label="t('hk_local_histories_map_aria_label')"
             @area-hover="handleMapHover"
             @area-click="handleMapClick"
           />

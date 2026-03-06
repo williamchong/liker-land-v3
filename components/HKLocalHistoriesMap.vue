@@ -5,7 +5,7 @@
       class="hk-map h-full w-full"
       viewBox="0 0 1000 1000"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="香港十八區地圖"
+      :aria-label="ariaLabel"
       role="img"
       :data-active-area="activeArea ?? ''"
       :data-selected-area="selectedArea ?? ''"
@@ -33,6 +33,7 @@
 const props = defineProps<{
   activeArea?: string | null
   selectedArea?: string | null
+  ariaLabel?: string
 }>()
 
 const emit = defineEmits<{
@@ -43,13 +44,19 @@ const emit = defineEmits<{
 const svgRef = ref<SVGSVGElement | null>(null)
 const mapTransform = ref('translate(0px, 0px) scale(1)')
 
+let lastHoveredArea: string | null = null
+
 const handleMove = (event: MouseEvent) => {
   const target = event.target as Element | null
-  const area = target?.getAttribute?.('data-area')
-  emit('area-hover', area || null)
+  const area = target?.getAttribute?.('data-area') || null
+  if (area === lastHoveredArea) return
+  lastHoveredArea = area
+  emit('area-hover', area)
 }
 
 const handleLeave = () => {
+  if (lastHoveredArea === null) return
+  lastHoveredArea = null
   emit('area-hover', null)
 }
 
