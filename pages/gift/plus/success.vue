@@ -226,8 +226,8 @@ const isRedirecting = ref(false)
 const error = ref<string | null>(null)
 const giftInfo = ref<{
   toEmail: string
-  toName?: string
-  fromName?: string
+  toName: string
+  fromName: string
 } | null>(null)
 
 // Extract query parameters

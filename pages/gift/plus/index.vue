@@ -107,11 +107,13 @@
         <UFormField
           class="mt-6"
           :label="$t('gift_plus_recipient_name')"
-          :hint="$t('form_optional')"
+          :error="errors.toName"
+          :required="true"
         >
           <UInput
             v-model="formData.toName"
             class="w-full"
+            :placeholder="$t('gift_book_modal_recipient_name_placeholder')"
             type="text"
             size="xl"
             :disabled="isProcessing"
@@ -122,7 +124,8 @@
         <UFormField
           class="mt-6"
           :label="$t('gift_plus_sender_name')"
-          :hint="$t('form_optional')"
+          :error="errors.fromName"
+          :required="true"
           :help="$t('gift_plus_sender_name_hint_text')"
         >
           <UInput
@@ -199,12 +202,18 @@ const formData = reactive({
 
 const errors = reactive({
   toEmail: '',
+  toName: '',
+  fromName: '',
 })
 
 const isFormValid = computed(() => {
   return (
     formData.toEmail
+    && formData.toName
+    && formData.fromName
     && !errors.toEmail
+    && !errors.toName
+    && !errors.fromName
   )
 })
 
@@ -230,8 +239,8 @@ async function handleCheckout() {
       period: selectedPlan.value,
       giftInfo: {
         toEmail: formData.toEmail,
-        toName: formData.toName || undefined,
-        fromName: formData.fromName || undefined,
+        toName: formData.toName,
+        fromName: formData.fromName,
         message: formData.message || undefined,
       },
       currency: getCheckoutCurrency(),

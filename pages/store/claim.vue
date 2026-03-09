@@ -10,61 +10,81 @@
         @connect="handleConnect"
       />
     </template>
-    <BookLoadingScreen
-      v-else
-      :book-name="bookInfo?.name.value"
-      :book-cover-src="bookCoverSrc"
-      icon="i-material-symbols-check-circle-rounded"
-      :icon-label="claimTitle"
-      :loading-label="currentLoadingLabel"
-      :is-printing="!canStartReading"
-    >
-      <template
-        v-if="canStartReading"
-        #footer
+    <template v-else>
+      <!-- Gift Message Banner -->
+      <div
+        v-if="cartGiftInfo"
+        class="w-full max-w-[348px] mb-6 p-4 rounded-xl bg-theme-cyan/10 text-center"
       >
-        <UButton
+        <UIcon
+          name="i-material-symbols-featured-seasonal-and-gifts-rounded"
+          class="text-theme-cyan"
+          :size="32"
+        />
+        <p class="mt-2 font-bold text-theme-cyan">
+          {{ $t('claim_page_gift_from', { name: cartGiftInfo.fromName || $t('claim_page_gift_anonymous') }) }}
+        </p>
+        <p
+          v-if="cartGiftInfo.message"
+          class="mt-1 text-sm text-muted italic"
+          v-text="cartGiftInfo.message"
+        />
+      </div>
+
+      <BookLoadingScreen
+        :book-name="bookInfo?.name.value"
+        :book-cover-src="bookCoverSrc"
+        icon="i-material-symbols-check-circle-rounded"
+        :icon-label="claimTitle"
+        :loading-label="currentLoadingLabel"
+        :is-printing="!canStartReading"
+      >
+        <template
           v-if="canStartReading"
-          :to="readerRoute"
-          :label="$t('claim_page_start_reading_button_label')"
-          size="xl"
-          block
-          @click="handleStartReadingButtonClick"
-        />
-        <UButton
-          :label="$t('claim_page_back_to_bookstore_button_label')"
-          size="xl"
-          variant="ghost"
-          block
-          :to="localeRoute({ name: 'store' })"
-        />
-      </template>
-      <template
-        v-else-if="!isLoading && !isAutoDeliver"
-        #footer
-      >
-        <span
-          class="px-6 text-xs text-muted"
-          v-text="$t('claim_page_description_await_for_delivery')"
-        />
-        <UButton
-          class="max-w-[348px] mt-2"
-          :label="$t('claim_page_back_to_bookstore_button_label')"
-          size="xl"
-          block
-          :to="localeRoute({ name: 'store' })"
-        />
-      </template>
-    </BookLoadingScreen>
-    <CollectorMessageModal
-      v-model:open="isOpenCollectorMessageModal"
-      :book-cover-src="bookCoverSrc"
-      :book-name="bookInfo.name.value"
-      :book-author="bookInfo.authorName.value"
-      :payment-id="paymentId"
-      :claiming-token="claimingToken"
-      :nft-class-id="nftClassId"
-    />
+          #footer
+        >
+          <UButton
+            :to="readerRoute"
+            :label="$t('claim_page_start_reading_button_label')"
+            size="xl"
+            block
+            @click="handleStartReadingButtonClick"
+          />
+          <UButton
+            :label="$t('claim_page_back_to_bookstore_button_label')"
+            size="xl"
+            variant="ghost"
+            block
+            :to="localeRoute({ name: 'store' })"
+          />
+        </template>
+        <template
+          v-else-if="!isLoading && !isAutoDeliver"
+          #footer
+        >
+          <span
+            class="px-6 text-xs text-muted"
+            v-text="$t('claim_page_description_await_for_delivery')"
+          />
+          <UButton
+            class="max-w-[348px] mt-2"
+            :label="$t('claim_page_back_to_bookstore_button_label')"
+            size="xl"
+            block
+            :to="localeRoute({ name: 'store' })"
+          />
+        </template>
+      </BookLoadingScreen>
+      <CollectorMessageModal
+        v-model:open="isOpenCollectorMessageModal"
+        :book-cover-src="bookCoverSrc"
+        :book-name="bookInfo.name.value"
+        :book-author="bookInfo.authorName.value"
+        :payment-id="paymentId"
+        :claiming-token="claimingToken"
+        :nft-class-id="nftClassId"
+      />
+    </template>
   </main>
 </template>
 
@@ -154,6 +174,7 @@ if (!cartId.value || !claimingToken.value || !paymentId.value) {
 
 const cartData = ref<FetchCartStatusByIdResponseData | null>(null)
 const status = computed(() => cartData.value?.status)
+const cartGiftInfo = computed(() => cartData.value?.giftInfo)
 const isClaimed = ref(!!status.value && ['completed', 'done', 'pending', 'pendingNFT'].includes(status.value))
 const isClaiming = ref(false)
 
