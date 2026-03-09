@@ -58,7 +58,7 @@
     </section>
     <div class="mx-auto w-full max-w-6xl px-4 py-12">
       <header class="mb-8 laptop:mb-12">
-        <h1
+        <h2
           class="text-2xl text-center font-semibold text-neutral-900"
           v-text="$t('local_histories_overview_title') "
         />
@@ -117,7 +117,7 @@
                   <span class="h-1.5 w-1.5 rounded-full bg-[#8fa08a]" />
                   <NuxtLink
                     v-if="item.isPublished"
-                    :to="getStoreQueryLink(item.title)"
+                    :to="localeRoute(getStoreQueryRoute(item.title))"
                     class="whitespace-nowrap text-[#2f4a3a] hover:text-[#1f2a22]"
                   >{{ item.title }}</NuxtLink>
                   <span
@@ -191,7 +191,7 @@
           >
             <NuxtLink
               v-if="item.isPublished"
-              :to="getStoreQueryLink(item.title)"
+              :to="localeRoute(getStoreQueryRoute(item.title))"
               class="rounded-2xl border border-[#effadf] bg-white p-4 shadow-sm transition hover:border-[#b6d89e]"
             >
               <div class="flex items-start justify-between gap-3">
@@ -268,6 +268,8 @@
 <script setup lang="ts">
 import { featuredLocalHistories } from '@/constants/featured-local-histories'
 
+const localeRoute = useLocaleRoute()
+
 const hoveredRegion = ref<string | null>(null)
 const selectedRegion = ref<string | null>('north')
 const expandedRegion = ref<string | null>('north')
@@ -305,8 +307,6 @@ const featuredByRegion = computed(() => {
   return map
 })
 
-const getStoreQueryLink = (title: string) => `/store?q=${encodeURIComponent(title)}`
-
 const searchTerm = ref('')
 const activeKeyword = ref('全部')
 
@@ -334,6 +334,20 @@ const toggleKeyword = (tag: string) => {
 }
 
 const { t } = useI18n()
+const runtimeConfig = useRuntimeConfig()
+const route = useRoute()
+
+useHead({
+  title: t('local_histories_page_title'),
+  meta: [
+    { name: 'description', content: t('local_histories_page_description') },
+    { property: 'og:title', content: t('local_histories_page_title') },
+    { property: 'og:description', content: t('local_histories_page_description') },
+  ],
+  link: [
+    { rel: 'canonical', href: `${runtimeConfig.public.baseURL}${route.path}` },
+  ],
+})
 
 const heroStatTargets = [66, 4, 12]
 
