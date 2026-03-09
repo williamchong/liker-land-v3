@@ -142,6 +142,34 @@
           </div>
         </div>
 
+        <!-- Claim Rewards Button -->
+        <div class="px-4 py-4">
+          <UButton
+            :label="(
+              isAutoRestakeEnabled
+                ? $t('governance_page_claim_rewards_and_restake')
+                : $t('governance_page_claim_rewards')
+            )"
+            color="primary"
+            size="lg"
+            block
+            :loading="isLoading"
+            :disabled="!isClaimRewardButtonEnabled"
+            @click="handleClaimRewards"
+          />
+
+          <div class="flex items-center justify-between mt-2">
+            <span
+              class="text-sm font-semibold"
+              v-text="$t('governance_page_auto_restake')"
+            />
+            <USwitch
+              v-model="isAutoRestakeEnabled"
+              @update:model-value="handleAutoRestakeSwitchChange"
+            />
+          </div>
+        </div>
+
         <!-- Legacy Rewards -->
         <div
           v-if="governanceData.hasLegacyReward.value"
@@ -168,35 +196,6 @@
               size="sm"
               :loading="isLoading"
               @click="handleClaimLegacyRewards"
-            />
-          </div>
-        </div>
-
-        <!-- Claim Rewards Button -->
-        <div class="px-4 py-4">
-          <UButton
-            :label="(
-              isAutoRestakeEnabledStorage
-                ? $t('governance_page_claim_rewards_and_restake')
-                : $t('governance_page_claim_rewards')
-            )"
-            color="primary"
-            size="lg"
-            block
-            :loading="isLoading"
-            :disabled="!isClaimRewardButtonEnabled"
-            @click="handleClaimRewards"
-          />
-
-          <!-- Auto Restake Checkbox -->
-          <div class="flex items-center justify-between mt-2">
-            <span
-              class="text-sm font-semibold"
-              v-text="$t('governance_page_auto_restake')"
-            />
-            <USwitch
-              v-model="isAutoRestakeEnabled"
-              @update:model-value="handleAutoRestakeSwitchChange"
             />
           </div>
         </div>
