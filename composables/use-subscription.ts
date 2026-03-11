@@ -18,6 +18,7 @@ export function useSubscription() {
   const isProcessingSubscription = ref(false)
 
   const { handleError } = useErrorHandler()
+  const { getCheckoutCurrency, displayCurrency } = usePaymentCurrency()
 
   const {
     monthlyPrice,
@@ -25,7 +26,7 @@ export function useSubscription() {
   } = useSubscriptionPricing()
 
   const paywallModalProps = ref<PaywallModalProps>({})
-  const currency = ref('USD')
+  const currency = computed(() => displayCurrency.value.toUpperCase())
   const PLUS_BOOK_PURCHASE_DISCOUNT = 0.2 // 20% discount
   const isLikerPlus = computed(() => {
     if (!hasLoggedIn.value) return false
@@ -193,6 +194,7 @@ export function useSubscription() {
         const { url } = await likeCoinSessionAPI.fetchLikerPlusCheckoutLink({
           period: subscribePlan,
           from: getRouteQuery('from'),
+          currency: getCheckoutCurrency(),
           trialPeriodDays,
           mustCollectPaymentMethod,
           giftNFTClassId: isYearly ? nftClassId : undefined,

@@ -174,6 +174,7 @@ const { handleError } = useErrorHandler()
 const likeCoinSessionAPI = useLikeCoinSessionAPI()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
+const { getCheckoutCurrency } = usePaymentCurrency()
 
 useHead({
   title: $t('gift_plus_page_title'),
@@ -233,6 +234,7 @@ async function handleCheckout() {
         fromName: formData.fromName || undefined,
         message: formData.message || undefined,
       },
+      currency: getCheckoutCurrency(),
       utmCampaign: 'gift_plus',
       utmSource: 'website',
       utmMedium: 'web',

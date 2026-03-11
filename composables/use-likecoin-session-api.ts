@@ -242,6 +242,7 @@ export function useLikeCoinSessionAPI() {
     mustCollectPaymentMethod,
     giftNFTClassId,
     from,
+    currency,
     referrer,
     utmCampaign,
     utmMedium,
@@ -260,6 +261,7 @@ export function useLikeCoinSessionAPI() {
     mustCollectPaymentMethod?: boolean
     giftNFTClassId?: string
     from?: string
+    currency?: string
     referrer?: string
     utmCampaign?: string
     utmMedium?: string
@@ -275,7 +277,7 @@ export function useLikeCoinSessionAPI() {
   }) {
     return fetch.value<FetchLikerPlusCheckoutLinkResponseData>(`/plus/new`, {
       method: 'POST',
-      query: { period, from },
+      query: { period, from, currency },
       body: {
         trialPeriodDays,
         mustCollectPaymentMethod,
@@ -320,6 +322,7 @@ export function useLikeCoinSessionAPI() {
     giftInfo,
     coupon,
     from,
+    currency,
     referrer,
     utmCampaign,
     utmMedium,
@@ -341,6 +344,7 @@ export function useLikeCoinSessionAPI() {
     }
     coupon?: string
     from?: string
+    currency?: string
     referrer?: string
     utmCampaign?: string
     utmMedium?: string
@@ -355,7 +359,7 @@ export function useLikeCoinSessionAPI() {
   }) {
     return fetch.value<FetchLikerPlusCheckoutLinkResponseData>(`/plus/gift/new`, {
       method: 'POST',
-      query: { period, from },
+      query: { period, from, currency },
       body: {
         giftInfo,
         referrer,

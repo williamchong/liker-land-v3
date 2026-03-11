@@ -159,6 +159,7 @@ const {
   hasMonthlyDiscount,
   hasYearlyDiscount,
   currency,
+  convertToDisplayCurrency,
 } = useSubscriptionPricing()
 
 const selectedPlan = defineModel({
@@ -183,7 +184,7 @@ const plans = computed(() => {
       hint = $t('plan_select_trial_for_price_hint', {
         days: props.trialPeriodDays,
         currency: currency.value,
-        price: props.trialPrice,
+        price: convertToDisplayCurrency(props.trialPrice),
       })
     }
 
