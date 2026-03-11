@@ -96,7 +96,7 @@
             />
             <span
               class="text-2xl laptop:text-4xl font-bold"
-              v-text="`$${price}`"
+              v-text="`$${convertedPrice}`"
             />
           </span>
         </template>
@@ -111,9 +111,9 @@
 import brushCircle from '~/assets/images/brush-circle.png'
 import { DEFAULT_TRIAL_PERIOD_DAYS, PAID_TRIAL_PRICE } from '~/constants/pricing'
 
-const { currency } = useSubscriptionPricing()
+const { currency, convertToDisplayCurrency } = useSubscriptionPricing()
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     isHidden?: boolean
     trialPeriodDays?: number
@@ -125,4 +125,6 @@ withDefaults(
     price: PAID_TRIAL_PRICE,
   },
 )
+
+const convertedPrice = computed(() => convertToDisplayCurrency(props.price))
 </script>

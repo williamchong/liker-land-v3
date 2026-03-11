@@ -89,7 +89,7 @@ const emit = defineEmits<{
 
 const { t: $t } = useI18n()
 const route = useRoute()
-const { currency } = useSubscriptionPricing()
+const { currency, convertToDisplayCurrency } = useSubscriptionPricing()
 
 const selectedPlan = ref<SubscriptionPlan>('yearly')
 
@@ -122,7 +122,7 @@ const subscribeButtonLabel = computed(() => {
       if (isPaidTrial.value) {
         return $t('plus_subscribe_cta_trial_for_price', {
           days: props.trialPeriodDays,
-          price: props.trialPrice,
+          price: convertToDisplayCurrency(props.trialPrice),
           currency: currency.value,
         })
       }
@@ -134,7 +134,7 @@ const subscribeButtonLabel = computed(() => {
     if (isPaidTrial.value) {
       return $t('plus_subscribe_cta_trial_for_price', {
         days: props.trialPeriodDays,
-        price: props.trialPrice,
+        price: convertToDisplayCurrency(props.trialPrice),
         currency: currency.value,
       })
     }
