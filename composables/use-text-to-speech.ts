@@ -344,6 +344,9 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       if (isNativeBridge.value) {
         params.set('blocking', '1')
       }
+      if (nftClassId) {
+        params.set('nft_class_id', nftClassId)
+      }
       return `/api/reader/tts?${params.toString()}`
     }
 
@@ -355,6 +358,9 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     })
     if (isNativeBridge.value) {
       params.set('blocking', '1')
+    }
+    if (nftClassId) {
+      params.set('nft_class_id', nftClassId)
     }
     return `/api/reader/tts?${params.toString()}`
   }
