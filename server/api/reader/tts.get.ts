@@ -114,7 +114,7 @@ export default defineEventHandler(async (event) => {
     })
   }
   const config = useRuntimeConfig()
-  const { text, language, voice_id: voiceId, blocking } = await getValidatedQuery(event, createValidator(TTSQuerySchema))
+  const { text, language, voice_id: voiceId, blocking, nft_class_id: nftClassId } = await getValidatedQuery(event, createValidator(TTSQuerySchema))
 
   const isCustomVoice = voiceId === 'custom'
   let customMiniMaxVoiceId: string | undefined
@@ -158,12 +158,22 @@ export default defineEventHandler(async (event) => {
         : generateTTSCacheKey(language, voiceId, text, ttsModel))
     : null
 
+  const ttsEventBase = {
+    evmWallet: session.user.evmWallet,
+    language,
+    voiceId,
+    isCustomVoice,
+    textLength: text.length,
+    nftClassId,
+  }
+
   if (isCacheEnabled) {
     const file = bucket.file(cacheKey!)
 
     try {
       const [exists] = await file.exists()
       if (exists) {
+        publishEvent(event, 'TTSCacheHit', ttsEventBase)
         return await serveCachedTTS(event, bucket, cacheKey!, provider.format, isCustomVoice, session.user.evmWallet)
       }
     }
@@ -204,13 +214,7 @@ export default defineEventHandler(async (event) => {
 
   await updateUserTTSCharacterUsage(session.user.evmWallet, text.length)
 
-  publishEvent(event, 'TTSRequest', {
-    evmWallet: session.user.evmWallet,
-    language,
-    voiceId,
-    isCustomVoice,
-    textLength: text.length,
-  })
+  publishEvent(event, 'TTSRequest', ttsEventBase)
 
   const isBlocking = blocking === '1'
   const requestParams: TTSRequestParams = {
@@ -260,6 +264,8 @@ export default defineEventHandler(async (event) => {
       else {
         resolveInFlight?.()
       }
+
+      publishEvent(event, 'TTSComplete', { ...ttsEventBase, audioSize: buffer.length, mode: 'blocking' })
 
       const rangeHeader = getHeader(event, 'range')
       if (rangeHeader) {
@@ -315,8 +321,10 @@ export default defineEventHandler(async (event) => {
       }
     })
 
+    let streamedBytes = 0
     const cacheStream = new TransformStream<Buffer, Buffer>({
       async transform(chunk, controller) {
+        streamedBytes += chunk.length
         if (cacheWriteStream) {
           const canContinue = cacheWriteStream.write(chunk)
           if (!canContinue) {
@@ -327,13 +335,15 @@ export default defineEventHandler(async (event) => {
       },
       flush() {
         cacheWriteStream?.end()
+        publishEvent(event, 'TTSComplete', { ...ttsEventBase, audioSize: streamedBytes, mode: 'streaming' })
       },
     })
 
-    return sendStream(event, stream.pipeThrough(cacheStream))
+    return await sendStream(event, stream.pipeThrough(cacheStream))
   }
   catch (error) {
     rejectInFlight?.(error)
+    publishEvent(event, 'TTSError', { ...ttsEventBase, error: error instanceof Error ? error.message : String(error) })
     console.error(`[Speech] Failed to convert text for user ${session.user.evmWallet}:`, error)
     throw error
   }
