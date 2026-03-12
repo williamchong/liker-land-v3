@@ -3,7 +3,7 @@
     <Transition name="reader-load">
       <BookLoadingScreen
         v-if="isReaderLoading"
-        class="absolute inset-0 z-10 bg-background"
+        class="absolute inset-0 z-10 bg-background [&>div:first-child]:mt-[8vh]"
         :book-name="bookInfo.name.value"
         :book-cover-src="bookCoverSrc"
         :loading-label="loadingLabel"

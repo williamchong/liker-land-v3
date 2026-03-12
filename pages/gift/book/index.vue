@@ -66,11 +66,6 @@
             v-text="$t('gift_book_success_title')"
           />
 
-          <p
-            class="mt-3 text-white text-lg text-center"
-            v-text="$t('gift_book_success_description')"
-          />
-
           <!-- Info Section -->
           <h3
             class="mt-8 pb-1 text-center font-bold text-lg text-theme-cyan border-b-2 border-theme-cyan"
@@ -258,6 +253,12 @@ onUnmounted(() => {
 })
 
 async function fetchGiftInfo() {
+  if (!cartId.value || !claimingToken.value) {
+    error.value = $t('gift_book_success_error_description')
+    isLoading.value = false
+    return
+  }
+
   const maxRetries = 12
   let retries = 0
 
@@ -279,10 +280,13 @@ async function fetchGiftInfo() {
         if (cartData.classIds?.[0]) {
           try {
             const { classData } = await nftStore.fetchNFTClassAggregatedMetadataById(cartData.classIds[0])
+            if (isCancelled) return
             bookName.value = classData?.name || ''
           }
           catch { /* ignore */ }
         }
+
+        if (isCancelled) return
 
         if (isRedirected.value) {
           useLogEvent('purchase', {
@@ -315,6 +319,7 @@ async function fetchGiftInfo() {
       }
 
       await sleep(5000)
+      if (isCancelled) return
       retries++
     }
 

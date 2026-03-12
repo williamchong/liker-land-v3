@@ -136,7 +136,7 @@ const errors = reactive({
 })
 
 const isFormValid = computed(() => {
-  return formData.toEmail && formData.toName && formData.fromName
+  return formData.toEmail.trim() && formData.toName.trim() && formData.fromName.trim()
     && !errors.toEmail && !errors.toName && !errors.fromName
 })
 
@@ -147,11 +147,15 @@ watch(model, (isOpen) => {
     formData.fromName = ''
     formData.message = $t('gift_plus_message_default')
     errors.toEmail = ''
+    errors.toName = ''
+    errors.fromName = ''
   }
 })
 
-watch(() => formData.toEmail, () => {
-  errors.toEmail = ''
+watch(formData, (newVal, oldVal) => {
+  for (const key of Object.keys(errors) as (keyof typeof errors)[]) {
+    if (newVal[key] !== oldVal[key]) errors[key] = ''
+  }
 })
 
 async function handleCheckout() {
@@ -171,10 +175,10 @@ async function handleCheckout() {
     isProcessing.value = true
 
     const giftInfo = {
-      toEmail: formData.toEmail,
-      toName: formData.toName,
-      fromName: formData.fromName,
-      message: formData.message || undefined,
+      toEmail: formData.toEmail.trim(),
+      toName: formData.toName.trim(),
+      fromName: formData.fromName.trim(),
+      message: formData.message?.trim() || undefined,
     }
 
     const email = user.value?.email
