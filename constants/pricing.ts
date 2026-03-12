@@ -208,6 +208,7 @@ export const TWD_PRICE_TIER_LIST = [
   3000,
 ]
 
+export const PLUS_BOOK_PURCHASE_DISCOUNT = 0.2 // 20% discount
 export const DEFAULT_TRIAL_PERIOD_DAYS = 14
 export const PAID_TRIAL_PERIOD_DAYS_THRESHOLD = 14
 export const PAID_TRIAL_PRICE = 1

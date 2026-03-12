@@ -221,8 +221,9 @@ const selectedPlan = useVModel(props, 'modelValue', emit, {
 const isPaidTrial = computed(() => props.trialPeriodDays && props.trialPeriodDays >= PAID_TRIAL_PERIOD_DAYS_THRESHOLD)
 
 const route = useRoute()
+const getRouteBaseName = useRouteBaseName()
 const learnMoreRoute = computed(() => {
-  if (route.name?.toString().startsWith('about')) {
+  if (getRouteBaseName(route) === 'about') {
     return localeRoute({ name: 'store' })
   }
   return localeRoute({ name: 'about', query: { ll_medium: 'about-link', ll_source: 'plus-modal' } })

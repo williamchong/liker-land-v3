@@ -36,7 +36,7 @@ definePageMeta({ layout: false })
 
 const localeRoute = useLocaleRoute()
 const getRouteQuery = useRouteQuery()
-const subscription = useSubscription()
+const subscription = useSubscriptionModal()
 const { t: $t } = useI18n()
 const config = useRuntimeConfig()
 const baseURL = config.public.baseURL

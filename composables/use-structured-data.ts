@@ -2,12 +2,11 @@ export function useMemberProgramStructuredData() {
   const { t: $t } = useI18n()
   const config = useRuntimeConfig()
   const baseURL = config.public.baseURL
-  const subscription = useSubscription()
   const {
     yearlyPrice,
     monthlyPrice,
     currency,
-  } = subscription
+  } = useSubscription()
 
   const memberProgramTiers = computed(() => [
     {
