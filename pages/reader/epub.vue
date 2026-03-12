@@ -4,6 +4,7 @@
       <BookLoadingScreen
         v-if="isReaderLoading"
         class="absolute inset-0"
+        cover-class="mt-[8vh]"
         :book-name="bookInfo.name.value"
         :book-cover-src="bookCoverSrc"
         :loading-label="loadingLabel"

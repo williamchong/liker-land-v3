@@ -515,23 +515,29 @@
               v-if="pricingItems.length"
               class="flex flex-col gap-4"
             >
-              <UButton
-                class="cursor-pointer"
-                :label="isInBookList ? $t('product_page_remove_from_book_list_button_label') : $t('product_page_add_to_book_list_button_label')"
-                variant="outline"
-                color="primary"
-                size="xl"
-                :leading-icon="isInBookList ? 'i-material-symbols-favorite-rounded' : 'i-material-symbols-favorite-outline-rounded'"
-                :loading="isCheckingBookList || isUpdatingBookList"
-                block
-                @click="handleBookListButtonClickDebounced"
-              />
-
-              <GiftButton
-                class="hidden w-full"
-                :label="$t('product_page_gift_button_label')"
-                @click="handleGiftButtonClick"
-              />
+              <div class="flex gap-3">
+                <UButton
+                  v-if="canBePurchased"
+                  class="w-1/2 cursor-pointer justify-center"
+                  :label="$t('product_page_gift_button_label')"
+                  variant="outline"
+                  color="primary"
+                  size="xl"
+                  leading-icon="i-material-symbols-featured-seasonal-and-gifts-rounded"
+                  @click="handleGiftButtonClick"
+                />
+                <UButton
+                  class="cursor-pointer justify-center"
+                  :class="canBePurchased ? 'w-1/2' : 'w-full'"
+                  :label="isInBookList ? $t('product_page_remove_from_book_list_button_label') : $t('product_page_add_to_book_list_button_label')"
+                  variant="outline"
+                  color="primary"
+                  size="xl"
+                  :leading-icon="isInBookList ? 'i-material-symbols-favorite-rounded' : 'i-material-symbols-favorite-outline-rounded'"
+                  :loading="isCheckingBookList || isUpdatingBookList"
+                  @click="handleBookListButtonClickDebounced"
+                />
+              </div>
             </div>
           </template>
 
@@ -651,6 +657,16 @@
       </template>
     </aside>
 
+    <!-- Gift Book Modal -->
+    <GiftBookModal
+      v-model="isGiftModalOpen"
+      :nft-class-id="nftClassId"
+      :price-index="priceIndex"
+      :quantity="quantity"
+      :coupon="coupon"
+      :from="from"
+    />
+
     <!-- Reading Format Selection Drawer -->
     <UDrawer
       v-if="isUserBookOwner"
@@ -720,7 +736,6 @@ const getRouteParam = useRouteParam()
 const getRouteQuery = useRouteQuery()
 const { t: $t, locale } = useI18n()
 const toast = useToast()
-const wipModal = useWIPModal()
 const { formatPrice, formatDiscountedPrice } = useCurrency()
 const { getCheckoutCurrency } = usePaymentCurrency()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
@@ -1462,12 +1477,11 @@ function handleStickyPurchaseButtonClick() {
   handlePurchaseButtonClick()
 }
 
+const isGiftModalOpen = ref(false)
+
 function handleGiftButtonClick() {
   useLogEvent('gift_button_click', { nft_class_id: nftClassId.value })
-  // TODO: Implement gift functionality
-  wipModal.open({
-    title: $t('product_page_gift_button_label'),
-  })
+  isGiftModalOpen.value = true
 }
 
 function handleRecommendedBookCoverClick(classId: string) {

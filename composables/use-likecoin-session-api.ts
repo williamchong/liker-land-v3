@@ -1,5 +1,12 @@
 import type { FetchOptions } from 'ofetch'
 
+export interface BookGiftInfo {
+  toEmail: string
+  toName: string
+  fromName: string
+  message?: string
+}
+
 export interface FetchCartStatusByIdResponseData {
   email: string
   status: 'paid' | 'pendingClaim' | 'pending' | 'pendingNFT' | 'completed' | 'done'
@@ -13,6 +20,8 @@ export interface FetchCartStatusByIdResponseData {
   timestamp: number
   quantity: number
   coupon?: string
+  isGift?: boolean
+  giftInfo?: BookGiftInfo
   classIds: string[]
   classIdsWithPrice: {
     classId: string
@@ -89,6 +98,7 @@ export function useLikeCoinSessionAPI() {
     priceIndex,
     coupon,
     currency,
+    giftInfo,
     language,
     referrer,
     utmCampaign,
@@ -108,6 +118,7 @@ export function useLikeCoinSessionAPI() {
     priceIndex: number
     coupon?: string
     currency?: string
+    giftInfo?: BookGiftInfo
     from?: string
     language?: string
     referrer?: string
@@ -133,6 +144,7 @@ export function useLikeCoinSessionAPI() {
         customPriceInDecimal: customPrice !== undefined ? Math.floor(customPrice * 100) : undefined,
         coupon,
         currency,
+        giftInfo,
         language,
         referrer,
         utmCampaign,
@@ -157,6 +169,7 @@ export function useLikeCoinSessionAPI() {
       from = 'liker_land',
       coupon,
       currency,
+      giftInfo,
       cancelPage = 'list',
       language,
       referrer,
@@ -174,6 +187,7 @@ export function useLikeCoinSessionAPI() {
       email?: string
       coupon?: string
       currency?: string
+      giftInfo?: BookGiftInfo
       cancelPage?: 'list' | 'checkout'
       from?: string
       language?: string
@@ -206,6 +220,7 @@ export function useLikeCoinSessionAPI() {
         })),
         coupon,
         currency,
+        giftInfo,
         cancelPage,
         language,
         referrer,
@@ -338,8 +353,8 @@ export function useLikeCoinSessionAPI() {
     period?: SubscriptionPlan
     giftInfo: {
       toEmail: string
-      toName?: string
-      fromName?: string
+      toName: string
+      fromName: string
       message?: string
     }
     coupon?: string
@@ -384,7 +399,7 @@ export function useLikeCoinSessionAPI() {
 
   function fetchPlusGiftCartStatusById({ cartId, token }: { cartId: string, token: string }) {
     return fetch.value<{
-      giftInfo?: { toEmail?: string, toName?: string, fromName?: string, message?: string }
+      giftInfo?: { toEmail: string, toName: string, fromName: string, message?: string }
       period?: string
     }>(`/plus/gift/${cartId}/status`, {
       query: { token },

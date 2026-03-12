@@ -219,6 +219,9 @@ const route = useRoute()
 
 useHead({
   title: $t('gift_plus_success_title'),
+  meta: [
+    { name: 'robots', content: 'noindex, nofollow' },
+  ],
 })
 
 const isLoading = ref(true)
@@ -226,8 +229,8 @@ const isRedirecting = ref(false)
 const error = ref<string | null>(null)
 const giftInfo = ref<{
   toEmail: string
-  toName?: string
-  fromName?: string
+  toName: string
+  fromName: string
 } | null>(null)
 
 // Extract query parameters
