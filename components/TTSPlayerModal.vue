@@ -64,7 +64,7 @@
               <p
                 v-for="paragraph in visibleParagraphs"
                 :key="paragraph.key"
-                v-memo="[paragraph.activeSegmentIndex]"
+                v-memo="[paragraph.activeSegmentIndex, paragraph.segments.length]"
               >
                 <span
                   v-for="segment in paragraph.segments"
@@ -72,8 +72,7 @@
                   :ref="(el) => setSegmentRef(el, segment.index)"
                   :class="getSegmentClass(segment.index)"
                   @click="skipToIndex(segment.index)"
-                  v-text="segment.text"
-                />
+                >{{ segment.text }} </span>
               </p>
             </div>
           </div>
