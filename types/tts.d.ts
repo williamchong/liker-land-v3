@@ -2,6 +2,7 @@ declare interface TTSSegment {
   id: string
   text: string
   sectionIndex: number
+  elementIndex?: number
   cfi?: string
   audioSrc?: string
 }
