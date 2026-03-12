@@ -2,7 +2,10 @@
   <div class="flex flex-col justify-center items-center py-[56px]">
     <div
       class="relative max-w-[164px] w-full aspect-2/3 shrink-0 transition-opacity duration-1000"
-      :class="props.bookCoverSrc ? 'opacity-100' : 'opacity-0 pointer-events-none'"
+      :class="[
+        props.bookCoverSrc ? 'opacity-100' : 'opacity-0 pointer-events-none',
+        props.coverClass,
+      ]"
     >
       <BookCover
         class="w-full h-full"
@@ -109,6 +112,10 @@ const props = defineProps({
   isPrinting: {
     type: Boolean,
     default: false,
+  },
+  coverClass: {
+    type: String,
+    default: undefined,
   },
 })
 
