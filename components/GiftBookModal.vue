@@ -52,7 +52,22 @@
           />
         </UFormField>
 
-        <!-- Sender Name -->
+        <!-- Message -->
+        <UFormField
+          :label="$t('gift_plus_message')"
+          :help="$t('gift_plus_message_help_text')"
+        >
+          <UTextarea
+            v-model="formData.message"
+            class="w-full"
+            :placeholder="$t('gift_plus_message_placeholder')"
+            :disabled="isProcessing"
+            size="xl"
+            :rows="3"
+          />
+        </UFormField>
+
+        <!-- Sender Name (signature position) -->
         <UFormField
           :label="$t('gift_plus_sender_name')"
           :error="errors.fromName"
@@ -66,21 +81,6 @@
             type="text"
             size="xl"
             :disabled="isProcessing"
-          />
-        </UFormField>
-
-        <!-- Message -->
-        <UFormField
-          :label="$t('gift_plus_message')"
-          :help="$t('gift_plus_message_help_text')"
-        >
-          <UTextarea
-            v-model="formData.message"
-            class="w-full"
-            :placeholder="$t('gift_plus_message_placeholder')"
-            :disabled="isProcessing"
-            size="xl"
-            :rows="3"
           />
         </UFormField>
       </div>
