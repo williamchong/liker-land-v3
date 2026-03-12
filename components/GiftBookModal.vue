@@ -9,6 +9,7 @@
         <img
           class="h-10"
           :src="bookImage"
+          :alt="$t('gift_book_modal_title')"
         >
         <span
           class="text-lg font-semibold"
@@ -152,11 +153,14 @@ watch(model, (isOpen) => {
   }
 })
 
-watch(formData, (newVal, oldVal) => {
-  for (const key of Object.keys(errors) as (keyof typeof errors)[]) {
-    if (newVal[key] !== oldVal[key]) errors[key] = ''
-  }
-})
+watch(
+  () => ({ ...formData }),
+  (newVal, oldVal) => {
+    for (const key of Object.keys(errors) as (keyof typeof errors)[]) {
+      if (newVal[key] !== oldVal[key]) errors[key] = ''
+    }
+  },
+)
 
 async function handleCheckout() {
   if (isProcessing.value) return

@@ -208,9 +208,9 @@ const errors = reactive({
 
 const isFormValid = computed(() => {
   return (
-    formData.toEmail
-    && formData.toName
-    && formData.fromName
+    formData.toEmail.trim()
+    && formData.toName.trim()
+    && formData.fromName.trim()
     && !errors.toEmail
     && !errors.toName
     && !errors.fromName
@@ -238,10 +238,10 @@ async function handleCheckout() {
     const { url } = await likeCoinSessionAPI.fetchLikerPlusGiftCheckoutLink({
       period: selectedPlan.value,
       giftInfo: {
-        toEmail: formData.toEmail,
-        toName: formData.toName,
-        fromName: formData.fromName,
-        message: formData.message || undefined,
+        toEmail: formData.toEmail.trim(),
+        toName: formData.toName.trim(),
+        fromName: formData.fromName.trim(),
+        message: formData.message?.trim() || undefined,
       },
       currency: getCheckoutCurrency(),
       utmCampaign: 'gift_plus',
