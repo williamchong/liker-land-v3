@@ -60,17 +60,22 @@
           <div
             class="overflow-y-auto hide-scrollbar h-full relative"
           >
-            <ul class="flex flex-col gap-4 items-start py-6">
-              <li
-                v-for="item in visibleSegments"
-                :key="item.id"
-                :ref="(el) => setSegmentRef(el, item.index)"
-                v-memo="[currentTTSSegmentIndex === item.index, item.text]"
-                :class="getSegmentClass(item.index)"
-                @click="skipToIndex(item.index)"
-                v-text="item.text"
-              />
-            </ul>
+            <div class="flex flex-col gap-4 items-start py-6">
+              <p
+                v-for="paragraph in visibleParagraphs"
+                :key="paragraph.key"
+                v-memo="[paragraph.activeSegmentIndex]"
+              >
+                <span
+                  v-for="segment in paragraph.segments"
+                  :key="segment.id"
+                  :ref="(el) => setSegmentRef(el, segment.index)"
+                  :class="getSegmentClass(segment.index)"
+                  @click="skipToIndex(segment.index)"
+                  v-text="segment.text"
+                />
+              </p>
+            </div>
           </div>
           <div
             :class="[
@@ -358,13 +363,60 @@ const {
   },
 })
 
-const visibleSegments = computed(() => {
+interface VisibleParagraph {
+  key: string
+  segments: Array<TTSSegment & { index: number }>
+  activeSegmentIndex: number | undefined
+}
+
+function sameParagraph(a: TTSSegment, b: TTSSegment): boolean {
+  return a.elementIndex != null && a.elementIndex === b.elementIndex && a.sectionIndex === b.sectionIndex
+}
+
+const visibleParagraphs = computed<VisibleParagraph[]>(() => {
   const start = Math.max(currentTTSSegmentIndex.value - BUFFER_SIZE, 0)
   const end = Math.min(currentTTSSegmentIndex.value + BUFFER_SIZE, props.segments.length)
-  return props.segments.slice(start, end).map((segment, index) => ({
-    ...segment,
-    index: start + index,
-  }))
+
+  // Extend start/end to include complete paragraphs
+  let adjustedStart = start
+  while (adjustedStart > 0 && (start - adjustedStart) < BUFFER_SIZE) {
+    const prev = props.segments[adjustedStart - 1]
+    const curr = props.segments[adjustedStart]
+    if (prev && curr && sameParagraph(prev, curr)) {
+      adjustedStart--
+    }
+    else { break }
+  }
+  let adjustedEnd = end
+  while (adjustedEnd < props.segments.length && (adjustedEnd - end) < BUFFER_SIZE) {
+    const prev = props.segments[adjustedEnd - 1]
+    const curr = props.segments[adjustedEnd]
+    if (prev && curr && sameParagraph(prev, curr)) {
+      adjustedEnd++
+    }
+    else { break }
+  }
+
+  const paragraphs: VisibleParagraph[] = []
+  let currentParagraph: VisibleParagraph | null = null
+
+  for (let i = adjustedStart; i < adjustedEnd; i++) {
+    const segment = props.segments[i]!
+    const paragraphKey = segment.elementIndex != null
+      ? `${segment.sectionIndex}-${segment.elementIndex}`
+      : segment.id
+
+    if (!currentParagraph || currentParagraph.key !== paragraphKey) {
+      currentParagraph = { key: paragraphKey, segments: [], activeSegmentIndex: undefined }
+      paragraphs.push(currentParagraph)
+    }
+    currentParagraph.segments.push({ ...segment, index: i })
+    if (i === currentTTSSegmentIndex.value) {
+      currentParagraph.activeSegmentIndex = i
+    }
+  }
+
+  return paragraphs
 })
 
 const sectionTitle = computed(() => {
@@ -436,7 +488,7 @@ function setSegmentRef(
 }
 
 function getSegmentClass(index: number) {
-  const baseClasses = 'inline-block text-sm laptop:text-lg transition-opacity duration-300 cursor-pointer'
+  const baseClasses = 'text-sm laptop:text-lg transition-opacity duration-300 cursor-pointer'
   const activeClasses = 'text-(--ui-text) opacity-100 font-bold'
   const inactiveClasses = 'opacity-40 text-muted hover:opacity-90'
 

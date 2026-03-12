@@ -956,6 +956,7 @@ async function extractTTSSegments(book: Book) {
             id: `${section.index}-${elIndex}-${segIndex}`,
             cfi,
             sectionIndex: section.index ?? 0,
+            elementIndex: elIndex,
           })),
         )
       })
