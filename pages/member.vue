@@ -201,18 +201,13 @@ function handleOpen() {
 async function handleSubscribe(payload: {
   trialPeriodDays?: number
   mustCollectPaymentMethod?: boolean
-  selectedPlan: SubscriptionPlan
+  plan: SubscriptionPlan
   utmCampaign?: string
   utmMedium?: string
   utmSource?: string
 }) {
   await checkout.startSubscription({
-    plan: payload.selectedPlan,
-    trialPeriodDays: payload.trialPeriodDays,
-    mustCollectPaymentMethod: payload.mustCollectPaymentMethod,
-    utmCampaign: payload.utmCampaign,
-    utmMedium: payload.utmMedium,
-    utmSource: payload.utmSource,
+    ...payload,
     coupon: coupon.value,
   })
 }

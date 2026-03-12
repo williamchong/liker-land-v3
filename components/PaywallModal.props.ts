@@ -13,6 +13,7 @@ export interface PaywallModalProps {
   'coupon'?: string
   'onUpdate:modelValue'?: (value: SubscriptionPlan) => void
   'onSubscribe'?: (props: {
+    plan?: SubscriptionPlan
     trialPeriodDays?: number
     mustCollectPaymentMethod?: boolean
     utmCampaign?: string

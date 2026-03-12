@@ -59,7 +59,7 @@ const emit = defineEmits<{
   'subscribe': [payload: {
     trialPeriodDays?: number
     mustCollectPaymentMethod?: boolean
-    selectedPlan: SubscriptionPlan
+    plan: SubscriptionPlan
     utmCampaign?: string
     utmMedium?: string
     utmSource?: string
