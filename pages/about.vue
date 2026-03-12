@@ -37,7 +37,7 @@
         />
       </div>
 
-      <div class="flex flex-row flex-wrap gap-4 justify-center">
+      <div class="flex flex-row flex-wrap gap-4 justify-center items-center">
         <UButton
           :to="localeRoute({ name: 'store' })"
           :label="$t('about_page_hero_cta_store')"
@@ -48,13 +48,13 @@
         />
         <UButton
           v-if="!isApp"
-          :to="isLikerPlus ? localeRoute({ name: 'shelf' }) : localeRoute({ name: 'member', query: { samples: '1' } })"
-          :label="$t('about_page_hero_cta_narration')"
-          variant="outline"
-          class="text-inverted ring-inverted hover:bg-white/10"
+          :to="localeRoute({ name: 'member', query: { ll_source: 'about-page' } })"
+          :label="$t('about_page_hero_cta_plus')"
+          variant="link"
+          class="text-gray-300 hover:text-white"
           size="xl"
-          icon="i-material-symbols-volume-up-rounded"
-          @click="onClickHeroCtaNarration"
+          icon="i-material-symbols-star-rounded"
+          @click="onClickHeroCtaPlus"
         />
       </div>
     </section>
@@ -116,6 +116,34 @@
           class="grid md:grid-cols-2 gap-6"
         >
           <UCard
+            id="dual-format"
+            class="p-6 space-y-3"
+          >
+            <div class="flex items-center gap-3">
+              <UIcon
+                name="i-material-symbols-auto-stories-rounded"
+                size="24"
+                class="text-primary"
+              />
+              <h3 class="text-xl font-semibold text-gray-900">
+                <NuxtLink
+                  to="https://docs.3ook.com/zh-TW/articles/11905421-成為-3ook-plus-會員後-如何使用朗讀功能"
+                  target="_blank"
+                  rel="noopener"
+                  class="hover:text-primary hover:underline"
+                  @click="onClickFeatureDualFormat"
+                >
+                  {{ $t('about_page_feature_dual_format') }}
+                </NuxtLink>
+              </h3>
+            </div>
+            <p
+              class="mt-4 text-gray-700"
+              v-text="$t('about_page_feature_dual_format_desc')"
+            />
+          </UCard>
+
+          <UCard
             id="ai-narration"
             class="p-6 space-y-3"
           >
@@ -146,34 +174,6 @@
             <p
               class="mt-4 text-gray-700"
               v-text="$t('about_page_feature_ai_narration_desc')"
-            />
-          </UCard>
-
-          <UCard
-            id="dual-format"
-            class="p-6 space-y-3"
-          >
-            <div class="flex items-center gap-3">
-              <UIcon
-                name="i-material-symbols-auto-stories-rounded"
-                size="24"
-                class="text-primary"
-              />
-              <h3 class="text-xl font-semibold text-gray-900">
-                <NuxtLink
-                  to="https://docs.3ook.com/zh-TW/articles/11905421-成為-3ook-plus-會員後-如何使用朗讀功能"
-                  target="_blank"
-                  rel="noopener"
-                  class="hover:text-primary hover:underline"
-                  @click="onClickFeatureDualFormat"
-                >
-                  {{ $t('about_page_feature_dual_format') }}
-                </NuxtLink>
-              </h3>
-            </div>
-            <p
-              class="mt-4 text-gray-700"
-              v-text="$t('about_page_feature_dual_format_desc')"
             />
           </UCard>
 
@@ -232,34 +232,6 @@
           </UCard>
 
           <UCard
-            id="author-benefits"
-            class="p-6 space-y-3"
-          >
-            <div class="flex items-center gap-3">
-              <UIcon
-                name="i-material-symbols-handshake-rounded"
-                size="24"
-                class="text-primary"
-              />
-              <h3 class="text-xl font-semibold text-gray-900">
-                <NuxtLink
-                  to="https://publish.3ook.com/about/"
-                  target="_blank"
-                  rel="noopener"
-                  class="hover:text-primary hover:underline"
-                  @click="onClickFeatureAuthorBenefits"
-                >
-                  {{ $t('about_page_feature_author_benefits') }}
-                </NuxtLink>
-              </h3>
-            </div>
-            <p
-              class="mt-4 text-gray-700"
-              v-text="$t('about_page_feature_author_benefits_desc')"
-            />
-          </UCard>
-
-          <UCard
             id="affiliate"
             class="p-6 space-y-3"
           >
@@ -284,6 +256,34 @@
             <p
               class="mt-4 text-gray-700"
               v-text="$t('about_page_feature_affiliate_desc')"
+            />
+          </UCard>
+
+          <UCard
+            id="author-benefits"
+            class="p-6 space-y-3"
+          >
+            <div class="flex items-center gap-3">
+              <UIcon
+                name="i-material-symbols-handshake-rounded"
+                size="24"
+                class="text-primary"
+              />
+              <h3 class="text-xl font-semibold text-gray-900">
+                <NuxtLink
+                  to="https://publish.3ook.com/about/"
+                  target="_blank"
+                  rel="noopener"
+                  class="hover:text-primary hover:underline"
+                  @click="onClickFeatureAuthorBenefits"
+                >
+                  {{ $t('about_page_feature_author_benefits') }}
+                </NuxtLink>
+              </h3>
+            </div>
+            <p
+              class="mt-4 text-gray-700"
+              v-text="$t('about_page_feature_author_benefits_desc')"
             />
           </UCard>
         </div>
@@ -646,7 +646,7 @@
         </div>
         <UButton
           v-if="!isApp"
-          :to="localeRoute({ name: 'member' })"
+          :to="localeRoute({ name: 'member', query: { ll_source: 'about-page' } })"
           :label="$t('about_page_plus_cta')"
           color="primary"
           size="lg"
@@ -737,9 +737,6 @@ const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 const config = useRuntimeConfig()
 const baseURL = config.public.baseURL
-const { user } = useUserSession()
-const isLikerPlus = computed(() => Boolean(user.value?.isLikerPlus))
-
 const newsletterEmail = ref('')
 
 const metadataStore = useMetadataStore()
@@ -874,8 +871,8 @@ function onClickHeroCtaStore() {
   useLogEvent('about_hero_cta_store_click')
 }
 
-function onClickHeroCtaNarration() {
-  useLogEvent('about_hero_cta_narration_click')
+function onClickHeroCtaPlus() {
+  useLogEvent('about_hero_cta_plus_click')
 }
 
 function onClickFeatureAiNarration() {
