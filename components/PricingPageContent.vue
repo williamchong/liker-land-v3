@@ -147,7 +147,7 @@
           <UButton
             class="mt-2 self-center"
             :label="$t('pricing_page_learn_more')"
-            :to="localeRoute({ name: 'about', query: { ll_medium: 'about-link', ll_source: 'plus-modal' } })"
+            :to="learnMoreRoute"
             variant="link"
             color="neutral"
             size="sm"
@@ -219,6 +219,13 @@ const selectedPlan = useVModel(props, 'modelValue', emit, {
 })
 
 const isPaidTrial = computed(() => props.trialPeriodDays && props.trialPeriodDays >= PAID_TRIAL_PERIOD_DAYS_THRESHOLD)
+
+const learnMoreRoute = computed(() => {
+  if (getRouteQuery('ll_source') === 'about-page') {
+    return localeRoute({ name: 'store' })
+  }
+  return localeRoute({ name: 'about', query: { ll_medium: 'about-link', ll_source: 'plus-modal' } })
+})
 
 const subscribeButtonLabel = computed(() => {
   if (props.trialPeriodDays) {
