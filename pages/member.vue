@@ -2,7 +2,7 @@
   <PricingPageContent
     v-model="selectedPlan"
     class="min-h-screen"
-    :is-processing-subscription="subscription.isProcessingSubscription.value"
+    :is-processing-subscription="checkout.isProcessingSubscription.value"
     :trial-period-days="trialPeriodDays"
     :must-collect-payment-method="mustCollectPaymentMethod"
     utm-campaign="pricing_page"
@@ -36,18 +36,13 @@ definePageMeta({ layout: false })
 
 const localeRoute = useLocaleRoute()
 const getRouteQuery = useRouteQuery()
-const subscription = useSubscriptionModal()
+const { yearlyPrice, monthlyPrice, currency } = useSubscription()
+const checkout = useSubscriptionCheckout()
 const { t: $t } = useI18n()
 const config = useRuntimeConfig()
 const baseURL = config.public.baseURL
 
 const selectedPlan = ref<SubscriptionPlan>('yearly')
-
-const {
-  yearlyPrice,
-  monthlyPrice,
-  currency,
-} = subscription
 
 const { memberProgramData } = useMemberProgramStructuredData()
 
@@ -211,7 +206,7 @@ async function handleSubscribe(payload: {
   utmMedium?: string
   utmSource?: string
 }) {
-  await subscription.startSubscription({
+  await checkout.startSubscription({
     plan: payload.selectedPlan,
     trialPeriodDays: payload.trialPeriodDays,
     mustCollectPaymentMethod: payload.mustCollectPaymentMethod,
@@ -223,6 +218,6 @@ async function handleSubscribe(payload: {
 }
 
 onMounted(async () => {
-  await subscription.redirectIfSubscribed()
+  await checkout.redirectIfSubscribed()
 })
 </script>

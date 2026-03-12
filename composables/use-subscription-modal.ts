@@ -1,6 +1,6 @@
 import { PaywallModal, UpsellPlusModal } from '#components'
 import type { PaywallModalProps } from '~/components/PaywallModal.props'
-import type { UpsellPlusModalProps, UpsellPlusModalSubscribeEventPayload } from '~/components/UpsellPlusModal.props'
+import type { UpsellPlusModalProps } from '~/components/UpsellPlusModal.props'
 import { DEFAULT_TRIAL_PERIOD_DAYS } from '~/constants/pricing'
 
 export function useSubscriptionModal() {
@@ -11,24 +11,12 @@ export function useSubscriptionModal() {
     currency,
     isLikerPlus,
     likerPlusPeriod,
-    hasLoggedIn,
-    getCheckoutCurrency,
   } = subscriptionData
 
-  const likeCoinSessionAPI = useLikeCoinSessionAPI()
-  const { t: $t } = useI18n()
-  const accountStore = useAccountStore()
-  const { user } = useUserSession()
-  const localeRoute = useLocaleRoute()
-  const getRouteQuery = useRouteQuery()
-  const toast = useToast()
-  const blockingModal = useBlockingModal()
-  const { getAnalyticsParameters } = useAnalytics()
+  const checkoutData = useSubscriptionCheckout()
+  const { startSubscription, isProcessingSubscription } = checkoutData
 
   const selectedPlan = ref<SubscriptionPlan>('yearly')
-  const isProcessingSubscription = ref(false)
-
-  const { handleError } = useErrorHandler()
 
   const paywallModalProps = ref<PaywallModalProps>({})
 
@@ -129,96 +117,6 @@ export function useSubscriptionModal() {
     }
   }
 
-  async function redirectIfSubscribed(plan?: string) {
-    if (isLikerPlus.value && (!plan || likerPlusPeriod.value !== 'month' || plan !== 'yearly')) {
-      await navigateTo(localeRoute({ name: 'account' }))
-      return true
-    }
-    return false
-  }
-
-  async function startSubscription({
-    trialPeriodDays = 0,
-    mustCollectPaymentMethod = true,
-    utmCampaign,
-    utmMedium,
-    utmSource,
-    coupon = getRouteQuery('coupon'),
-    plan,
-    nftClassId,
-    redirectRoute,
-  }: UpsellPlusModalSubscribeEventPayload = {}) {
-    const subscribePlan = plan || selectedPlan.value
-    const isYearly = subscribePlan === 'yearly'
-    const eventPayloadWithCoupon = {
-      ...eventPayload.value,
-      promotion_id: coupon,
-      promotion_name: coupon,
-    }
-    useLogEvent('add_to_cart', eventPayloadWithCoupon)
-    useLogEvent('subscription_button_click')
-    useLogEvent(`subscription_button_click_${subscribePlan}`)
-
-    const isSubscribed = await redirectIfSubscribed(subscribePlan)
-    if (isSubscribed) return
-    if (!hasLoggedIn.value) {
-      await accountStore.login()
-      if (!hasLoggedIn.value) return
-    }
-
-    if (isProcessingSubscription.value) return
-    try {
-      isProcessingSubscription.value = true
-      blockingModal.open({ title: $t('common_processing') })
-
-      if (!user.value?.likerId) {
-        toast.add({
-          title: $t ('pricing_page_liker_id_required'),
-          description: $t('pricing_page_liker_id_required_description'),
-          color: 'warning',
-        })
-        isProcessingSubscription.value = false
-        return
-      }
-      useLogEvent('begin_checkout', eventPayloadWithCoupon)
-
-      const analyticsParams = getAnalyticsParameters()
-      if (isLikerPlus.value) {
-        await likeCoinSessionAPI.updateLikerPlusSubscription({
-          period: subscribePlan,
-          giftNFTClassId: isYearly ? nftClassId : undefined,
-        })
-        await navigateTo(localeRoute({ name: 'plus-success', query: { period: subscribePlan } }))
-      }
-      else {
-        const { url } = await likeCoinSessionAPI.fetchLikerPlusCheckoutLink({
-          period: subscribePlan,
-          from: getRouteQuery('from'),
-          currency: getCheckoutCurrency(),
-          trialPeriodDays,
-          mustCollectPaymentMethod,
-          giftNFTClassId: isYearly ? nftClassId : undefined,
-          ...analyticsParams,
-          utmCampaign: analyticsParams.utmCampaign || utmCampaign,
-          utmMedium: analyticsParams.utmMedium || utmMedium,
-          utmSource: analyticsParams.utmSource || utmSource,
-          coupon,
-        })
-        if (redirectRoute && redirectRoute?.name) {
-          accountStore.savePlusRedirectRoute(redirectRoute)
-        }
-        await navigateTo(url, { external: true })
-      }
-    }
-    catch (error) {
-      handleError(error)
-    }
-    finally {
-      isProcessingSubscription.value = false
-      blockingModal.close()
-    }
-  }
-
   watch(isProcessingSubscription, (newValue) => {
     paywallModal.patch({
       ...paywallModalProps.value,
@@ -228,12 +126,10 @@ export function useSubscriptionModal() {
 
   return {
     ...subscriptionData,
-    isProcessingSubscription,
+    ...checkoutData,
 
     openPaywallModal,
     closePaywallModal,
     openUpsellPlusModalIfEligible,
-    redirectIfSubscribed,
-    startSubscription,
   }
 }
