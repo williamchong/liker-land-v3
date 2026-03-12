@@ -487,13 +487,54 @@ const activeTTSElementIndex = useSyncedBookSettings<number | undefined>({
   namespace: 'epub',
 })
 
+let isTTSDisplaying = false
+let pendingTTSDisplayCfi: string | null = null
+const epubCFI = new EpubCFI()
+
+function isSegmentOnCurrentPage(segmentCfi: string): boolean {
+  if (!currentPageStartCfi.value || !currentPageEndCfi.value) return false
+  try {
+    return epubCFI.compare(segmentCfi, currentPageStartCfi.value) >= 0
+      && epubCFI.compare(segmentCfi, currentPageEndCfi.value) <= 0
+  }
+  catch {
+    return false
+  }
+}
+
 const { setTTSSegments, setChapterTitles, openPlayer } = useTTSPlayerModal({
   nftClassId: nftClassId.value,
-  onSegmentChange: (segment) => {
-    if (segment?.cfi) {
+  onSegmentChange: async (segment) => {
+    if (!segment?.cfi) return
+    activeTTSElementIndex.value = segment.index
+
+    // Skip navigation if the segment is already visible on the current page
+    if (isSegmentOnCurrentPage(segment.cfi)) return
+
+    // Serialize display calls: record the latest target CFI and let
+    // the current in-flight navigation pick it up when it finishes.
+    pendingTTSDisplayCfi = segment.cfi
+    if (isTTSDisplaying) return
+
+    while (pendingTTSDisplayCfi) {
+      const cfi = pendingTTSDisplayCfi
+      pendingTTSDisplayCfi = null
+      if (!rendition.value) {
+        console.warn('TTS page navigation skipped: rendition not initialized')
+        break
+      }
+      isTTSDisplaying = true
       isPageLoading.value = true
-      rendition.value?.display(segment.cfi)
-      activeTTSElementIndex.value = segment.index
+      try {
+        await rendition.value.display(cfi)
+      }
+      catch (error) {
+        isPageLoading.value = false
+        console.warn('TTS page navigation failed:', error)
+      }
+      finally {
+        isTTSDisplaying = false
+      }
     }
   },
 })
