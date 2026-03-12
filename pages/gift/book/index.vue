@@ -230,6 +230,9 @@ const route = useRoute()
 
 useHead({
   title: $t('gift_book_success_title'),
+  meta: [
+    { name: 'robots', content: 'noindex, nofollow' },
+  ],
 })
 
 const isLoading = ref(true)

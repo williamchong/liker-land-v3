@@ -82,7 +82,7 @@ export function getPercentageAmount<T extends number | bigint>(amount: T, percen
 }
 
 export function validateEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
 }
 
 export function getStoreQueryRoute(title: string) {
