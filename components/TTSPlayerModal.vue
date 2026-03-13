@@ -37,7 +37,7 @@
         </div>
         <h2
           v-if="sectionTitle"
-          class="text-lg font-semibold text-(--ui-text) truncate text-center laptop:my-4"
+          class="text-sm font-semibold text-muted truncate text-center laptop:my-4"
           v-text="sectionTitle"
         />
 
@@ -276,7 +276,8 @@ const scrollIndicatorClasses = [
   'pointer-events-none',
 ]
 
-const BUFFER_SIZE = 10
+const BUFFER_SIZE = 3
+const MAX_PARA_EXPANSION = 10
 const visibleSegmentElements = new Map<number, HTMLElement>()
 
 const {
@@ -378,7 +379,7 @@ const visibleParagraphs = computed<VisibleParagraph[]>(() => {
 
   // Extend start/end to include complete paragraphs
   let adjustedStart = start
-  while (adjustedStart > 0 && (start - adjustedStart) < BUFFER_SIZE) {
+  while (adjustedStart > 0 && (start - adjustedStart) < MAX_PARA_EXPANSION) {
     const prev = props.segments[adjustedStart - 1]
     const curr = props.segments[adjustedStart]
     if (prev && curr && sameParagraph(prev, curr)) {
@@ -387,7 +388,7 @@ const visibleParagraphs = computed<VisibleParagraph[]>(() => {
     else { break }
   }
   let adjustedEnd = end
-  while (adjustedEnd < props.segments.length && (adjustedEnd - end) < BUFFER_SIZE) {
+  while (adjustedEnd < props.segments.length && (adjustedEnd - end) < MAX_PARA_EXPANSION) {
     const prev = props.segments[adjustedEnd - 1]
     const curr = props.segments[adjustedEnd]
     if (prev && curr && sameParagraph(prev, curr)) {
@@ -487,11 +488,11 @@ function setSegmentRef(
 }
 
 function getSegmentClass(index: number) {
-  const baseClasses = 'text-sm laptop:text-lg transition-opacity duration-300 cursor-pointer'
-  const activeClasses = 'text-(--ui-text) opacity-100 font-bold'
-  const inactiveClasses = 'opacity-40 text-muted hover:opacity-90'
+  const base = 'transition-opacity duration-300 cursor-pointer'
+  const active = 'text-lg laptop:text-2xl text-(--ui-text) opacity-100 font-bold'
+  const inactive = 'text-sm laptop:text-lg opacity-40 text-muted hover:opacity-90'
 
-  return `${baseClasses} ${index === currentTTSSegmentIndex.value ? activeClasses : inactiveClasses}`
+  return `${base} ${index === currentTTSSegmentIndex.value ? active : inactive}`
 }
 
 watch(currentTTSSegment, (newSegment: TTSSegment | undefined) => {
