@@ -40,7 +40,7 @@ export function useSubscriptionCheckout() {
     utmMedium,
     utmSource,
     coupon = getRouteQuery('coupon'),
-    plan = 'yearly' as SubscriptionPlan,
+    plan = 'yearly',
     nftClassId,
     redirectRoute,
   }: UpsellPlusModalSubscribeEventPayload = {}) {

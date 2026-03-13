@@ -223,7 +223,7 @@ const isPaidTrial = computed(() => props.trialPeriodDays && props.trialPeriodDay
 const route = useRoute()
 const getRouteBaseName = useRouteBaseName()
 const learnMoreRoute = computed(() => {
-  if (getRouteBaseName(route) === 'about') {
+  if (getRouteBaseName(route) === 'about' || getRouteQuery('ll_source') === 'about-page') {
     return localeRoute({ name: 'store' })
   }
   return localeRoute({ name: 'about', query: { ll_medium: 'about-link', ll_source: 'plus-modal' } })
