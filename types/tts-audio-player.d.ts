@@ -6,6 +6,7 @@ declare interface TTSAudioPlayerEvents {
   allEnded: () => void
   error: (error: string | Event | MediaError) => void
   positionState: (state: { position: number, duration: number }) => void
+  rateForced: (rate: number) => void
 }
 
 declare interface TTSAudioPlayer {

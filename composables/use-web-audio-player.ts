@@ -21,6 +21,7 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
   let errored = false
   let stuckTimer: ReturnType<typeof setTimeout> | null = null
   let stuckRetried = false
+  let rateWasForced = false
 
   const handlers: Partial<{ [K in keyof TTSAudioPlayerEvents]: TTSAudioPlayerEvents[K] }> = {}
 
@@ -108,7 +109,10 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
       console.warn(`Audio playback stalled at ${currentRate}x`)
       if (audio.currentTime < 0.00001) {
         // Safari on iOS sometimes gets stuck at 0.000001 for rate > 1.0
+        rateWasForced = true
         audio.playbackRate = 1.0
+        audio.defaultPlaybackRate = 1.0
+        handlers.rateForced?.(1.0)
         if (active && !errored) {
           audio.play()?.catch(() => {})
         }
@@ -226,6 +230,12 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     audible = false
     clearStuckTimer()
     clearAutoResumeTimer()
+
+    if (rateWasForced) {
+      rateWasForced = false
+      handlers.rateForced?.(currentRate)
+    }
+
     ensureAudioPool()
 
     const element = segments[index]
@@ -365,6 +375,7 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
 
   function stop() {
     active = false
+    rateWasForced = false
     clearStuckTimer()
     clearAutoResumeTimer()
     resetAudio()
@@ -375,6 +386,7 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
   }
 
   function setRate(rate: number) {
+    rateWasForced = false
     currentRate = rate
     const act = getActiveAudio()
     if (act) {

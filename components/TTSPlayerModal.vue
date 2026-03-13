@@ -287,7 +287,7 @@ const {
   activeTTSLanguageVoiceAvatar,
   activeTTSLanguageVoiceLabel,
   ttsPlaybackRateOptions,
-  ttsPlaybackRate,
+  effectivePlaybackRate,
   isTextToSpeechOn,
   isTextToSpeechPlaying,
   currentTTSSegment,
@@ -427,8 +427,8 @@ const sectionTitle = computed(() => {
 })
 
 const getTTSPlaybackRateLabel = computed(() => {
-  const rate = ttsPlaybackRate.value
-  return ttsPlaybackRateOptions.value.find(option => option.value === rate)?.label || ''
+  const rate = effectivePlaybackRate.value
+  return ttsPlaybackRateOptions.value.find(option => option.value === rate)?.label || `${rate}x`
 })
 
 const { t: $t } = useI18n()

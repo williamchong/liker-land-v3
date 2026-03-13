@@ -78,6 +78,9 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   })))
 
   const ttsPlaybackRate = useStorage(getTTSConfigKeyWithSuffix(ttsConfigCacheKey.value, 'playback-rate'), DEFAULT_PLAYBACK_RATE)
+  // Effective rate tracks what the player is actually using (may differ from user preference
+  // when Safari forces a downgrade on stall). Used for UI display and Media Session.
+  const effectivePlaybackRate = ref(ttsPlaybackRate.value)
   const isShowTextToSpeechOptions = ref(false)
   const isTextToSpeechOn = ref(false)
   const isTextToSpeechPlaying = ref(false)
@@ -227,7 +230,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
       try {
         navigator.mediaSession.setPositionState({
           duration: pos.duration,
-          playbackRate: ttsPlaybackRate.value,
+          playbackRate: effectivePlaybackRate.value,
           position: pos.position,
         })
       }
@@ -238,6 +241,11 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   }
 
   player.on('positionState', () => {
+    updatePositionState()
+  })
+
+  player.on('rateForced', (rate) => {
+    effectivePlaybackRate.value = rate
     updatePositionState()
   })
 
@@ -325,6 +333,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   })
 
   watch(ttsPlaybackRate, (newRate) => {
+    effectivePlaybackRate.value = newRate
     player.setRate(newRate)
     useLogEvent('tts_playback_rate_change', {
       nft_class_id: nftClassId,
@@ -530,6 +539,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     isTextToSpeechPlaying.value = false
     isTextToSpeechLoading.value = false
     isShowTextToSpeechOptions.value = false
+    effectivePlaybackRate.value = ttsPlaybackRate.value
 
     if (!isNativeBridge.value && 'mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'none'
@@ -553,6 +563,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
     ttsLanguageVoiceOptionsWithAvatars,
     ttsPlaybackRateOptions,
     ttsPlaybackRate,
+    effectivePlaybackRate,
     setTTSLanguageVoice,
     // Player-related properties
     isShowTextToSpeechOptions,
