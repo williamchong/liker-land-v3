@@ -1,3 +1,40 @@
+const AIRTABLE_RECORDS_TTL = 86400 // 1 day
+const AIRTABLE_OFFSET_TTL = 120 // 2 minutes (Airtable offsets expire ~5 min)
+
+/**
+ * Dual-TTL cache for Airtable paginated responses.
+ * Records are cached with a long TTL; offset cursor is cached separately with a short TTL.
+ * When offset expires, cached records are still served (without offset).
+ * When records expire, a fresh Airtable fetch is made.
+ */
+export async function fetchWithAirtableCache<T>(
+  cacheKey: string,
+  fetcher: () => Promise<{ records: T[], offset?: string }>,
+): Promise<{ records: T[], offset?: string }> {
+  const storage = useStorage('airtable')
+  const recordsKey = `${cacheKey}:records`
+  const offsetKey = `${cacheKey}:offset`
+
+  const [cachedRecords, cachedOffset] = await Promise.all([
+    storage.getItem<T[]>(recordsKey),
+    storage.getItem<string>(offsetKey),
+  ])
+
+  if (cachedRecords) {
+    return { records: cachedRecords, offset: cachedOffset ?? undefined }
+  }
+
+  const result = await fetcher()
+
+  // Fire-and-forget cache writes
+  storage.setItem(recordsKey, result.records, { ttl: AIRTABLE_RECORDS_TTL }).catch(() => {})
+  if (result.offset) {
+    storage.setItem(offsetKey, result.offset, { ttl: AIRTABLE_OFFSET_TTL }).catch(() => {})
+  }
+
+  return result
+}
+
 export function getAirtableCMSFetch() {
   const config = useRuntimeConfig()
   return $fetch.create({
