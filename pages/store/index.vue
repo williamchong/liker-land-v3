@@ -901,18 +901,17 @@ async function fetchTags() {
 
 async function fetchTagItems({ isRefresh = false } = {}) {
   const apiSortValue = mapTagIdToAPIStakingSortValue(isStakingTagId.value ? tagId.value : STAKING_TAG_DEFAULT)
-  const fetchPromises = [
-    // NOTE: Fetch staking books for sorting CMS tag items by staking
-    bookstoreStore.fetchStakingBooks(apiSortValue, { isRefresh, limit: 100 }).catch((error) => {
-      if (isStakingTagId.value) {
-        throw error
-      }
-    }),
-  ]
-  if (!isStakingTagId.value) {
-    fetchPromises.push(bookstoreStore.fetchCMSProductsByTagId(tagId.value, { isRefresh }))
+
+  if (isStakingTagId.value) {
+    await bookstoreStore.fetchStakingBooks(apiSortValue, { isRefresh, limit: 100 })
+    return
   }
-  await Promise.all(fetchPromises)
+
+  // Fetch staking books first so CMS tag items can be sorted by staking
+  await bookstoreStore.fetchStakingBooks(apiSortValue, { isRefresh, limit: 100 }).catch((error) => {
+    console.warn('[store] Failed to fetch staking data for CMS tag sorting:', error)
+  })
+  await bookstoreStore.fetchCMSProductsByTagId(tagId.value, { isRefresh })
 }
 
 async function fetchItems({ lazy = false, isRefresh = false } = {}) {

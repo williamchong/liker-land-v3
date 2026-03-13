@@ -370,7 +370,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
         stakingBooksMap.value[sortBy].items.push(...bookNFTs)
       }
 
-      stakingBooksMap.value[sortBy].offset = result.data.length <= limit ? undefined : result.pagination?.next_key?.toString()
+      stakingBooksMap.value[sortBy].offset = result.data.length < limit ? undefined : result.pagination?.next_key?.toString()
       stakingBooksMap.value[sortBy].hasFetched = true
     }
     finally {
