@@ -2,7 +2,7 @@
   <PricingPageContent
     v-model="selectedPlan"
     class="min-h-screen"
-    :is-processing-subscription="subscription.isProcessingSubscription.value"
+    :is-processing-subscription="checkout.isProcessingSubscription.value"
     :trial-period-days="trialPeriodDays"
     :must-collect-payment-method="mustCollectPaymentMethod"
     utm-campaign="pricing_page"
@@ -36,18 +36,13 @@ definePageMeta({ layout: false })
 
 const localeRoute = useLocaleRoute()
 const getRouteQuery = useRouteQuery()
-const subscription = useSubscription()
+const { yearlyPrice, monthlyPrice, currency } = useSubscription()
+const checkout = useSubscriptionCheckout()
 const { t: $t } = useI18n()
 const config = useRuntimeConfig()
 const baseURL = config.public.baseURL
 
 const selectedPlan = ref<SubscriptionPlan>('yearly')
-
-const {
-  yearlyPrice,
-  monthlyPrice,
-  currency,
-} = subscription
 
 const { memberProgramData } = useMemberProgramStructuredData()
 
@@ -206,23 +201,18 @@ function handleOpen() {
 async function handleSubscribe(payload: {
   trialPeriodDays?: number
   mustCollectPaymentMethod?: boolean
-  selectedPlan: SubscriptionPlan
+  plan: SubscriptionPlan
   utmCampaign?: string
   utmMedium?: string
   utmSource?: string
 }) {
-  await subscription.startSubscription({
-    plan: payload.selectedPlan,
-    trialPeriodDays: payload.trialPeriodDays,
-    mustCollectPaymentMethod: payload.mustCollectPaymentMethod,
-    utmCampaign: payload.utmCampaign,
-    utmMedium: payload.utmMedium,
-    utmSource: payload.utmSource,
+  await checkout.startSubscription({
+    ...payload,
     coupon: coupon.value,
   })
 }
 
 onMounted(async () => {
-  await subscription.redirectIfSubscribed()
+  await checkout.redirectIfSubscribed()
 })
 </script>

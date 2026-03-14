@@ -749,7 +749,7 @@ const {
   PLUS_BOOK_PURCHASE_DISCOUNT,
   getPlusDiscountRate,
   openUpsellPlusModalIfEligible,
-} = useSubscription()
+} = useSubscriptionModal()
 
 const metadataStore = useMetadataStore()
 const bookListStore = useBookListStore()

@@ -229,7 +229,7 @@
 import type { TTSPlayerModalProps } from './TTSPlayerModal.props'
 
 const { user } = useUserSession()
-const subscription = useSubscription()
+const subscription = useSubscriptionModal()
 const { errorModal, handleError } = useErrorHandler()
 
 const { customVoice, hasCustomVoice, isLoading: isCustomVoiceLoading, fetchCustomVoice } = useCustomVoice()

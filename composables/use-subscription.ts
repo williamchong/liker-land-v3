@@ -1,33 +1,16 @@
-import { PaywallModal, UpsellPlusModal } from '#components'
-import type { PaywallModalProps } from '~/components/PaywallModal.props'
-import type { UpsellPlusModalProps, UpsellPlusModalSubscribeEventPayload } from '~/components/UpsellPlusModal.props'
-import { DEFAULT_TRIAL_PERIOD_DAYS } from '~/constants/pricing'
+import { PLUS_BOOK_PURCHASE_DISCOUNT } from '~/constants/pricing'
 
 export function useSubscription() {
-  const likeCoinSessionAPI = useLikeCoinSessionAPI()
-  const { t: $t } = useI18n()
-  const accountStore = useAccountStore()
   const { user, loggedIn: hasLoggedIn } = useUserSession()
-  const localeRoute = useLocaleRoute()
-  const getRouteQuery = useRouteQuery()
-  const toast = useToast()
-  const blockingModal = useBlockingModal()
-  const { getAnalyticsParameters } = useAnalytics()
-
-  const selectedPlan = ref<SubscriptionPlan>('yearly')
-  const isProcessingSubscription = ref(false)
-
-  const { handleError } = useErrorHandler()
-  const { getCheckoutCurrency, displayCurrency } = usePaymentCurrency()
+  const { displayCurrency, getCheckoutCurrency } = usePaymentCurrency()
 
   const {
     monthlyPrice,
     yearlyPrice,
   } = useSubscriptionPricing()
 
-  const paywallModalProps = ref<PaywallModalProps>({})
   const currency = computed(() => displayCurrency.value.toUpperCase())
-  const PLUS_BOOK_PURCHASE_DISCOUNT = 0.2 // 20% discount
+
   const isLikerPlus = computed(() => {
     if (!hasLoggedIn.value) return false
     return user.value?.isLikerPlus
@@ -37,187 +20,6 @@ export function useSubscription() {
     if (!hasLoggedIn.value || !isLikerPlus.value) return undefined
     return user.value?.likerPlusPeriod || undefined
   })
-
-  const eventPayload = computed(() => ({
-    currency: currency.value,
-    value: selectedPlan.value === 'yearly' ? yearlyPrice.value : monthlyPrice.value,
-    items: [{
-      id: `plus-${selectedPlan.value}`,
-      name: `Plus (${selectedPlan.value})`,
-      price: selectedPlan.value === 'yearly' ? yearlyPrice.value : monthlyPrice.value,
-      currency: currency.value,
-      quantity: 1,
-    }],
-  }))
-
-  function getPaywallModalProps(): PaywallModalProps {
-    return {
-      'trialPeriodDays': DEFAULT_TRIAL_PERIOD_DAYS,
-      'modelValue': selectedPlan.value,
-      'isProcessingSubscription': isProcessingSubscription.value,
-      'onUpdate:modelValue': (value: SubscriptionPlan) => {
-        selectedPlan.value = value
-        useLogEvent('select_item', eventPayload.value)
-      },
-      'onOpen': () => {
-        useLogEvent('view_item', eventPayload.value)
-      },
-      'onSubscribe': startSubscription,
-    }
-  }
-
-  function getUpsellPlusModalProps(): UpsellPlusModalProps {
-    return {
-      isLikerPlus: isLikerPlus.value,
-      likerPlusPeriod: likerPlusPeriod.value,
-      onSubscribe: startSubscription,
-      onClose: () => {
-        useLogEvent('subscription_button_click_skip')
-      },
-    }
-  }
-
-  const overlay = useOverlay()
-  const paywallModal = overlay.create(PaywallModal, {
-    props: getPaywallModalProps(),
-  })
-  const upsellPlusModal = overlay.create(UpsellPlusModal, {
-    props: getUpsellPlusModalProps(),
-  })
-
-  async function openPaywallModal(props: PaywallModalProps = {}) {
-    if (paywallModal.isOpen) {
-      paywallModal.close()
-    }
-
-    paywallModalProps.value = {
-      ...getPaywallModalProps(),
-      ...props,
-    }
-    return paywallModal.open(paywallModalProps.value).result
-  }
-
-  function closePaywallModal() {
-    paywallModal.close()
-  }
-
-  const hasShownUpsellThisSession = useSessionStorage('3ook_upsell_plus_shown', false)
-
-  async function openUpsellPlusModalIfEligible(props: UpsellPlusModalProps = {}) {
-    if (hasShownUpsellThisSession.value) return
-    if (upsellPlusModal.isOpen) {
-      upsellPlusModal.close()
-    }
-    let nftClassId = props.nftClassId
-    if (!props.bookPrice || props.bookPrice > yearlyPrice.value) {
-      nftClassId = undefined
-    }
-    const shouldShowMonthlyPlan = !isLikerPlus.value && !props.from
-    const shouldShowYearlyPlan = (!isLikerPlus.value || (likerPlusPeriod.value === 'month' && nftClassId)) && (!props.from || nftClassId)
-    if (shouldShowMonthlyPlan || shouldShowYearlyPlan) {
-      // Only pass nftClassId if book price is <= Plus yearly price
-      // This way expensive books won't show the "gift book" option, only 20% off
-
-      const upsellModalProps: UpsellPlusModalProps = {
-        ...props,
-        ...getUpsellPlusModalProps(),
-        nftClassId,
-      }
-      hasShownUpsellThisSession.value = true
-      useLogEvent('upsell_plus_modal_open')
-      return upsellPlusModal.open(upsellModalProps).result
-    }
-  }
-
-  async function redirectIfSubscribed(plan?: string) {
-    if (isLikerPlus.value && (!plan || likerPlusPeriod.value !== 'month' || plan !== 'yearly')) {
-      await navigateTo(localeRoute({ name: 'account' }))
-      return true
-    }
-    return false
-  }
-
-  async function startSubscription({
-    trialPeriodDays = 0,
-    mustCollectPaymentMethod = true,
-    utmCampaign,
-    utmMedium,
-    utmSource,
-    coupon = getRouteQuery('coupon'),
-    plan,
-    nftClassId,
-    redirectRoute,
-  }: UpsellPlusModalSubscribeEventPayload = {}) {
-    const subscribePlan = plan || selectedPlan.value
-    const isYearly = subscribePlan === 'yearly'
-    const eventPayloadWithCoupon = {
-      ...eventPayload.value,
-      promotion_id: coupon,
-      promotion_name: coupon,
-    }
-    useLogEvent('add_to_cart', eventPayloadWithCoupon)
-    useLogEvent('subscription_button_click')
-    useLogEvent(`subscription_button_click_${subscribePlan}`)
-
-    const isSubscribed = await redirectIfSubscribed(subscribePlan)
-    if (isSubscribed) return
-    if (!hasLoggedIn.value) {
-      await accountStore.login()
-      if (!hasLoggedIn.value) return
-    }
-
-    if (isProcessingSubscription.value) return
-    try {
-      isProcessingSubscription.value = true
-      blockingModal.open({ title: $t('common_processing') })
-
-      if (!user.value?.likerId) {
-        toast.add({
-          title: $t ('pricing_page_liker_id_required'),
-          description: $t('pricing_page_liker_id_required_description'),
-          color: 'warning',
-        })
-        isProcessingSubscription.value = false
-        return
-      }
-      useLogEvent('begin_checkout', eventPayloadWithCoupon)
-
-      const analyticsParams = getAnalyticsParameters()
-      if (isLikerPlus.value) {
-        await likeCoinSessionAPI.updateLikerPlusSubscription({
-          period: subscribePlan,
-          giftNFTClassId: isYearly ? nftClassId : undefined,
-        })
-        await navigateTo(localeRoute({ name: 'plus-success', query: { period: subscribePlan } }))
-      }
-      else {
-        const { url } = await likeCoinSessionAPI.fetchLikerPlusCheckoutLink({
-          period: subscribePlan,
-          from: getRouteQuery('from'),
-          currency: getCheckoutCurrency(),
-          trialPeriodDays,
-          mustCollectPaymentMethod,
-          giftNFTClassId: isYearly ? nftClassId : undefined,
-          ...analyticsParams,
-          utmCampaign: analyticsParams.utmCampaign || utmCampaign,
-          utmMedium: analyticsParams.utmMedium || utmMedium,
-          utmSource: analyticsParams.utmSource || utmSource,
-          coupon,
-        })
-        if (redirectRoute && redirectRoute?.name) {
-          accountStore.savePlusRedirectRoute(redirectRoute)
-        }
-        await navigateTo(url, { external: true })
-      }
-    }
-    catch (error) {
-      handleError(error)
-    }
-    finally {
-      isProcessingSubscription.value = false
-      blockingModal.close()
-    }
-  }
 
   function getPlusDiscountPrice(price: number): number | null {
     if (isLikerPlus.value && price > 0) {
@@ -233,13 +35,6 @@ export function useSubscription() {
     return 0
   }
 
-  watch(isProcessingSubscription, (newValue) => {
-    paywallModal.patch({
-      ...paywallModalProps.value,
-      isProcessingSubscription: newValue,
-    })
-  })
-
   return {
     yearlyPrice,
     monthlyPrice,
@@ -247,15 +42,10 @@ export function useSubscription() {
 
     isLikerPlus,
     likerPlusPeriod,
+    hasLoggedIn,
     getPlusDiscountPrice,
     getPlusDiscountRate,
+    getCheckoutCurrency,
     PLUS_BOOK_PURCHASE_DISCOUNT,
-    isProcessingSubscription,
-
-    openPaywallModal,
-    closePaywallModal,
-    openUpsellPlusModalIfEligible,
-    redirectIfSubscribed,
-    startSubscription,
   }
 }

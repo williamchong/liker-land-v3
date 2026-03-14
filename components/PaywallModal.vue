@@ -19,7 +19,6 @@
         :utm-medium="props.utmMedium"
         :utm-source="props.utmSource"
         :coupon="props.coupon"
-        @open="emit('open')"
         @subscribe="emit('subscribe', $event)"
         @update:model-value="emit('update:modelValue', $event)"
       >
@@ -59,7 +58,7 @@ const emit = defineEmits<{
   'subscribe': [payload: {
     trialPeriodDays?: number
     mustCollectPaymentMethod?: boolean
-    selectedPlan: SubscriptionPlan
+    plan: SubscriptionPlan
     utmCampaign?: string
     utmMedium?: string
     utmSource?: string

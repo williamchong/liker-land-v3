@@ -173,7 +173,7 @@ const emit = defineEmits<{
   'subscribe': [payload: {
     trialPeriodDays?: number
     mustCollectPaymentMethod?: boolean
-    selectedPlan: SubscriptionPlan
+    plan: SubscriptionPlan
     utmCampaign?: string
     utmMedium?: string
     utmSource?: string
@@ -220,8 +220,10 @@ const selectedPlan = useVModel(props, 'modelValue', emit, {
 
 const isPaidTrial = computed(() => props.trialPeriodDays && props.trialPeriodDays >= PAID_TRIAL_PERIOD_DAYS_THRESHOLD)
 
+const route = useRoute()
+const getRouteBaseName = useRouteBaseName()
 const learnMoreRoute = computed(() => {
-  if (getRouteQuery('ll_source') === 'about-page') {
+  if (getRouteBaseName(route) === 'about' || getRouteQuery('ll_source') === 'about-page') {
     return localeRoute({ name: 'store' })
   }
   return localeRoute({ name: 'about', query: { ll_medium: 'about-link', ll_source: 'plus-modal' } })
@@ -247,7 +249,7 @@ onMounted(() => {
 
 function handleSubscribeButtonClick() {
   emit('subscribe', {
-    selectedPlan: selectedPlan.value ?? 'yearly',
+    plan: selectedPlan.value ?? 'yearly',
     mustCollectPaymentMethod: props.mustCollectPaymentMethod,
     trialPeriodDays: props.trialPeriodDays,
     utmCampaign: utmCampaign.value,
