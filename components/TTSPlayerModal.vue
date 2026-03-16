@@ -363,6 +363,12 @@ const {
   },
 })
 
+const { isTTSPlaying } = useTTSPlayingState()
+watch(isTextToSpeechPlaying, playing => isTTSPlaying.value = playing, { immediate: true })
+onBeforeUnmount(() => {
+  isTTSPlaying.value = false
+})
+
 interface VisibleParagraph {
   key: string
   segments: Array<TTSSegment & { index: number }>

@@ -1,10 +1,13 @@
 import * as v from 'valibot'
 
+export const nftClassIdField = v.pipe(
+  v.string('MISSING_NFT_CLASS_ID'),
+  v.nonEmpty('MISSING_NFT_CLASS_ID'),
+  v.regex(/^0x[0-9a-fA-F]{40}$/, 'INVALID_NFT_CLASS_ID'),
+)
+
 export const NFTClassIdParamsSchema = v.object({
-  nftClassId: v.pipe(
-    v.string('MISSING_NFT_CLASS_ID'),
-    v.nonEmpty('MISSING_NFT_CLASS_ID'),
-  ),
+  nftClassId: nftClassIdField,
 })
 
 export const TagIdParamsSchema = v.object({
@@ -15,10 +18,7 @@ export const TagIdParamsSchema = v.object({
 })
 
 export const AnnotationParamsSchema = v.object({
-  nftClassId: v.pipe(
-    v.string('MISSING_NFT_CLASS_ID'),
-    v.nonEmpty('MISSING_NFT_CLASS_ID'),
-  ),
+  nftClassId: nftClassIdField,
   annotationId: v.pipe(
     v.string('MISSING_ANNOTATION_ID'),
     v.nonEmpty('MISSING_ANNOTATION_ID'),

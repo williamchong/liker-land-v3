@@ -216,6 +216,11 @@ export default defineEventHandler(async (event) => {
 
   publishEvent(event, 'TTSRequest', ttsEventBase)
 
+  if (nftClassId) {
+    incrementBookTTSCharacterUsage(session.user.evmWallet, nftClassId, text.length)
+      .catch(err => console.warn('[TTS] Failed to increment per-book TTS usage:', err))
+  }
+
   const isBlocking = blocking === '1'
   const requestParams: TTSRequestParams = {
     text,

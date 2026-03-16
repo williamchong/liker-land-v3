@@ -61,6 +61,19 @@ const {
 } = useReader()
 const { handleError } = useErrorHandler()
 
+const pdfProgress = ref(0)
+function updatePDFProgress(page: number) {
+  const totalPages = loadedPDFDocument.value?.numPages || 1
+  pdfProgress.value = Math.round((page / totalPages) * 100)
+}
+const { isTTSPlaying } = useTTSPlayingState()
+useReadingSession({
+  nftClassId,
+  readerType: 'pdf',
+  progress: pdfProgress,
+  isTextToSpeechPlaying: isTTSPlaying,
+})
+
 const fileBuffer = ref<ArrayBuffer | null>(null)
 const isPDFReady = ref(false)
 const loadedPDFDocument = shallowRef<PDFDocumentProxy>()
@@ -129,6 +142,7 @@ function handlePDFLoaded(pdfDocument: PDFDocumentProxy) {
   isPDFReady.value = true
   loadedPDFDocument.value = pdfDocument
   currentPageIndex.value = pdfReaderRef.value?.currentPage || 1
+  updatePDFProgress(currentPageIndex.value)
   // Release the ArrayBuffer — PDF.js has its own internal copy
   fileBuffer.value = null
 }
@@ -187,6 +201,7 @@ async function extractTTSSegmentsFromPDF(pdfDocument: PDFDocumentProxy) {
 function handlePageChanged(pageNumber: number) {
   currentPageIndex.value = pageNumber
   activeTTSElementIndex.value = undefined
+  updatePDFProgress(pageNumber)
 }
 
 let ttsExtractionPromise: Promise<void> | undefined

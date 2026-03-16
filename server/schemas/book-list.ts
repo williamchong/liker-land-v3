@@ -1,17 +1,12 @@
 import * as v from 'valibot'
+import { nftClassIdField } from '~/server/schemas/params'
 
 export const BookListBodySchema = v.object({
-  nftClassId: v.pipe(
-    v.string('MISSING_NFT_CLASS_ID'),
-    v.nonEmpty('MISSING_NFT_CLASS_ID'),
-  ),
+  nftClassId: nftClassIdField,
   priceIndex: v.optional(v.number(), 0),
 })
 
 export const BookListQuerySchema = v.object({
-  nft_class_id: v.pipe(
-    v.string('MISSING_NFT_CLASS_ID'),
-    v.nonEmpty('MISSING_NFT_CLASS_ID'),
-  ),
+  nft_class_id: nftClassIdField,
   price_index: v.optional(v.string()),
 })

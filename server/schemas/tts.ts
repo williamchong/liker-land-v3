@@ -1,4 +1,5 @@
 import * as v from 'valibot'
+import { nftClassIdField } from '~/server/schemas/params'
 
 export const TTSQuerySchema = v.object({
   text: v.pipe(
@@ -11,8 +12,5 @@ export const TTSQuerySchema = v.object({
     v.nonEmpty('INVALID_VOICE_ID'),
   ),
   blocking: v.optional(v.string()),
-  nft_class_id: v.optional(v.pipe(
-    v.string('INVALID_NFT_CLASS_ID'),
-    v.nonEmpty('INVALID_NFT_CLASS_ID'),
-  )),
+  nft_class_id: v.optional(nftClassIdField),
 })
