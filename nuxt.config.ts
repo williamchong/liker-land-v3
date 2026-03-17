@@ -76,6 +76,7 @@ export default defineNuxtConfig({
       airtableCMSPublicationsTableId: process.env.AIRTABLE_CMS_PUBLICATIONS_TABLE_ID,
       airtableCMSTagsTableId: process.env.AIRTABLE_CMS_TAGS_TABLE_ID,
       cacheKeyPrefix: '3ook',
+      alchemyGasPolicyId: process.env.ALCHEMY_GAS_POLICY_ID,
       customRpcUrl: process.env.CUSTOM_RPC_URL,
       googleAdConversionId: process.env.AD_CONVERSION_ID,
       likeCoinAPIEndpoint: process.env.LIKECOIN_API_ENDPOINT,

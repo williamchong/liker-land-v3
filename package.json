@@ -18,6 +18,9 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
+    "@aa-sdk/core": "^4.86.0",
+    "@account-kit/infra": "^4.86.0",
+    "@account-kit/wallet-client": "^4.86.0",
     "@breezystack/lamejs": "^1.2.7",
     "@coinbase/wallet-sdk": "~4.3.6",
     "@farcaster/miniapp-sdk": "^0.2.1",

@@ -11,10 +11,8 @@ runConfig:
 env:
   # Configure environment variables.
   # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
-  - variable: NODE_OPTIONS
-    value: --max-old-space-size=8192
-    availability:
-      - BUILD
+  - variable: AIRTABLE_API_SECRET
+    secret: V3_AIRTABLE_API_SECRET
   - variable: AIRTABLE_CMS_BASE_ID
     value: appdrA6ruqhPRRFQj
   - variable: AIRTABLE_CMS_PRODUCTS_TABLE_ID
@@ -23,22 +21,22 @@ env:
     value: tblgXqb89EtLtmaKw
   - variable: AIRTABLE_CMS_TAGS_TABLE_ID
     value: tblUhRa3g1x2qmrik
-  - variable: AIRTABLE_API_SECRET
-    secret: V3_AIRTABLE_API_SECRET
-  - variable: BASE_URL
-    value: https://3ook.com
-  - variable: MINIMAX_GROUP_ID
-    secret: MINIMAX_GROUP_ID
-  - variable: MINIMAX_API_KEY
-    secret: MINIMAX_API_KEY
-  - variable: TTS_CACHE_BUCKET_PREFIX
-    value: tts-cache
-  - variable: CUSTOM_VOICE_BUCKET_PREFIX
-    value: custom-voices
+  - variable: ALCHEMY_GAS_POLICY_ID
+    value: f3d2b8c5-9bd4-45f0-90da-54175fa3bd92
+  - variable: APP_SERVER
+    value: 3ook-web
   - variable: ARWEAVE_ENDPOINT
     value: https://gateway.irys.xyz
+  - variable: BASE_URL
+    value: https://3ook.com
   - variable: CUSTOM_RPC_URL
     value: https://base-mainnet.g.alchemy.com/v2/zJMnNhwcswjtggeonrTh3
+  - variable: CUSTOM_VOICE_BUCKET_PREFIX
+    value: custom-voices
+  - variable: GA_TRACKING_ID
+    value: G-WBSJGPMQE2
+  - variable: GCLOUD_PUBSUB_ENABLE
+    value: TRUE
   - variable: IPFS_ENDPOINT
     value: https://w3s.link/ipfs
   - variable: LIKECOIN_API_ENDPOINT
@@ -69,6 +67,14 @@ env:
     value: pk_live_583D0D54D78940DA
   - variable: MAGIC_LINK_CUSTOM_LOGO_URL
     value: https://3ook.com/pwa-512x512.png
+  - variable: MINIMAX_API_KEY
+    secret: MINIMAX_API_KEY
+  - variable: MINIMAX_GROUP_ID
+    secret: MINIMAX_GROUP_ID
+  - variable: NODE_OPTIONS
+    value: --max-old-space-size=8192
+    availability:
+      - BUILD
   - variable: NUXT_PUBLIC_SCRIPTS_INTERCOM_APP_ID
     value: eupcse57
   - variable: NUXT_PUBLIC_SCRIPTS_META_PIXEL_ID
@@ -79,26 +85,22 @@ env:
     value: https://likecoin.github.io
   - variable: PDF_VIEWER_PATH
     value: /pdf.js/legacy/web/viewer.html
-  - variable: POSTHOG_PUBLIC_KEY
-    value: phc_VOXrU28p44Z0coehNjKThwVPK5dO0A6xwQTQqThWI1c
-  - variable: POSTHOG_HOST
-    value: https://t.3ook.com
   - variable: POSTHOG_DEFAULTS
     value: 2026-01-30
+  - variable: POSTHOG_HOST
+    value: https://t.3ook.com
+  - variable: POSTHOG_PUBLIC_KEY
+    value: phc_VOXrU28p44Z0coehNjKThwVPK5dO0A6xwQTQqThWI1c
   - variable: PUBLISH_BOOK_ENDPOINT
     value: https://publish.3ook.com
-  - variable: GA_TRACKING_ID
-    value: G-WBSJGPMQE2
   - variable: SENTRY_AUTH_TOKEN
     secret: SENTRY_AUTH_TOKEN
   - variable: SENTRY_DSN
     value: https://07b4bd03c1d828f7e241ccc9e47a2f80@o149940.ingest.us.sentry.io/4509350693240832
+  - variable: TTS_CACHE_BUCKET_PREFIX
+    value: tts-cache
   - variable: UET_TAG_ID
     value: 343221602
-  - variable: GCLOUD_PUBSUB_ENABLE
-    value: TRUE
-  - variable: APP_SERVER
-    value: 3ook-web
   - variable: WALLET_CONNECT_PROJECT_ID
     value: 526a2e1c9bf37fb75a7e0a4b11d6008e
   # Grant access to secrets in Cloud Secret Manager.
