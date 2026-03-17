@@ -667,11 +667,65 @@
       </div>
     </section>
 
-    <div class="w-full max-w-4xl mx-auto px-4 py-12 space-y-12">
-      <!-- Get Started Section -->
+    <!-- App Section -->
+    <section
+      v-if="!isApp"
+      id="app"
+      class="relative w-full px-6 md:px-12 bg-theme-black overflow-hidden"
+    >
+      <div class="grid md:grid-cols-2 items-center w-full max-w-4xl mx-auto">
+        <div
+          v-gsap.entrance.slide-left.stagger
+          class="relative max-md:order-2 flex flex-col items-center md:items-start space-y-6 py-16 text-center md:text-left"
+        >
+          <div class="flex items-center justify-center md:justify-start gap-4">
+            <img
+              src="~assets/images/about/app-icon.webp"
+              alt="3ook Reader App"
+              class="size-16 md:size-20 rounded-2xl"
+            >
+            <h2
+              class="text-2xl md:text-3xl font-bold text-white"
+              v-text="$t('about_page_app_title')"
+            />
+          </div>
+
+          <p
+            class="text-lg text-gray-300 leading-relaxed max-w-lg"
+            v-text="$t('about_page_app_description')"
+          />
+
+          <AppDownloadButtons
+            class="*:text-theme-white *:ring-theme-white *:hover:bg-theme-white/20"
+            @click-app-store="onClickAppStoreButton"
+            @click-google-play="onClickGooglePlayButton"
+          />
+        </div>
+
+        <aside
+          v-gsap.entrance.slide-right="{ delay: 0.5, duration: 1, ease: 'power1.out' }"
+          class="max-md:absolute inset-0 flex justify-center self-stretch opacity-10! md:opacity-100! max-md:pointer-events-none"
+        >
+          <img
+            v-gsap.entrance.fade="{ delay: 0.5, duration: 1, ease: 'power1.out' }"
+            class="-my-40 max-md:scale-200 origin-center object-contain"
+            src="~assets/images/about/app-mockup.png"
+            alt="3ook Reader App"
+          >
+        </aside>
+      </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section
+      id="contact"
+      class="px-6 md:px-12 py-12"
+    >
       <UCard
-        id="contact"
-        :ui="{ body: 'p-12 sm:py-12 space-y-4 text-center' }"
+        :ui="{
+          root: 'w-full max-w-4xl mx-auto',
+          body: 'flex flex-col items-center p-12 sm:py-12 space-y-4 text-center',
+        }"
       >
         <h2
           class="text-2xl md:text-3xl font-bold text-gray-900"
@@ -681,60 +735,67 @@
           class="text-lg text-muted max-w-2xl mx-auto"
           v-text="$t('about_page_contact_content')"
         />
-        <div class="flex flex-row flex-wrap gap-4 justify-center">
-          <LoginButton @click="onClickCtaSignUp" />
+        <div class="grid sm:grid-cols-2 gap-4 justify-center items-center max-w-xl mx-auto">
+          <LoginButton
+            block
+            @click="onClickCtaSignUp"
+          />
           <UButton
             :to="localeRoute({ name: 'store' })"
             :label="$t('app_header_store')"
             color="primary"
             size="lg"
             icon="i-material-symbols-storefront"
+            block
             @click="onClickCtaStore"
           />
         </div>
       </UCard>
+    </section>
 
-      <!-- Newsletter Subscribe Section -->
-      <section
-        id="newsletter"
-        class="space-y-4 text-center"
-      >
-        <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
-          {{ $t('about_page_newsletter_title') }}
-        </h2>
-        <p class="text-lg text-muted leading-relaxed max-w-2xl mx-auto">
-          {{ $t('about_page_newsletter_content') }}
-        </p>
-        <form
-          class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
-          @submit.prevent="onSubmitNewsletter"
-        >
-          <UInput
-            v-model="newsletterEmail"
-            type="email"
-            :placeholder="$t('about_page_newsletter_placeholder')"
-            size="lg"
-            required
-            class="flex-1"
-            icon="i-material-symbols-mail-outline-rounded"
-          />
-          <UButton
-            class="self-center"
-            type="submit"
-            :label="$t('about_page_newsletter_button')"
-            color="primary"
-            size="lg"
-            icon="i-material-symbols-send-rounded"
-          />
-        </form>
-      </section>
-
-      <USeparator />
-      <p
-        class="text-sm text-muted text-center leading-relaxed max-w-2xl mx-auto"
-        v-text="$t('app_description')"
+    <!-- Newsletter Subscribe Section -->
+    <section
+      id="newsletter"
+      class="space-y-4 text-center px-6"
+    >
+      <h2
+        class="text-2xl md:text-3xl font-bold text-gray-900"
+        v-text="$t('about_page_newsletter_title')"
       />
-    </div>
+      <p
+        class="text-lg text-muted leading-relaxed max-w-2xl mx-auto"
+        v-text="$t('about_page_newsletter_content')"
+      />
+      <form
+        class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
+        @submit.prevent="onSubmitNewsletter"
+      >
+        <UInput
+          v-model="newsletterEmail"
+          class="flex-1"
+          type="email"
+          :placeholder="$t('about_page_newsletter_placeholder')"
+          size="lg"
+          required
+          icon="i-material-symbols-mail-outline-rounded"
+        />
+        <UButton
+          class="self-center"
+          type="submit"
+          :label="$t('about_page_newsletter_button')"
+          color="primary"
+          size="lg"
+          icon="i-material-symbols-send-rounded"
+        />
+      </form>
+    </section>
+
+    <USeparator class="my-12" />
+
+    <p
+      class="max-w-2xl mx-auto mb-12 px-6 text-sm text-muted text-center leading-relaxed"
+      v-text="$t('app_description')"
+    />
   </NuxtLayout>
 </template>
 
@@ -950,6 +1011,14 @@ function onClickCtaStore() {
 
 function onClickPlusCta() {
   useLogEvent('about_plus_cta_click')
+}
+
+function onClickAppStoreButton() {
+  useLogEvent('about_app_cta_app_store_click')
+}
+
+function onClickGooglePlayButton() {
+  useLogEvent('about_app_cta_google_play_click')
 }
 
 function onSubmitNewsletter() {
