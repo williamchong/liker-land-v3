@@ -1,5 +1,4 @@
 import { readContract } from '@wagmi/core'
-import { useWriteContract } from '@wagmi/vue'
 import type { Hash } from 'viem'
 
 import likeCoinABI from '~/contracts/likecoin.json'
@@ -7,7 +6,7 @@ import likeCoinABI from '~/contracts/likecoin.json'
 export function useLikeCoinContract() {
   const config = useRuntimeConfig()
   const likeCoinAddress = config.public.likeCoinTokenAddress as `0x${string}`
-  const { writeContractAsync } = useWriteContract()
+  const { writeContractAsync } = useContractWrite()
   const { $wagmiConfig } = useNuxtApp()
 
   // Read functions

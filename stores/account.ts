@@ -55,6 +55,7 @@ export const useAccountStore = defineStore('account', () => {
   const { getLikeCoinV3BookMigrationSiteURL } = useLikeCoinV3MigrationSite()
   const likeCoinSessionAPI = useLikeCoinSessionAPI()
 
+  const { ensureMagicSession } = useMagicSession()
   const loginModal = overlay.create(LoginModal)
   const registrationFormModal = overlay.create(RegistrationModal)
 
@@ -608,6 +609,7 @@ export const useAccountStore = defineStore('account', () => {
     }
 
     try {
+      await ensureMagicSession()
       const connector = connectors.find((c: { id: string }) => c.id === 'magic')
       if (!connector || !('getMagic' in connector)) {
         throw createError({
