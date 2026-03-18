@@ -1,12 +1,11 @@
 import { readContract } from '@wagmi/core'
-import { useWriteContract } from '@wagmi/vue'
 import type { Hash } from 'viem'
 
 import likeCoinNFTClassABI from '~/contracts/like-nft-class.json'
 
 export function useLikeNFTClassContract() {
   const { $wagmiConfig } = useNuxtApp()
-  const { writeContractAsync } = useWriteContract()
+  const { writeContractAsync } = useContractWrite()
 
   async function fetchNFTClassMetadataById(nftClassId: string) {
     const nftClassMetadataURI = await readContract($wagmiConfig, {

@@ -1,11 +1,10 @@
 import { readContract } from '@wagmi/core'
-import { useWriteContract } from '@wagmi/vue'
 import type { Hash } from 'viem'
 
 import veLikeRewardABI from '~/contracts/ve-like-reward.json'
 
 export function useVeLikeRewardContract(contractAddress: Ref<string | null> | string) {
-  const { writeContractAsync } = useWriteContract()
+  const { writeContractAsync } = useContractWrite()
   const { $wagmiConfig } = useNuxtApp()
 
   // Read functions
