@@ -8,6 +8,7 @@ export interface LikerInfoResponseData {
   description: string
   isLikerPlus?: boolean
   isExpiredLikerPlus?: boolean
+  likerPlusSubscriptionStatus?: 'active' | 'past_due' | 'canceled'
 }
 
 export interface LikerProfileResponseData extends LikerInfoResponseData {

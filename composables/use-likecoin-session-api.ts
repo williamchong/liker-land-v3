@@ -520,6 +520,10 @@ export function useLikeCoinSessionAPI() {
     })
   }
 
+  function retryLikerPlusPayment() {
+    return fetch.value(`/plus/retry`, { method: 'POST' })
+  }
+
   return {
     createNFTBookPurchase,
     createNFTBookCartPurchase,
@@ -536,5 +540,6 @@ export function useLikeCoinSessionAPI() {
     sendCollectorMessage,
     fetchClaimableFreeBooks,
     claimFreeBook,
+    retryLikerPlusPayment,
   }
 }

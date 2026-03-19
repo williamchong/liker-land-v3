@@ -70,6 +70,7 @@ export default defineEventHandler(async (event) => {
     loginMethod: body.loginMethod,
     isLikerPlus: userInfoRes.isLikerPlus || false,
     isExpiredLikerPlus: userInfoRes.isExpiredLikerPlus || false,
+    likerPlusSubscriptionStatus: userInfoRes.likerPlusSubscriptionStatus,
     ttsKey: generateTTSKey(),
   }
   await setUserSession(event, { user: userInfo })
