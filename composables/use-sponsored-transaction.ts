@@ -40,10 +40,10 @@ export function useSponsoredTransaction() {
   const accountStore = useAccountStore()
   const config = useRuntimeConfig()
   const { $wagmiConfig } = useNuxtApp()
-  const alchemyApiKey = computed(() => (config.public.customRpcUrl as string)?.split('/v2/')[1])
+  const alchemyAPIKey = computed(() => (config.public.customRpcUrl as string)?.split('/v2/')[1])
   const isSponsoredMode = computed(() =>
     !!accountStore.isLoginWithMagic
-    && !!alchemyApiKey.value
+    && !!alchemyAPIKey.value
     && !!config.public.alchemyGasPolicyId,
   )
 
@@ -69,7 +69,7 @@ export function useSponsoredTransaction() {
     const { WalletClientSigner, alchemy, base, baseSepolia, createSmartWalletClient: create } = alchemyModules
 
     const alchemyChain = config.public.isTestnet ? baseSepolia : base
-    const apiKey = alchemyApiKey.value!
+    const apiKey = alchemyAPIKey.value!
 
     const walletClient = createWalletClient({
       chain: alchemyChain,
