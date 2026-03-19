@@ -16,6 +16,7 @@ declare module '#auth-utils' {
     likerPlusPeriod?: LikerPlusStatus
     plusAffiliateFrom?: string
     ttsKey?: string
+    likerPlusSubscriptionStatus?: 'active' | 'past_due' | 'canceled'
   }
 }
 

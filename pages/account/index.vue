@@ -20,7 +20,7 @@
             #right
           >
             <UButton
-              :label="user?.isLikerPlus ? $t('account_page_manage_subscription') : $t('account_page_renew_subscription')"
+              :label="likerPlusButtonLabel"
               :variant="user?.isLikerPlus ? 'outline' : 'solid'"
               color="primary"
               :loading="isOpeningBillingPortal"
@@ -550,7 +550,6 @@ const bookshelfStore = useBookshelfStore()
 const localeRoute = useLocaleRoute()
 const { handleError } = useErrorHandler()
 const toast = useToast()
-const isWindowFocused = useDocumentVisibility()
 const { copy: copyToClipboard } = useClipboard()
 const { isApp } = useAppDetection()
 
@@ -607,6 +606,19 @@ watchImmediate(hasLoggedIn, async (loggedIn) => {
         console.error('Failed to refresh session info:', error)
       }
     }
+    if (route.query.action === 'billing-return') {
+      if (isPaymentPastDue.value) {
+        try {
+          await likeCoinSessionAPI.retryLikerPlusPayment()
+          await accountStore.refreshSessionInfo()
+        }
+        catch (error) {
+          console.error('Failed to retry past_due payment after billing portal:', error)
+        }
+      }
+      const { action: _action, ...nextQuery } = route.query
+      await navigateTo({ query: nextQuery }, { replace: true })
+    }
     const isCustomVoiceAction = route.query.action === 'custom-voice'
     if (isCustomVoiceAction) {
       if (!user.value?.isLikerPlus) {
@@ -649,6 +661,10 @@ const publishBookURL = computed(() => {
   return `${config.public.publishBookEndpoint}?utm_source=3ookcom&utm_medium=referral&utm_campaign=3ookcom_account`
 })
 
+const isPaymentPastDue = computed(() =>
+  !!user.value?.isExpiredLikerPlus && user.value?.likerPlusSubscriptionStatus === 'past_due',
+)
+
 const subscriptionStateLabel = computed(() => {
   if (!user.value) return undefined
   if (user.value.isLikerPlus) {
@@ -656,9 +672,18 @@ const subscriptionStateLabel = computed(() => {
     return $t('account_page_subscription_plus')
   }
   if (user.value.isExpiredLikerPlus) {
+    if (isPaymentPastDue.value) {
+      return $t('account_page_subscription_past_due')
+    }
     return $t('account_page_subscription_expired')
   }
   return $t('account_page_subscription_free')
+})
+
+const likerPlusButtonLabel = computed(() => {
+  if (user.value?.isLikerPlus) return $t('account_page_manage_subscription')
+  if (isPaymentPastDue.value) return $t('account_page_update_payment')
+  return $t('account_page_renew_subscription')
 })
 
 const likeWalletButtonTo = computed(() => {
@@ -697,22 +722,16 @@ const isOpeningBillingPortal = ref(false)
 async function handleLikerPlusButtonClick() {
   useLogEvent('account_liker_plus_button_click')
 
-  if (!user.value?.isLikerPlus && !user.value?.isExpiredLikerPlus) {
+  if (!user.value?.isLikerPlus && !isPaymentPastDue.value) {
     await navigateTo(localeRoute({ name: 'member' }))
     return
   }
-
   if (isOpeningBillingPortal.value) return
   try {
     isOpeningBillingPortal.value = true
     const { url } = await likeCoinSessionAPI.fetchLikerPlusBillingPortalLink()
     // NOTE: Not using _blank here as some browsers block popups
     await navigateTo(url, { external: true })
-    // NOTE: Keep `isOpeningBillingPortal` true while navigating to the billing portal
-    do {
-      await sleep(3000)
-    } while (!isWindowFocused.value)
-    isOpeningBillingPortal.value = false
   }
   catch (error) {
     isOpeningBillingPortal.value = false
