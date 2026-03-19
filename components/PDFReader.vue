@@ -25,7 +25,6 @@
 
           <UButtonGroup>
             <UButton
-              class="max-phone:hidden"
               icon="i-material-symbols-zoom-out"
               :disabled="scale <= scaleMin"
               color="neutral"
@@ -33,6 +32,7 @@
               @click="zoomOut"
             />
             <UDropdownMenu
+              class="max-phone:hidden"
               :items="scaleMenuItems"
               :ui="{
                 item: 'justify-center',
@@ -41,7 +41,7 @@
               }"
             >
               <UButton
-                class="justify-center min-w-[64px] max-phone:!rounded-md"
+                class="justify-center min-w-[64px]"
                 :label="`${Math.round(scale * 100)}%`"
                 color="neutral"
                 variant="outline"
@@ -49,7 +49,6 @@
               />
             </UDropdownMenu>
             <UButton
-              class="max-phone:hidden"
               icon="i-material-symbols-zoom-in"
               :disabled="scale >= scaleMax"
               color="neutral"
@@ -141,8 +140,7 @@
       >
         <div
           v-if="isDualPageMode"
-          class="flex origin-top-left"
-          :style="{ transform: `scale(${scale})` }"
+          class="flex"
         >
           <div
             :class="[
@@ -175,9 +173,7 @@
           <div
             :class="[
               ...pagePaddingClasses,
-              'origin-top-left',
             ]"
-            :style="{ transform: `scale(${scale})` }"
           >
             <canvas
               ref="singleCanvas"
@@ -234,6 +230,7 @@ const totalPages = ref(0)
 const scaleMin = 0.5
 const scaleMax = 3.0
 const scaleStep = 0.25
+const scaleButtonStep = 0.05
 const scale = useSyncedBookSettings({
   nftClassId: props.nftClassId,
   key: 'scale',
@@ -258,6 +255,7 @@ const scaleMenuItems = computed<DropdownMenuItem[]>(() => {
 const pdfDocument = shallowRef<PDFDocumentProxy>()
 const renderQueue = ref<(() => Promise<void>)[]>([])
 const isRendering = ref(false)
+const hasAutoZoomedToPage = ref(false)
 const isDualPageMode = useSyncedBookSettings({
   nftClassId: props.nftClassId,
   key: 'isDualPageMode',
@@ -422,11 +420,59 @@ async function loadPDF() {
 
     emit('pdfLoaded', pdfDocument.value)
 
+    await autoZoomToPageIfNeeded()
     renderPages()
   }
   catch (error) {
     emit('error', error as Error)
   }
+}
+
+function clampScale(value: number) {
+  return Math.min(scaleMax, Math.max(scaleMin, value))
+}
+
+async function autoZoomToPageIfNeeded() {
+  if (!pdfDocument.value || hasAutoZoomedToPage.value) return
+  if (scale.value !== 1.0) return
+
+  await nextTick()
+  await new Promise(resolve => requestAnimationFrame(() => resolve(true)))
+
+  const container = scrollableContainer.value
+  if (!container) return
+
+  const containerWidth = container.clientWidth
+  const containerHeight = container.clientHeight
+  if (!containerWidth || !containerHeight) return
+
+  const isDual = isDualPageMode.value && totalPages.value > 1 && !isCoverPage.value
+  if (isDual) {
+    const rightPageNum = dualRightPage.value
+    const pagePromises = [pdfDocument.value.getPage(currentPage.value)]
+    if (rightPageNum) pagePromises.push(pdfDocument.value.getPage(rightPageNum))
+    const pages = await Promise.all(pagePromises)
+
+    const viewports = pages.map(page => page.getViewport({ scale: 1 }))
+    const totalWidth = viewports.reduce((sum, viewport) => sum + viewport.width, 0)
+    const maxHeight = Math.max(...viewports.map(viewport => viewport.height))
+    const effectiveScale = Math.min(containerWidth / totalWidth, containerHeight / maxHeight)
+    const fitScale = clampScale(effectiveScale)
+
+    scale.value = fitScale
+    hasAutoZoomedToPage.value = true
+    pages.forEach(page => page.cleanup())
+    return
+  }
+
+  const page = await pdfDocument.value.getPage(currentPage.value)
+  const viewport = page.getViewport({ scale: 1 })
+  const effectiveScale = Math.min(containerWidth / viewport.width, containerHeight / viewport.height)
+  const fitScale = clampScale(effectiveScale)
+
+  scale.value = fitScale
+  hasAutoZoomedToPage.value = true
+  page.cleanup()
 }
 
 async function renderPages() {
@@ -584,13 +630,13 @@ function togglePageMode(value?: 'single' | 'dual') {
 
 function zoomIn() {
   if (scale.value < scaleMax) {
-    scale.value += scaleStep
+    scale.value = clampScale(scale.value + scaleButtonStep)
   }
 }
 
 function zoomOut() {
   if (scale.value > scaleMin) {
-    scale.value -= scaleStep
+    scale.value = clampScale(scale.value - scaleButtonStep)
   }
 }
 
