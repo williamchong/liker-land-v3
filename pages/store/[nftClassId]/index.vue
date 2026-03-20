@@ -29,8 +29,8 @@
         </template>
       </UButton>
     </div>
-    <section class="flex flex-col tablet:flex-row gap-[32px] tablet:gap-[44px] w-full max-w-[1200px]">
-      <div class="grow pt-5">
+    <section class="grid grid-cols-1 tablet:grid-cols-[1fr_300px] laptop:grid-cols-[1fr_380px] gap-x-[44px] gap-y-0 w-full max-w-[1200px]">
+      <div class="pt-5">
         <AffiliateAlert class="mb-6" />
 
         <div class="flex flex-col laptop:flex-row gap-6 laptop:gap-8">
@@ -93,7 +93,9 @@
             </ul>
           </div>
         </div>
+      </div>
 
+      <div class="order-last tablet:order-none">
         <UTabs
           v-if="infoTabItems.length"
           v-model="activeTabValue"
@@ -328,7 +330,7 @@
         </UTabs>
       </div>
 
-      <div class="relative w-full tablet:max-w-[300px] laptop:max-w-[380px] shrink-0">
+      <div class="relative w-full tablet:row-span-2 tablet:col-start-2 tablet:row-start-1">
         <div class="sticky top-0 flex flex-col gap-4 tablet:pt-5">
           <template v-if="isStakingTabActive">
             <StakingControl
@@ -371,6 +373,8 @@
                       'ease-in-out',
                       { 'cursor-pointer': !item.isSoldOut },
                     ]"
+                    :aria-pressed="item.isSelected"
+                    :disabled="item.isSoldOut"
                     @click="handlePricingItemClick(index)"
                   >
                     <div class="relative shrink-0 w-[24px] h-[24px] flex items-center justify-center">
@@ -404,7 +408,7 @@
                       >
                         <span
                           class="font-semibold text-left"
-                          v-text="item.isAutoDeliver ? item.name : $t('product_page_edition_title', { name: item.name })"
+                          v-text="item.label"
                         />
                         <span
                           v-if="item.isSoldOut"
@@ -630,32 +634,81 @@
       </template>
 
       <template v-else-if="pricingItems.length">
-        <span class="text-theme-cyan">
-          <span
-            v-if="selectedPricingItem?.discountedPrice"
-            class="text-2xl font-semibold"
-            v-text="selectedPricingItem?.discountedPrice"
+        <div class="flex flex-col gap-2 w-full">
+          <div
+            v-if="pricingItems.length > 1"
+            class="flex gap-1.5 overflow-x-auto"
+          >
+            <button
+              v-for="(item, index) in pricingItems"
+              :key="item.name"
+              :class="[
+                'px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-colors',
+                item.isSelected
+                  ? 'border-neutral-900 dark:border-neutral-300 bg-neutral-900 dark:bg-neutral-300 text-white dark:text-neutral-900'
+                  : 'border-neutral-300 dark:border-neutral-600 text-dimmed',
+                item.isSoldOut ? 'opacity-50' : 'cursor-pointer',
+              ]"
+              :aria-pressed="item.isSelected"
+              :disabled="item.isSoldOut"
+              @click="handlePricingItemClick(index)"
+            >
+              {{ item.label }}
+            </button>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-theme-cyan shrink-0">
+              <span
+                v-if="selectedPricingItem?.discountedPrice"
+                class="text-2xl font-semibold"
+                v-text="selectedPricingItem?.discountedPrice"
+              />
+              <PlusBadge
+                v-if="selectedPricingItem?.discountedPrice"
+                class="ml-1"
+              />
+              <span
+                v-else
+                class="text-2xl font-semibold"
+                v-text="selectedPricingItem?.originalPrice"
+              />
+            </span>
+            <div class="flex items-center gap-2">
+              <UButton
+                v-if="canBePurchased"
+                icon="i-material-symbols-featured-seasonal-and-gifts-rounded"
+                color="primary"
+                variant="outline"
+                size="sm"
+                :ui="{ base: 'cursor-pointer rounded-full p-1.5' }"
+                :aria-label="$t('product_page_gift_button_label')"
+                :title="$t('product_page_gift_button_label')"
+                @click="handleGiftButtonClick"
+              />
+              <UButton
+                :icon="isInBookList ? 'i-material-symbols-favorite-rounded' : 'i-material-symbols-favorite-outline-rounded'"
+                color="primary"
+                variant="outline"
+                size="sm"
+                :ui="{ base: 'cursor-pointer rounded-full p-1.5' }"
+                :loading="isCheckingBookList || isUpdatingBookList"
+                :aria-label="$t(isInBookList ? 'product_page_remove_from_book_list_button_label' : 'product_page_add_to_book_list_button_label')"
+                :title="$t(isInBookList ? 'product_page_remove_from_book_list_button_label' : 'product_page_add_to_book_list_button_label')"
+                @click="handleBookListButtonClickDebounced"
+              />
+            </div>
+          </div>
+          <UButton
+            v-bind="checkoutButtonProps"
+            class="cursor-pointer"
+            color="primary"
+            size="xl"
+            :loading="isPurchasing"
+            :disabled="!canBePurchased"
+            block
+            @click="handleStickyPurchaseButtonClick"
           />
-          <PlusBadge
-            v-if="selectedPricingItem?.discountedPrice"
-            class="ml-1"
-          />
-          <span
-            v-else
-            class="text-2xl font-semibold"
-            v-text="selectedPricingItem?.originalPrice"
-          />
-        </span>
-        <UButton
-          v-bind="checkoutButtonProps"
-          class="cursor-pointer max-w-[248px]"
-          color="primary"
-          size="xl"
-          :loading="isPurchasing"
-          :disabled="!canBePurchased"
-          block
-          @click="handleStickyPurchaseButtonClick"
-        />
+        </div>
       </template>
     </aside>
 
@@ -1034,6 +1087,7 @@ const pricingItems = computed(() => {
       const shouldShowDiscount = !from.value && isLikerPlus.value && item.price > 0
       return {
         ...item,
+        label: item.isAutoDeliver ? item.name : $t('product_page_edition_title', { name: item.name }),
         originalPrice: formatPrice(item.price),
         discountedPrice: shouldShowDiscount ? formatDiscountedPrice(item.price, PLUS_BOOK_PURCHASE_DISCOUNT) : null,
         isSelected: index === selectedPricingItemIndex.value,

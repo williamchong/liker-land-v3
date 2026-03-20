@@ -538,9 +538,9 @@
   "plus_subscribe_cta_start_free_trial": "Start {days}-day free trial",
   "plus_subscribe_cta_trial_for_free": "Get {days} Days Free",
   "plus_subscribe_cta_trial_for_price": "Get {days} Days for {currency} ${price}",
-  "plus_subscribe_cta_upsell_skip": "Skip and continue to pay",
+  "plus_subscribe_cta_upsell_skip": "No thanks, pay full price",
   "plus_subscribe_cta_yearly": "Become an annual member",
-  "plus_subscribe_cta_yearly_gift": "Subscribe & get the book free",
+  "plus_subscribe_cta_yearly_gift": "Subscribe yearly — this book is free",
   "price_free": "Free",
   "pricing_page_description": "3ook.com — Read, Listen, Own. The 3rd-gen bookstore ecosystem. Become Plus member to listen to books with a custom voice, receive a free book of your choice and get 20% off on all titles.",
   "pricing_page_feature_1": "Custom voice narration — or create your own private voice actor",
@@ -802,6 +802,6 @@
   "upsell_plus_benefits_title": "Subscription Benefits",
   "upsell_plus_modal_title": "Become a Plus Member",
   "upsell_plus_plan_monthly_discount_book": "20% off this book",
-  "upsell_plus_plan_yearly_gift_book": "Get this book free",
+  "upsell_plus_plan_yearly_gift_book": "This book is included for free",
   "work_in_progress": "Work in progress"
 }

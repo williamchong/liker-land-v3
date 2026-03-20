@@ -45,8 +45,9 @@
     <template #footer>
       <UButton
         :label="$t('plus_subscribe_cta_upsell_skip')"
-        variant="outline"
-        size="xl"
+        variant="ghost"
+        color="neutral"
+        size="lg"
         block
         :ui="{ base: 'cursor-pointer' }"
         @click="handleClose"
@@ -101,15 +102,19 @@ const isAllowYearlyTrial = computed(() => !props.nftClassId)
 const isPaidTrial = computed(() => props.trialPeriodDays && props.trialPeriodDays >= PAID_TRIAL_PERIOD_DAYS_THRESHOLD)
 
 const canGiftBook = computed(() => !!props.bookPrice && !!props.nftClassId)
-const isFreeBook = computed(() => !props.bookPrice)
+const isFreeBook = computed(() => props.bookPrice === 0)
 
 const yearlyDescription = computed(() => {
-  if (canGiftBook.value) return $t('upsell_plus_plan_yearly_gift_book')
+  if (canGiftBook.value) {
+    return $t('upsell_plus_plan_yearly_gift_book')
+  }
   return undefined
 })
 
 const monthlyDescription = computed(() => {
-  if (!isFreeBook.value) return $t('upsell_plus_plan_monthly_discount_book')
+  if (!isFreeBook.value) {
+    return $t('upsell_plus_plan_monthly_discount_book')
+  }
   return undefined
 })
 

@@ -538,9 +538,9 @@
   "plus_subscribe_cta_start_free_trial": "開始 {days} 日免費試用",
   "plus_subscribe_cta_trial_for_free": "取得 {days} 日免費",
   "plus_subscribe_cta_trial_for_price": "以 {currency} ${price} 體驗 {days} 天",
-  "plus_subscribe_cta_upsell_skip": "略過，繼續付款",
+  "plus_subscribe_cta_upsell_skip": "不用了，按原價購買",
   "plus_subscribe_cta_yearly": "成為年費會員",
-  "plus_subscribe_cta_yearly_gift": "訂閱兼得贈書",
+  "plus_subscribe_cta_yearly_gift": "年費訂閱，免費獲得本書",
   "price_free": "免費",
   "pricing_page_description": "3ook.com 第３代電子書店，可讀、可聽、可擁有。成為 Plus 會員，定制聲線，以粵語或國語聽書，獲贈自選電子書，享受八折購書等福利。",
   "pricing_page_feature_1": "定制聲線朗讀書籍，更可打造私人專屬聲優",
@@ -802,6 +802,6 @@
   "upsell_plus_benefits_title": "訂閱福利",
   "upsell_plus_modal_title": "成為 Plus 會員",
   "upsell_plus_plan_monthly_discount_book": "本書即享八折",
-  "upsell_plus_plan_yearly_gift_book": "即時獲贈本書",
+  "upsell_plus_plan_yearly_gift_book": "免費獲得本書",
   "work_in_progress": "即將推出"
 }
