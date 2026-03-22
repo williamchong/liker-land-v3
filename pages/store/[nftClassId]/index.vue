@@ -330,7 +330,7 @@
         </UTabs>
       </div>
 
-      <div class="relative w-full tablet:row-span-2 tablet:col-start-2 tablet:row-start-1">
+      <div class="relative w-full mt-6 tablet:mt-0 tablet:row-span-2 tablet:col-start-2 tablet:row-start-1">
         <div class="sticky top-0 flex flex-col gap-4 tablet:pt-5">
           <template v-if="isStakingTabActive">
             <StakingControl
