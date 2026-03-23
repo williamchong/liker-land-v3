@@ -45,9 +45,8 @@
     <template #footer>
       <UButton
         :label="$t('plus_subscribe_cta_upsell_skip')"
-        variant="ghost"
-        color="neutral"
-        size="lg"
+        variant="soft"
+        size="xl"
         block
         :ui="{ base: 'cursor-pointer' }"
         @click="handleClose"

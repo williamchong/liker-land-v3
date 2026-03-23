@@ -98,8 +98,8 @@ export function useSubscriptionModal() {
     if (props.nftClassId) {
       if (shownUpsellClassIds.value.includes(props.nftClassId)) return
     }
-    else {
-      if (hasShownGenericUpsell.value) return
+    else if (hasShownGenericUpsell.value) {
+      return
     }
     if (upsellPlusModal.isOpen) {
       upsellPlusModal.close()

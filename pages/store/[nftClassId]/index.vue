@@ -95,7 +95,7 @@
         </div>
       </div>
 
-      <div class="order-last tablet:order-none">
+      <div :class="[!isStakingTabActive && 'order-last', 'tablet:order-none']">
         <UTabs
           v-if="infoTabItems.length"
           v-model="activeTabValue"
@@ -635,27 +635,27 @@
 
       <template v-else-if="pricingItems.length">
         <div class="flex flex-col gap-2 w-full">
-          <div
+          <UButtonGroup
             v-if="pricingItems.length > 1"
-            class="flex gap-1.5 overflow-x-auto"
+            size="xs"
           >
-            <button
-              v-for="(item, index) in pricingItems"
-              :key="item.name"
-              :class="[
-                'px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-colors',
-                item.isSelected
-                  ? 'border-neutral-900 dark:border-neutral-300 bg-neutral-900 dark:bg-neutral-300 text-white dark:text-neutral-900'
-                  : 'border-neutral-300 dark:border-neutral-600 text-dimmed',
-                item.isSoldOut ? 'opacity-50' : 'cursor-pointer',
-              ]"
-              :aria-pressed="item.isSelected"
-              :disabled="item.isSoldOut"
-              @click="handlePricingItemClick(index)"
+            <UButton
+              :label="selectedPricingItem?.label"
+              color="neutral"
+              variant="outline"
+              :ui="{ base: 'cursor-default' }"
+            />
+            <UDropdownMenu
+              :items="stickyEditionDropdownItems"
             >
-              {{ item.label }}
-            </button>
-          </div>
+              <UButton
+                icon="i-material-symbols-arrow-drop-down"
+                color="neutral"
+                variant="outline"
+                class="cursor-pointer"
+              />
+            </UDropdownMenu>
+          </UButtonGroup>
           <div class="flex items-center justify-between">
             <span class="text-theme-cyan shrink-0">
               <span
@@ -1100,6 +1100,14 @@ const selectedPricingItem = computed(() => {
   return pricingItems.value[selectedPricingItemIndex.value]
 })
 const priceIndex = computed(() => selectedPricingItem.value?.index || 0)
+
+const stickyEditionDropdownItems = computed(() => {
+  return pricingItems.value.map((item, index) => ({
+    label: item.label,
+    disabled: item.isSoldOut,
+    onSelect: () => handlePricingItemClick(index),
+  }))
+})
 
 const bookName = computed(() => bookInfo.name.value)
 
