@@ -89,10 +89,18 @@ export function useSubscriptionModal() {
     paywallModal.close()
   }
 
-  const hasShownUpsellThisSession = useSessionStorage('3ook_upsell_plus_shown', false)
+  const shownUpsellClassIds = useSessionStorage<string[]>('3ook_upsell_plus_shown_ids', [])
+  const hasShownGenericUpsell = useSessionStorage('3ook_upsell_plus_shown', false)
 
   async function openUpsellPlusModalIfEligible(props: UpsellPlusModalProps = {}) {
-    if (hasShownUpsellThisSession.value) return
+    // Per-book dedup: allow showing upsell for different books in the same session
+    // For non-book contexts (no nftClassId), fall back to once-per-session
+    if (props.nftClassId) {
+      if (shownUpsellClassIds.value.includes(props.nftClassId)) return
+    }
+    else if (hasShownGenericUpsell.value) {
+      return
+    }
     if (upsellPlusModal.isOpen) {
       upsellPlusModal.close()
     }
@@ -111,7 +119,12 @@ export function useSubscriptionModal() {
         ...getUpsellPlusModalProps(),
         nftClassId,
       }
-      hasShownUpsellThisSession.value = true
+      if (props.nftClassId) {
+        shownUpsellClassIds.value = [...shownUpsellClassIds.value, props.nftClassId]
+      }
+      else {
+        hasShownGenericUpsell.value = true
+      }
       useLogEvent('upsell_plus_modal_open')
       return upsellPlusModal.open(upsellModalProps).result
     }
