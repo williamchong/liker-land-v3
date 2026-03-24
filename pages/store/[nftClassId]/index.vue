@@ -703,7 +703,7 @@
               ]"
               v-text="selectedPricingItem?.originalPrice"
             />
-            <PlusBadge v-if="isLikerPlus" />
+            <PlusBadge v-if="isLikerPlus && selectedPricingItem?.discountedPrice" />
           </span>
           <div class="flex items-center gap-2">
             <UButton
