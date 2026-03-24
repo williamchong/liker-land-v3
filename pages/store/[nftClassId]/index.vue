@@ -38,7 +38,7 @@
 
     <!-- Main content -->
     <section class="grid tablet:grid-cols-[1fr_300px] laptop:grid-cols-[1fr_380px] gap-x-[44px] w-full max-w-[1200px]">
-      <!-- Left hand side (Desktop) -->
+      <!-- Primary content column -->
       <div class="pt-5">
         <AffiliateAlert class="mb-6" />
 
@@ -344,7 +344,7 @@
         </template>
       </UAccordion>
 
-      <!-- Right hand side (Desktop) -->
+      <!-- Sticky side panel -->
       <div
         :class="[
           'relative',
