@@ -44,7 +44,15 @@
         alt="3ook.com"
       >
 
-      <div class="grid sm:grid-cols-2 gap-4 justify-center items-center">
+      <div
+        :class="[
+          'grid',
+          { 'sm:grid-cols-2': !isApp },
+          'gap-4',
+          'justify-center',
+          'items-center',
+        ]"
+      >
         <UButton
           class="text-theme-cyan ring-theme-cyan hover:bg-theme-cyan/20"
           :to="localeRoute({ name: 'store' })"
