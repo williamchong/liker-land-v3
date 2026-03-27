@@ -20,6 +20,7 @@ export interface CollectiveBookNFT {
   staked_amount: string
   last_staked_at: string | null
   number_of_stakers: number
+  staking_rank?: number
 }
 
 export interface CollectiveAccountBookNFT {

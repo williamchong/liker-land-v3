@@ -49,32 +49,15 @@
       />
     </div>
 
-    <!-- Staking info for staking mode -->
-    <div class="mt-3 space-y-1 text-muted text-xs">
-      <BookItemStatsRow
-        :label="$t('staking_explore_total_staked')"
-        :is-hidden="totalStaked <= 0"
-        :to="stakingRoute"
-      >
-        <BalanceLabel
-          :value="totalStaked"
-          :is-bold="false"
-          :is-compact="true"
-        />
-      </BookItemStatsRow>
-      <BookItemStatsRow
-        :label="$t('staking_explore_stakers')"
-        :is-hidden="totalStaked <= 0"
-        :to="stakingRoute"
-      >
-        <BalanceLabel
-          :value="stakerCount"
-          :is-compact="true"
-          :is-bold="false"
-          currency=""
-        />
-      </BookItemStatsRow>
-    </div>
+    <!-- LikeRank -->
+    <BookItemStatsRow
+      class="mt-3 text-muted text-xs"
+      :is-hidden="likeRank <= 0"
+      :label="$t('staking_like_rank')"
+      :to="stakingRoute"
+    >
+      <span class="font-semibold">#{{ likeRank }}</span>
+    </BookItemStatsRow>
   </li>
 </template>
 
@@ -108,11 +91,7 @@ const props = defineProps({
     type: String,
     default: '',
   },
-  totalStaked: {
-    type: Number,
-    default: 0,
-  },
-  stakerCount: {
+  likeRank: {
     type: Number,
     default: 0,
   },

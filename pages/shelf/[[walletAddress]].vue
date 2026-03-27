@@ -128,8 +128,6 @@
           :class="getGridItemClassesByIndex(index)"
           :nft-class-id="item.nftClassId"
           :nft-ids="item.nftIds"
-          :staked-amount="item.stakedAmount"
-          :pending-rewards="item.pendingRewards"
           :is-owned="item.isOwned"
           :progress="item.progress"
           :lazy="index >= columnMax"

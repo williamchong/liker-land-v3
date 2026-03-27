@@ -2,14 +2,14 @@
   <li
     ref="lazyLoadTrigger"
     class="flex flex-col justify-end"
-    :class="!props.isOwned && props.stakedAmount > 0 ? 'opacity-50' : 'opacity-100'"
+    :class="!props.isOwned ? 'opacity-50' : 'opacity-100'"
   >
     <BookCover
       :src="bookCoverSrc"
       :alt="bookInfo.name.value"
       :lazy="props.lazy"
       :is-claimable="isClaimable"
-      :is-staked="hasStakes"
+      :is-staked="false"
       :has-shadow="true"
       @click="handleCoverClick"
     />
@@ -103,28 +103,6 @@
         >{{ bookInfo.authorName }}</NuxtLink>
       </div>
     </div>
-
-    <!-- Staking info section -->
-    <div class="mt-3 space-y-1 text-toned text-xs">
-      <BookItemStatsRow
-        :label="$t('staking_dashboard_staked')"
-        :is-hidden="stakedAmount <= 0"
-      >
-        <BalanceLabel
-          :value="stakedAmount"
-          :is-compact="true"
-        />
-      </BookItemStatsRow>
-      <BookItemStatsRow
-        :label="$t('staking_dashboard_rewards')"
-        :is-hidden="pendingRewards <= 0"
-      >
-        <BalanceLabel
-          :value="pendingRewards"
-          :is-compact="true"
-        />
-      </BookItemStatsRow>
-    </div>
   </li>
 </template>
 
@@ -147,14 +125,6 @@ const props = defineProps({
   isClaimable: {
     type: Boolean,
     default: false,
-  },
-  stakedAmount: {
-    type: Number,
-    default: 0,
-  },
-  pendingRewards: {
-    type: Number,
-    default: 0,
   },
   isOwned: {
     type: Boolean,
@@ -183,8 +153,6 @@ const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, 
 const progressPercentage = computed(() => Math.round(props.progress * 100))
 
 const isDesktopScreen = useDesktopScreen()
-
-const hasStakes = computed(() => props.stakedAmount > 0)
 
 const menuItems = computed<DropdownMenuItem[]>(() => {
   const genericItems: DropdownMenuItem[] = []
