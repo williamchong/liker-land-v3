@@ -1,6 +1,15 @@
 <template>
   <div class="flex min-h-screen w-full flex-col">
     <section class="local-histories-index-hero relative flex w-full items-end justify-center px-6 pb-16 pt-32 laptop:pb-24 laptop:pt-48">
+      <UButton
+        class="absolute z-10 top-4 left-4"
+        icon="i-material-symbols-arrow-back-rounded"
+        :to="localeRoute({ name: 'store' })"
+        variant="ghost"
+        color="neutral"
+        size="md"
+        :ui="{ base: 'text-white' }"
+      />
       <div class="z-10 mx-auto max-w-3xl text-center text-white">
         <h1
           class="text-4xl font-bold laptop:text-6xl"
@@ -25,6 +34,16 @@
             class="absolute inset-0 transition-transform duration-500 group-hover:scale-105"
             :class="region.bgClass"
           />
+          <div class="map-preview pointer-events-none absolute inset-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-105">
+            <LocalHistoriesMap
+              v-if="region.routeName === 'local-histories-taiwan'"
+              class="h-full w-full"
+            />
+            <HKLocalHistoriesMap
+              v-else-if="region.routeName === 'local-histories-hongkong'"
+              class="h-full w-full"
+            />
+          </div>
           <div
             class="relative flex flex-col justify-end p-8 laptop:p-10"
             :class="region.minH"
@@ -104,5 +123,27 @@ const regions = [
 
 .bg-hk-card {
   background: linear-gradient(160deg, #8a4a2a 0%, #b85c38 40%, #d4a574 100%);
+}
+
+.map-preview {
+  opacity: 0.3;
+}
+
+.map-preview :deep(path) {
+  fill: white !important;
+  stroke: rgba(255, 255, 255, 0.5) !important;
+  cursor: default !important;
+  will-change: auto !important;
+}
+
+.map-preview :deep(circle) {
+  fill: white !important;
+  stroke: white !important;
+}
+
+.map-preview :deep(#features),
+.map-preview :deep(#pins) {
+  will-change: auto !important;
+  transition: none !important;
 }
 </style>

@@ -1,6 +1,15 @@
 <template>
   <div class="flex w-full flex-col justify-center">
     <section class="local-histories-hero w-full min-h-screen flex justify-center relative text-white px-12 py-24 laptop:py-36">
+      <UButton
+        class="absolute z-10 top-4 left-4"
+        icon="i-material-symbols-arrow-back-rounded"
+        :to="localeRoute({ name: 'local-histories' })"
+        variant="ghost"
+        color="neutral"
+        size="md"
+        :ui="{ base: 'text-white' }"
+      />
       <div class="z-10 flex flex-col text-center max-w-6xl mx-auto px-2 laptop:px-12">
         <div class="absolute bottom-[60px] left-1/2 transform -translate-x-1/2 w-full max-w-2xl text-white">
           <div class="flex justify-center mb-6">
