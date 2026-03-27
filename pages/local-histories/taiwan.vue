@@ -69,7 +69,7 @@
       <header class="mb-8 laptop:mb-12">
         <h2
           class="text-2xl text-center font-semibold text-neutral-900"
-          v-text="$t('local_histories_overview_title') "
+          v-text="$t('local_histories_overview_title')"
         />
         <p
           class="mt-2 text-sm text-center text-neutral-600"
@@ -114,7 +114,7 @@
               v-text="region.areas.join('、')"
             />
             <div
-              v-if="expandedRegion === region.key"
+              v-if="selectedRegion === region.key"
               class="mt-4 border-t border-[#d8dfd2] pt-3"
             >
               <ul class="mt-2 grid gap-2 text-sm text-[#5c6f61]">
@@ -281,7 +281,6 @@ const localeRoute = useLocaleRoute()
 
 const hoveredRegion = ref<string | null>(null)
 const selectedRegion = ref<string | null>('north')
-const expandedRegion = ref<string | null>('north')
 
 const activeRegion = computed(() => selectedRegion.value ?? hoveredRegion.value)
 
@@ -292,13 +291,10 @@ const handleMapHover = (region: string | null) => {
 const handleMapClick = (region: string) => {
   if (selectedRegion.value === region) return
   selectedRegion.value = region
-  expandedRegion.value = region
 }
 
 const handleCardClick = (regionKey: string) => {
-  if (selectedRegion.value === regionKey) return
-  selectedRegion.value = regionKey
-  expandedRegion.value = regionKey
+  selectedRegion.value = selectedRegion.value === regionKey ? null : regionKey
 }
 
 const featuredByRegion = computed(() => {
@@ -317,17 +313,16 @@ const featuredByRegion = computed(() => {
 })
 
 const searchTerm = ref('')
+const debouncedSearchTerm = refDebounced(searchTerm, 300)
 const activeKeyword = ref('全部')
 
 const featuredTags = ['全部', '文化', '歷史', '飲食', '職人', '社區營造']
 
-const featuredItems = featuredLocalHistories
-
 const filteredFeatured = computed(() => {
   const keyword = activeKeyword.value
-  const term = searchTerm.value.trim().toLowerCase()
+  const term = debouncedSearchTerm.value.trim().toLowerCase()
 
-  const filtered = featuredItems.filter((item) => {
+  const filtered = featuredLocalHistories.filter((item) => {
     const matchesKeyword = keyword === '全部' || item.tags.includes(keyword)
     if (!term) return matchesKeyword
 
@@ -367,41 +362,22 @@ const heroStats = computed(() => [
 ])
 
 const heroStatsRef = ref<HTMLElement | null>(null)
-const animatedStats = ref<number[]>(heroStatTargets.map(() => 0))
-const hasAnimatedStats = ref(false)
+const statsProgress = ref(0)
+const transitionedProgress = useTransition(statsProgress, { duration: 700 })
+const animatedStats = computed(() =>
+  heroStatTargets.map(target => Math.round(target * transitionedProgress.value)),
+)
 
-const animateStats = () => {
-  const duration = 700
-  const start = performance.now()
-
-  const step = (now: number) => {
-    const progress = Math.min((now - start) / duration, 1)
-    animatedStats.value = heroStatTargets.map(target => Math.round(target * progress))
-
-    if (progress < 1) {
-      requestAnimationFrame(step)
+const { stop: stopObserver } = useIntersectionObserver(
+  heroStatsRef,
+  ([entry]) => {
+    if (entry?.isIntersecting) {
+      statsProgress.value = 1
+      stopObserver()
     }
-  }
-
-  requestAnimationFrame(step)
-}
-
-onMounted(() => {
-  if (!heroStatsRef.value) return
-
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      if (entry?.isIntersecting && !hasAnimatedStats.value) {
-        hasAnimatedStats.value = true
-        animateStats()
-        observer.disconnect()
-      }
-    },
-    { threshold: 0.4 },
-  )
-
-  observer.observe(heroStatsRef.value)
-})
+  },
+  { threshold: 0.4 },
+)
 
 const regions = [
   {
