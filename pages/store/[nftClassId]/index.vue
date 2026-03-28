@@ -204,6 +204,27 @@
           </ul>
         </template>
 
+        <template #preview-content>
+          <template v-if="hasLoggedIn">
+            <ExpandableContent>
+              <div
+                class="markdown"
+                v-html="previewContentHTML"
+              />
+            </ExpandableContent>
+          </template>
+          <div
+            v-else
+            class="flex flex-col items-center gap-4 py-8"
+          >
+            <p
+              class="text-muted"
+              v-text="$t('product_page_preview_content_login_prompt')"
+            />
+            <LoginButton @click="handlePreviewContentLoginClick" />
+          </div>
+        </template>
+
         <template #author>
           <ExpandableContent>
             <div
@@ -1025,6 +1046,10 @@ const tableOfContentsHTML = computed(() => {
   return renderDescription(bookInfo.tableOfContents?.value || '')
 })
 
+const previewContentHTML = computed(() => {
+  return renderDescription(bookInfo.previewContent?.value || '')
+})
+
 const authorDescriptionHTML = computed(() => {
   return renderDescription(bookInfo.authorDescription?.value || '')
 })
@@ -1057,6 +1082,14 @@ const infoTabItems = computed(() => {
     })
   }
 
+  if (bookInfo.previewContent.value) {
+    items.push({
+      label: $t('product_page_info_tab_preview_content'),
+      slot: 'preview-content',
+      value: 'preview-content',
+    })
+  }
+
   if (bookInfo.authorDescription.value) {
     items.push({
       label: $t('product_page_info_tab_author_description'),
@@ -1086,6 +1119,7 @@ const infoTabItems = computed(() => {
 })
 
 const activeTabValue = ref(infoTabItems.value[0]?.value || 'description')
+const isTabInitialized = ref(false)
 
 const isStakingTabActive = computed(() => {
   return activeTabValue.value === 'staking-info'
@@ -1095,6 +1129,9 @@ watch(activeTabValue, (newTabValue) => {
   const tabValue = infoTabItems.value.find(item => item.value === newTabValue)
   if (tabValue) {
     router.replace({ hash: `#${tabValue.slot}` })
+  }
+  if (isTabInitialized.value && newTabValue === 'preview-content') {
+    useLogEvent('product_page_preview_content_tab_click', { nft_class_id: nftClassId.value })
   }
 })
 
@@ -1319,6 +1356,8 @@ onMounted(async () => {
   checkBookListStatus()
   await loadStakingData()
   initializeTabFromHash()
+  await nextTick()
+  isTabInitialized.value = true
 })
 
 const { copy: copyToClipboard } = useClipboard()
@@ -1653,5 +1692,9 @@ function handleBookReviewClick() {
   useLogEvent('book_review_link_click', {
     nft_class_id: nftClassId.value,
   })
+}
+
+function handlePreviewContentLoginClick() {
+  useLogEvent('product_page_preview_content_login_click', { nft_class_id: nftClassId.value })
 }
 </script>
