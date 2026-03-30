@@ -8,7 +8,8 @@
         variant="ghost"
         color="neutral"
         size="md"
-        :ui="{ base: 'text-white' }"
+        :aria-label="$t('common_back')"
+        :ui="{ base: 'text-white hover:bg-white/10' }"
       />
       <div class="z-10 flex flex-col text-center max-w-6xl mx-auto px-2 laptop:px-12">
         <div class="absolute bottom-[60px] left-1/2 transform -translate-x-1/2 w-full max-w-2xl text-white">

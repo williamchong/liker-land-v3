@@ -8,7 +8,8 @@
         variant="ghost"
         color="neutral"
         size="md"
-        :ui="{ base: 'text-white' }"
+        :aria-label="$t('common_back')"
+        :ui="{ base: 'text-white hover:bg-white/10' }"
       />
       <div class="z-10 mx-auto max-w-3xl text-center text-white">
         <h1
@@ -34,16 +35,18 @@
             class="absolute inset-0 transition-transform duration-500 group-hover:scale-105"
             :class="region.bgClass"
           />
-          <div class="map-preview pointer-events-none absolute inset-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-105">
-            <LocalHistoriesMap
-              v-if="region.routeName === 'local-histories-taiwan'"
-              class="h-full w-full"
-            />
-            <HKLocalHistoriesMap
-              v-else-if="region.routeName === 'local-histories-hongkong'"
-              class="h-full w-full"
-            />
-          </div>
+          <ClientOnly>
+            <div class="map-preview pointer-events-none absolute inset-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-105">
+              <LazyLocalHistoriesMap
+                v-if="region.routeName === 'local-histories-taiwan'"
+                class="h-full w-full"
+              />
+              <LazyHKLocalHistoriesMap
+                v-else-if="region.routeName === 'local-histories-hongkong'"
+                class="h-full w-full"
+              />
+            </div>
+          </ClientOnly>
           <div
             class="relative flex flex-col justify-end p-8 laptop:p-10"
             :class="region.minH"
