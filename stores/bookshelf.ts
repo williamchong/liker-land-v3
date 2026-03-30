@@ -102,6 +102,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
       const statusCode = getErrorStatusCode(error)
       if (statusCode === 404) {
         // NOTE: For a new wallet address, the API will return 404
+        nextKey.value = undefined
         return
       }
       throw createError({
@@ -113,6 +114,23 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     finally {
       isFetching.value = false
       hasFetched.value = true
+    }
+  }
+
+  async function fetchAllItems({
+    walletAddress,
+    isRefresh = false,
+  }: {
+    walletAddress: string
+    isRefresh?: boolean
+  }) {
+    await fetchItems({ walletAddress, isRefresh })
+    while (nextKey.value) {
+      const previousNextKey = nextKey.value
+      await fetchItems({ walletAddress })
+      if (nextKey.value === previousNextKey) {
+        break
+      }
     }
   }
 
@@ -182,6 +200,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     items,
 
     fetchItems,
+    fetchAllItems,
     getTokenIdsByNFTClassId,
     getFirstTokenIdByNFTClassId,
     fetchNFTByNFTClassIdAndOwnerWalletAddressThroughContract,
