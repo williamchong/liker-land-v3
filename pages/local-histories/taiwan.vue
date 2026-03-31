@@ -131,6 +131,7 @@
                     v-if="item.isPublished"
                     :to="localeRoute(getStoreQueryRoute(item.title))"
                     class="whitespace-nowrap text-[#2f4a3a] hover:text-[#1f2a22]"
+                    @click.stop
                   >{{ item.title }}</NuxtLink>
                   <span
                     v-else

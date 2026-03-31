@@ -36,7 +36,7 @@
             :class="region.bgClass"
           />
           <ClientOnly>
-            <div class="map-preview pointer-events-none absolute inset-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-105">
+            <div aria-hidden="true" class="map-preview pointer-events-none absolute inset-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-105">
               <LazyLocalHistoriesMap
                 v-if="region.routeName === 'local-histories-taiwan'"
                 class="h-full w-full"
