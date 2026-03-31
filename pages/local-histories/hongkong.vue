@@ -1,6 +1,16 @@
 <template>
   <div class="flex w-full flex-col justify-center">
     <section class="hk-local-histories-hero w-full min-h-screen flex justify-center relative text-white px-12 py-24 laptop:py-36">
+      <UButton
+        class="absolute z-10 top-4 left-4"
+        icon="i-material-symbols-arrow-back-rounded"
+        :to="localeRoute({ name: 'local-histories' })"
+        variant="ghost"
+        color="neutral"
+        size="md"
+        :aria-label="$t('common_back')"
+        :ui="{ base: 'text-white hover:bg-white/10' }"
+      />
       <div class="z-10 flex flex-col text-center max-w-6xl mx-auto px-2 laptop:px-12">
         <div class="absolute bottom-[60px] left-1/2 transform -translate-x-1/2 w-full max-w-2xl text-white">
           <div class="flex justify-center mb-6">
@@ -315,13 +325,14 @@ const featuredByRegion = computed(() => {
 })
 
 const searchTerm = ref('')
+const debouncedSearchTerm = refDebounced(searchTerm, 300)
 const activeKeyword = ref('全部')
 
 const featuredTags = ['全部', '社區', '文化', '民生', '環境', '歷史']
 
 const filteredFeatured = computed(() => {
   const keyword = activeKeyword.value
-  const term = searchTerm.value.trim().toLowerCase()
+  const term = debouncedSearchTerm.value.trim().toLowerCase()
 
   return featuredHKLocalHistories.filter((item) => {
     const matchesKeyword = keyword === '全部' || item.tags.includes(keyword)
@@ -361,48 +372,22 @@ const heroStats = computed(() => [
 ])
 
 const heroStatsRef = ref<HTMLElement | null>(null)
-const animatedStats = ref<number[]>(heroStatTargets.map(() => 0))
-const hasAnimatedStats = ref(false)
-let rafHandle = 0
-let statsObserver: IntersectionObserver | null = null
+const statsProgress = ref(0)
+const transitionedProgress = useTransition(statsProgress, { duration: 700 })
+const animatedStats = computed(() =>
+  heroStatTargets.map(target => Math.round(target * transitionedProgress.value)),
+)
 
-const animateStats = () => {
-  const duration = 700
-  const start = performance.now()
-
-  const step = (now: number) => {
-    const progress = Math.min((now - start) / duration, 1)
-    animatedStats.value = heroStatTargets.map(target => Math.round(target * progress))
-
-    if (progress < 1) {
-      rafHandle = requestAnimationFrame(step)
+const { stop: stopObserver } = useIntersectionObserver(
+  heroStatsRef,
+  ([entry]) => {
+    if (entry?.isIntersecting) {
+      statsProgress.value = 1
+      stopObserver()
     }
-  }
-
-  rafHandle = requestAnimationFrame(step)
-}
-
-onMounted(() => {
-  if (!heroStatsRef.value) return
-
-  statsObserver = new IntersectionObserver(
-    ([entry]) => {
-      if (entry?.isIntersecting && !hasAnimatedStats.value) {
-        hasAnimatedStats.value = true
-        animateStats()
-        statsObserver?.disconnect()
-      }
-    },
-    { threshold: 0.4 },
-  )
-
-  statsObserver.observe(heroStatsRef.value)
-})
-
-onUnmounted(() => {
-  cancelAnimationFrame(rafHandle)
-  statsObserver?.disconnect()
-})
+  },
+  { threshold: 0.4 },
+)
 
 const regions = [
   {
