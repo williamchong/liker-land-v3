@@ -34,30 +34,28 @@
       </div>
     </div>
 
-    <!-- Price info for store mode -->
-    <div
-      v-if="!isApp || price === 0"
-      class="h-5 mt-3 text-sm text-theme-black dark:text-highlighted"
-    >
-      <span
-        v-if="formattedDiscountPrice"
-        v-text="formattedDiscountPrice"
-      />
-      <span
-        :class="{ 'text-xs text-toned ml-0.5 line-through': formattedDiscountPrice }"
-        v-text="formattedPrice"
-      />
+    <div class="flex items-center justify-between mt-3 h-5">
+      <div
+        v-if="!isApp || price === 0"
+        class="text-sm text-theme-black dark:text-highlighted"
+      >
+        <span
+          v-if="formattedDiscountPrice"
+          v-text="formattedDiscountPrice"
+        />
+        <span
+          :class="{ 'text-xs text-toned ml-0.5 line-through': formattedDiscountPrice }"
+          v-text="formattedPrice"
+        />
+      </div>
+      <NuxtLink
+        v-if="likeRank > 0"
+        :to="stakingRoute"
+        class="text-muted text-sm font-semibold"
+      >
+        #{{ likeRank }}
+      </NuxtLink>
     </div>
-
-    <!-- LikeRank -->
-    <BookItemStatsRow
-      class="mt-3 text-muted text-xs"
-      :is-hidden="likeRank <= 0"
-      :label="$t('staking_like_rank')"
-      :to="stakingRoute"
-    >
-      <span class="font-semibold">#{{ likeRank }}</span>
-    </BookItemStatsRow>
   </li>
 </template>
 
