@@ -201,6 +201,16 @@
                 @click="handleKeywordClick(tag)"
               />
             </li>
+            <li v-if="!bookInfo.isAudioHidden.value">
+              <UButton
+                :label="ttsLabel"
+                :to="ttsTagRoute"
+                variant="soft"
+                color="success"
+                :ui="{ base: 'rounded-full' }"
+                @click="handleKeywordClick(ttsLabel)"
+              />
+            </li>
           </ul>
         </template>
 
@@ -521,8 +531,8 @@
                         <UBadge
                           v-if="!bookInfo.isAudioHidden.value"
                           :label="$t('product_page_support_tts_label')"
-                          variant="outline"
-                          color="neutral"
+                          variant="subtle"
+                          color="success"
                           size="sm"
                         />
                       </div>
@@ -619,9 +629,24 @@
       </div>
     </section>
 
+    <p
+      v-if="!bookInfo.isAudioHidden.value && !isLikerPlus"
+      class="w-full max-w-[1200px] mx-auto mt-8 text-sm text-dimmed"
+    >
+      {{ $t('product_page_tts_plus_explainer') }}
+      <UButton
+        :label="$t('product_page_tts_plus_explainer_cta')"
+        :to="localeRoute({ name: 'member' })"
+        variant="link"
+        color="success"
+        size="sm"
+        :ui="{ base: 'inline' }"
+      />
+    </p>
+
     <section
       v-if="filteredRecommendedClassIds.length"
-      class="w-full max-w-[1200px] mx-auto mt-16 laptop:mt-20"
+      class="w-full max-w-[1200px] mx-auto mt-12 laptop:mt-20"
     >
       <h2
         class="text-lg font-bold"
@@ -858,6 +883,20 @@ const {
   openUpsellPlusModalIfEligible,
 } = useSubscriptionModal()
 
+const ttsLabel = computed(() => $t('product_page_support_tts_label'))
+const ttsTagRoute = computed(() =>
+  isLikerPlus.value
+    ? localeRoute({
+        name: 'store',
+        query: {
+          q: ttsLabel.value,
+          ll_medium: `keyword-${ttsLabel.value}`,
+          ll_source: 'product-page',
+        },
+      })
+    : localeRoute({ name: 'member' }),
+)
+
 const metadataStore = useMetadataStore()
 const bookListStore = useBookListStore()
 const { handleError } = useErrorHandler()
@@ -971,10 +1010,6 @@ const descriptionTags = computed(() => {
 
   if (bookInfo.isDownloadable.value) {
     tags.push($t('reading_method_download_file'))
-  }
-
-  if (!bookInfo.isAudioHidden.value) {
-    tags.push($t('product_page_support_tts_label'))
   }
 
   return [...new Set(tags)]
