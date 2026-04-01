@@ -208,7 +208,7 @@
                 variant="soft"
                 color="success"
                 :ui="{ base: 'rounded-full' }"
-                @click="handleKeywordClick(ttsLabel)"
+                @click="handleTtsTagClick"
               />
             </li>
           </ul>
@@ -636,11 +636,12 @@
       {{ $t('product_page_tts_plus_explainer') }}
       <UButton
         :label="$t('product_page_tts_plus_explainer_cta')"
-        :to="localeRoute({ name: 'member' })"
+        :to="ttsExplainerRoute"
         variant="link"
         color="success"
         size="sm"
         :ui="{ base: 'inline' }"
+        @click="handleTtsExplainerClick"
       />
     </p>
 
@@ -894,8 +895,21 @@ const ttsTagRoute = computed(() =>
           ll_source: 'product-page',
         },
       })
-    : localeRoute({ name: 'member' }),
+    : localeRoute({
+        name: 'member',
+        query: {
+          ll_medium: 'tts-plus-tag',
+          ll_source: 'product-page',
+        },
+      }),
 )
+const ttsExplainerRoute = computed(() => localeRoute({
+  name: 'member',
+  query: {
+    ll_medium: 'tts-plus-explainer',
+    ll_source: 'product-page',
+  },
+}))
 
 const metadataStore = useMetadataStore()
 const bookListStore = useBookListStore()
@@ -1713,6 +1727,19 @@ function handleGenreClick() {
 
 function handleKeywordClick(keyword: string) {
   useLogEvent('keyword_click', { keyword })
+}
+
+function handleTtsTagClick() {
+  if (isLikerPlus.value) {
+    handleKeywordClick(ttsLabel.value)
+  }
+  else {
+    useLogEvent('tts_plus_tag_click', { nft_class_id: nftClassId.value })
+  }
+}
+
+function handleTtsExplainerClick() {
+  useLogEvent('tts_plus_explainer_click', { nft_class_id: nftClassId.value })
 }
 
 async function handleBackButtonClick() {
