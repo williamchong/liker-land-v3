@@ -250,7 +250,7 @@
             :is-control-hidden="isApp"
           />
           <div class="max-tablet:hidden space-y-4 text-highlighted">
-            <div class="grid grid-cols-1 tablet:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 tablet:grid-cols-2 gap-4">
               <UCard :ui="{ body: 'p-4' }">
                 <div class="text-center">
                   <BalanceLabel
