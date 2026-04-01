@@ -419,6 +419,8 @@ const isMobileTocOpen = computed({
   },
 })
 
+const { isIOS, isAndroid } = useAppDetection()
+
 const isPageLoading = ref(false)
 
 const isAnnotationMenuVisible = ref(false)
@@ -583,6 +585,7 @@ const FONT_SIZE_OPTIONS = [
 ]
 const DEFAULT_FONT_SIZE_INDEX = 8 // Default to 24px
 const COPY_CHAR_LIMIT = 100
+const SELECTION_CHANGE_DEBOUNCE_MS = 300
 const fontSize = useSyncedBookSettings({
   nftClassId: nftClassId.value,
   key: 'fontSize',
@@ -618,6 +621,9 @@ function applyTheme() {
     textCSS.color = bodyCSS.color as string
     textCSS['background-color'] = 'transparent !important'
   }
+  if (isIOS.value || isAndroid.value) {
+    textCSS['-webkit-touch-callout'] = 'none'
+  }
   const anchorCSS: Record<string, string> = {
     color: isDarkMode ? '#9ecfff !important' : '#0066cc',
   }
@@ -647,6 +653,7 @@ let removeSelectAllByHotkeyListener: (() => void) | undefined
 let removeCopyListener: (() => void) | undefined
 let removeMouseUpListener: (() => void) | undefined
 let removeSelectionChangeListener: (() => void) | undefined
+let removeContextMenuListener: (() => void) | undefined
 const renditionElement = useTemplateRef<HTMLDivElement>('reader')
 const renditionViewWindow = ref<Window | undefined>(undefined)
 
@@ -881,8 +888,17 @@ async function loadEPub() {
     }
     const debouncedSelectionChange = useDebounceFn(() => {
       handleTextSelection(view.window)
-    }, 300)
+    }, SELECTION_CHANGE_DEBOUNCE_MS)
     removeSelectionChangeListener = useEventListener(view.window.document, 'selectionchange', debouncedSelectionChange)
+
+    if (removeContextMenuListener) {
+      removeContextMenuListener()
+    }
+    if (isIOS.value || isAndroid.value) {
+      removeContextMenuListener = useEventListener(view.window, 'contextmenu', (event: Event) => {
+        event.preventDefault()
+      })
+    }
 
     renderAnnotations()
   })
@@ -1212,6 +1228,38 @@ function removeAnnotationHighlight(cfi: string) {
   renderedHighlights.delete(cfi)
 }
 
+let tempHighlightCfi: string | null = null
+
+function removeTempHighlight() {
+  if (!tempHighlightCfi || !rendition.value) return
+  try {
+    rendition.value.annotations.remove(tempHighlightCfi, 'underline')
+  }
+  catch {
+    // Ignore
+  }
+  tempHighlightCfi = null
+}
+
+function addTempHighlight(cfi: string) {
+  removeTempHighlight()
+  if (!rendition.value) return
+  try {
+    rendition.value.annotations.underline(cfi, {}, undefined, undefined, {
+      'stroke': '#50e3c2',
+      'stroke-width': '3px',
+    })
+    tempHighlightCfi = cfi
+  }
+  catch {
+    // Ignore
+  }
+}
+
+watch(isAnnotationMenuVisible, (visible) => {
+  if (!visible) removeTempHighlight()
+})
+
 function renderAnnotations() {
   if (!rendition.value) return
 
@@ -1241,7 +1289,11 @@ function handleAnnotationClick(annotationId: string) {
   }
 }
 
+let isClearingSelection = false
+
 function handleTextSelection(viewWindow: Window) {
+  if (isClearingSelection) return
+
   const selection = viewWindow.getSelection()
   if (!selection || selection.isCollapsed || !selection.toString().trim()) {
     isAnnotationMenuVisible.value = false
@@ -1291,6 +1343,16 @@ function handleTextSelection(viewWindow: Window) {
         y: rect.top,
         yBottom: rect.bottom,
       }
+    }
+
+    // On iOS, clear selection to dismiss native callout menu and add temp highlight
+    if (isIOS.value) {
+      isClearingSelection = true
+      selection.removeAllRanges()
+      addTempHighlight(cfiRange)
+      setTimeout(() => {
+        isClearingSelection = false
+      }, SELECTION_CHANGE_DEBOUNCE_MS + 100)
     }
 
     isAnnotationMenuVisible.value = true
@@ -1537,6 +1599,7 @@ onBeforeUnmount(() => {
   removeCopyListener?.()
   removeMouseUpListener?.()
   removeSelectionChangeListener?.()
+  removeContextMenuListener?.()
   renderedHighlights.clear()
   renditionViewWindow.value = undefined
   rendition.value?.destroy()
