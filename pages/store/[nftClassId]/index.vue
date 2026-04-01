@@ -630,7 +630,7 @@
     </section>
 
     <p
-      v-if="!bookInfo.isAudioHidden.value && !isLikerPlus"
+      v-if="!bookInfo.isAudioHidden.value && !isLikerPlus && !isApp"
       class="w-full max-w-[1200px] mx-auto mt-8 text-sm text-dimmed"
     >
       {{ $t('product_page_tts_plus_explainer') }}
@@ -886,7 +886,7 @@ const {
 
 const ttsLabel = computed(() => $t('product_page_support_tts_label'))
 const ttsTagRoute = computed(() =>
-  isLikerPlus.value
+  isLikerPlus.value || isApp.value
     ? localeRoute({
         name: 'store',
         query: {
@@ -1730,7 +1730,7 @@ function handleKeywordClick(keyword: string) {
 }
 
 function handleTtsTagClick() {
-  if (isLikerPlus.value) {
+  if (isLikerPlus.value || isApp.value) {
     handleKeywordClick(ttsLabel.value)
   }
   else {
