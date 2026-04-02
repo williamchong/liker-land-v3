@@ -22,6 +22,27 @@
         size="md"
       />
     </template>
+
+    <template
+      v-if="!hasLoggedIn"
+      #pricing-mobile
+    >
+      <div class="flex flex-col items-center gap-3">
+        <span
+          class="text-sm text-muted"
+          v-text="$t('pricing_page_login_cta_description')"
+        />
+        <UButton
+          :label="$t('pricing_page_login_cta_button')"
+          icon="i-material-symbols-login-rounded"
+          size="xl"
+          block
+          :loading="accountStore.isLoggingIn"
+          :ui="{ base: 'py-2 laptop:py-3 cursor-pointer', label: 'font-bold' }"
+          @click="handleRegisterClick"
+        />
+      </div>
+    </template>
   </PricingPageContent>
 </template>
 
@@ -43,6 +64,8 @@ const config = useRuntimeConfig()
 const baseURL = config.public.baseURL
 
 const { isApp } = useAppDetection()
+const { loggedIn: hasLoggedIn } = useUserSession()
+const accountStore = useAccountStore()
 const selectedPlan = ref<SubscriptionPlan>('yearly')
 
 const { memberProgramData } = useMemberProgramStructuredData()
@@ -197,6 +220,11 @@ function handleOpen() {
       quantity: 1,
     }],
   })
+}
+
+async function handleRegisterClick() {
+  useLogEvent('pricing_page_register_click')
+  await accountStore.login()
 }
 
 async function handleSubscribe(payload: {
