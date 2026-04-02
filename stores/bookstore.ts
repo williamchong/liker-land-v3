@@ -26,6 +26,7 @@ interface StakingBooks {
     nftClassId: string
     totalStaked: bigint
     stakerCount: number
+    likeRank: number
   }>
   isFetching: boolean
   hasFetched: boolean
@@ -383,16 +384,16 @@ export const useBookstoreStore = defineStore('bookstore', () => {
         'sort_by': sortBy as 'staked_amount' | 'last_staked_at' | 'number_of_stakers',
       })
 
+      const currentOffset = Number(stakingBooksMap.value[sortBy].offset ?? 0)
       const bookNFTs = result.data
-        .map(bookNFT => ({
+        .filter(bookNFT => BigInt(bookNFT.staked_amount || 0) > 0)
+        .map((bookNFT, index) => ({
           nftClassId: normalizeNFTClassId(bookNFT.evm_address),
           totalStaked: BigInt(bookNFT.staked_amount || 0),
           stakerCount: bookNFT.number_of_stakers,
           lastStakedAt: bookNFT.last_staked_at,
+          likeRank: currentOffset + index + 1,
         }))
-        .filter((bookNFT) => {
-          return bookNFT.totalStaked > 0
-        })
 
       if (isRefresh) {
         stakingBooksMap.value[sortBy].items = bookNFTs

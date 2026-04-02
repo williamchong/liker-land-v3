@@ -34,46 +34,28 @@
       </div>
     </div>
 
-    <!-- Price info for store mode -->
-    <div
-      v-if="!isApp || price === 0"
-      class="h-5 mt-3 text-sm text-theme-black dark:text-highlighted"
-    >
-      <span
-        v-if="formattedDiscountPrice"
-        v-text="formattedDiscountPrice"
-      />
-      <span
-        :class="{ 'text-xs text-toned ml-0.5 line-through': formattedDiscountPrice }"
-        v-text="formattedPrice"
-      />
-    </div>
-
-    <!-- Staking info for staking mode -->
-    <div class="mt-3 space-y-1 text-muted text-xs">
-      <BookItemStatsRow
-        :label="$t('staking_explore_total_staked')"
-        :is-hidden="totalStaked <= 0"
-        :to="stakingRoute"
+    <div class="flex items-center justify-between mt-3 h-5">
+      <!-- Price info for store mode -->
+      <div
+        v-if="!isApp || price === 0"
+        class="text-sm text-theme-black dark:text-highlighted"
       >
-        <BalanceLabel
-          :value="totalStaked"
-          :is-bold="false"
-          :is-compact="true"
+        <span
+          v-if="formattedDiscountPrice"
+          v-text="formattedDiscountPrice"
         />
-      </BookItemStatsRow>
-      <BookItemStatsRow
-        :label="$t('staking_explore_stakers')"
-        :is-hidden="totalStaked <= 0"
+        <span
+          :class="{ 'text-xs text-toned ml-0.5 line-through': formattedDiscountPrice }"
+          v-text="formattedPrice"
+        />
+      </div>
+      <NuxtLink
+        v-if="likeRank > 0"
         :to="stakingRoute"
+        class="text-muted text-sm font-semibold"
       >
-        <BalanceLabel
-          :value="stakerCount"
-          :is-compact="true"
-          :is-bold="false"
-          currency=""
-        />
-      </BookItemStatsRow>
+        #{{ likeRank }}
+      </NuxtLink>
     </div>
   </li>
 </template>
@@ -108,11 +90,7 @@ const props = defineProps({
     type: String,
     default: '',
   },
-  totalStaked: {
-    type: Number,
-    default: 0,
-  },
-  stakerCount: {
+  likeRank: {
     type: Number,
     default: 0,
   },

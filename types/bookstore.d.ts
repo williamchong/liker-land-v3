@@ -1,6 +1,7 @@
 declare interface BookstoreItem {
   totalStaked?: bigint
   stakerCount?: number
+  likeRank?: number
   id?: string
   classId?: string
   classIds?: string[]

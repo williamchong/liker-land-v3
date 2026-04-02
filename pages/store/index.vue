@@ -341,8 +341,7 @@
           :book-name="item.title"
           :book-cover-src="item.imageUrl"
           :price="item.minPrice"
-          :total-staked="Number(formatUnits(item.totalStaked ?? 0n, likeCoinTokenDecimals))"
-          :staker-count="item.stakerCount ?? 0"
+          :like-rank="item.likeRank ?? 0"
           :lazy="index >= columnMax"
           :ll-medium="llMedium"
           ll-source="bookstore"
@@ -364,10 +363,8 @@
 </template>
 
 <script setup lang="ts">
-import { formatUnits } from 'viem'
 import { getGenreI18nKey } from '~/constants/book-categories'
 
-const { likeCoinTokenDecimals } = useRuntimeConfig().public
 const { t: $t, locale } = useI18n()
 const localeRoute = useLocaleRoute()
 const route = useRoute()
@@ -653,13 +650,15 @@ const searchResults = computed<BookstoreItemList | null>(() => {
 
 const cmsProducts = computed<BookstoreItemList>(() => {
   const apiSortValue = mapTagIdToAPIStakingSortValue(STAKING_TAG_DEFAULT)
-  const stakingData = bookstoreStore.getStakingBooks(apiSortValue).items.reduce((map, item) => {
+  const stakingItems = bookstoreStore.getStakingBooks(apiSortValue).items
+  const stakingData = stakingItems.reduce((map, item) => {
     map[item.nftClassId.toLowerCase()] = {
       totalStaked: item.totalStaked,
       stakerCount: item.stakerCount,
+      likeRank: item.likeRank,
     }
     return map
-  }, {} as Record<string, { totalStaked: bigint, stakerCount: number }>)
+  }, {} as Record<string, { totalStaked: bigint, stakerCount: number, likeRank?: number }>)
 
   const listingProducts = bookstoreStore.getBookstoreCMSProductsByTagId(tagId.value)
   const items = listingProducts.items.map((item) => {
@@ -668,6 +667,7 @@ const cmsProducts = computed<BookstoreItemList>(() => {
       ...item,
       totalStaked: stakingInfo?.totalStaked ?? 0n,
       stakerCount: stakingInfo?.stakerCount ?? 0,
+      likeRank: stakingInfo?.likeRank ?? 0,
     }
   })
 
@@ -716,6 +716,7 @@ const products = computed<BookstoreItemList>(() => {
         minPrice: undefined,
         totalStaked: item.totalStaked,
         stakerCount: item.stakerCount,
+        likeRank: item.likeRank,
       })
     })
     return {

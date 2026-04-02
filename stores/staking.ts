@@ -19,6 +19,7 @@ interface NFTClassTotalStake {
   nftClassId: string
   totalStake: bigint
   numberOfStakers: number
+  stakingRank: number
   isFetching: boolean
 }
 
@@ -54,6 +55,10 @@ export const useStakingStore = defineStore('staking', () => {
 
   const getTotalStakeOfNFTClassCached = computed(() => (nftClassId: string) => {
     return totalStakeByNFTClassMap.value[nftClassId]?.totalStake ?? 0n
+  })
+
+  const getStakingRankCached = computed(() => (nftClassId: string) => {
+    return totalStakeByNFTClassMap.value[nftClassId]?.stakingRank ?? 0
   })
 
   const getNumberOfStakersCached = computed(() => (nftClassId: string) => {
@@ -207,6 +212,7 @@ export const useStakingStore = defineStore('staking', () => {
           nftClassId,
           totalStake: 0n,
           numberOfStakers: 0,
+          stakingRank: 0,
           isFetching: false,
         }
       }
@@ -215,12 +221,13 @@ export const useStakingStore = defineStore('staking', () => {
 
       const [totalStake, bookNFTData] = await Promise.all([
         getTotalStakeOfNFTClass(nftClassId),
-        fetchCollectiveBookNFT(nftClassId).catch(() => ({ number_of_stakers: 0 })),
+        fetchCollectiveBookNFT(nftClassId).catch(() => ({ number_of_stakers: 0, staking_rank: undefined })),
       ])
 
       if (totalStakeByNFTClassMap.value[nftClassId]) {
         totalStakeByNFTClassMap.value[nftClassId].totalStake = totalStake
         totalStakeByNFTClassMap.value[nftClassId].numberOfStakers = bookNFTData.number_of_stakers
+        totalStakeByNFTClassMap.value[nftClassId].stakingRank = bookNFTData.staking_rank ?? 0
       }
 
       return totalStake
@@ -270,6 +277,7 @@ export const useStakingStore = defineStore('staking', () => {
     getUserStakingData,
     getFormattedTotalRewards,
     getTotalStakeOfNFTClassCached,
+    getStakingRankCached,
     getNumberOfStakersCached,
 
     fetchUserStakingData,
