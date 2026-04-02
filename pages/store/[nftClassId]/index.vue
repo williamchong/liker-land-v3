@@ -634,11 +634,11 @@
     <UAlert
       v-if="!bookInfo.isAudioHidden.value && !isLikerPlus && !isApp"
       :description="$t('product_page_tts_plus_explainer')"
-      color="secondary"
-      variant="subtle"
+      color="neutral"
+      variant="outline"
       orientation="horizontal"
       :ui="{
-        root: 'w-full max-w-[1200px] mt-4 max-tablet:flex-col max-tablet:text-center',
+        root: 'w-full max-w-[1200px] mt-4 max-tablet:flex-col max-tablet:text-center text-sm text-muted bg-transparent',
       }"
     >
       <template #actions>
@@ -646,7 +646,9 @@
           :label="$t('product_page_tts_plus_explainer_cta')"
           :to="ttsExplainerRoute"
           trailing-icon="i-material-symbols-arrow-forward-rounded"
+          variant="soft"
           color="secondary"
+          size="sm"
           @click="handleTTSExplainerClick"
         />
       </template>
