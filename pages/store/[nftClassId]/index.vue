@@ -206,7 +206,7 @@
                 :label="ttsLabel"
                 :to="ttsTagRoute"
                 variant="soft"
-                color="success"
+                :color="ttsColor"
                 :ui="{ base: 'rounded-full' }"
                 @click="handleTtsTagClick"
               />
@@ -532,7 +532,7 @@
                           v-if="!bookInfo.isAudioHidden.value"
                           :label="$t('product_page_support_tts_label')"
                           variant="subtle"
-                          color="success"
+                          :color="ttsColor"
                           size="sm"
                         />
                       </div>
@@ -638,7 +638,7 @@
         :label="$t('product_page_tts_plus_explainer_cta')"
         :to="ttsExplainerRoute"
         variant="link"
-        color="success"
+        :color="ttsColor"
         size="sm"
         :ui="{ base: 'inline' }"
         @click="handleTtsExplainerClick"
@@ -884,6 +884,8 @@ const {
   openUpsellPlusModalIfEligible,
 } = useSubscriptionModal()
 
+const colorMode = useColorMode()
+const ttsColor = computed(() => colorMode.value === 'dark' ? 'primary' : 'success')
 const ttsLabel = computed(() => $t('product_page_support_tts_label'))
 const ttsTagRoute = computed(() =>
   isLikerPlus.value || isApp.value
