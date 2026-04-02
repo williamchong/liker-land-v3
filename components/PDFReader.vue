@@ -1011,6 +1011,50 @@ function handleKeydown(event: KeyboardEvent) {
 
 useEventListener('keydown', handleKeydown)
 
+let pinchStartDistance = 0
+let pinchStartScale = 1
+
+function getTouchDistance(touches: TouchList) {
+  const a = touches[0]!
+  const b = touches[1]!
+  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
+}
+
+function handleTouchStart(event: TouchEvent) {
+  if (event.touches.length === 2) {
+    pinchStartDistance = getTouchDistance(event.touches)
+    pinchStartScale = scale.value
+  }
+}
+
+function handleTouchMove(event: TouchEvent) {
+  if (event.touches.length !== 2) return
+
+  const currentDistance = getTouchDistance(event.touches)
+
+  if (pinchStartDistance === 0) {
+    if (currentDistance === 0) return
+    pinchStartDistance = currentDistance
+    pinchStartScale = scale.value
+  }
+
+  if (event.cancelable) event.preventDefault()
+  const ratio = currentDistance / pinchStartDistance
+  const newScale = clampScale(roundScale(pinchStartScale * ratio))
+  if (newScale !== scale.value) {
+    scale.value = newScale
+  }
+}
+
+function handleTouchEnd() {
+  pinchStartDistance = 0
+}
+
+useEventListener(scrollableContainer, 'touchstart', handleTouchStart, { passive: true })
+useEventListener(scrollableContainer, 'touchmove', handleTouchMove, { passive: false })
+useEventListener(scrollableContainer, 'touchend', handleTouchEnd)
+useEventListener(scrollableContainer, 'touchcancel', handleTouchEnd)
+
 let wheelUnusedTicks = 0
 
 function handleWheel(event: WheelEvent) {
