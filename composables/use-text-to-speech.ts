@@ -1,4 +1,4 @@
-import { useEventListener, useStorage } from '@vueuse/core'
+import { useDocumentVisibility, useEventListener, useStorage } from '@vueuse/core'
 import type { CustomVoiceData } from '~/shared/types/custom-voice'
 import { computeTTSTextSig } from '~/shared/utils/tts-sig'
 
@@ -61,6 +61,7 @@ export function useTextToSpeech(options: TTSOptions) {
     setRate: rate => activePlayer().setRate(rate),
     seek: time => activePlayer().seek(time),
     getPosition: () => activePlayer().getPosition(),
+    wasInterruptedByBackground: () => activePlayer().wasInterruptedByBackground(),
     on(event, handler) {
       // Register on both — the inactive player won't fire events
       nativePlayer.on(event, handler)
@@ -228,6 +229,17 @@ export function useTextToSpeech(options: TTSOptions) {
   // Set up network listeners with automatic cleanup via useEventListener
   useEventListener(window, 'offline', handleOffline)
   useEventListener(window, 'online', handleOnline)
+
+  // Recover from browser-imposed background pauses on return. The
+  // wasInterruptedByBackground() gate is required because pauseTextToSpeech()
+  // leaves isTextToSpeechOn=true, so without it we'd resume a user pause.
+  const documentVisibility = useDocumentVisibility()
+  watch(documentVisibility, (state) => {
+    if (state !== 'visible') return
+    if (!isTextToSpeechOn.value || isTextToSpeechPlaying.value) return
+    if (!player.wasInterruptedByBackground()) return
+    player.resume()
+  })
 
   onMounted(() => {
     isOffline.value = !navigator.onLine

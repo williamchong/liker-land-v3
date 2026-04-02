@@ -8,6 +8,9 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
   let activeSlot: 'A' | 'B' = 'A'
   let swapping = false
   let dualMode = true
+  // iOS gesture-unlock is per-element: once an element has successfully played,
+  // subsequent programmatic .play() calls on it work even while backgrounded.
+  const slotUnlocked: Record<'A' | 'B', boolean> = { A: false, B: false }
 
   let segments: TTSSegment[] = []
   let getAudioSrc: (segment: TTSSegment) => string = () => ''
@@ -19,6 +22,7 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
   let audible = false
   let active = false
   let errored = false
+  let backgroundInterrupted = false
   let stuckTimer: ReturnType<typeof setTimeout> | null = null
   let stuckRetried = false
   let rateWasForced = false
@@ -29,17 +33,21 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     handlers[event] = handler
   }
 
+  function getIdleSlot(): 'A' | 'B' {
+    return activeSlot === 'A' ? 'B' : 'A'
+  }
+
   function getActiveAudio(): HTMLAudioElement | null {
     return activeSlot === 'A' ? audioA.value : audioB.value
   }
 
   function getIdleAudio(): HTMLAudioElement | null {
     if (!dualMode) return null
-    return activeSlot === 'A' ? audioB.value : audioA.value
+    return getIdleSlot() === 'A' ? audioA.value : audioB.value
   }
 
   function swapSlots() {
-    activeSlot = activeSlot === 'A' ? 'B' : 'A'
+    activeSlot = getIdleSlot()
   }
 
   function clearAutoResumeTimer() {
@@ -49,8 +57,9 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     }
   }
 
-  function installHandlers(audio: HTMLAudioElement) {
+  function installHandlers(audio: HTMLAudioElement, slot: 'A' | 'B') {
     audio.onplay = () => {
+      slotUnlocked[slot] = true
       // Bug fix: if iOS resumes the idle element after lock screen, pause it
       // immediately to prevent two audio streams overlapping.
       if (audio !== getActiveAudio() || swapping) {
@@ -93,7 +102,14 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
           autoResumeTimer = null
           const current = getActiveAudio()
           if (!audible && current && !current.ended) {
-            current.play()?.catch(handlePlayError)
+            current.play()?.catch((e) => {
+              if (e instanceof DOMException && e.name === 'NotAllowedError') {
+                active = false
+                backgroundInterrupted = true
+                return
+              }
+              handlePlayError(e)
+            })
           }
         }, 1000)
       }
@@ -142,14 +158,17 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
   function ensureAudioPool() {
     if (audioA.value) return
 
+    slotUnlocked.A = false
+    slotUnlocked.B = false
+
     const a = new Audio()
     a.preload = 'auto'
-    installHandlers(a)
+    installHandlers(a, 'A')
     audioA.value = a
 
     const b = new Audio()
     b.preload = 'auto'
-    installHandlers(b)
+    installHandlers(b, 'B')
     audioB.value = b
 
     activeSlot = 'A'
@@ -232,6 +251,7 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     active = true
     currentIndex = index
     errored = false
+    backgroundInterrupted = false
     stuckRetried = false
     audible = false
     clearStuckTimer()
@@ -261,7 +281,11 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
 
     handlers.trackChanged?.(index)
 
-    if (dualMode) {
+    // Skip dual-element swap when backgrounded unless the target slot was
+    // already gesture-unlocked by a prior successful play — iOS ties audio
+    // session permissions to the element that has been played at least once.
+    const canSwapWhenHidden = !document.hidden || slotUnlocked[getIdleSlot()]
+    if (dualMode && canSwapWhenHidden) {
       const idle = getIdleAudio()!
       const idleReady = idle.getAttribute('data-src') === targetSrc
         && idle.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
@@ -355,6 +379,7 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     const audio = getActiveAudio()
     if (!audio) return false
     active = true
+    backgroundInterrupted = false
     audio.play()?.catch((e) => {
       active = false
       clearAutoResumeTimer()
@@ -365,6 +390,7 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
 
   function pause() {
     active = false
+    backgroundInterrupted = false
     clearStuckTimer()
     clearAutoResumeTimer()
     audible = false
@@ -381,10 +407,15 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
 
   function stop() {
     active = false
+    backgroundInterrupted = false
     rateWasForced = false
     clearStuckTimer()
     clearAutoResumeTimer()
     resetAudio()
+  }
+
+  function wasInterruptedByBackground(): boolean {
+    return backgroundInterrupted
   }
 
   function skipTo(index: number) {
@@ -428,6 +459,7 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     setRate,
     seek,
     getPosition,
+    wasInterruptedByBackground,
     on,
   }
 }

@@ -25,5 +25,6 @@ declare interface TTSAudioPlayer {
   setRate(rate: number): void
   seek(time: number): void
   getPosition(): { position: number, duration: number } | null
+  wasInterruptedByBackground(): boolean
   on<K extends keyof TTSAudioPlayerEvents>(event: K, handler: TTSAudioPlayerEvents[K]): void
 }

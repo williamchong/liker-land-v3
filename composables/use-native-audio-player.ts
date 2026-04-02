@@ -104,6 +104,10 @@ export function useNativeAudioPlayer(isActive: Ref<boolean | undefined>): TTSAud
     return null
   }
 
+  function wasInterruptedByBackground(): boolean {
+    return false
+  }
+
   return {
     load,
     resume,
@@ -113,6 +117,7 @@ export function useNativeAudioPlayer(isActive: Ref<boolean | undefined>): TTSAud
     setRate,
     seek,
     getPosition,
+    wasInterruptedByBackground,
     on,
   }
 }
