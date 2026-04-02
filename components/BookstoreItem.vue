@@ -35,6 +35,7 @@
     </div>
 
     <div class="flex items-center justify-between mt-3 h-5">
+      <!-- Price info for store mode -->
       <div
         v-if="!isApp || price === 0"
         class="text-sm text-theme-black dark:text-highlighted"
