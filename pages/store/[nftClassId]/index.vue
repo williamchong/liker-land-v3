@@ -589,6 +589,7 @@
                 </li>
               </ul>
               <footer class="flex flex-col gap-3">
+                <BookPlusPromoAlert v-if="bookInfo.isPlusPromoEnabled.value && !isLikerPlus && !isApp && !isUserBookOwner" />
                 <UButton
                   v-if="isUserBookOwner"
                   :label="$t('product_page_read_button_label')"
@@ -1619,7 +1620,7 @@ async function handlePurchaseButtonClick() {
       await accountStore.login()
       if (!hasLoggedIn.value) return
     }
-    if (!isApp.value && !isRedirectedFromUpsell.value && !bookInfo.isUpsellDisabled.value) {
+    if (!isApp.value && !isRedirectedFromUpsell.value && !bookInfo.isUpsellDisabled.value && !bookInfo.isPlusPromoEnabled.value) {
       const isStartSubscription = await openUpsellPlusModalIfEligible({
         nftClassId: nftClassId.value,
         bookPrice: selectedPricingItem.value.price,
