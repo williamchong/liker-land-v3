@@ -130,6 +130,19 @@
           </div>
           <div :class="$slots['pricing-mobile'] ? 'hidden laptop:contents' : undefined">
             <slot name="pricing">
+              <UAlert
+                v-if="coupon"
+                class="mb-3"
+                color="primary"
+                variant="subtle"
+                icon="i-material-symbols-local-offer-outline-rounded"
+                :title="$t('checkout_coupon_applied', { code: coupon })"
+                :description="$t('pricing_page_coupon_applied_description')"
+                :ui="{
+                  root: 'rounded-xl',
+                  title: 'font-bold',
+                }"
+              />
               <PricingLimitedOfferAlert
                 v-if="!isApp"
                 :is-hidden="!isPaidTrial"
