@@ -9,6 +9,7 @@
     utm-source="website"
     utm-medium="web"
     :coupon="coupon"
+    :must-show-tts-on-mobile="isMobileRegisterCTATestVariant"
     @open="handleOpen"
     @subscribe="handleSubscribe"
   >
@@ -24,7 +25,7 @@
     </template>
 
     <template
-      v-if="!hasLoggedIn"
+      v-if="!hasLoggedIn && isMobileRegisterCTATestVariant"
       #pricing-mobile
     >
       <div class="flex flex-col items-center gap-3">
@@ -66,6 +67,8 @@ const baseURL = config.public.baseURL
 const { isApp } = useAppDetection()
 const { loggedIn: hasLoggedIn } = useUserSession()
 const accountStore = useAccountStore()
+const mobileRegisterCTATest = useABTest({ experimentKey: 'pricing-page-mobile-register-cta' })
+const isMobileRegisterCTATestVariant = computed(() => mobileRegisterCTATest.isVariant('test'))
 const selectedPlan = ref<SubscriptionPlan>('yearly')
 
 const { memberProgramData } = useMemberProgramStructuredData()
