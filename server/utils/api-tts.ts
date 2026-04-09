@@ -1,6 +1,6 @@
 import type { H3Event } from 'h3'
 
-const TTS_TRIAL_CHARACTER_LIMIT = 1000
+const TTS_TRIAL_CHARACTER_LIMIT = 5000
 
 export interface TTSRequestParams {
   text: string
