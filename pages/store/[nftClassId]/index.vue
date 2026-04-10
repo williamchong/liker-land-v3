@@ -1,11 +1,17 @@
 <template>
   <main
     :class="[
+      'max-tablet:relative',
       'items-center',
       'px-4 laptop:px-12',
       pricingItems.length > 1 ? 'pb-[152px]' : 'pb-[120px]',
     ]"
   >
+    <BookPlusPromoAlert
+      v-if="isPlusPromoBannerVisible"
+      class="tablet:hidden sticky max-w-[1280px] rounded-t-none top-0 z-20 bg-theme-white shadow-lg"
+    />
+
     <div
       :class="[
         'z-10',
@@ -446,6 +452,11 @@
         ]"
       >
         <div class="sticky top-0 flex flex-col gap-4 tablet:pt-5">
+          <BookPlusPromoAlert
+            v-if="isPlusPromoBannerVisible"
+            class="max-tablet:hidden"
+          />
+
           <StakingControl
             v-if="isStakingTabActive"
             class="max-tablet:hidden"
@@ -1056,6 +1067,10 @@ const coupon = computed(() => getRouteQuery('coupon') || undefined)
 const quantity = computed(() => Math.max(parseInt(getRouteQuery('quantity'), 10) || 1, 1))
 const isRedirectedFromUpsell = computed(() => getRouteQuery('upsell') === '1')
 
+const isPlusPromoBannerVisible = computed(() => {
+  return bookInfo.isPlusPromoEnabled.value && !isLikerPlus.value && !isApp.value && !isUserBookOwner.value
+})
+
 const descriptionTags = computed(() => {
   const tags: string[] = []
 
@@ -1636,7 +1651,7 @@ async function handlePurchaseButtonClick() {
       await accountStore.login()
       if (!hasLoggedIn.value) return
     }
-    if (!isApp.value && !isRedirectedFromUpsell.value && !bookInfo.isUpsellDisabled.value) {
+    if (!isApp.value && !isRedirectedFromUpsell.value && !bookInfo.isUpsellDisabled.value && !bookInfo.isPlusPromoEnabled.value) {
       const isStartSubscription = await openUpsellPlusModalIfEligible({
         nftClassId: nftClassId.value,
         bookPrice: selectedPricingItem.value.price,

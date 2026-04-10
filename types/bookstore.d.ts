@@ -85,6 +85,7 @@ declare interface BookstoreInfo {
   recommendedClassIds?: string[]
   promotionalImages?: string[]
   promotionalVideos?: string[]
+  plusPromoEnabled?: boolean
   timestamp: number
 }
 
