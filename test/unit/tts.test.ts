@@ -177,6 +177,32 @@ describe('splitTextIntoSegments', () => {
     const result = splitTextIntoSegments(text)
     expect(result.join('')).toBe(text)
   })
+
+  // Regression: balanced splitter must not strand consecutive punctuation in
+  // its own segment (which would then be filtered as non-speakable and lost)
+  it('preserves consecutive punctuation between long passages', () => {
+    const long = 'あ'.repeat(100)
+    const text = `${long}。。${long}`
+    const result = splitTextIntoSegments(text)
+    expect(result.join('')).toBe(text)
+  })
+
+  it('produces segments with uniform length variance to smooth TTS playback', () => {
+    const clause = 'あ'.repeat(29)
+    const text = `${clause}。${clause}。${clause}。${clause}。${clause}。${clause}。${clause}。${clause}。`
+    const result = splitTextIntoSegments(text)
+    expect(result.join('')).toBe(text)
+    const lengths = result.map(seg => seg.length)
+    for (const length of lengths) {
+      expect(length).toBeLessThanOrEqual(100)
+    }
+    // Tight spread catches regressions to a greedy fill pattern (e.g.
+    // 100/100/40) which a weaker 50%-variance bound would silently accept.
+    const maxLen = Math.max(...lengths)
+    const minLen = Math.min(...lengths)
+    expect(maxLen - minLen).toBeLessThanOrEqual(30)
+    expect(minLen).toBeGreaterThanOrEqual(60)
+  })
 })
 
 describe('mergeShortTTSSegments', () => {

@@ -26,35 +26,97 @@ const SPEAKABLE_REGEX = /[\p{L}\p{N}]/u
 const MAX_SEGMENT_LENGTH = 100
 const MIN_SEGMENT_LENGTH = 15
 
+/**
+ * Merge tokenized parts (from a punctuation split) into segments that are as
+ * uniform in length as possible, while always breaking at a punctuation
+ * boundary. Uniform segments reduce variance in TTS API generation time, which
+ * smooths streaming playback.
+ */
 function mergeParts(parts: string[]): string[] {
-  const result: string[] = []
-  let current = ''
+  // Keep every entry speakable so the balanced splitter can't strand a
+  // punctuation-only segment, which would be filtered and break the
+  // `result.join('') === text` integrity invariant.
+  const cleaned: string[] = []
+  let pendingPrefix = ''
   for (const part of parts) {
     const trimmed = part.replace(/[\s\u200B]+/g, ' ').trim()
     if (!trimmed) continue
-    if (
-      trimmed.length === 1
-      || current.length + trimmed.length < MAX_SEGMENT_LENGTH
-      || (trimmed.length < MIN_SEGMENT_LENGTH && current.length + trimmed.length <= MAX_SEGMENT_LENGTH * 1.5)
-    ) {
-      current += trimmed
+    if (SPEAKABLE_REGEX.test(trimmed)) {
+      cleaned.push(pendingPrefix + trimmed)
+      pendingPrefix = ''
+    }
+    else if (cleaned.length > 0) {
+      cleaned[cleaned.length - 1] += trimmed
     }
     else {
-      if (SPEAKABLE_REGEX.test(current)) result.push(current)
-      current = trimmed
+      pendingPrefix += trimmed
     }
   }
-  if (SPEAKABLE_REGEX.test(current)) {
-    // Merge short trailing text into the previous segment
-    if (current.length < MIN_SEGMENT_LENGTH && result.length > 0
-      && result[result.length - 1]!.length + current.length <= MAX_SEGMENT_LENGTH) {
-      result[result.length - 1] += current
-    }
-    else {
-      result.push(current)
-    }
+  const n = cleaned.length
+  if (!n) return []
+
+  let totalLength = 0
+  let maxPartLen = 0
+  for (const p of cleaned) {
+    totalLength += p.length
+    if (p.length > maxPartLen) maxPartLen = p.length
   }
-  return result
+
+  const prefix: number[] = new Array(n + 1)
+  prefix[0] = 0
+  for (let i = 0; i < n; i++) prefix[i + 1] = prefix[i]! + cleaned[i]!.length
+
+  // Place each of k-1 boundaries at whichever part boundary lands closest to
+  // an evenly-spaced target (j * totalLength / k). Because prefix sums are
+  // monotonic, |prefix[i] - goal| is unimodal, so the search short-circuits
+  // as soon as distance stops shrinking.
+  const buildSegments = (k: number): { segments: string[], maxLen: number } => {
+    const target = totalLength / k
+    const splits: number[] = [0]
+    for (let j = 1; j < k; j++) {
+      const goal = j * target
+      const prev = splits[splits.length - 1]!
+      const maxIdx = n - (k - j)
+      let best = prev + 1
+      let bestDiff = Math.abs(prefix[best]! - goal)
+      for (let i = prev + 2; i <= maxIdx; i++) {
+        const diff = Math.abs(prefix[i]! - goal)
+        if (diff < bestDiff) {
+          best = i
+          bestDiff = diff
+        }
+        else {
+          break
+        }
+      }
+      splits.push(best)
+    }
+    splits.push(n)
+
+    const segments: string[] = []
+    let maxLen = 0
+    for (let j = 0; j < splits.length - 1; j++) {
+      const len = prefix[splits[j + 1]!]! - prefix[splits[j]!]!
+      if (len > maxLen) maxLen = len
+      segments.push(cleaned.slice(splits[j]!, splits[j + 1]!).join(''))
+    }
+    return { segments, maxLen }
+  }
+
+  const initialK = Math.min(n, Math.ceil(totalLength / MAX_SEGMENT_LENGTH))
+
+  // If a single atomic part is already larger than MAX, no amount of
+  // re-partitioning fits it. Return the initialK split; when called with
+  // sentence parts, splitTextIntoSegments retries via CLAUSE_REGEX. At the
+  // clause level there is no finer delimiter, so oversize segments pass
+  // through — the TTS backend must tolerate them.
+  if (maxPartLen > MAX_SEGMENT_LENGTH) return buildSegments(initialK).segments
+
+  for (let k = initialK; k <= n; k++) {
+    const result = buildSegments(k)
+    if (result.maxLen <= MAX_SEGMENT_LENGTH) return result.segments
+  }
+  return buildSegments(n).segments
 }
 
 export function splitTextIntoSegments(text: string): string[] {
