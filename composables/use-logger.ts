@@ -101,7 +101,6 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
     console.error(`Failed to track event: ${eventName}`, eventParams)
   }
 
-  const { proxy } = useScriptMetaPixel()
   try {
     const eventNameMapping: { [key: string]: string } = {
       view_item: 'ViewContent',
@@ -121,6 +120,7 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
         predicted_ltv: predictedLTV,
       } = eventParams
       const eventId = paymentId ? `${eventNameMapping[eventName]}_${paymentId}` : undefined
+      const { proxy } = useScriptMetaPixel()
       proxy.fbq('track', eventNameMapping[eventName], {
         currency,
         value,
