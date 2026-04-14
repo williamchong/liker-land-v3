@@ -2,23 +2,42 @@ import type { CustomVoiceData } from '~/shared/types/custom-voice'
 
 export function useCustomVoice() {
   const customVoice = useState<CustomVoiceData | null>('custom-voice', () => null)
+  const isLoaded = useState<boolean>('custom-voice-loaded', () => false)
   const isLoading = useState<boolean>('custom-voice-loading', () => false)
+  const inflightFetch = useState<Promise<void> | null>('custom-voice-inflight', () => null)
+
+  const { loggedIn: hasLoggedIn } = useUserSession()
 
   const hasCustomVoice = computed(() => !!customVoice.value?.voiceId)
 
-  async function fetchCustomVoice() {
-    isLoading.value = true
-    try {
-      const data = await $fetch<CustomVoiceData | null>('/api/user/custom-voice')
-      customVoice.value = data
-    }
-    catch (error) {
-      console.error('[CustomVoice] Failed to fetch:', error)
-    }
-    finally {
-      isLoading.value = false
-    }
+  function fetchCustomVoice(): Promise<void> {
+    if (isLoaded.value) return Promise.resolve()
+    if (inflightFetch.value) return inflightFetch.value
+    const task = (async () => {
+      try {
+        const data = await $fetch<CustomVoiceData | null>('/api/user/custom-voice')
+        if (!hasLoggedIn.value) return
+        customVoice.value = data
+        isLoaded.value = true
+      }
+      catch (error) {
+        console.error('[CustomVoice] Failed to fetch:', error)
+      }
+      finally {
+        inflightFetch.value = null
+      }
+    })()
+    inflightFetch.value = task
+    return task
   }
+
+  watch(hasLoggedIn, (loggedIn, wasLoggedIn) => {
+    if (!loggedIn && wasLoggedIn) {
+      customVoice.value = null
+      isLoaded.value = false
+      inflightFetch.value = null
+    }
+  })
 
   async function uploadCustomVoice(params: { audio: File, voiceName: string, voiceLanguage?: string, avatar?: File, promptAudio?: File, promptText?: string }) {
     if (isLoading.value) return
@@ -44,6 +63,7 @@ export function useCustomVoice() {
         body: formData,
       })
       customVoice.value = data
+      isLoaded.value = true
       return data
     }
     finally {
@@ -74,6 +94,7 @@ export function useCustomVoice() {
     try {
       await $fetch('/api/user/custom-voice', { method: 'DELETE' })
       customVoice.value = null
+      isLoaded.value = true
     }
     finally {
       isLoading.value = false
