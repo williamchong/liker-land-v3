@@ -31,6 +31,9 @@ export function useTextToSpeech(options: TTSOptions) {
 
   const config = useRuntimeConfig()
 
+  const ttsTrialUsage = useTTSTrialUsage()
+  ttsTrialUsage.fetchUsage()
+
   // Use the TTS voice composable
   const {
     isBookEnglish,
@@ -42,6 +45,30 @@ export function useTextToSpeech(options: TTSOptions) {
     ttsLanguageVoiceValues,
     setTTSLanguageVoice,
   } = useTTSVoice({ bookLanguage, customVoice: options.customVoice })
+
+  function parseLanguageVoice(languageVoice: string) {
+    const [language = '', ...voiceIdParts] = languageVoice.split('_')
+    return { language, voiceId: voiceIdParts.join('_') }
+  }
+
+  function buildTTSEventPayload(extras: Record<string, unknown> = {}) {
+    const languageVoice = ttsLanguageVoice.value || ''
+    const { voiceId } = parseLanguageVoice(languageVoice)
+    return {
+      nft_class_id: nftClassId,
+      is_liker_plus_at_event_time: !!sessionUser.value?.isLikerPlus,
+      ...(ttsTrialUsage.isLoaded.value
+        ? {
+            cumulative_chars_used: ttsTrialUsage.charactersUsed.value,
+            chars_remaining: ttsTrialUsage.charactersRemaining.value,
+          }
+        : {}),
+      book_language: toValue(bookLanguage) || undefined,
+      voice_id: voiceId || languageVoice || undefined,
+      language_voice: languageVoice || undefined,
+      ...extras,
+    }
+  }
 
   // Pick player implementation — both are created upfront (inert until load()),
   // and the proxy delegates to the correct one based on the reactive flag.
@@ -142,7 +169,7 @@ export function useTextToSpeech(options: TTSOptions) {
   player.on('allEnded', () => {
     isTextToSpeechPlaying.value = false
     isTextToSpeechLoading.value = false
-    useLogEvent('tts_completed', { nft_class_id: nftClassId })
+    useLogEvent('tts_completed', buildTTSEventPayload())
     options.onAllSegmentsPlayed?.()
   })
 
@@ -187,7 +214,7 @@ export function useTextToSpeech(options: TTSOptions) {
     options.onError?.(error)
     if (consecutiveAudioErrors.value >= MAX_CONSECUTIVE_ERRORS) {
       console.warn(`TTS paused after ${MAX_CONSECUTIVE_ERRORS} consecutive audio errors`)
-      useLogEvent('tts_error', { nft_class_id: nftClassId, consecutive_errors: consecutiveAudioErrors.value })
+      useLogEvent('tts_error', buildTTSEventPayload({ consecutive_errors: consecutiveAudioErrors.value }))
       pauseTextToSpeech()
       return
     }
@@ -392,10 +419,27 @@ export function useTextToSpeech(options: TTSOptions) {
     }
   }
 
+  // Estimate only: the server charges on cache miss, so we dedupe by the
+  // same shape (language+voice+text) that determines its cache key.
+  const optimisticallyCountedRequests = new Set<string>()
+
+  function recordOptimisticSegmentUsage(sanitizedText: string) {
+    if (sessionUser.value?.isLikerPlus) return
+    // Custom voice is gated to Plus; the server rejects non-Plus requests
+    // before charging, so decrementing here would drift the local counter.
+    if (ttsLanguageVoice.value === 'custom') return
+    if (!ttsTrialUsage.isLoaded.value) return
+    const key = `${ttsLanguageVoice.value}:${sanitizedText}`
+    if (optimisticallyCountedRequests.has(key)) return
+    optimisticallyCountedRequests.add(key)
+    ttsTrialUsage.recordOptimisticUsage(sanitizedText.length)
+  }
+
   function getAudioSrc(element: TTSSegment): string {
     if (element.audioSrc) return element.audioSrc
 
     const sanitizedText = sanitizeTTSText(element.text)
+    recordOptimisticSegmentUsage(sanitizedText)
 
     if (ttsLanguageVoice.value === 'custom') {
       const language = resolveCustomVoiceLanguage()
@@ -411,9 +455,9 @@ export function useTextToSpeech(options: TTSOptions) {
       return `/api/reader/tts?${params.toString()}`
     }
 
-    const [languagePart, ...voiceIdParts] = ttsLanguageVoice.value.split('_')
-    const language = languagePart || 'zh-HK'
-    const voiceId = voiceIdParts.join('_')
+    const parsed = parseLanguageVoice(ttsLanguageVoice.value)
+    const language = parsed.language || 'zh-HK'
+    const voiceId = parsed.voiceId
     const params = new URLSearchParams({
       text: sanitizedText,
       language,
@@ -465,9 +509,7 @@ export function useTextToSpeech(options: TTSOptions) {
       consecutiveAudioErrors.value = 0
       isTextToSpeechOn.value = true
 
-      useLogEvent('tts_start', {
-        nft_class_id: nftClassId,
-      })
+      useLogEvent('tts_start', buildTTSEventPayload())
 
       isTextToSpeechLoading.value = true
       player.load({
@@ -625,5 +667,6 @@ export function useTextToSpeech(options: TTSOptions) {
     stopTextToSpeech,
     cyclePlaybackRate,
     forceResume,
+    buildTTSEventPayload,
   }
 }
