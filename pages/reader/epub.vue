@@ -150,6 +150,13 @@
               />
             </UTooltip>
 
+            <ReaderSearch
+              ref="readerSearch"
+              v-model:open="isSearchOpen"
+              :search-handler="handleSearchEPUB"
+              @navigate="handleSearchNavigate"
+            />
+
             <BottomSlideover :title="$t('reader_display_options_button')">
               <UButton
                 icon="i-material-symbols-text-fields"
@@ -471,6 +478,8 @@ const editingAnnotation = ref<Annotation | null>(null)
 const isNewAnnotation = ref(false)
 const pendingAnnotationColor = ref<AnnotationColor>('yellow')
 const isAnnotationsListOpen = ref(false)
+const isSearchOpen = ref(false)
+const readerSearch = useTemplateRef<{ open: () => void } | null>('readerSearch')
 const isAnnotationClickInProgress = ref(false)
 const pendingSavePromise = ref<Promise<Annotation | null> | null>(null)
 const renderedHighlights = new Set<string>()
@@ -755,6 +764,7 @@ watch(colorModeValue, () => {
 let cleanUpClickListener: (() => void) | undefined
 let removeSwipeListener: (() => void) | undefined
 let removeSelectAllByHotkeyListener: (() => void) | undefined
+let removeFindHotkeyListener: (() => void) | undefined
 let removeCopyListener: (() => void) | undefined
 let removeMouseUpListener: (() => void) | undefined
 let removeSelectionChangeListener: (() => void) | undefined
@@ -977,6 +987,17 @@ async function loadEPub() {
       if (event.ctrlKey || event.metaKey) {
         event.preventDefault()
       }
+    }, { target: view.window })
+
+    // Capture Ctrl/Cmd + F inside the rendition iframe and open our search UI
+    // instead of the browser's native find bar.
+    if (removeFindHotkeyListener) {
+      removeFindHotkeyListener()
+    }
+    removeFindHotkeyListener = onKeyStroke(['f', 'F'], (event) => {
+      if (!(event.ctrlKey || event.metaKey)) return
+      event.preventDefault()
+      readerSearch.value?.open()
     }, { target: view.window })
 
     if (removeCopyListener) {
@@ -1383,6 +1404,95 @@ async function onClickTTSPlay() {
     sectionIndex: currentSectionIndex.value,
     cfi: currentPageStartCfi.value,
   })
+}
+
+const SEARCH_MAX_RESULTS = 200
+
+function getChapterTitleForSectionHref(sectionHref: string | undefined): string | undefined {
+  if (!sectionHref) return undefined
+  const bareHref = sectionHref.split('#')[0]
+  const match = navItems.value.find((item) => {
+    if (item.href === sectionHref) return true
+    const itemBare = item.href.split('#')[0]
+    return itemBare === bareHref
+  })
+  return match?.label
+}
+
+async function handleSearchEPUB(query: string): Promise<ReaderSearchResult[]> {
+  const book = loadedBook.value
+  if (!book) return []
+
+  const sections: Section[] = []
+  book.spine!.each((section: Section) => sections.push(section))
+
+  const results: ReaderSearchResult[] = []
+  for (const section of sections) {
+    if (results.length >= SEARCH_MAX_RESULTS) break
+    if (!section.href) continue
+    const wasLoaded = !!section.document
+    try {
+      if (!wasLoaded) {
+        // Reuse the same loader path as extractTTSSegments — book.load returns
+        // a parsed Document; attaching it to the section lets section.find
+        // work and also caches subsequent access.
+        const doc = await book.load(section.href)
+        if (!(doc instanceof Document)) continue
+        section.document = doc
+        section.contents = doc.documentElement
+      }
+      if (!section.document) continue
+      const matches = section.find(query)
+      const chapterTitle = getChapterTitleForSectionHref(section.href)
+      for (const [i, match] of matches.entries()) {
+        results.push({
+          id: `${section.index ?? 0}-${i}-${match.cfi}`,
+          excerpt: match.excerpt,
+          chapterTitle,
+          locator: match.cfi,
+        })
+        if (results.length >= SEARCH_MAX_RESULTS) break
+      }
+    }
+    catch (error) {
+      console.warn(`Failed to search section ${section.href}:`, error)
+    }
+    finally {
+      // Release per-search DOM so memory doesn't grow with each search on
+      // large books. Sections already loaded by the rendition are left alone.
+      if (!wasLoaded) {
+        try {
+          section.unload()
+        }
+        catch {
+          // Ignore unload errors
+        }
+      }
+    }
+  }
+  return results
+}
+
+async function handleSearchNavigate(result: ReaderSearchResult) {
+  isPageLoading.value = true
+  try {
+    const cfi = new EpubCFI(result.locator)
+    if (cfi.range) cfi.collapse(true)
+    await rendition.value?.display(cfi.toString())
+  }
+  catch (error) {
+    console.error('Failed to navigate to search result:', error)
+    toast.add({
+      title: $t('reader_epub_rendition_display_failed'),
+      color: 'error',
+      duration: 3000,
+      progress: false,
+    })
+  }
+  finally {
+    isPageLoading.value = false
+  }
+  useLogEvent('reader_search_navigate', { nft_class_id: nftClassId.value })
 }
 
 function handleMobileTTSClick() {
@@ -1847,6 +1957,7 @@ onBeforeUnmount(() => {
   cleanUpClickListener?.()
   removeSwipeListener?.()
   removeSelectAllByHotkeyListener?.()
+  removeFindHotkeyListener?.()
   removeCopyListener?.()
   removeMouseUpListener?.()
   removeSelectionChangeListener?.()

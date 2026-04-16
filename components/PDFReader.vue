@@ -163,6 +163,13 @@
               </ul>
             </template>
           </USlideover>
+          <ReaderSearch
+            ref="readerSearch"
+            v-model:open="isSearchOpen"
+            :search-handler="handleSearchPDF"
+            @navigate="handleSearchNavigate"
+          />
+
           <UButton
             :class="[
               'laptop:hidden',
@@ -394,6 +401,7 @@ const scaleMenuItems = computed<DropdownMenuItem[]>(() => {
 
 const pdfDocument = shallowRef<PDFDocumentProxy>()
 const textContentCache = new Map<number, Awaited<ReturnType<PDFPageProxy['getTextContent']>>>()
+const pageSearchTextCache = new Map<number, string>()
 const renderQueue = ref<(() => Promise<void>)[]>([])
 const isRendering = ref(false)
 const hasAutoZoomedToPage = ref(false)
@@ -436,6 +444,8 @@ interface OutlineItem {
 
 const outlineItems = ref<OutlineItem[]>([])
 const isTocOpen = ref(false)
+const isSearchOpen = ref(false)
+const readerSearch = useTemplateRef<{ open: () => void } | null>('readerSearch')
 const isDesktop = useDesktopScreen()
 watch(isDesktop, () => {
   isTocOpen.value = false
@@ -517,6 +527,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   renderQueue.value = []
   textContentCache.clear()
+  pageSearchTextCache.clear()
   pdfDocument.value?.destroy()
   pdfDocument.value = undefined
 })
@@ -600,6 +611,7 @@ async function loadPDF() {
 
     outlineItems.value = []
     textContentCache.clear()
+    pageSearchTextCache.clear()
     emit('pdfLoaded', pdfDocument.value)
     loadOutline(pdfDocument.value)
 
@@ -1112,6 +1124,81 @@ function handleMobileTTSClick() {
 
 function onClickTTSPlay() {
   emit('ttsPlay')
+}
+
+const SEARCH_MAX_RESULTS = 200
+const SEARCH_EXCERPT_RADIUS = 60
+
+function getChapterTitleForPage(pageNumber: number): string | undefined {
+  let best: OutlineItem | undefined
+  for (const item of outlineItems.value) {
+    if (item.pageNumber <= pageNumber && (!best || item.pageNumber >= best.pageNumber)) {
+      best = item
+    }
+  }
+  return best?.title
+}
+
+async function handleSearchPDF(query: string): Promise<ReaderSearchResult[]> {
+  const doc = pdfDocument.value
+  if (!doc) return []
+  const needle = query.toLowerCase()
+
+  const results: ReaderSearchResult[] = []
+  for (let pageNum = 1; pageNum <= doc.numPages; pageNum += 1) {
+    if (results.length >= SEARCH_MAX_RESULTS) break
+    try {
+      let pageText = pageSearchTextCache.get(pageNum)
+      if (pageText === undefined) {
+        let textContent = textContentCache.get(pageNum)
+        if (!textContent) {
+          const page = await doc.getPage(pageNum)
+          textContent = await page.getTextContent()
+          textContentCache.set(pageNum, textContent)
+          page.cleanup()
+        }
+        pageText = textContent.items
+          .map(item => ('str' in item ? item.str : ''))
+          .join(' ')
+        pageSearchTextCache.set(pageNum, pageText)
+      }
+      if (!pageText) continue
+      const haystack = pageText.toLowerCase()
+      const chapterTitle = getChapterTitleForPage(pageNum)
+      const pageLabel = $t('reader_search_page_label', { page: pageNum })
+      let matchIndex = 0
+      let searchFrom = 0
+      while (results.length < SEARCH_MAX_RESULTS) {
+        const found = haystack.indexOf(needle, searchFrom)
+        if (found === -1) break
+        const start = Math.max(0, found - SEARCH_EXCERPT_RADIUS)
+        const end = Math.min(pageText.length, found + needle.length + SEARCH_EXCERPT_RADIUS)
+        let excerpt = pageText.slice(start, end).trim()
+        if (start > 0) excerpt = `…${excerpt}`
+        if (end < pageText.length) excerpt = `${excerpt}…`
+        results.push({
+          id: `${pageNum}-${matchIndex}`,
+          excerpt,
+          chapterTitle,
+          pageLabel,
+          locator: String(pageNum),
+        })
+        matchIndex += 1
+        searchFrom = found + Math.max(1, needle.length)
+      }
+    }
+    catch (error) {
+      console.warn(`Failed to search PDF page ${pageNum}:`, error)
+    }
+  }
+  return results
+}
+
+function handleSearchNavigate(result: ReaderSearchResult) {
+  const pageNumber = Number.parseInt(result.locator, 10)
+  if (!Number.isFinite(pageNumber)) return
+  goToPage(pageNumber)
+  useLogEvent('reader_search_navigate', { nft_class_id: props.nftClassId })
 }
 
 defineExpose({
