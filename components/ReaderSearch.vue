@@ -8,6 +8,7 @@
       class="laptop:hidden"
       icon="i-material-symbols-search-rounded"
       variant="ghost"
+      :aria-label="$t('reader_search_button')"
     />
     <template #body>
       <div class="flex flex-col gap-3 px-4 py-3">
@@ -116,7 +117,7 @@
 
 <script setup lang="ts">
 const props = defineProps<{
-  searchHandler: (query: string) => Promise<ReaderSearchResult[]>
+  searchHandler: (query: string, signal: AbortSignal) => Promise<ReaderSearchResult[]>
 }>()
 
 const emit = defineEmits<{
@@ -146,34 +147,44 @@ const hasSearched = ref(false)
 const mobileInput = useTemplateRef<{ inputRef?: Ref<HTMLInputElement | null> } | null>('mobileInput')
 const desktopInput = useTemplateRef<{ inputRef?: Ref<HTMLInputElement | null> } | null>('desktopInput')
 
-let searchToken = 0
+let activeController: AbortController | null = null
+
+function abortActiveSearch() {
+  activeController?.abort()
+  activeController = null
+}
 
 async function runSearch() {
   const trimmed = query.value.trim()
   if (!trimmed) {
+    abortActiveSearch()
     results.value = []
     hasSearched.value = false
     submittedQuery.value = ''
+    isSearching.value = false
     return
   }
 
-  const token = ++searchToken
+  abortActiveSearch()
+  const controller = new AbortController()
+  activeController = controller
   isSearching.value = true
   submittedQuery.value = trimmed
   try {
-    const next = await props.searchHandler(trimmed)
-    if (token !== searchToken) return
+    const next = await props.searchHandler(trimmed, controller.signal)
+    if (controller.signal.aborted) return
     results.value = next
     hasSearched.value = true
   }
   catch (error) {
-    if (token !== searchToken) return
+    if (controller.signal.aborted) return
     console.warn('Reader search failed:', error)
     results.value = []
     hasSearched.value = true
   }
   finally {
-    if (token === searchToken) {
+    if (activeController === controller) {
+      activeController = null
       isSearching.value = false
     }
   }
@@ -186,7 +197,7 @@ function handleBlur() {
 }
 
 function clearQuery() {
-  searchToken += 1
+  abortActiveSearch()
   query.value = ''
   submittedQuery.value = ''
   results.value = []
@@ -196,6 +207,7 @@ function clearQuery() {
 }
 
 function handleSelect(result: ReaderSearchResult) {
+  abortActiveSearch()
   emit('navigate', result)
   isOpen.value = false
 }
@@ -212,7 +224,7 @@ function handleOpenChange(open: boolean) {
     focusInput()
   }
   else {
-    searchToken += 1
+    abortActiveSearch()
     isSearching.value = false
   }
 }

@@ -1419,7 +1419,7 @@ function getChapterTitleForSectionHref(sectionHref: string | undefined): string 
   return match?.label
 }
 
-async function handleSearchEPUB(query: string): Promise<ReaderSearchResult[]> {
+async function handleSearchEPUB(query: string, signal: AbortSignal): Promise<ReaderSearchResult[]> {
   const book = loadedBook.value
   if (!book) return []
 
@@ -1428,6 +1428,7 @@ async function handleSearchEPUB(query: string): Promise<ReaderSearchResult[]> {
 
   const results: ReaderSearchResult[] = []
   for (const section of sections) {
+    signal.throwIfAborted()
     if (results.length >= SEARCH_MAX_RESULTS) break
     if (!section.href) continue
     const wasLoaded = !!section.document
@@ -1437,6 +1438,7 @@ async function handleSearchEPUB(query: string): Promise<ReaderSearchResult[]> {
         // a parsed Document; attaching it to the section lets section.find
         // work and also caches subsequent access.
         const doc = await book.load(section.href)
+        signal.throwIfAborted()
         if (!(doc instanceof Document)) continue
         section.document = doc
         section.contents = doc.documentElement
@@ -1455,6 +1457,7 @@ async function handleSearchEPUB(query: string): Promise<ReaderSearchResult[]> {
       }
     }
     catch (error) {
+      if (signal.aborted) throw error
       console.warn(`Failed to search section ${section.href}:`, error)
     }
     finally {

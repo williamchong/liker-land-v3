@@ -401,7 +401,7 @@ const scaleMenuItems = computed<DropdownMenuItem[]>(() => {
 
 const pdfDocument = shallowRef<PDFDocumentProxy>()
 const textContentCache = new Map<number, Awaited<ReturnType<PDFPageProxy['getTextContent']>>>()
-const pageSearchTextCache = new Map<number, string>()
+const pageSearchTextCache = new Map<number, { raw: string, lower: string }>()
 const renderQueue = ref<(() => Promise<void>)[]>([])
 const isRendering = ref(false)
 const hasAutoZoomedToPage = ref(false)
@@ -1139,31 +1139,34 @@ function getChapterTitleForPage(pageNumber: number): string | undefined {
   return best?.title
 }
 
-async function handleSearchPDF(query: string): Promise<ReaderSearchResult[]> {
+async function handleSearchPDF(query: string, signal: AbortSignal): Promise<ReaderSearchResult[]> {
   const doc = pdfDocument.value
   if (!doc) return []
   const needle = query.toLowerCase()
 
   const results: ReaderSearchResult[] = []
   for (let pageNum = 1; pageNum <= doc.numPages; pageNum += 1) {
+    signal.throwIfAborted()
     if (results.length >= SEARCH_MAX_RESULTS) break
     try {
-      let pageText = pageSearchTextCache.get(pageNum)
-      if (pageText === undefined) {
+      let cached = pageSearchTextCache.get(pageNum)
+      if (cached === undefined) {
         let textContent = textContentCache.get(pageNum)
         if (!textContent) {
           const page = await doc.getPage(pageNum)
+          signal.throwIfAborted()
           textContent = await page.getTextContent()
           textContentCache.set(pageNum, textContent)
           page.cleanup()
         }
-        pageText = textContent.items
+        const raw = textContent.items
           .map(item => ('str' in item ? item.str : ''))
           .join(' ')
-        pageSearchTextCache.set(pageNum, pageText)
+        cached = { raw, lower: raw.toLowerCase() }
+        pageSearchTextCache.set(pageNum, cached)
       }
+      const { raw: pageText, lower: haystack } = cached
       if (!pageText) continue
-      const haystack = pageText.toLowerCase()
       const chapterTitle = getChapterTitleForPage(pageNum)
       const pageLabel = $t('reader_search_page_label', { page: pageNum })
       let matchIndex = 0
@@ -1188,6 +1191,7 @@ async function handleSearchPDF(query: string): Promise<ReaderSearchResult[]> {
       }
     }
     catch (error) {
+      if (signal.aborted) throw error
       console.warn(`Failed to search PDF page ${pageNum}:`, error)
     }
   }
