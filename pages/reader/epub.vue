@@ -340,6 +340,7 @@
       :position="annotationMenuPosition"
       @select="handleAnnotationColorSelect"
       @create-note="handleAnnotationAddNote"
+      @report-issue="handleAnnotationReportIssue"
     />
 
     <AnnotationModal
@@ -456,7 +457,7 @@ const isMobileTocOpen = computed({
   },
 })
 
-const { isIOS, isAndroid } = useAppDetection()
+const { isIOS, isAndroid, isApp } = useAppDetection()
 
 const isPageLoading = ref(false)
 
@@ -758,6 +759,12 @@ let removeCopyListener: (() => void) | undefined
 let removeMouseUpListener: (() => void) | undefined
 let removeSelectionChangeListener: (() => void) | undefined
 let removeContextMenuListener: (() => void) | undefined
+const { isIntercomVisible, markIntercomVisible } = useIntercomVisibility()
+useHead({
+  htmlAttrs: {
+    class: computed(() => (isIntercomVisible.value ? 'intercom-visible' : '')),
+  },
+})
 const renditionElement = useTemplateRef<HTMLDivElement>('reader')
 const renditionViewWindow = ref<Window | undefined>(undefined)
 
@@ -1660,6 +1667,35 @@ async function handleAnnotationAddNote() {
       color: 'error',
     })
   }
+}
+
+function handleAnnotationReportIssue() {
+  isAnnotationMenuVisible.value = false
+
+  const prefillMessage = $t('reader_annotation_report_issue_prefill', {
+    text: selectedText.value,
+    bookName: bookInfo.name.value,
+    chapter: selectedChapterTitle.value,
+    bookId: nftClassId.value,
+    cfi: selectedCfi.value,
+  })
+
+  if (!isApp.value && window?.Intercom) {
+    markIntercomVisible()
+    window.Intercom('showNewMessage', prefillMessage)
+  }
+  else {
+    const subject = $t('reader_annotation_report_issue_email_subject', { bookName: bookInfo.name.value })
+    const mailto = `mailto:cs@3ook.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(prefillMessage)}`
+    window.open(mailto, '_blank')
+  }
+
+  useLogEvent('reader_annotation_report_issue', {
+    nft_class_id: nftClassId.value,
+    is_uploaded_book: isUploadedBook.value,
+  })
+
+  renditionViewWindow.value?.getSelection()?.removeAllRanges()
 }
 
 async function handleAnnotationModalSave(data: { color: AnnotationColor, note: string }) {
