@@ -213,6 +213,9 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
   })
 
   return {
+    // Must be returned so Pinia exposes it on $state for persist.pick.
+    settingsMap,
+
     fetchSettings,
     fetchBatchSettings,
     getSettings,

@@ -214,6 +214,11 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
   })
 
   return {
+    // Must be returned so Pinia exposes them on $state for persist.pick.
+    nftClassIds,
+    tokenIdsByNFTClassId,
+    persistedWalletAddress,
+
     isFetching,
     hasFetched,
     nextKey,

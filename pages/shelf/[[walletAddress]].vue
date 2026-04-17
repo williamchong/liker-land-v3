@@ -600,7 +600,8 @@ async function loadBookshelfData(addr: string, { isRefresh = false } = {}) {
       promises.push(uploadedBooksStore.fetchItems({ force: isRefresh }))
     }
   }
-  await Promise.all(promises)
+  // allSettled: one failing source shouldn't mask persisted shelf data.
+  await Promise.allSettled(promises)
 }
 
 const uploadedBookItems = computed(() => uploadedBooksStore.items)
@@ -625,14 +626,19 @@ onUnmounted(() => {
 
 watch(
   walletAddress,
-  async (value) => {
-    bookshelfStore.reset()
-    resetClaimableBooks()
-    // Drop the previous viewer's uploads so they don't leak into another
-    // user's shelf (affects the empty-state logic).
-    uploadedBooksStore.reset()
+  async (value, oldValue) => {
+    // Skip reset on initial session-hydration (undefined → wallet) so it
+    // doesn't wipe state just hydrated from persisted storage. On account
+    // switch, drop the previous viewer's uploads so they don't leak into
+    // another user's shelf.
+    const isAccountSwitch = oldValue !== undefined && oldValue !== value
+    if (isAccountSwitch) {
+      bookshelfStore.reset()
+      resetClaimableBooks()
+      uploadedBooksStore.reset()
+    }
     if (value) {
-      await loadBookshelfData(value, { isRefresh: true })
+      await loadBookshelfData(value, { isRefresh: isAccountSwitch })
     }
   },
 )

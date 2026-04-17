@@ -7,6 +7,29 @@ import { createPersistedState } from 'pinia-plugin-persistedstate'
 function createDebouncedStorage(base: Storage, delayMs = 300): Storage {
   const timers = new Map<string, ReturnType<typeof setTimeout>>()
   const pending = new Map<string, string>()
+
+  // Browsers don't run pending setTimeout callbacks during unload, so a
+  // refresh inside the debounce window would otherwise drop the latest state.
+  // pagehide fires on reload/close/bfcache; visibilitychange:hidden catches
+  // mobile tab-switch where pagehide is unreliable.
+  function flushPending() {
+    for (const [key, value] of pending) base.setItem(key, value)
+    for (const timer of timers.values()) clearTimeout(timer)
+    pending.clear()
+    timers.clear()
+  }
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') flushPending()
+  }
+  window.addEventListener('pagehide', flushPending)
+  document.addEventListener('visibilitychange', onVisibilityChange)
+  if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      window.removeEventListener('pagehide', flushPending)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    })
+  }
+
   return {
     ...base,
     length: base.length,

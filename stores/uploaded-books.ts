@@ -173,6 +173,8 @@ export const useUploadedBooksStore = defineStore('uploaded-books', () => {
     items,
     rawItems,
     quota,
+    // Must be returned so Pinia exposes it on $state for persist.pick.
+    persistedWalletAddress,
     isFetching,
     hasFetched,
 
