@@ -1,0 +1,2 @@
+export const SEARCH_MAX_RESULTS = 200
+export const SEARCH_EXCERPT_RADIUS = 60
