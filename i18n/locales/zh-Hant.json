@@ -651,6 +651,7 @@
   "reader_rate_options_button": "語速",
   "reader_right_to_left": "從右至左排列",
   "reader_search_button": "搜尋",
+  "reader_search_clear_label": "清除搜尋",
   "reader_search_input_placeholder": "於書中搜尋",
   "reader_search_loading": "搜尋中...",
   "reader_search_no_results": "找不到結果",

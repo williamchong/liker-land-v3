@@ -32,7 +32,7 @@
               color="neutral"
               variant="link"
               size="xs"
-              :aria-label="$t('reader_search_input_placeholder')"
+              :aria-label="$t('reader_search_clear_label')"
               @click="clearQuery"
             />
           </template>
@@ -64,7 +64,7 @@
       header: 'py-3 min-h-14',
       close: 'top-3',
       body: 'p-0 sm:p-0',
-      content: 'divide-gray-500 ring-gray-500',
+      content: 'divide-muted ring-muted',
     }"
     @update:open="handleOpenChange"
   >
@@ -96,7 +96,7 @@
               color="neutral"
               variant="link"
               size="xs"
-              :aria-label="$t('reader_search_input_placeholder')"
+              :aria-label="$t('reader_search_clear_label')"
               @click="clearQuery"
             />
           </template>
@@ -147,11 +147,11 @@ const hasSearched = ref(false)
 const mobileInput = useTemplateRef<{ inputRef?: Ref<HTMLInputElement | null> } | null>('mobileInput')
 const desktopInput = useTemplateRef<{ inputRef?: Ref<HTMLInputElement | null> } | null>('desktopInput')
 
-let activeController: AbortController | null = null
+let activeSearchController: AbortController | null = null
 
 function abortActiveSearch() {
-  activeController?.abort()
-  activeController = null
+  activeSearchController?.abort()
+  activeSearchController = null
 }
 
 async function runSearch() {
@@ -167,7 +167,7 @@ async function runSearch() {
 
   abortActiveSearch()
   const controller = new AbortController()
-  activeController = controller
+  activeSearchController = controller
   isSearching.value = true
   submittedQuery.value = trimmed
   try {
@@ -183,8 +183,8 @@ async function runSearch() {
     hasSearched.value = true
   }
   finally {
-    if (activeController === controller) {
-      activeController = null
+    if (activeSearchController === controller) {
+      activeSearchController = null
       isSearching.value = false
     }
   }

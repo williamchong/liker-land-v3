@@ -651,6 +651,7 @@
   "reader_rate_options_button": "Playback speed",
   "reader_right_to_left": "Right-to-Left layout",
   "reader_search_button": "Search",
+  "reader_search_clear_label": "Clear search query",
   "reader_search_input_placeholder": "Search in book",
   "reader_search_loading": "Searching...",
   "reader_search_no_results": "No results found",

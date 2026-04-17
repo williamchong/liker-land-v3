@@ -373,6 +373,7 @@ import ePub, {
   type Section,
 } from '@likecoin/epub-ts'
 import { ANNOTATION_COLORS_MAP, ANNOTATION_TEXT_MAX_LENGTH } from '~/constants/annotations'
+import { SEARCH_MAX_RESULTS } from '~/constants/reader-search'
 
 // Force a fresh page instance when switching between NFT and uploaded books:
 // useReader() branches on the `source` query at setup, so a within-route
@@ -1094,8 +1095,12 @@ function openTTSTryModal() {
     onDismiss: () => setTTSQueryParam(false),
   })
 }
+function getHrefBasePath(href: string): string {
+  return href.split('#')[0] ?? href
+}
+
 function getHrefBaseFilename(href: string): string {
-  const path = href.split('#')[0] ?? href
+  const path = getHrefBasePath(href)
   return path.split('/').pop() ?? path
 }
 
@@ -1406,16 +1411,10 @@ async function onClickTTSPlay() {
   })
 }
 
-const SEARCH_MAX_RESULTS = 200
-
 function getChapterTitleForSectionHref(sectionHref: string | undefined): string | undefined {
   if (!sectionHref) return undefined
-  const bareHref = sectionHref.split('#')[0]
-  const match = navItems.value.find((item) => {
-    if (item.href === sectionHref) return true
-    const itemBare = item.href.split('#')[0]
-    return itemBare === bareHref
-  })
+  const bareHref = getHrefBasePath(sectionHref)
+  const match = navItems.value.find(item => item.href === sectionHref || getHrefBasePath(item.href) === bareHref)
   return match?.label
 }
 

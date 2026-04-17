@@ -164,7 +164,6 @@
             </template>
           </USlideover>
           <ReaderSearch
-            ref="readerSearch"
             v-model:open="isSearchOpen"
             :search-handler="handleSearchPDF"
             @navigate="handleSearchNavigate"
@@ -318,6 +317,7 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type { PDFDocumentProxy, PDFPageProxy, PageViewport } from 'pdfjs-dist'
+import { SEARCH_EXCERPT_RADIUS, SEARCH_MAX_RESULTS } from '~/constants/reader-search'
 
 interface Props {
   bookName?: string
@@ -445,7 +445,6 @@ interface OutlineItem {
 const outlineItems = ref<OutlineItem[]>([])
 const isTocOpen = ref(false)
 const isSearchOpen = ref(false)
-const readerSearch = useTemplateRef<{ open: () => void } | null>('readerSearch')
 const isDesktop = useDesktopScreen()
 watch(isDesktop, () => {
   isTocOpen.value = false
@@ -1125,9 +1124,6 @@ function handleMobileTTSClick() {
 function onClickTTSPlay() {
   emit('ttsPlay')
 }
-
-const SEARCH_MAX_RESULTS = 200
-const SEARCH_EXCERPT_RADIUS = 60
 
 function getChapterTitleForPage(pageNumber: number): string | undefined {
   let best: OutlineItem | undefined
