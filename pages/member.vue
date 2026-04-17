@@ -25,6 +25,43 @@
     </template>
 
     <template
+      v-if="activeAffiliate"
+      #affiliate-promo
+    >
+      <AffiliateAlert class="mt-6" />
+
+      <div
+        v-if="isAffiliateGiftRedeemable"
+        class="mt-4 p-4 rounded-xl bg-elevated text-center"
+      >
+        <p
+          class="text-sm font-medium text-toned mb-3"
+          v-text="$t('pricing_page_affiliate_gift_label')"
+        />
+        <div class="flex items-center justify-center gap-3">
+          <BookCover
+            class="w-12 shrink-0"
+            :src="giftBookCoverSrc"
+            :alt="activeAffiliate.giftBookName || $t('pricing_page_affiliate_gift_label')"
+            has-shadow
+          />
+          <div class="text-left">
+            <p
+              v-if="activeAffiliate.giftBookName"
+              class="text-sm font-bold text-highlighted"
+              v-text="activeAffiliate.giftBookName"
+            />
+            <p
+              v-if="affiliateVoiceNames"
+              class="text-xs text-muted"
+              v-text="$t('pricing_page_affiliate_voice_label', { name: affiliateVoiceNames })"
+            />
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template
       v-if="!hasLoggedIn && isMobileRegisterCTATestVariant"
       #pricing-mobile
     >
@@ -49,6 +86,9 @@
 
 <script setup lang="ts">
 import type { ResolvableArray, ResolvableLink } from '@unhead/vue'
+
+import type { AffiliatePublicConfig } from '~/shared/types/affiliate'
+import { normalizeLikerId } from '~/shared/utils/liker-id'
 
 import { DEFAULT_TRIAL_PERIOD_DAYS } from '~/constants/pricing'
 
@@ -75,6 +115,40 @@ const selectedPlan = ref<SubscriptionPlan>(initialPlan)
 
 const { memberProgramData } = useMemberProgramStructuredData()
 
+const affiliateInfo = ref<AffiliatePublicConfig | null>(null)
+const activeAffiliate = computed(() =>
+  affiliateInfo.value?.active ? affiliateInfo.value : null,
+)
+const affiliateLikerId = computed(() => {
+  const from = getRouteQuery('from')
+  return from ? normalizeLikerId(from) : undefined
+})
+const affiliateVoiceNames = computed(() => {
+  const voices = activeAffiliate.value?.customVoices
+  if (!voices?.length) return undefined
+  return voices.map(v => v.name).join($t('text_separator_comma'))
+})
+
+const { getResizedNormalizedImageURL } = useImageResize()
+const giftBookCoverSrc = computed(() => {
+  const src = activeAffiliate.value?.giftBookCover
+  return src ? getResizedNormalizedImageURL(src, { size: 300 }) : ''
+})
+
+async function fetchAffiliateInfo() {
+  if (!affiliateLikerId.value) {
+    affiliateInfo.value = null
+    return
+  }
+  try {
+    affiliateInfo.value = await $fetch<AffiliatePublicConfig>(`/api/affiliate/${encodeURIComponent(affiliateLikerId.value)}`)
+  }
+  catch { /* ignore */ }
+}
+
+watchImmediate(affiliateLikerId, () => {
+  fetchAffiliateInfo()
+})
 const productGroup = 'plus'
 const monthlyProductId = 'plus-monthly'
 
@@ -200,8 +274,18 @@ const trialPeriodDays = computed(() => {
     case '7d': return 7
     case '14d': return 14
     case '30d': return 30
-    default: return DEFAULT_TRIAL_PERIOD_DAYS
+    default:
+      if (activeAffiliate.value?.giftOnTrial === false) return 0
+      return DEFAULT_TRIAL_PERIOD_DAYS
   }
+})
+
+const isAffiliateGiftRedeemable = computed(() => {
+  const info = activeAffiliate.value
+  if (!info?.giftClassId) return false
+  if (selectedPlan.value !== 'yearly') return false
+  if (info.giftOnTrial === false && trialPeriodDays.value !== 0) return false
+  return true
 })
 
 const coupon = computed(() => getRouteQuery('coupon') as string | undefined)

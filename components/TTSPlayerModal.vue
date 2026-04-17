@@ -169,7 +169,7 @@
 
                 <div class="flex gap-2 items-center w-full">
                   <URadioGroup
-                    v-model="ttsLanguageVoice"
+                    v-model="selectedTTSLanguageVoice"
                     :ui="{
                       item: '!rounded-none !items-center !border-none',
                     }"
@@ -214,6 +214,7 @@
 
 <script setup lang="ts">
 import type { TTSPlayerModalProps } from './TTSPlayerModal.props'
+import { encodeAffiliateVoiceId } from '~/shared/utils/tts-sig'
 
 const { user } = useUserSession()
 const subscription = useSubscriptionModal()
@@ -243,6 +244,25 @@ const props = withDefaults(
     isFullscreen: true,
   },
 )
+
+const { fetchConfig: fetchPlusAffiliateConfig, voicesForBook } = usePlusAffiliate()
+const plusAffiliateVoices = computed(() => voicesForBook(props.nftClassId))
+
+const {
+  ownerLikerId: bookOwnerLikerId,
+  upsellVoices: bookOwnerUpsellVoices,
+} = useBookOwnerAffiliate(() => props.nftClassId)
+
+const isLikerPlus = computed(() => !!user.value?.isLikerPlus)
+
+const affiliateVoices = computed(() =>
+  isLikerPlus.value ? plusAffiliateVoices.value : bookOwnerUpsellVoices.value,
+)
+
+const affiliateUpsellVoiceValues = computed(() => {
+  if (isLikerPlus.value) return new Set<string>()
+  return new Set(bookOwnerUpsellVoices.value.map(v => encodeAffiliateVoiceId(v.id)))
+})
 
 const { isApp } = useAppDetection()
 const isDesktopScreen = useDesktopScreen()
@@ -299,6 +319,7 @@ const {
   bookCoverSrc: props.bookCoverSrc,
   bookLanguage: props.bookLanguage,
   customVoice,
+  affiliateVoices,
   onError: (error: string | Event | MediaError) => {
     if (
       !user.value?.isLikerPlus
@@ -470,6 +491,26 @@ onMounted(() => {
   if (user.value) {
     fetchCustomVoice()
   }
+  if (isLikerPlus.value) {
+    fetchPlusAffiliateConfig()
+  }
+})
+
+const selectedTTSLanguageVoice = computed({
+  get: () => ttsLanguageVoice.value,
+  set: (val: string) => {
+    if (val && affiliateUpsellVoiceValues.value.has(val)) {
+      const likerId = bookOwnerLikerId.value
+      if (likerId) {
+        navigateTo(localeRoute({
+          name: 'member',
+          query: { from: `@${likerId}` },
+        }))
+      }
+      return
+    }
+    ttsLanguageVoice.value = val
+  },
 })
 
 function setSegmentRef(

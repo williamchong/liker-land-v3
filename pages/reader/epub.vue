@@ -398,12 +398,6 @@ if (!hasLoggedIn.value) {
   await navigateTo(localeRoute({ name: 'account', query: route.query }))
 }
 
-const { fetchCustomVoice } = useCustomVoice()
-onMounted(() => {
-  if (hasLoggedIn.value) {
-    fetchCustomVoice()
-  }
-})
 const toast = useToast()
 const { value: colorModeValue } = useColorModeSync()
 const { t: $t } = useI18n()
@@ -418,6 +412,14 @@ const {
   bookFileCacheKey,
   bookProgressKeyPrefix,
 } = useReader()
+const { fetchCustomVoice } = useCustomVoice()
+const { fetchConfig: fetchPlusAffiliateConfig } = usePlusAffiliate()
+onMounted(() => {
+  if (hasLoggedIn.value) {
+    fetchCustomVoice()
+    fetchPlusAffiliateConfig()
+  }
+})
 const { errorModal, handleError } = useErrorHandler()
 const {
   shouldShowTTSTryModal,
