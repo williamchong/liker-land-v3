@@ -58,7 +58,7 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
     return fetchPromise
   }
 
-  async function fetchBatchSettings(nftClassIds: string[]): Promise<void> {
+  async function fetchBatchSettings(nftClassIds: string[], { force = false }: { force?: boolean } = {}): Promise<void> {
     if (!hasLoggedIn.value || nftClassIds.length === 0) {
       return
     }
@@ -67,7 +67,9 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
       await batchFetchPromise.value
     }
 
-    const nftClassIdsToFetch = nftClassIds.filter(id => !isInitialized(id))
+    const nftClassIdsToFetch = force
+      ? nftClassIds
+      : nftClassIds.filter(id => !isInitialized(id))
     if (nftClassIdsToFetch.length === 0) {
       return
     }
@@ -75,12 +77,16 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
     batchFetchPromise.value = (async () => {
       try {
         for (let i = 0; i < nftClassIdsToFetch.length; i += FIRESTORE_IN_OPERATOR_LIMIT) {
+          // Bail if the user logged out / got reset mid-flight — otherwise
+          // the response would repopulate a just-cleared settingsMap.
+          if (!hasLoggedIn.value) return
           const chunk = nftClassIdsToFetch.slice(i, i + FIRESTORE_IN_OPERATOR_LIMIT)
           const settings = await $fetch<Record<string, BookSettingsData>>('/api/books/settings', {
             params: {
               nftClassIds: chunk,
             },
           })
+          if (!hasLoggedIn.value) return
 
           Object.entries(settings).forEach(([nftClassId, data]) => {
             const key = getKey(nftClassId)
@@ -192,6 +198,20 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
     debouncedFlush()
   }
 
+  function reset() {
+    settingsMap.value = {}
+    fetchPromisesMap.value = {}
+    batchFetchPromise.value = null
+    batchQueuesMap.value = {}
+    debouncedFlushFunctionsMap.value = {}
+  }
+
+  watch(hasLoggedIn, (value, oldValue) => {
+    if (oldValue && !value) {
+      reset()
+    }
+  })
+
   return {
     fetchSettings,
     fetchBatchSettings,
@@ -201,5 +221,10 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
     isInitialized,
     queueUpdate,
     flushBatch,
+    reset,
   }
+}, {
+  persist: {
+    pick: ['settingsMap'],
+  },
 })

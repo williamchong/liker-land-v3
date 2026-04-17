@@ -7,11 +7,12 @@ export interface UploadedBookItem extends UploadedBookMeta {
 }
 
 export const useUploadedBooksStore = defineStore('uploaded-books', () => {
-  const { loggedIn: hasLoggedIn } = useUserSession()
+  const { loggedIn: hasLoggedIn, user } = useUserSession()
   const bookSettingsStore = useBookSettingsStore()
 
   const rawItems = ref<UploadedBookMeta[]>([])
   const quota = ref<UploadedBooksQuota>({ count: 0, totalSize: 0, maxCount: UPLOADED_BOOK_MAX_COUNT })
+  const persistedWalletAddress = ref<string | null>(null)
   const isFetching = ref(false)
   const hasFetched = ref(false)
 
@@ -28,6 +29,16 @@ export const useUploadedBooksStore = defineStore('uploaded-books', () => {
 
   async function fetchItems({ force = false } = {}) {
     if (isFetching.value) return
+
+    const currentWallet = user.value?.evmWallet?.toLowerCase() ?? null
+    if (
+      currentWallet
+      && persistedWalletAddress.value
+      && persistedWalletAddress.value !== currentWallet
+    ) {
+      reset()
+    }
+
     if (hasFetched.value && !force) return
     isFetching.value = true
     try {
@@ -37,14 +48,15 @@ export const useUploadedBooksStore = defineStore('uploaded-books', () => {
       }>('/api/uploaded-books')
       rawItems.value = data.items
       quota.value = data.quota
+      persistedWalletAddress.value = currentWallet
 
       const bookIds = data.items.map(item => item.id)
       if (bookIds.length) {
-        await bookSettingsStore.fetchBatchSettings(bookIds)
+        await bookSettingsStore.fetchBatchSettings(bookIds, { force: true })
       }
     }
     catch (error) {
-      console.error('Failed to fetch uploaded books:', error)
+      console.warn('Failed to fetch uploaded books:', error)
     }
     finally {
       isFetching.value = false
@@ -146,6 +158,7 @@ export const useUploadedBooksStore = defineStore('uploaded-books', () => {
   function reset() {
     rawItems.value = []
     quota.value = { count: 0, totalSize: 0, maxCount: UPLOADED_BOOK_MAX_COUNT }
+    persistedWalletAddress.value = null
     isFetching.value = false
     hasFetched.value = false
   }
@@ -169,4 +182,8 @@ export const useUploadedBooksStore = defineStore('uploaded-books', () => {
     getBook,
     reset,
   }
+}, {
+  persist: {
+    pick: ['rawItems', 'quota', 'persistedWalletAddress'],
+  },
 })

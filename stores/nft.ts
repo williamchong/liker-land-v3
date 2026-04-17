@@ -52,11 +52,20 @@ export const useNFTStore = defineStore('nft', () => {
 
   async function lazyFetchNFTClassAggregatedMetadataById(nftClassId: string, { exclude = [], nocache = false }: FetchLikeCoinNFTClassAggregatedMetadataOptions = {}) {
     const excludedOptions: LikeCoinNFTClassAggregatedMetadataOptionKey[] = exclude
-    if (!nocache && getNFTClassMetadataById.value(nftClassId)) {
+    const cachedClassChain = nocache ? undefined : getNFTClassMetadataById.value(nftClassId)
+    const cachedBookstore = nocache ? undefined : bookstoreStore.getBookstoreInfoByNFTClassId(nftClassId)
+    if (cachedClassChain) {
       excludedOptions.push('class_chain')
     }
-    if (!nocache && bookstoreStore.getBookstoreInfoByNFTClassId(nftClassId)) {
+    if (cachedBookstore) {
       excludedOptions.push('bookstore')
+    }
+    if (cachedClassChain && cachedBookstore) {
+      return {
+        classData: cachedClassChain,
+        bookstoreInfo: cachedBookstore,
+        ownerInfo: null,
+      }
     }
     return fetchNFTClassAggregatedMetadataById(nftClassId, { exclude: excludedOptions, nocache })
   }
@@ -106,4 +115,8 @@ export const useNFTStore = defineStore('nft', () => {
     fetchMessagesByClassId,
     lazyFetchMessagesByClassId,
   }
+}, {
+  persist: {
+    pick: ['nftClassByIdMap'],
+  },
 })
