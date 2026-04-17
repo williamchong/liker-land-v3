@@ -1427,7 +1427,7 @@ async function handleSearchEPUB(query: string, signal: AbortSignal): Promise<Rea
 
   const results: ReaderSearchResult[] = []
   for (const section of sections) {
-    signal.throwIfAborted()
+    throwIfAborted(signal)
     if (results.length >= SEARCH_MAX_RESULTS) break
     if (!section.href) continue
     const wasLoaded = !!section.document
@@ -1437,7 +1437,7 @@ async function handleSearchEPUB(query: string, signal: AbortSignal): Promise<Rea
         // a parsed Document; attaching it to the section lets section.find
         // work and also caches subsequent access.
         const doc = await book.load(section.href)
-        signal.throwIfAborted()
+        throwIfAborted(signal)
         if (!(doc instanceof Document)) continue
         section.document = doc
         section.contents = doc.documentElement

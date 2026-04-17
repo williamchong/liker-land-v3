@@ -1142,7 +1142,7 @@ async function handleSearchPDF(query: string, signal: AbortSignal): Promise<Read
 
   const results: ReaderSearchResult[] = []
   for (let pageNum = 1; pageNum <= doc.numPages; pageNum += 1) {
-    signal.throwIfAborted()
+    throwIfAborted(signal)
     if (results.length >= SEARCH_MAX_RESULTS) break
     try {
       let cached = pageSearchTextCache.get(pageNum)
@@ -1150,7 +1150,7 @@ async function handleSearchPDF(query: string, signal: AbortSignal): Promise<Read
         let textContent = textContentCache.get(pageNum)
         if (!textContent) {
           const page = await doc.getPage(pageNum)
-          signal.throwIfAborted()
+          throwIfAborted(signal)
           textContent = await page.getTextContent()
           textContentCache.set(pageNum, textContent)
           page.cleanup()

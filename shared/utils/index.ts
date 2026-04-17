@@ -5,3 +5,9 @@ export function checkIsEVMAddress(address: string) {
 export function normalizeNFTClassId(id?: string) {
   return id?.toLowerCase() ?? ''
 }
+
+export function throwIfAborted(signal: AbortSignal) {
+  if (signal.aborted) {
+    throw signal.reason ?? new DOMException('Aborted', 'AbortError')
+  }
+}
