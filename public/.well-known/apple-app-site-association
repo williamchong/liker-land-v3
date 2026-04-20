@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["SQMQJBU5RU.land.liker.book3app"],
+        "components": [
+          {
+            "/": "*"
+          }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["SQMQJBU5RU.land.liker.book3app"]
+  }
+}
