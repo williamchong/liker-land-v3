@@ -163,7 +163,7 @@
                     variant="soft"
                     :label="$t('tts_custom_voice_upgrade_button')"
                     icon="i-material-symbols-lock-outline"
-                    @click="subscription.openPaywallModal({ utmSource: 'tts_custom_voice' })"
+                    @click="subscription.openPaywallModal({ utmSource: 'tts_custom_voice', redirectRoute: buildSubscribeRedirectRoute() })"
                   />
                 </div>
 
@@ -222,6 +222,16 @@ const { errorModal, handleError } = useErrorHandler()
 
 const { customVoice, hasCustomVoice, fetchCustomVoice } = useCustomVoice()
 const localeRoute = useLocaleRoute()
+const route = useRoute()
+
+function buildSubscribeRedirectRoute() {
+  return {
+    name: route.name,
+    params: route.params,
+    query: route.query,
+    hash: route.hash,
+  }
+}
 
 const emit = defineEmits<{
   close: []
@@ -349,6 +359,7 @@ const {
         utmSource: 'epub_reader',
         utmCampaign: props.nftClassId,
         utmMedium: 'tts',
+        redirectRoute: buildSubscribeRedirectRoute(),
       })
       return
     }
