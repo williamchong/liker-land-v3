@@ -89,6 +89,19 @@
 
         <!-- Controls -->
         <div class="px-4 py-2 pb-safe">
+          <div
+            v-if="shouldShowTrialChip"
+            class="flex justify-center mb-3"
+          >
+            <TTSTrialUsageChip
+              :characters-used="trialCharactersUsed"
+              :limit="trialLimit"
+              :is-exhausted="trialIsExhausted"
+              :voice-language="currentVoiceLanguage"
+              @click="handleTrialChipClick"
+            />
+          </div>
+
           <div class="flex items-center justify-center gap-6">
             <UButton
               :ui="{ leadingIcon: 'size-10' }"
@@ -216,11 +229,18 @@
 import type { TTSPlayerModalProps } from './TTSPlayerModal.props'
 import { encodeAffiliateVoiceId } from '~/shared/utils/tts-sig'
 
-const { user } = useUserSession()
+const { user, loggedIn: hasLoggedIn } = useUserSession()
 const subscription = useSubscriptionModal()
 const { errorModal, handleError } = useErrorHandler()
 
 const { customVoice, hasCustomVoice, fetchCustomVoice } = useCustomVoice()
+const {
+  isLoaded: isTrialUsageLoaded,
+  charactersUsed: trialCharactersUsed,
+  limit: trialLimit,
+  charactersRemaining: trialCharactersRemaining,
+  isExhausted: trialIsExhausted,
+} = useTTSTrialUsage()
 const localeRoute = useLocaleRoute()
 
 const emit = defineEmits<{
@@ -554,6 +574,47 @@ function handleCustomVoiceUploadClick() {
 function handleTTSPlaybackRateButton() {
   const rate = cyclePlaybackRate()
   useLogEvent('tts_playback_rate_change', { rate })
+}
+
+const shouldShowTrialChip = computed(() =>
+  hasLoggedIn.value
+  && !user.value?.isLikerPlus
+  && isTrialUsageLoaded.value,
+)
+
+// Private voices (custom, affiliate) have no language prefix; fall back
+// to the book's language so TTS pacing estimates stay reasonable.
+const currentVoiceLanguage = computed(() => {
+  const { language } = parseLanguageVoice(ttsLanguageVoice.value || '')
+  if (language.includes('-')) return language
+  return props.bookLanguage || 'zh-HK'
+})
+
+function buildChipEventPayload() {
+  return {
+    nft_class_id: props.nftClassId,
+    characters_used: trialCharactersUsed.value,
+    chars_remaining: trialCharactersRemaining.value,
+    is_exhausted: trialIsExhausted.value,
+    voice_language: currentVoiceLanguage.value,
+  }
+}
+
+const hasFiredChipImpression = ref(false)
+watch(shouldShowTrialChip, (shown) => {
+  if (shown && !hasFiredChipImpression.value) {
+    hasFiredChipImpression.value = true
+    useLogEvent('tts_trial_chip_impression', buildChipEventPayload())
+  }
+}, { immediate: true })
+
+function handleTrialChipClick() {
+  useLogEvent('tts_trial_chip_click', buildChipEventPayload())
+  subscription.openPaywallModal({
+    utmSource: 'epub_reader',
+    utmCampaign: props.nftClassId,
+    utmMedium: 'tts_chip',
+  })
 }
 
 function handleOfflineModalStop() {

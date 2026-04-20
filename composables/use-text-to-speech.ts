@@ -22,6 +22,11 @@ export function formatTTSError(error: string | Event | MediaError): string {
   return 'unknown'
 }
 
+export function parseLanguageVoice(languageVoice: string): { language: string, voiceId: string } {
+  const [language = '', ...voiceIdParts] = languageVoice.split('_')
+  return { language, voiceId: voiceIdParts.join('_') }
+}
+
 interface TTSOptions {
   nftClassId: string
   onError?: (error: string | Event | MediaError) => void
@@ -51,7 +56,6 @@ export function useTextToSpeech(options: TTSOptions) {
   const config = useRuntimeConfig()
 
   const ttsTrialUsage = useTTSTrialUsage()
-  ttsTrialUsage.fetchUsage()
 
   // Use the TTS voice composable
   const {
@@ -68,11 +72,6 @@ export function useTextToSpeech(options: TTSOptions) {
     customVoice: options.customVoice,
     affiliateVoices: options.affiliateVoices,
   })
-
-  function parseLanguageVoice(languageVoice: string) {
-    const [language = '', ...voiceIdParts] = languageVoice.split('_')
-    return { language, voiceId: voiceIdParts.join('_') }
-  }
 
   function resolveVoiceTier(languageVoice: string): 'system' | 'affiliate' | 'custom' {
     if (languageVoice === 'custom') return 'custom'
@@ -510,20 +509,12 @@ export function useTextToSpeech(options: TTSOptions) {
     }
   }
 
-  // Estimate only: the server charges on cache miss, so we dedupe by the
-  // same shape (language+voice+text) that determines its cache key.
-  const optimisticallyCountedRequests = new Set<string>()
-
+  // Custom voice is gated to Plus; the server rejects non-Plus requests
+  // before charging, so decrementing here would drift the local counter.
   function recordOptimisticSegmentUsage(sanitizedText: string) {
-    if (sessionUser.value?.isLikerPlus) return
-    // Custom voice is gated to Plus; the server rejects non-Plus requests
-    // before charging, so decrementing here would drift the local counter.
     if (ttsLanguageVoice.value === 'custom') return
-    if (!ttsTrialUsage.isLoaded.value) return
-    const key = `${ttsLanguageVoice.value}:${sanitizedText}`
-    if (optimisticallyCountedRequests.has(key)) return
-    optimisticallyCountedRequests.add(key)
-    ttsTrialUsage.recordOptimisticUsage(sanitizedText.length)
+    const dedupKey = `${ttsLanguageVoice.value}:${sanitizedText}`
+    ttsTrialUsage.recordOptimisticSegmentUsage(dedupKey, sanitizedText.length)
   }
 
   function getAudioSrc(element: TTSSegment): string {
