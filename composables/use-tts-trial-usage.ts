@@ -1,3 +1,4 @@
+import { useStorage } from '@vueuse/core'
 import { TTS_TRIAL_CHARACTER_LIMIT } from '~/shared/utils/tts-trial'
 
 // Module-scoped so dedup survives `useTextToSpeech` teardown when the player
@@ -13,28 +14,6 @@ interface ServerUsage {
 // Per-wallet dedup for the server floor fetch — prevents N concurrent GETs
 // when multiple components mount the composable at the same time.
 const inflightServerFetches = new Map<string, Promise<ServerUsage | null>>()
-
-function getStorageKey(wallet: string): string {
-  return `tts-trial-chars-${wallet.toLowerCase()}`
-}
-
-function readStoredCharacters(wallet: string): number {
-  if (!import.meta.client || !wallet) return 0
-  const raw = localStorage.getItem(getStorageKey(wallet))
-  if (!raw) return 0
-  const parsed = Number(raw)
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0
-}
-
-function writeStoredCharacters(wallet: string, value: number): void {
-  if (!import.meta.client || !wallet) return
-  try {
-    localStorage.setItem(getStorageKey(wallet), String(value))
-  }
-  catch (error) {
-    console.warn('[TTSTrialUsage] Failed to persist:', error)
-  }
-}
 
 async function fetchServerUsage(wallet: string): Promise<ServerUsage | null> {
   const pending = inflightServerFetches.get(wallet)
@@ -58,16 +37,23 @@ async function fetchServerUsage(wallet: string): Promise<ServerUsage | null> {
 export function useTTSTrialUsage() {
   const { loggedIn: hasLoggedIn, user } = useUserSession()
 
-  const charactersUsed = useState<number>('tts-trial-chars-used', () => 0)
-  const limit = useState<number>('tts-trial-limit', () => TTS_TRIAL_CHARACTER_LIMIT)
-  const hasHydrated = useState<boolean>('tts-trial-hydrated', () => false)
-
   const wallet = computed(() => user.value?.evmWallet || '')
   const isLikerPlus = computed(() => !!user.value?.isLikerPlus)
 
+  // Reactive key: wallet switch rebinds the ref to the new wallet's storage
+  // key automatically. `anon` is a sentinel for the logged-out state — the UI
+  // gates on `isLoaded`, so any writes to it are never displayed.
+  const storageKey = computed(() =>
+    `tts-trial-chars-${wallet.value.toLowerCase() || 'anon'}`,
+  )
+  const charactersUsed = useStorage<number>(storageKey, 0)
+  const limit = useState<number>('tts-trial-limit', () => TTS_TRIAL_CHARACTER_LIMIT)
+
   const charactersRemaining = computed(() => Math.max(limit.value - charactersUsed.value, 0))
   const isExhausted = computed(() => !isLikerPlus.value && charactersUsed.value >= limit.value)
-  const isLoaded = computed(() => hasLoggedIn.value && (isLikerPlus.value || hasHydrated.value))
+  const isLoaded = computed(() =>
+    hasLoggedIn.value && (isLikerPlus.value || (import.meta.client && !!wallet.value)),
+  )
 
   async function mergeServerUsage(targetWallet: string): Promise<void> {
     const server = await fetchServerUsage(targetWallet)
@@ -77,19 +63,20 @@ export function useTTSTrialUsage() {
     if (server.limit !== limit.value) limit.value = server.limit
     if (server.charactersUsed <= charactersUsed.value) return
     charactersUsed.value = server.charactersUsed
-    writeStoredCharacters(targetWallet, server.charactersUsed)
   }
 
-  watch([wallet, hasLoggedIn], ([newWallet, loggedIn]) => {
+  watch([wallet, hasLoggedIn], ([newWallet, loggedIn], oldValues) => {
+    const [oldWallet] = oldValues ?? []
     if (!import.meta.client) return
     if (!loggedIn || !newWallet) {
-      charactersUsed.value = 0
-      hasHydrated.value = false
       optimisticallyCountedSegments.clear()
       return
     }
-    charactersUsed.value = readStoredCharacters(newWallet)
-    hasHydrated.value = true
+    // Clear per-wallet dedup on wallet switch so the new wallet isn't
+    // suppressed by segments counted under the previous wallet.
+    if (oldWallet && oldWallet !== newWallet) {
+      optimisticallyCountedSegments.clear()
+    }
     // Non-blocking merge: localStorage may be wiped (new device, private
     // mode, user cleared data) while the server still holds the cost
     // counter. Merging keeps the chip from understating relative to the
@@ -108,9 +95,7 @@ export function useTTSTrialUsage() {
     if (!wallet.value || isLikerPlus.value) return
     if (optimisticallyCountedSegments.has(dedupKey)) return
     optimisticallyCountedSegments.add(dedupKey)
-    const next = charactersUsed.value + charactersDelta
-    charactersUsed.value = next
-    writeStoredCharacters(wallet.value, next)
+    charactersUsed.value += charactersDelta
   }
 
   return {
