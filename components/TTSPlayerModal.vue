@@ -355,22 +355,7 @@ const {
         )
       )
     ) {
-      stopTextToSpeech()
-      useLogEvent('tts_trial_exhausted', buildTTSEventPayload({
-        is_app: isApp.value,
-      }))
-      if (isApp.value) {
-        errorModal.open({
-          title: $t('tts_free_trial_limit_error_title'),
-          description: $t('tts_free_trial_limit_error_description_app'),
-        })
-        return
-      }
-      subscription.openPaywallModal({
-        utmSource: 'epub_reader',
-        utmCampaign: props.nftClassId,
-        utmMedium: 'tts',
-      })
+      handleTrialExhausted('server_402')
       return
     }
     if (error instanceof MediaError) {
@@ -388,7 +373,28 @@ const {
       handleModalClose()
     }
   },
+  onTrialExhausted: () => handleTrialExhausted('client_gate'),
 })
+
+function handleTrialExhausted(source: 'server_402' | 'client_gate') {
+  stopTextToSpeech()
+  useLogEvent('tts_trial_exhausted', buildTTSEventPayload({
+    is_app: isApp.value,
+    source,
+  }))
+  if (isApp.value) {
+    errorModal.open({
+      title: $t('tts_free_trial_limit_error_title'),
+      description: $t('tts_free_trial_limit_error_description_app'),
+    })
+    return
+  }
+  subscription.openPaywallModal({
+    utmSource: 'epub_reader',
+    utmCampaign: props.nftClassId,
+    utmMedium: 'tts',
+  })
+}
 
 const { isTTSPlaying } = useTTSPlayingState()
 watch(isTextToSpeechPlaying, playing => isTTSPlaying.value = playing, { immediate: true })

@@ -31,6 +31,7 @@ interface TTSOptions {
   nftClassId: string
   onError?: (error: string | Event | MediaError) => void
   onAllSegmentsPlayed?: () => void
+  onTrialExhausted?: () => void
   bookName?: string | Ref<string> | ComputedRef<string>
   bookChapterName?: string | Ref<string> | ComputedRef<string>
   bookAuthorName?: string | Ref<string> | ComputedRef<string>
@@ -220,6 +221,12 @@ export function useTextToSpeech(options: TTSOptions) {
 
   player.on('ended', () => {
     consecutiveAudioErrors.value = 0
+    if (hasMoreTracks() && ttsTrialUsage.isExhausted.value) {
+      isTextToSpeechLoading.value = false
+      isTextToSpeechPlaying.value = false
+      options.onTrialExhausted?.()
+      return
+    }
     // Set loading before clearing playing so the UI never briefly shows
     // the play button while the next segment is being fetched.
     if (hasMoreTracks()) {
@@ -576,6 +583,10 @@ export function useTextToSpeech(options: TTSOptions) {
 
   async function startTextToSpeech(index: number | null = null) {
     if (isStartingTextToSpeech.value) return
+    if (ttsTrialUsage.isExhausted.value) {
+      options.onTrialExhausted?.()
+      return
+    }
     isStartingTextToSpeech.value = true
 
     try {
@@ -666,6 +677,10 @@ export function useTextToSpeech(options: TTSOptions) {
 
   function skipForward() {
     if (!isTextToSpeechOn.value) return
+    if (ttsTrialUsage.isExhausted.value) {
+      options.onTrialExhausted?.()
+      return
+    }
     useLogEvent('tts_skip_forward', {
       nft_class_id: nftClassId,
     })
@@ -679,6 +694,10 @@ export function useTextToSpeech(options: TTSOptions) {
 
   function skipToIndex(segmentIndex: number) {
     if (!isTextToSpeechOn.value) return
+    if (ttsTrialUsage.isExhausted.value && segmentIndex > currentTTSSegmentIndex.value) {
+      options.onTrialExhausted?.()
+      return
+    }
     useLogEvent('tts_skip_to_index', {
       nft_class_id: nftClassId,
     })
