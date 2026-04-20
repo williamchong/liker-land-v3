@@ -31,7 +31,7 @@ export function useNativeAudioPlayer(isActive: Ref<boolean | undefined>): TTSAud
         break
       case 'trackChanged':
         if (typeof detail.index === 'number') {
-          handlers.trackChanged?.(detail.index)
+          handlers.trackChanged?.(detail.index, detail.isResync ? { isResync: true } : undefined)
         }
         break
       case 'queueEnded':

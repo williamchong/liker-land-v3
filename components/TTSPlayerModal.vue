@@ -225,7 +225,7 @@ const localeRoute = useLocaleRoute()
 
 const emit = defineEmits<{
   close: []
-  segmentChange: [segment: TTSSegment & { index: number }]
+  segmentChange: [segment: TTSSegment & { index: number, isResync?: boolean }]
 }>()
 
 const props = withDefaults(
@@ -308,6 +308,7 @@ const {
   skipBackward,
   stopTextToSpeech,
   currentTTSSegmentIndex,
+  consumeTrackChangeResync,
   cyclePlaybackRate,
   showOfflineModal,
   forceResume,
@@ -529,7 +530,7 @@ function getSegmentClass(index: number) {
 
 watch(currentTTSSegment, (newSegment: TTSSegment | undefined) => {
   if (newSegment) {
-    emit('segmentChange', { index: currentTTSSegmentIndex.value, ...newSegment })
+    emit('segmentChange', { index: currentTTSSegmentIndex.value, ...newSegment, isResync: consumeTrackChangeResync() })
   }
 })
 

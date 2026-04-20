@@ -3,7 +3,7 @@ declare interface TTSAudioPlayerEvents {
   pause: () => void
   buffering: () => void
   ended: () => void
-  trackChanged: (index: number) => void
+  trackChanged: (index: number, meta?: { isResync?: boolean }) => void
   allEnded: () => void
   error: (error: string | Event | MediaError) => void
   positionState: (state: { position: number, duration: number }) => void

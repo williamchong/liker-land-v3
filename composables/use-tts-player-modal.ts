@@ -5,7 +5,7 @@ import { isUploadedBookId } from '~/shared/utils/uploaded-book'
 
 interface TTSPlayerOptions {
   nftClassId: MaybeRef<string>
-  onSegmentChange?: (segment: TTSSegment & { index: number }) => void
+  onSegmentChange?: (segment: TTSSegment & { index: number, isResync?: boolean }) => void
   onClose?: () => void
 }
 

@@ -230,10 +230,18 @@ export function useTextToSpeech(options: TTSOptions) {
     playNextElement()
   })
 
-  player.on('trackChanged', (index) => {
+  let isLastTrackChangeResync = false
+  function consumeTrackChangeResync(): boolean {
+    const value = isLastTrackChangeResync
+    isLastTrackChangeResync = false
+    return value
+  }
+
+  player.on('trackChanged', (index, meta) => {
     if (index !== currentTTSSegmentIndex.value) {
       consecutiveAudioErrors.value = 0
     }
+    isLastTrackChangeResync = !!meta?.isResync
     currentTTSSegmentIndex.value = index
     startSegmentLoadTimer(index)
   })
@@ -756,6 +764,7 @@ export function useTextToSpeech(options: TTSOptions) {
     currentTTSSegment,
     currentTTSSegmentText,
     currentTTSSegmentIndex,
+    consumeTrackChangeResync,
     pauseTextToSpeech,
     startTextToSpeech,
     setTTSSegments,
