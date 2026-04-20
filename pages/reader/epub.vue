@@ -275,7 +275,7 @@
                 'flex-1',
                 'h-full',
                 'cursor-pointer',
-                { 'opacity-0 pointer-events-none': isRightToLeft ? isAtLastPage : isAtFirstPage },
+                { 'opacity-0 pointer-events-none': shouldFlipFromRightToLeft ? isAtLastPage : isAtFirstPage },
               ]"
               @click="handleLeftArrowButtonClick"
             >
@@ -301,7 +301,7 @@
                 'flex-1',
                 'h-full',
                 'cursor-pointer',
-                { 'opacity-0 pointer-events-none': isRightToLeft ? isAtFirstPage : isAtLastPage },
+                { 'opacity-0 pointer-events-none': shouldFlipFromRightToLeft ? isAtFirstPage : isAtLastPage },
               ]"
               @click="handleRightArrowButtonClick"
             >
@@ -685,14 +685,39 @@ const EPUB_WRITING_MODES = {
 } as const
 type EpubWritingMode = typeof EPUB_WRITING_MODES[keyof typeof EPUB_WRITING_MODES]
 
-const DEFAULT_WRITING_MODE = EPUB_WRITING_MODES.horizontal
-const writingMode = useSyncedBookSettings<EpubWritingMode>({
-  nftClassId: nftClassId.value,
-  key: 'writingMode',
-  defaultValue: DEFAULT_WRITING_MODE,
-  namespace: 'epub',
+const FALLBACK_WRITING_MODE = EPUB_WRITING_MODES.horizontal
+const WRITING_MODE_SETTING_KEY = 'writingMode'
+const EPUB_SETTING_NAMESPACE = 'epub'
+const WRITING_MODE_DB_KEY = getBookSettingDbKey({
+  key: WRITING_MODE_SETTING_KEY,
+  namespace: EPUB_SETTING_NAMESPACE,
 })
-const isRightToLeft = computed(() => writingMode.value === EPUB_WRITING_MODES.vertical)
+const originalWritingMode = ref<EpubWritingMode>(FALLBACK_WRITING_MODE)
+const writingModeSetting = useSyncedBookSettings<EpubWritingMode>({
+  nftClassId: nftClassId.value,
+  key: WRITING_MODE_SETTING_KEY,
+  defaultValue: FALLBACK_WRITING_MODE,
+  namespace: EPUB_SETTING_NAMESPACE,
+})
+const hasSavedWritingMode = computed(() => {
+  return bookSettingsStore.getSettings(nftClassId.value)?.[WRITING_MODE_DB_KEY] !== undefined
+})
+const writingMode = computed(() => {
+  return hasSavedWritingMode.value ? writingModeSetting.value : originalWritingMode.value
+})
+// Tracks EPUB `page-progression-direction` so horizontal RTL books (Arabic,
+// Hebrew) still get RTL page turns without being forced into vertical layout.
+const isWrittenFromRightToLeft = ref(false)
+const shouldFlipFromRightToLeft = computed(() =>
+  writingMode.value === EPUB_WRITING_MODES.vertical || isWrittenFromRightToLeft.value,
+)
+
+function detectWritingModeFromDocument(doc: Document): EpubWritingMode {
+  const computedMode = doc.defaultView?.getComputedStyle(doc.documentElement).writingMode
+  return computedMode?.startsWith('vertical-')
+    ? EPUB_WRITING_MODES.vertical
+    : EPUB_WRITING_MODES.horizontal
+}
 
 function getWritingModeStyles() {
   const isVerticalWritingMode = writingMode.value === EPUB_WRITING_MODES.vertical
@@ -707,6 +732,9 @@ function getWritingModeStyles() {
 }
 
 function applyWritingModeToDocument(document: Document) {
+  // Only override when the user has explicitly picked a mode; otherwise let
+  // the book's own CSS declare writing-mode so epub.js sizes columns from it.
+  if (!hasSavedWritingMode.value) return
   const documentElement = document.documentElement
   const body = document.body
   if (!documentElement || !body) return
@@ -732,13 +760,11 @@ function applyTheme() {
   if (!rendition.value) return
 
   const isDarkMode = colorModeValue.value === 'dark'
-  const writingModeStyles = getWritingModeStyles()
   const bodyCSS: Record<string, string> = {
     'color': isDarkMode ? '#f9f9f9 !important' : '#333',
     '-webkit-text-size-adjust': 'none',
     'text-size-adjust': 'none',
     'direction': 'ltr',
-    ...writingModeStyles,
   }
   if (isDarkMode) {
     bodyCSS['background-color'] = '#131313 !important'
@@ -756,12 +782,20 @@ function applyTheme() {
   const anchorCSS: Record<string, string> = {
     color: isDarkMode ? '#9ecfff !important' : '#0066cc',
   }
-  rendition.value.themes.default({
-    'html': writingModeStyles,
+  const themeRules: Record<string, Record<string, string>> = {
     'body': bodyCSS,
     'p, div, span, h1, h2, h3, h4, h5, h6, li': textCSS,
     'a': anchorCSS,
-  })
+  }
+  // Only layer a writing-mode rule on top of the book's own CSS when the user
+  // has explicitly picked a mode; otherwise it changes the initial column
+  // layout calc and can skew textWidth/textHeight on the first rendered page.
+  if (hasSavedWritingMode.value) {
+    const writingModeStyles = getWritingModeStyles()
+    themeRules.html = writingModeStyles
+    Object.assign(bodyCSS, writingModeStyles)
+  }
+  rendition.value.themes.default(themeRules)
   rendition.value.themes.fontSize(`${fontSize.value}px`)
 }
 
@@ -927,6 +961,10 @@ async function loadEPub() {
     currentSectionIndex.value = section.index ?? 0
     renditionViewWindow.value = view.window
     isPageLoading.value = false
+    isWrittenFromRightToLeft.value = view.settings.direction === 'rtl'
+    if (!hasSavedWritingMode.value && view.window?.document) {
+      originalWritingMode.value = detectWritingModeFromDocument(view.window.document)
+    }
 
     if (cleanUpClickListener) {
       cleanUpClickListener()
@@ -1265,7 +1303,7 @@ function prevPage() {
 }
 
 function turnPageLeft() {
-  if (isRightToLeft.value) {
+  if (shouldFlipFromRightToLeft.value) {
     nextPage()
   }
   else {
@@ -1274,7 +1312,7 @@ function turnPageLeft() {
 }
 
 function turnPageRight() {
-  if (isRightToLeft.value) {
+  if (shouldFlipFromRightToLeft.value) {
     prevPage()
   }
   else {
@@ -1316,9 +1354,9 @@ function decreaseLineHeight() {
 }
 
 async function setWritingMode(mode: EpubWritingMode) {
-  if (mode === writingMode.value) return
+  if (mode === writingMode.value && hasSavedWritingMode.value) return
 
-  writingMode.value = mode
+  writingModeSetting.value = mode
   applyWritingModeToLoadedSections()
   applyTheme()
   await rerenderRenditionAtCurrentLocation()
@@ -1332,7 +1370,7 @@ async function restoreDefaultDisplayOptions() {
 
   fontSize.value = FONT_SIZE_OPTIONS[DEFAULT_FONT_SIZE_INDEX]
   lineHeight.value = DEFAULT_LINE_HEIGHT
-  writingMode.value = DEFAULT_WRITING_MODE
+  writingModeSetting.value = originalWritingMode.value
   const hasFontSizeChanged = previousFontSize !== fontSize.value
   const hasLineHeightChanged = previousLineHeight !== lineHeight.value
   const hasWritingModeChanged = previousWritingMode !== writingMode.value
