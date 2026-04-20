@@ -112,6 +112,9 @@ const { setTTSSegments, setChapterTitles, openPlayer } = useTTSPlayerModal({
           pdfReaderRef.value.goToPage(newPageIndex)
         }
       }
+      if (segment.isResync) {
+        useBookSettingsStore().flushBatch(nftClassId.value)
+      }
     }
   },
 })

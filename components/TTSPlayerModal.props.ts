@@ -12,5 +12,5 @@ export interface TTSPlayerModalProps {
   isAutoClose?: boolean
   isFullscreen?: boolean
   onClose?: () => void
-  onSegmentChange?: (segment: TTSSegment & { index: number }) => void
+  onSegmentChange?: (segment: TTSSegment & { index: number, isResync?: boolean }) => void
 }

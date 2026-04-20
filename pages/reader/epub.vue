@@ -584,6 +584,9 @@ const { setTTSSegments, setChapterTitles, openPlayer } = useTTSPlayerModal({
         percentage.value = locations.percentageFromCfi(segment.cfi) ?? 0
         readingProgress.value = percentage.value
       }
+      if (segment.isResync) {
+        useBookSettingsStore().flushBatch(nftClassId.value)
+      }
     }
 
     // Skip navigation if the segment is already visible on the current page
