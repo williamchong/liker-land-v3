@@ -129,6 +129,9 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
+    '/.well-known/apple-app-site-association': {
+      headers: { 'Content-Type': 'application/json' },
+    },
     '/api/store/products': {
       security: {
         corsHandler: {
