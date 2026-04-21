@@ -108,6 +108,10 @@ export function useNativeAudioPlayer(isActive: Ref<boolean | undefined>): TTSAud
     return false
   }
 
+  function getCurrentURL(): string {
+    return ''
+  }
+
   return {
     load,
     resume,
@@ -118,6 +122,7 @@ export function useNativeAudioPlayer(isActive: Ref<boolean | undefined>): TTSAud
     seek,
     getPosition,
     wasInterruptedByBackground,
+    getCurrentURL,
     on,
   }
 }

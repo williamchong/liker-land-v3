@@ -450,6 +450,10 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     return { position: audio.currentTime, duration: audio.duration }
   }
 
+  function getCurrentURL(): string {
+    return getActiveAudio()?.currentSrc || ''
+  }
+
   return {
     load,
     resume,
@@ -460,6 +464,7 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     seek,
     getPosition,
     wasInterruptedByBackground,
+    getCurrentURL,
     on,
   }
 }
