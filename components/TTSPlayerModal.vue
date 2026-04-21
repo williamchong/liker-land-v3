@@ -214,6 +214,7 @@
 
 <script setup lang="ts">
 import type { TTSPlayerModalProps } from './TTSPlayerModal.props'
+import { TTS_ERROR_NOT_ALLOWED } from '~/composables/use-text-to-speech'
 import { encodeAffiliateVoiceId } from '~/shared/utils/tts-sig'
 
 const { user } = useUserSession()
@@ -322,6 +323,13 @@ const {
   customVoice,
   affiliateVoices,
   onError: (error: string | Event | MediaError) => {
+    // Autoplay was blocked by the browser because the modal auto-started
+    // without a user gesture (e.g. reloading the reader with ?tts=1). The
+    // composable has already reset playback state — leave the modal open so
+    // the play button is visible and the user can tap to resume.
+    if (error === TTS_ERROR_NOT_ALLOWED) {
+      return
+    }
     if (
       !user.value?.isLikerPlus
       && (
