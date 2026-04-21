@@ -85,7 +85,10 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
 
       // O(1) dedup across the page — otherwise paginated loads hit O(n²).
       const seenClassIds = new Set(nftClassIds.value)
-      const nftClassIdsForProgressFetch: string[] = []
+      // Dedup progress-fetch IDs: the API returns one row per owned token_id,
+      // so a class with N tokens would otherwise appear N times and inflate
+      // chunked settings requests when force-refreshing.
+      const progressFetchIds = new Set<string>()
       res.data.forEach((nftClass) => {
         const nftClassId = nftClass.address.toLowerCase() as `0x${string}`
 
@@ -107,10 +110,10 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
           nftStore.addNFTClassMetadata(nftClassId, nftClass.metadata)
         }
 
-        nftClassIdsForProgressFetch.push(nftClassId)
+        progressFetchIds.add(nftClassId)
       })
 
-      await bookSettingsStore.fetchBatchSettings(nftClassIdsForProgressFetch, { force: isRefresh })
+      await bookSettingsStore.fetchBatchSettings(Array.from(progressFetchIds), { force: isRefresh })
 
       nextKey.value = res.pagination.count < limit ? undefined : res.pagination.next_key
       persistedWalletAddress.value = normalizedWallet ?? null
@@ -203,7 +206,6 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     nextKey.value = undefined
     persistedWalletAddress.value = null
     lastError.value = null
-    bookSettingsStore.reset()
   }
 
   watch(hasLoggedIn, (value, oldValue) => {

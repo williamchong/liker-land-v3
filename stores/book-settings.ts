@@ -12,6 +12,9 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
   const settingsMap = ref<Record<string, BookSettingsEntry>>({})
   const fetchPromisesMap = ref<Record<string, Promise<BookSettingsData>>>({})
   const batchFetchPromise = ref<Promise<void> | null>(null)
+  // Bumped on reset() so in-flight fetches can detect they've been superseded
+  // and skip repopulating a cleared settingsMap.
+  let resetGeneration = 0
 
   // Batch update queues per nftClassId
   const batchQueuesMap = ref<Record<string, Map<string, unknown>>>({})
@@ -74,19 +77,21 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
       return
     }
 
+    const generation = resetGeneration
+    // True once the user logs out or reset() bumps the generation — in either
+    // case the response would repopulate a just-cleared settingsMap.
+    const isStale = () => !hasLoggedIn.value || generation !== resetGeneration
     batchFetchPromise.value = (async () => {
       try {
         for (let i = 0; i < nftClassIdsToFetch.length; i += FIRESTORE_IN_OPERATOR_LIMIT) {
-          // Bail if the user logged out / got reset mid-flight — otherwise
-          // the response would repopulate a just-cleared settingsMap.
-          if (!hasLoggedIn.value) return
+          if (isStale()) return
           const chunk = nftClassIdsToFetch.slice(i, i + FIRESTORE_IN_OPERATOR_LIMIT)
           const settings = await $fetch<Record<string, BookSettingsData>>('/api/books/settings', {
             params: {
               nftClassIds: chunk,
             },
           })
-          if (!hasLoggedIn.value) return
+          if (isStale()) return
 
           Object.entries(settings).forEach(([nftClassId, data]) => {
             const key = getKey(nftClassId)
@@ -199,9 +204,11 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
   }
 
   function reset() {
+    resetGeneration += 1
     settingsMap.value = {}
     fetchPromisesMap.value = {}
-    batchFetchPromise.value = null
+    // Leave batchFetchPromise alone: in-flight fetches detect the generation
+    // bump and bail in their own finally.
     batchQueuesMap.value = {}
     debouncedFlushFunctionsMap.value = {}
   }
