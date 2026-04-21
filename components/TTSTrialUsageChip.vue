@@ -3,7 +3,7 @@
     class="rounded-full"
     :label="label"
     :icon="isExhausted ? 'i-material-symbols-lock-outline' : 'i-material-symbols-volume-up-outline-rounded'"
-    :color="isExhausted ? 'error' : 'primary'"
+    :color="chipColor"
     variant="soft"
     size="sm"
     @click="emit('click')"
@@ -21,6 +21,12 @@ const emit = defineEmits<{
 }>()
 
 const { t: $t } = useI18n()
+const colorMode = useColorMode()
+
+const chipColor = computed(() => {
+  if (props.isExhausted) return 'error'
+  return colorMode.value === 'dark' ? 'primary' : 'secondary'
+})
 
 const label = computed(() => {
   if (props.isExhausted) {
