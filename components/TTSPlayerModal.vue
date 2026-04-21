@@ -89,6 +89,14 @@
 
         <!-- Controls -->
         <div class="px-4 py-2 pb-safe">
+          <TTSTrialUsageChip
+            v-if="shouldShowTrialChip"
+            class="mb-3"
+            :minutes-remaining="trialMinutesRemaining"
+            :is-exhausted="isTrialExhausted"
+            @click="handleTrialChipClick"
+          />
+
           <div class="flex items-center justify-center gap-6">
             <UButton
               :ui="{ leadingIcon: 'size-10' }"
@@ -215,12 +223,19 @@
 <script setup lang="ts">
 import type { TTSPlayerModalProps } from './TTSPlayerModal.props'
 import { encodeAffiliateVoiceId } from '~/shared/utils/tts-sig'
+import { estimateTTSMinutes } from '~/shared/utils/tts-trial'
 
-const { user } = useUserSession()
+const { user, loggedIn: hasLoggedIn } = useUserSession()
 const subscription = useSubscriptionModal()
 const { errorModal, handleError } = useErrorHandler()
 
 const { customVoice, hasCustomVoice, fetchCustomVoice } = useCustomVoice()
+const {
+  isLoaded: isTrialUsageLoaded,
+  charactersUsed: trialCharactersUsed,
+  charactersRemaining: trialCharactersRemaining,
+  isExhausted: isTrialExhausted,
+} = useTTSTrialUsage()
 const localeRoute = useLocaleRoute()
 
 const emit = defineEmits<{
@@ -335,22 +350,7 @@ const {
         )
       )
     ) {
-      stopTextToSpeech()
-      useLogEvent('tts_trial_exhausted', buildTTSEventPayload({
-        is_app: isApp.value,
-      }))
-      if (isApp.value) {
-        errorModal.open({
-          title: $t('tts_free_trial_limit_error_title'),
-          description: $t('tts_free_trial_limit_error_description_app'),
-        })
-        return
-      }
-      subscription.openPaywallModal({
-        utmSource: 'epub_reader',
-        utmCampaign: props.nftClassId,
-        utmMedium: 'tts',
-      })
+      handleTrialExhausted('server_402')
       return
     }
     if (error instanceof MediaError) {
@@ -368,7 +368,28 @@ const {
       handleModalClose()
     }
   },
+  onTrialExhausted: () => handleTrialExhausted('client_gate'),
 })
+
+function handleTrialExhausted(source: 'server_402' | 'client_gate') {
+  stopTextToSpeech()
+  useLogEvent('tts_trial_exhausted', buildTTSEventPayload({
+    is_app: isApp.value,
+    source,
+  }))
+  if (isApp.value) {
+    errorModal.open({
+      title: $t('tts_free_trial_limit_error_title'),
+      description: $t('tts_free_trial_limit_error_description_app'),
+    })
+    return
+  }
+  subscription.openPaywallModal({
+    utmSource: 'epub_reader',
+    utmCampaign: props.nftClassId,
+    utmMedium: 'tts',
+  })
+}
 
 const { isTTSPlaying } = useTTSPlayingState()
 watch(isTextToSpeechPlaying, playing => isTTSPlaying.value = playing, { immediate: true })
@@ -554,6 +575,54 @@ function handleCustomVoiceUploadClick() {
 function handleTTSPlaybackRateButton() {
   const rate = cyclePlaybackRate()
   useLogEvent('tts_playback_rate_change', { rate })
+}
+
+const shouldShowTrialChip = computed(() =>
+  hasLoggedIn.value
+  && !user.value?.isLikerPlus
+  && isTrialUsageLoaded.value,
+)
+
+// Private voices (custom, affiliate) have no language prefix; fall back
+// to the book's language so TTS pacing estimates stay reasonable.
+const currentVoiceLanguage = computed(() => {
+  const { language } = parseLanguageVoice(ttsLanguageVoice.value || '')
+  if (language.includes('-')) return language
+  return props.bookLanguage || 'zh-HK'
+})
+
+// Floor at 1 so the chip never reads "0 分鐘" in the sub-minute window
+// before `isTrialExhausted` flips.
+const trialMinutesRemaining = computed(() => Math.max(
+  1,
+  Math.round(estimateTTSMinutes(trialCharactersRemaining.value, currentVoiceLanguage.value)),
+))
+
+function buildChipEventPayload() {
+  return {
+    nft_class_id: props.nftClassId,
+    characters_used: trialCharactersUsed.value,
+    chars_remaining: trialCharactersRemaining.value,
+    is_exhausted: isTrialExhausted.value,
+    voice_language: currentVoiceLanguage.value,
+  }
+}
+
+const hasFiredChipImpression = ref(false)
+watch(shouldShowTrialChip, (shown) => {
+  if (shown && !hasFiredChipImpression.value) {
+    hasFiredChipImpression.value = true
+    useLogEvent('tts_trial_chip_impression', buildChipEventPayload())
+  }
+}, { immediate: true })
+
+function handleTrialChipClick() {
+  useLogEvent('tts_trial_chip_click', buildChipEventPayload())
+  subscription.openPaywallModal({
+    utmSource: 'epub_reader',
+    utmCampaign: props.nftClassId,
+    utmMedium: 'tts_chip',
+  })
 }
 
 function handleOfflineModalStop() {

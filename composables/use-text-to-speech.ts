@@ -22,10 +22,16 @@ export function formatTTSError(error: string | Event | MediaError): string {
   return 'unknown'
 }
 
+export function parseLanguageVoice(languageVoice: string): { language: string, voiceId: string } {
+  const [language = '', ...voiceIdParts] = languageVoice.split('_')
+  return { language, voiceId: voiceIdParts.join('_') }
+}
+
 interface TTSOptions {
   nftClassId: string
   onError?: (error: string | Event | MediaError) => void
   onAllSegmentsPlayed?: () => void
+  onTrialExhausted?: () => void
   bookName?: string | Ref<string> | ComputedRef<string>
   bookChapterName?: string | Ref<string> | ComputedRef<string>
   bookAuthorName?: string | Ref<string> | ComputedRef<string>
@@ -51,7 +57,6 @@ export function useTextToSpeech(options: TTSOptions) {
   const config = useRuntimeConfig()
 
   const ttsTrialUsage = useTTSTrialUsage()
-  ttsTrialUsage.fetchUsage()
 
   // Use the TTS voice composable
   const {
@@ -68,11 +73,6 @@ export function useTextToSpeech(options: TTSOptions) {
     customVoice: options.customVoice,
     affiliateVoices: options.affiliateVoices,
   })
-
-  function parseLanguageVoice(languageVoice: string) {
-    const [language = '', ...voiceIdParts] = languageVoice.split('_')
-    return { language, voiceId: voiceIdParts.join('_') }
-  }
 
   function resolveVoiceTier(languageVoice: string): 'system' | 'affiliate' | 'custom' {
     if (languageVoice === 'custom') return 'custom'
@@ -221,6 +221,12 @@ export function useTextToSpeech(options: TTSOptions) {
 
   player.on('ended', () => {
     consecutiveAudioErrors.value = 0
+    if (hasMoreTracks() && ttsTrialUsage.isExhausted.value) {
+      isTextToSpeechLoading.value = false
+      isTextToSpeechPlaying.value = false
+      options.onTrialExhausted?.()
+      return
+    }
     // Set loading before clearing playing so the UI never briefly shows
     // the play button while the next segment is being fetched.
     if (hasMoreTracks()) {
@@ -510,20 +516,12 @@ export function useTextToSpeech(options: TTSOptions) {
     }
   }
 
-  // Estimate only: the server charges on cache miss, so we dedupe by the
-  // same shape (language+voice+text) that determines its cache key.
-  const optimisticallyCountedRequests = new Set<string>()
-
   function recordOptimisticSegmentUsage(sanitizedText: string) {
-    if (sessionUser.value?.isLikerPlus) return
-    // Custom voice is gated to Plus; the server rejects non-Plus requests
-    // before charging, so decrementing here would drift the local counter.
+    // Custom voice is gated to Plus; the server rejects non-Plus requests,
+    // so counting here would drift the local trial counter.
     if (ttsLanguageVoice.value === 'custom') return
-    if (!ttsTrialUsage.isLoaded.value) return
-    const key = `${ttsLanguageVoice.value}:${sanitizedText}`
-    if (optimisticallyCountedRequests.has(key)) return
-    optimisticallyCountedRequests.add(key)
-    ttsTrialUsage.recordOptimisticUsage(sanitizedText.length)
+    const dedupKey = `${ttsLanguageVoice.value}:${sanitizedText}`
+    ttsTrialUsage.recordOptimisticSegmentUsage(dedupKey, sanitizedText.length)
   }
 
   function getAudioSrc(element: TTSSegment): string {
@@ -585,6 +583,10 @@ export function useTextToSpeech(options: TTSOptions) {
 
   async function startTextToSpeech(index: number | null = null) {
     if (isStartingTextToSpeech.value) return
+    if (ttsTrialUsage.isExhausted.value) {
+      options.onTrialExhausted?.()
+      return
+    }
     isStartingTextToSpeech.value = true
 
     try {
@@ -675,6 +677,10 @@ export function useTextToSpeech(options: TTSOptions) {
 
   function skipForward() {
     if (!isTextToSpeechOn.value) return
+    if (ttsTrialUsage.isExhausted.value) {
+      options.onTrialExhausted?.()
+      return
+    }
     useLogEvent('tts_skip_forward', {
       nft_class_id: nftClassId,
     })
@@ -688,6 +694,10 @@ export function useTextToSpeech(options: TTSOptions) {
 
   function skipToIndex(segmentIndex: number) {
     if (!isTextToSpeechOn.value) return
+    if (ttsTrialUsage.isExhausted.value && segmentIndex > currentTTSSegmentIndex.value) {
+      options.onTrialExhausted?.()
+      return
+    }
     useLogEvent('tts_skip_to_index', {
       nft_class_id: nftClassId,
     })

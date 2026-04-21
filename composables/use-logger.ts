@@ -62,6 +62,8 @@ const INTERCOM_EVENT_ALLOWLIST = new Set<string>([
   'tts_error',
   'tts_try_modal_open',
   'tts_trial_exhausted',
+  'tts_trial_chip_impression',
+  'tts_trial_chip_click',
 
   // Annotations
   'annotation_created',
