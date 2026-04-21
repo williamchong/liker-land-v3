@@ -94,10 +94,8 @@
             class="flex justify-center mb-3"
           >
             <TTSTrialUsageChip
-              :characters-used="trialCharactersUsed"
-              :limit="trialLimit"
+              :minutes-remaining="trialMinutesRemaining"
               :is-exhausted="trialIsExhausted"
-              :voice-language="currentVoiceLanguage"
               @click="handleTrialChipClick"
             />
           </div>
@@ -228,6 +226,7 @@
 <script setup lang="ts">
 import type { TTSPlayerModalProps } from './TTSPlayerModal.props'
 import { encodeAffiliateVoiceId } from '~/shared/utils/tts-sig'
+import { estimateTTSMinutes } from '~/shared/utils/tts-trial'
 
 const { user, loggedIn: hasLoggedIn } = useUserSession()
 const subscription = useSubscriptionModal()
@@ -237,7 +236,6 @@ const { customVoice, hasCustomVoice, fetchCustomVoice } = useCustomVoice()
 const {
   isLoaded: isTrialUsageLoaded,
   charactersUsed: trialCharactersUsed,
-  limit: trialLimit,
   charactersRemaining: trialCharactersRemaining,
   isExhausted: trialIsExhausted,
 } = useTTSTrialUsage()
@@ -595,6 +593,13 @@ const currentVoiceLanguage = computed(() => {
   if (language.includes('-')) return language
   return props.bookLanguage || 'zh-HK'
 })
+
+// Floor at 1 so the chip never reads "0 分鐘" in the sub-minute window
+// before `trialIsExhausted` flips.
+const trialMinutesRemaining = computed(() => Math.max(
+  1,
+  Math.round(estimateTTSMinutes(trialCharactersRemaining.value, currentVoiceLanguage.value)),
+))
 
 function buildChipEventPayload() {
   return {
