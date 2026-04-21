@@ -263,6 +263,16 @@ export function useTextToSpeech(options: TTSOptions) {
     isTextToSpeechLoading.value = false
     console.warn('Audio playback error:', error)
 
+    if (error === TTS_ERROR_NOT_ALLOWED) {
+      // Autoplay blocked is not a load failure — skip the analytics event
+      // but still clear the timer so a subsequent real error isn't measured
+      // against this one's start time.
+      clearSegmentLoadTimer()
+      stopTextToSpeech()
+      options.onError?.(error)
+      return
+    }
+
     const timing = consumeSegmentLoadTimer()
     if (timing && timing.index === currentTTSSegmentIndex.value) {
       useLogEvent('tts_segment_load_failed', buildTTSEventPayload({
@@ -272,12 +282,6 @@ export function useTextToSpeech(options: TTSOptions) {
         is_first_segment: timing.index === 0,
         error: formatTTSError(error),
       }))
-    }
-
-    if (error === TTS_ERROR_NOT_ALLOWED) {
-      stopTextToSpeech()
-      options.onError?.(error)
-      return
     }
 
     // Check if this is a network error (require both error code AND offline status to avoid misjudgment)
