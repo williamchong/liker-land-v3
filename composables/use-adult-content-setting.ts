@@ -1,6 +1,6 @@
 export function useAdultContentSetting() {
   const { isApp } = useAppDetection()
-  const setting = useSyncedUserSettings<boolean>({
+  const setting = useSyncedUserSettings({
     key: 'isAdultContentEnabled',
     defaultValue: false,
   })

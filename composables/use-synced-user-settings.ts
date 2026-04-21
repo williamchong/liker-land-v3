@@ -1,22 +1,25 @@
 import type { UserSettingsData } from '~/types/user-settings'
+import type { UserSettingKey } from '~/shared/types/user-settings'
 
-interface UseSyncedUserSettingsOptions<T> {
-  key: UserSettingKey
-  defaultValue: T
+type SettingValue<K extends UserSettingKey> = Exclude<UserSettingsData[K], undefined>
+
+interface UseSyncedUserSettingsOptions<K extends UserSettingKey> {
+  key: K
+  defaultValue: SettingValue<K>
 }
 
-export function useSyncedUserSettings<T>({
+export function useSyncedUserSettings<K extends UserSettingKey>({
   key,
   defaultValue,
-}: UseSyncedUserSettingsOptions<T>): Ref<T> {
+}: UseSyncedUserSettingsOptions<K>): Ref<SettingValue<K>> {
   const { loggedIn: hasLoggedIn } = useUserSession()
   const userSettingsStore = useUserSettingsStore()
 
-  const localState = ref<T>(defaultValue)
+  const localState = ref(defaultValue) as Ref<SettingValue<K>>
 
   const storeValue = computed(() => {
     const settings = userSettingsStore.getSettings()
-    return settings?.[key as keyof UserSettingsData] as T | undefined
+    return settings?.[key] as SettingValue<K> | undefined
   })
 
   function ensureInitialized() {
@@ -72,5 +75,5 @@ export function useSyncedUserSettings<T>({
     userSettingsStore.flushBatch()
   })
 
-  return state as Ref<T>
+  return state as Ref<SettingValue<K>>
 }

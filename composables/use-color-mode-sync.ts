@@ -3,7 +3,7 @@ export function useColorModeSync() {
   const { loggedIn: hasLoggedIn, user } = useUserSession()
   const userSettingsStore = useUserSettingsStore()
 
-  const syncedColorMode = useSyncedUserSettings<ColorMode>({
+  const syncedColorMode = useSyncedUserSettings({
     key: 'colorMode',
     defaultValue: 'light',
   })

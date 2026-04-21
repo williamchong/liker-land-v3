@@ -18,7 +18,7 @@ export function usePaymentCurrency() {
   const { loggedIn: hasLoggedIn } = useUserSession()
   const { detectedCountry, initializeClientGeolocation } = useDetectedGeolocation()
 
-  const syncedCurrency = useSyncedUserSettings<PaymentCurrency>({
+  const syncedCurrency = useSyncedUserSettings({
     key: 'currency',
     defaultValue: 'auto',
   })
@@ -56,11 +56,13 @@ export function usePaymentCurrency() {
       initializeClientGeolocation()
     }
 
+    let storedCurrency: PaymentCurrency | undefined
     if (hasLoggedIn.value) {
       await userSettingsStore.ensureInitialized()
+      storedCurrency = userSettingsStore.getSettings()?.currency
     }
 
-    setCurrency(syncedCurrency.value || localStorageCurrency.value || 'auto')
+    setCurrency(storedCurrency || localStorageCurrency.value || 'auto')
   }
 
   return {

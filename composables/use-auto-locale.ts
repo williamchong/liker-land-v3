@@ -22,7 +22,7 @@ export function useAutoLocale() {
   const { loggedIn: hasLoggedIn } = useUserSession()
   const { detectedCountry, initializeClientGeolocation } = useDetectedGeolocation()
 
-  const syncedLocale = useSyncedUserSettings<LocaleCode | null>({
+  const syncedLocale = useSyncedUserSettings({
     key: 'locale',
     defaultValue: null,
   })
