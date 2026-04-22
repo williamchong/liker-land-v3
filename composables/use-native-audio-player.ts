@@ -109,6 +109,7 @@ export function useNativeAudioPlayer(isActive: Ref<boolean | undefined>): TTSAud
   }
 
   function getCurrentURL(): string {
+    // Native app owns track URLs internally; not exposed to the web layer
     return ''
   }
 
