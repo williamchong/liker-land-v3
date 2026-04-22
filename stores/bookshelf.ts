@@ -18,6 +18,9 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
   const hasFetched = ref(false)
   const nextKey = ref<number | undefined>(undefined)
   const lastError = ref<{ statusCode: number, statusMessage: string } | null>(null)
+  // Bumped on reset() so in-flight fetches can detect they've been superseded
+  // (e.g. by a wallet switch) and skip repopulating just-cleared state.
+  let resetGeneration = 0
 
   const getTokenIdsByNFTClassId = computed(() => (nftClassId: string) => {
     const normalizedId = nftClassId.toLowerCase()
@@ -74,6 +77,9 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
       return
     }
 
+    const generation = resetGeneration
+    const isStale = () => generation !== resetGeneration
+
     try {
       isFetching.value = true
       const key = isRefresh ? undefined : nextKey.value?.toString()
@@ -82,6 +88,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
         nocache: isRefresh,
         limit,
       })
+      if (isStale()) return
 
       // O(1) dedup across the page — otherwise paginated loads hit O(n²).
       const seenClassIds = new Set(nftClassIds.value)
@@ -114,25 +121,30 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
       })
 
       await bookSettingsStore.fetchBatchSettings(Array.from(progressFetchIds), { force: isRefresh })
+      if (isStale()) return
 
       nextKey.value = res.pagination.count < limit ? undefined : res.pagination.next_key
       persistedWalletAddress.value = normalizedWallet ?? null
       lastError.value = null
     }
     catch (error) {
+      if (isStale()) return
       const statusCode = getErrorStatusCode(error)
       if (statusCode === 404) {
         // NOTE: For a new wallet address, the API will return 404
         nextKey.value = undefined
         persistedWalletAddress.value = normalizedWallet ?? null
+        lastError.value = null
         return
       }
       console.warn('Failed to fetch bookshelf items:', error)
       lastError.value = { statusCode: statusCode ?? 0, statusMessage: getErrorMessage(error) }
     }
     finally {
-      isFetching.value = false
-      hasFetched.value = true
+      if (!isStale()) {
+        isFetching.value = false
+        hasFetched.value = true
+      }
     }
   }
 
@@ -199,6 +211,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
   }
 
   function reset() {
+    resetGeneration += 1
     isFetching.value = false
     hasFetched.value = false
     nftClassIds.value = []
