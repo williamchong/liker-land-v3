@@ -1,1 +1,26 @@
+# 3ook.com — robots.txt
+# Decentralized bookstore and AI reading companion
+# https://3ook.com
 
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /checkout
+Disallow: /account
+Disallow: /shelf
+Disallow: /reader
+Disallow: /plus/checkout
+Disallow: /plus/success
+Disallow: /gift/plus/claim
+Disallow: /gift/plus/success
+Disallow: /en/checkout
+Disallow: /en/account
+Disallow: /en/shelf
+Disallow: /en/reader
+Disallow: /en/plus/checkout
+Disallow: /en/plus/success
+Disallow: /en/gift/plus/claim
+Disallow: /en/gift/plus/success
+Disallow: /*/claim$
+
+Sitemap: https://3ook.com/sitemap.xml
