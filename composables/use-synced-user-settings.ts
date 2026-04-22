@@ -28,14 +28,13 @@ export function useSyncedUserSettings<K extends UserSettingKey>({
     }
   }
 
-  function syncFromStore() {
-    if (storeValue.value !== undefined) {
-      localState.value = storeValue.value
-    }
-  }
-
   const state = computed({
-    get: () => localState.value,
+    get: () => {
+      if (userSettingsStore.isInitialized() && storeValue.value !== undefined) {
+        return storeValue.value
+      }
+      return localState.value
+    },
     set: (newValue) => {
       localState.value = newValue
       if (!hasLoggedIn.value) {
@@ -43,12 +42,6 @@ export function useSyncedUserSettings<K extends UserSettingKey>({
       }
       userSettingsStore.queueUpdate(key, newValue)
     },
-  })
-
-  watch(storeValue, (newValue) => {
-    if (newValue !== undefined) {
-      localState.value = newValue
-    }
   })
 
   watch(hasLoggedIn, (isLoggedIn, wasLoggedIn) => {
@@ -63,12 +56,7 @@ export function useSyncedUserSettings<K extends UserSettingKey>({
   })
 
   onMounted(() => {
-    if (hasLoggedIn.value) {
-      if (!userSettingsStore.isInitialized()) {
-        ensureInitialized()
-      }
-      syncFromStore()
-    }
+    ensureInitialized()
   })
 
   onBeforeUnmount(() => {

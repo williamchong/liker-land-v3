@@ -92,8 +92,7 @@ export const useUserSettingsStore = defineStore('user-settings', () => {
     if (!hasLoggedIn.value) return
 
     const currentValue = settingsEntry.value?.data?.[key]
-    const hasPendingUpdate = batchQueue.value.has(key)
-    if (currentValue === value && !hasPendingUpdate) return
+    if (currentValue === value) return
 
     if (settingsEntry.value?.data) {
       settingsEntry.value.data[key] = value
