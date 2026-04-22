@@ -125,6 +125,7 @@ export function useTextToSpeech(options: TTSOptions) {
     seek: time => activePlayer().seek(time),
     getPosition: () => activePlayer().getPosition(),
     wasInterruptedByBackground: () => activePlayer().wasInterruptedByBackground(),
+    getCurrentURL: () => activePlayer().getCurrentURL(),
     on(event, handler) {
       // Register on both — the inactive player won't fire events
       nativePlayer.on(event, handler)
@@ -217,6 +218,11 @@ export function useTextToSpeech(options: TTSOptions) {
     return currentTTSSegment.value?.text || ''
   })
 
+  function resolveCacheStatus() {
+    if (isNativeBridge.value) return 'native' as const
+    return classifyTTSCacheStatus(player.getCurrentURL())
+  }
+
   // Wire player events
   player.on('play', () => {
     isTextToSpeechPlaying.value = true
@@ -228,6 +234,7 @@ export function useTextToSpeech(options: TTSOptions) {
         load_time_ms: timing.loadMs,
         had_buffering: timing.hadBuffering,
         is_first_segment: timing.index === 0,
+        cache_status: resolveCacheStatus(),
       }))
     }
   })
@@ -304,6 +311,7 @@ export function useTextToSpeech(options: TTSOptions) {
         had_buffering: timing.hadBuffering,
         is_first_segment: timing.index === 0,
         error: formatTTSError(error),
+        cache_status: resolveCacheStatus(),
       }))
     }
 

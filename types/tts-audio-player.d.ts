@@ -26,5 +26,6 @@ declare interface TTSAudioPlayer {
   seek(time: number): void
   getPosition(): { position: number, duration: number } | null
   wasInterruptedByBackground(): boolean
+  getCurrentURL(): string
   on<K extends keyof TTSAudioPlayerEvents>(event: K, handler: TTSAudioPlayerEvents[K]): void
 }

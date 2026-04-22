@@ -108,6 +108,11 @@ export function useNativeAudioPlayer(isActive: Ref<boolean | undefined>): TTSAud
     return false
   }
 
+  function getCurrentURL(): string {
+    // Native app owns track URLs internally; not exposed to the web layer
+    return ''
+  }
+
   return {
     load,
     resume,
@@ -118,6 +123,7 @@ export function useNativeAudioPlayer(isActive: Ref<boolean | undefined>): TTSAud
     seek,
     getPosition,
     wasInterruptedByBackground,
+    getCurrentURL,
     on,
   }
 }
