@@ -1,22 +1,25 @@
 import type { UserSettingsData } from '~/types/user-settings'
+import type { UserSettingKey } from '~/shared/types/user-settings'
 
-interface UseSyncedUserSettingsOptions<T> {
-  key: UserSettingKey
-  defaultValue: T
+type SettingValue<K extends UserSettingKey> = Exclude<UserSettingsData[K], undefined>
+
+interface UseSyncedUserSettingsOptions<K extends UserSettingKey> {
+  key: K
+  defaultValue: SettingValue<K>
 }
 
-export function useSyncedUserSettings<T>({
+export function useSyncedUserSettings<K extends UserSettingKey>({
   key,
   defaultValue,
-}: UseSyncedUserSettingsOptions<T>): Ref<T> {
+}: UseSyncedUserSettingsOptions<K>): Ref<SettingValue<K>> {
   const { loggedIn: hasLoggedIn } = useUserSession()
   const userSettingsStore = useUserSettingsStore()
 
-  const localState = ref<T>(defaultValue)
+  const localState = ref(defaultValue) as Ref<SettingValue<K>>
 
   const storeValue = computed(() => {
     const settings = userSettingsStore.getSettings()
-    return settings?.[key as keyof UserSettingsData] as T | undefined
+    return settings?.[key] as SettingValue<K> | undefined
   })
 
   function ensureInitialized() {
@@ -25,14 +28,13 @@ export function useSyncedUserSettings<T>({
     }
   }
 
-  function syncFromStore() {
-    if (storeValue.value !== undefined) {
-      localState.value = storeValue.value
-    }
-  }
-
   const state = computed({
-    get: () => localState.value,
+    get: () => {
+      if (userSettingsStore.isInitialized() && storeValue.value !== undefined) {
+        return storeValue.value
+      }
+      return localState.value
+    },
     set: (newValue) => {
       localState.value = newValue
       if (!hasLoggedIn.value) {
@@ -40,12 +42,6 @@ export function useSyncedUserSettings<T>({
       }
       userSettingsStore.queueUpdate(key, newValue)
     },
-  })
-
-  watch(storeValue, (newValue) => {
-    if (newValue !== undefined) {
-      localState.value = newValue
-    }
   })
 
   watch(hasLoggedIn, (isLoggedIn, wasLoggedIn) => {
@@ -60,17 +56,12 @@ export function useSyncedUserSettings<T>({
   })
 
   onMounted(() => {
-    if (hasLoggedIn.value) {
-      if (!userSettingsStore.isInitialized()) {
-        ensureInitialized()
-      }
-      syncFromStore()
-    }
+    ensureInitialized()
   })
 
   onBeforeUnmount(() => {
     userSettingsStore.flushBatch()
   })
 
-  return state as Ref<T>
+  return state as Ref<SettingValue<K>>
 }

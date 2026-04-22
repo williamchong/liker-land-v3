@@ -1,5 +1,6 @@
 import { useDebounceFn } from '@vueuse/core'
 import type { UserSettingsData } from '~/types/user-settings'
+import type { UserSettingKey } from '~/shared/types/user-settings'
 
 interface UserSettingsEntry {
   data: UserSettingsData
@@ -11,7 +12,7 @@ export const useUserSettingsStore = defineStore('user-settings', () => {
   const settingsEntry = ref<UserSettingsEntry | null>(null)
   const fetchPromise = ref<Promise<UserSettingsData> | null>(null)
 
-  const batchQueue = ref<Map<string, unknown>>(new Map())
+  const batchQueue = ref<Map<UserSettingKey, UserSettingsData[UserSettingKey]>>(new Map())
 
   function isInitialized(): boolean {
     return settingsEntry.value !== null
@@ -87,11 +88,14 @@ export const useUserSettingsStore = defineStore('user-settings', () => {
 
   const debouncedFlush = useDebounceFn(() => flushBatch(), 1000)
 
-  function queueUpdate(key: string, value: unknown) {
+  function queueUpdate<K extends UserSettingKey>(key: K, value: UserSettingsData[K]) {
     if (!hasLoggedIn.value) return
 
+    const currentValue = settingsEntry.value?.data?.[key]
+    if (currentValue === value) return
+
     if (settingsEntry.value?.data) {
-      (settingsEntry.value.data as Record<string, unknown>)[key] = value
+      settingsEntry.value.data[key] = value
     }
 
     batchQueue.value.set(key, value)
