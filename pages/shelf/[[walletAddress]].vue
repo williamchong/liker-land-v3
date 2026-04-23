@@ -545,6 +545,7 @@ const retryActions = computed(() => [{
   label: $t('bookshelf_refresh_failed_retry'),
   color: 'warning' as const,
   variant: 'soft' as const,
+  loading: bookshelfStore.isFetching,
   onClick: () => {
     if (walletAddress.value) loadBookshelfData(walletAddress.value, { isRefresh: true })
   },
@@ -565,7 +566,7 @@ const shelfNotice = computed(() => {
       color: 'warning' as const,
       // Suppress the Retry button while a fetch is already in flight to avoid
       // double-taps; keep the banner visible so the error context doesn't flash.
-      actions: bookshelfStore.isFetching ? undefined : retryActions.value,
+      actions: retryActions.value,
     }
   }
   return null
