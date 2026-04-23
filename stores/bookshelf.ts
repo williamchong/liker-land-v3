@@ -63,11 +63,11 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     isRefresh?: boolean
     limit?: number
   }) {
-    const normalizedWallet = walletAddress?.toLowerCase()
+    const normalizedWalletAddress = walletAddress?.toLowerCase()
     if (
-      normalizedWallet
+      normalizedWalletAddress
       && persistedWalletAddress.value
-      && persistedWalletAddress.value !== normalizedWallet
+      && persistedWalletAddress.value !== normalizedWalletAddress
     ) {
       reset()
     }
@@ -91,16 +91,16 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
       if (isStale()) return
 
       // O(1) dedup across the page — otherwise paginated loads hit O(n²).
-      const seenClassIds = new Set(nftClassIds.value)
-      // Dedup progress-fetch IDs: the API returns one row per owned token_id,
-      // so a class with N tokens would otherwise appear N times and inflate
-      // chunked settings requests when force-refreshing.
-      const progressFetchIds = new Set<string>()
+      const seenNFTClassIds = new Set(nftClassIds.value)
+      // Dedup progress-fetch NFT Class IDs: the API returns one row per owned
+      // token_id, so a class with N tokens would otherwise appear N times and
+      // inflate chunked settings requests when force-refreshing.
+      const progressFetchNFTClassIds = new Set<string>()
       res.data.forEach((nftClass) => {
         const nftClassId = nftClass.address.toLowerCase() as `0x${string}`
 
-        if (!seenClassIds.has(nftClassId)) {
-          seenClassIds.add(nftClassId)
+        if (!seenNFTClassIds.has(nftClassId)) {
+          seenNFTClassIds.add(nftClassId)
           nftClassIds.value.push(nftClassId)
         }
         if (nftClass.token_id) {
@@ -117,14 +117,14 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
           nftStore.addNFTClassMetadata(nftClassId, nftClass.metadata)
         }
 
-        progressFetchIds.add(nftClassId)
+        progressFetchNFTClassIds.add(nftClassId)
       })
 
-      await bookSettingsStore.fetchBatchSettings(Array.from(progressFetchIds), { force: isRefresh })
+      await bookSettingsStore.fetchBatchSettings(Array.from(progressFetchNFTClassIds), { force: isRefresh })
       if (isStale()) return
 
       nextKey.value = res.pagination.count < limit ? undefined : res.pagination.next_key
-      persistedWalletAddress.value = normalizedWallet ?? null
+      persistedWalletAddress.value = normalizedWalletAddress ?? null
       lastError.value = null
     }
     catch (error) {
@@ -133,7 +133,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
       if (statusCode === 404) {
         // NOTE: For a new wallet address, the API will return 404
         nextKey.value = undefined
-        persistedWalletAddress.value = normalizedWallet ?? null
+        persistedWalletAddress.value = normalizedWalletAddress ?? null
         lastError.value = null
         return
       }

@@ -554,7 +554,7 @@ const shelfNotice = computed(() => {
   if (!isOnline.value) {
     return {
       title: $t('bookshelf_offline_notice'),
-      icon: 'i-material-symbols-wifi-off-rounded',
+      icon: 'i-material-symbols-signal-wifi-off-rounded',
       color: 'neutral' as const,
     }
   }
