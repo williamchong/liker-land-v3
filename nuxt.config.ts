@@ -25,7 +25,7 @@ export default defineNuxtConfig({
     '@sentry/nuxt/module',
     '@nuxt/scripts',
     '@nuxtjs/sitemap',
-    'v-gsap-nuxt',
+    // v-gsap-nuxt replaced by local plugins/v-gsap.{client,server}.ts to lazy-load gsap off the entry bundle
     '@vite-pwa/nuxt',
     '@posthog/nuxt',
   ],
