@@ -45,12 +45,10 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
       }
       return settings
     }).catch((error) => {
+      // Don't write an empty entry on network error: settingsMap is persisted,
+      // so a transient offline blip would otherwise mark the key initialized
+      // permanently and block future refetches across reloads.
       console.warn(`Failed to fetch book settings for ${nftClassId}:`, error)
-      // Store empty entry to mark as initialized (prevents retry)
-      settingsMap.value[key] = {
-        data: {} as BookSettingsData,
-        fetchedAt: Date.now(),
-      }
       throw error
     }).finally(() => {
       const { [key]: _, ...rest } = fetchPromisesMap.value

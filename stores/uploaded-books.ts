@@ -15,6 +15,7 @@ export const useUploadedBooksStore = defineStore('uploaded-books', () => {
   const persistedWalletAddress = ref<string | null>(null)
   const isFetching = ref(false)
   const hasFetched = ref(false)
+  let resetGeneration = 0
 
   const items = computed<UploadedBookItem[]>(() => {
     return rawItems.value.map((book) => {
@@ -28,8 +29,6 @@ export const useUploadedBooksStore = defineStore('uploaded-books', () => {
   })
 
   async function fetchItems({ force = false } = {}) {
-    if (isFetching.value) return
-
     const currentWallet = user.value?.evmWallet?.toLowerCase() ?? null
     if (
       currentWallet
@@ -39,28 +38,38 @@ export const useUploadedBooksStore = defineStore('uploaded-books', () => {
       reset()
     }
 
+    if (isFetching.value) return
     if (hasFetched.value && !force) return
+
+    const generation = resetGeneration
+    const isStale = () => generation !== resetGeneration
+
     isFetching.value = true
     try {
       const data = await $fetch<{
         items: UploadedBookMeta[]
         quota: UploadedBooksQuota
       }>('/api/uploaded-books')
+      if (isStale()) return
+
       rawItems.value = data.items
       quota.value = data.quota
       persistedWalletAddress.value = currentWallet
 
       const bookIds = data.items.map(item => item.id)
       if (bookIds.length) {
-        await bookSettingsStore.fetchBatchSettings(bookIds, { force: true })
+        await bookSettingsStore.fetchBatchSettings(bookIds, { force })
       }
     }
     catch (error) {
+      if (isStale()) return
       console.warn('Failed to fetch uploaded books:', error)
     }
     finally {
-      isFetching.value = false
-      hasFetched.value = true
+      if (!isStale()) {
+        isFetching.value = false
+        hasFetched.value = true
+      }
     }
   }
 
@@ -156,6 +165,7 @@ export const useUploadedBooksStore = defineStore('uploaded-books', () => {
   }
 
   function reset() {
+    resetGeneration += 1
     rawItems.value = []
     quota.value = { count: 0, totalSize: 0, maxCount: UPLOADED_BOOK_MAX_COUNT }
     persistedWalletAddress.value = null
