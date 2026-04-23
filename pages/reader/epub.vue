@@ -1458,6 +1458,7 @@ async function onClickTTSPlay() {
     ttsIndex: activeTTSElementIndex.value,
     sectionIndex: currentSectionIndex.value,
     cfi: currentPageStartCfi.value,
+    pageEndCFI: currentPageEndCfi.value,
   })
 }
 

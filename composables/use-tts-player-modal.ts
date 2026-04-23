@@ -59,13 +59,36 @@ export function useTTSPlayerModal(options: TTSPlayerOptions) {
     ttsIndex,
     sectionIndex,
     cfi,
+    pageEndCFI,
     ...props
   }: {
     ttsIndex?: number
     sectionIndex?: number
     cfi?: string
+    pageEndCFI?: string
   } & TTSPlayerModalProps = {}) {
-    if (ttsIndex !== undefined) {
+    const epubCFI = new EpubCFI()
+    // A persisted ttsIndex can outlive a reader navigation that didn't clear
+    // it (search/annotation jump), so only honor it when the page range says
+    // its segment is still on-screen. Otherwise fall through to the cfi
+    // lookup so TTS starts where the user is actually reading.
+    const storedSegmentCFI = ttsIndex !== undefined
+      ? ttsSegments.value[ttsIndex]?.cfi
+      : undefined
+    let isStoredIndexStale = false
+    if (storedSegmentCFI && cfi && pageEndCFI) {
+      try {
+        isStoredIndexStale = epubCFI.compare(storedSegmentCFI, cfi) < 0
+          || epubCFI.compare(storedSegmentCFI, pageEndCFI) > 0
+      }
+      catch {
+        // Treat malformed/unsupported CFIs as stale so we fall back to the
+        // cfi/sectionIndex lookup instead of failing to open the player.
+        isStoredIndexStale = true
+      }
+    }
+
+    if (ttsIndex !== undefined && !isStoredIndexStale) {
       startIndex.value = ttsIndex
     }
     else if (sectionIndex !== undefined || cfi) {
@@ -77,7 +100,6 @@ export function useTTSPlayerModal(options: TTSPlayerOptions) {
         segmentIndex = Math.max(segmentIndex, 0)
       }
       if (cfi) {
-        const epubCFI = new EpubCFI()
         const cfiIndex = ttsSegments.value
           .slice(segmentIndex)
           .findIndex(segment => segment.cfi && epubCFI.compare(segment.cfi, cfi) >= 0)
