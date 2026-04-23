@@ -1,7 +1,16 @@
+import type { ColorMode } from '~/shared/types/user-settings'
+
 export function useColorModeSync() {
+  const { t: $t } = useI18n()
   const colorMode = useColorMode()
   const { loggedIn: hasLoggedIn, user } = useUserSession()
   const userSettingsStore = useUserSettingsStore()
+
+  const options = computed<Array<{ label: string, value: ColorMode }>>(() => [
+    { label: $t('color_mode_light'), value: 'light' },
+    { label: $t('color_mode_dark'), value: 'dark' },
+    { label: $t('color_mode_system'), value: 'system' },
+  ])
 
   const syncedColorMode = useSyncedUserSettings({
     key: 'colorMode',
@@ -60,5 +69,6 @@ export function useColorModeSync() {
   return {
     preference: syncedColorMode,
     value: computed(() => colorMode.value),
+    options,
   }
 }
