@@ -554,14 +554,14 @@ const shelfNotice = computed(() => {
   if (!isOnline.value) {
     return {
       title: $t('bookshelf_offline_notice'),
-      icon: 'i-material-symbols-signal-wifi-off-rounded',
+      icon: 'i-material-symbols-signal-wifi-off-outline-rounded',
       color: 'neutral' as const,
     }
   }
   if (bookshelfStore.lastError) {
     return {
       title: $t('bookshelf_refresh_failed_notice'),
-      icon: 'i-material-symbols-cloud-off-rounded',
+      icon: 'i-material-symbols-cloud-off-outline-rounded',
       color: 'warning' as const,
       // Suppress the Retry button while a fetch is already in flight to avoid
       // double-taps; keep the banner visible so the error context doesn't flash.
