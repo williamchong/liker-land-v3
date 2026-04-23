@@ -119,6 +119,7 @@ export function useLikeCoinSessionAPI() {
     fbClickId,
     fbp,
     fbc,
+    posthogDistinctId,
   }: {
     email?: string
     nftClassId: string
@@ -142,6 +143,7 @@ export function useLikeCoinSessionAPI() {
     fbClickId?: string
     fbp?: string
     fbc?: string
+    posthogDistinctId?: string
   }) {
     return fetch.value<{ url: string, paymentId: string }>(`/likernft/book/purchase/${nftClassId}/new`, {
       method: 'POST',
@@ -169,6 +171,7 @@ export function useLikeCoinSessionAPI() {
         fbClickId,
         fbp,
         fbc,
+        posthogDistinctId,
         ipCountry: detectedCountry.value || undefined,
         site: '3ook.com',
         isApp: isApp.value || undefined,
@@ -199,6 +202,7 @@ export function useLikeCoinSessionAPI() {
       fbClickId,
       fbp,
       fbc,
+      posthogDistinctId,
     }: {
       email?: string
       coupon?: string
@@ -220,6 +224,7 @@ export function useLikeCoinSessionAPI() {
       fbClickId?: string
       fbp?: string
       fbc?: string
+      posthogDistinctId?: string
     },
   ) {
     return fetch.value<{ url: string, paymentId: string }>(`/likernft/book/purchase/cart/new`, {
@@ -254,6 +259,7 @@ export function useLikeCoinSessionAPI() {
         fbClickId,
         fbp,
         fbc,
+        posthogDistinctId,
         ipCountry: detectedCountry.value || undefined,
         site: '3ook.com',
         isApp: isApp.value || undefined,
@@ -293,6 +299,7 @@ export function useLikeCoinSessionAPI() {
     fbClickId,
     fbp,
     fbc,
+    posthogDistinctId,
     coupon,
     uiMode,
   }: {
@@ -315,6 +322,7 @@ export function useLikeCoinSessionAPI() {
     fbClickId?: string
     fbp?: string
     fbc?: string
+    posthogDistinctId?: string
     coupon?: string
     uiMode?: CheckoutUIMode
   }) {
@@ -338,6 +346,7 @@ export function useLikeCoinSessionAPI() {
         fbClickId,
         fbp,
         fbc,
+        posthogDistinctId,
         coupon,
         uiMode,
         ipCountry: detectedCountry.value || undefined,
@@ -384,6 +393,7 @@ export function useLikeCoinSessionAPI() {
     fbClickId,
     fbp,
     fbc,
+    posthogDistinctId,
   }: {
     period?: SubscriptionPlan
     giftInfo: {
@@ -408,6 +418,7 @@ export function useLikeCoinSessionAPI() {
     fbClickId?: string
     fbp?: string
     fbc?: string
+    posthogDistinctId?: string
   }) {
     return fetch.value<FetchLikerPlusCheckoutLinkResponseData>(`/plus/gift/new`, {
       method: 'POST',
@@ -427,6 +438,7 @@ export function useLikeCoinSessionAPI() {
         fbClickId,
         fbp,
         fbc,
+        posthogDistinctId,
         coupon,
         ipCountry: detectedCountry.value || undefined,
         isApp: isApp.value || undefined,
