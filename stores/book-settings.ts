@@ -12,6 +12,9 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
   const settingsMap = ref<Record<string, BookSettingsEntry>>({})
   const fetchPromisesMap = ref<Record<string, Promise<BookSettingsData>>>({})
   const batchFetchPromise = ref<Promise<void> | null>(null)
+  // Bumped on reset() so in-flight fetches can detect they've been superseded
+  // and skip repopulating a cleared settingsMap.
+  let resetGeneration = 0
 
   // Batch update queues per nftClassId
   const batchQueuesMap = ref<Record<string, Map<string, unknown>>>({})
@@ -42,12 +45,10 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
       }
       return settings
     }).catch((error) => {
+      // Don't write an empty entry on network error: settingsMap is persisted,
+      // so a transient offline blip would otherwise mark the key initialized
+      // permanently and block future refetches across reloads.
       console.warn(`Failed to fetch book settings for ${nftClassId}:`, error)
-      // Store empty entry to mark as initialized (prevents retry)
-      settingsMap.value[key] = {
-        data: {} as BookSettingsData,
-        fetchedAt: Date.now(),
-      }
       throw error
     }).finally(() => {
       const { [key]: _, ...rest } = fetchPromisesMap.value
@@ -58,7 +59,7 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
     return fetchPromise
   }
 
-  async function fetchBatchSettings(nftClassIds: string[]): Promise<void> {
+  async function fetchBatchSettings(nftClassIds: string[], { force = false }: { force?: boolean } = {}): Promise<void> {
     if (!hasLoggedIn.value || nftClassIds.length === 0) {
       return
     }
@@ -67,20 +68,28 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
       await batchFetchPromise.value
     }
 
-    const nftClassIdsToFetch = nftClassIds.filter(id => !isInitialized(id))
+    const nftClassIdsToFetch = force
+      ? nftClassIds
+      : nftClassIds.filter(id => !isInitialized(id))
     if (nftClassIdsToFetch.length === 0) {
       return
     }
 
+    const generation = resetGeneration
+    // True once the user logs out or reset() bumps the generation — in either
+    // case the response would repopulate a just-cleared settingsMap.
+    const isStale = () => !hasLoggedIn.value || generation !== resetGeneration
     batchFetchPromise.value = (async () => {
       try {
         for (let i = 0; i < nftClassIdsToFetch.length; i += FIRESTORE_IN_OPERATOR_LIMIT) {
+          if (isStale()) return
           const chunk = nftClassIdsToFetch.slice(i, i + FIRESTORE_IN_OPERATOR_LIMIT)
           const settings = await $fetch<Record<string, BookSettingsData>>('/api/books/settings', {
             params: {
               nftClassIds: chunk,
             },
           })
+          if (isStale()) return
 
           Object.entries(settings).forEach(([nftClassId, data]) => {
             const key = getKey(nftClassId)
@@ -192,7 +201,26 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
     debouncedFlush()
   }
 
+  function reset() {
+    resetGeneration += 1
+    settingsMap.value = {}
+    fetchPromisesMap.value = {}
+    // Leave batchFetchPromise alone: in-flight fetches detect the generation
+    // bump and bail in their own finally.
+    batchQueuesMap.value = {}
+    debouncedFlushFunctionsMap.value = {}
+  }
+
+  watch(hasLoggedIn, (value, oldValue) => {
+    if (oldValue && !value) {
+      reset()
+    }
+  })
+
   return {
+    // Must be returned so Pinia exposes it on $state for persist.pick.
+    settingsMap,
+
     fetchSettings,
     fetchBatchSettings,
     getSettings,
@@ -201,5 +229,10 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
     isInitialized,
     queueUpdate,
     flushBatch,
+    reset,
   }
+}, {
+  persist: {
+    pick: ['settingsMap'],
+  },
 })

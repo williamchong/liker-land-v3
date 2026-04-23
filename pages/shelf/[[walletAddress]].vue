@@ -35,6 +35,15 @@
     </header>
 
     <main class="flex flex-col items-center grow w-full max-w-[1440px] mx-auto px-4 laptop:px-12 pb-16">
+      <UAlert
+        v-if="shelfNotice"
+        class="w-full mt-4"
+        :title="shelfNotice.title"
+        :icon="shelfNotice.icon"
+        :color="shelfNotice.color"
+        variant="subtle"
+        :actions="shelfNotice.actions"
+      />
       <UCard
         v-if="!walletAddress && !hasLoggedIn"
         class="w-full max-w-(--breakpoint-phone) mt-4"
@@ -531,6 +540,38 @@ const shelfOwnerWalletAddress = computed(() => {
   return shelfOwner.value?.evmWallet || walletAddress.value
 })
 
+const isOnline = useOnline()
+const retryActions = computed(() => [{
+  label: $t('bookshelf_refresh_failed_retry'),
+  color: 'warning' as const,
+  variant: 'soft' as const,
+  loading: bookshelfStore.isFetching,
+  onClick: () => {
+    if (walletAddress.value) loadBookshelfData(walletAddress.value, { isRefresh: true })
+  },
+}])
+const shelfNotice = computed(() => {
+  if (!isMyBookshelf.value) return null
+  if (!isOnline.value) {
+    return {
+      title: $t('bookshelf_offline_notice'),
+      icon: 'i-material-symbols-signal-wifi-off-outline-rounded',
+      color: 'neutral' as const,
+    }
+  }
+  if (bookshelfStore.lastError) {
+    return {
+      title: $t('bookshelf_refresh_failed_notice'),
+      icon: 'i-material-symbols-cloud-off-outline-rounded',
+      color: 'warning' as const,
+      // Suppress the Retry button while a fetch is already in flight to avoid
+      // double-taps; keep the banner visible so the error context doesn't flash.
+      actions: retryActions.value,
+    }
+  }
+  return null
+})
+
 useHead(() => ({
   title: isMyBookshelf.value
     ? $t('shelf_page_title')
@@ -560,7 +601,8 @@ async function loadBookshelfData(addr: string, { isRefresh = false } = {}) {
       promises.push(uploadedBooksStore.fetchItems({ force: isRefresh }))
     }
   }
-  await Promise.all(promises)
+  // allSettled: one failing source shouldn't mask persisted shelf data.
+  await Promise.allSettled(promises)
 }
 
 const uploadedBookItems = computed(() => uploadedBooksStore.items)
@@ -585,14 +627,19 @@ onUnmounted(() => {
 
 watch(
   walletAddress,
-  async (value) => {
-    bookshelfStore.reset()
-    resetClaimableBooks()
-    // Drop the previous viewer's uploads so they don't leak into another
-    // user's shelf (affects `totalItemsCount` and the empty-state logic).
-    uploadedBooksStore.reset()
+  async (value, oldValue) => {
+    // Skip reset on initial session-hydration (undefined → wallet) so it
+    // doesn't wipe state just hydrated from persisted storage. On account
+    // switch, drop the previous viewer's uploads so they don't leak into
+    // another user's shelf.
+    const isAccountSwitch = oldValue !== undefined && oldValue !== value
+    if (isAccountSwitch) {
+      bookshelfStore.reset()
+      resetClaimableBooks()
+      uploadedBooksStore.reset()
+    }
     if (value) {
-      await loadBookshelfData(value, { isRefresh: true })
+      await loadBookshelfData(value, { isRefresh: isAccountSwitch })
     }
   },
 )

@@ -11,11 +11,16 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
   const likeNFTClassContract = useLikeNFTClassContract()
   const bookSettingsStore = useBookSettingsStore()
 
-  const nftClassIds = ref<Set<string>>(new Set())
+  const nftClassIds = ref<string[]>([])
   const tokenIdsByNFTClassId = ref<Record<string, string[]>>({})
+  const persistedWalletAddress = ref<string | null>(null)
   const isFetching = ref(false)
   const hasFetched = ref(false)
   const nextKey = ref<number | undefined>(undefined)
+  const lastError = ref<{ statusCode: number, statusMessage: string } | null>(null)
+  // Bumped on reset() so in-flight fetches can detect they've been superseded
+  // (e.g. by a wallet switch) and skip repopulating just-cleared state.
+  let resetGeneration = 0
 
   const getTokenIdsByNFTClassId = computed(() => (nftClassId: string) => {
     const normalizedId = nftClassId.toLowerCase()
@@ -27,7 +32,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
   })
 
   const items = computed<BookshelfItem[]>(() => {
-    return Array.from(nftClassIds.value)
+    return nftClassIds.value
       .filter((nftClassId) => {
         const metadata = nftStore.getNFTClassMetadataById(nftClassId)
         return metadata?.['@type'] === 'Book'
@@ -58,10 +63,22 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     isRefresh?: boolean
     limit?: number
   }) {
+    const normalizedWalletAddress = walletAddress?.toLowerCase()
+    if (
+      normalizedWalletAddress
+      && persistedWalletAddress.value
+      && persistedWalletAddress.value !== normalizedWalletAddress
+    ) {
+      reset()
+    }
+
     const isRefresh = shouldRefresh || !hasFetched.value
     if (!walletAddress || isFetching.value || (!isRefresh && !nextKey.value)) {
       return
     }
+
+    const generation = resetGeneration
+    const isStale = () => generation !== resetGeneration
 
     try {
       isFetching.value = true
@@ -71,12 +88,21 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
         nocache: isRefresh,
         limit,
       })
+      if (isStale()) return
 
-      const nftClassIdsForProgressFetch: string[] = []
+      // O(1) dedup across the page — otherwise paginated loads hit O(n²).
+      const seenNFTClassIds = new Set(nftClassIds.value)
+      // Dedup progress-fetch NFT Class IDs: the API returns one row per owned
+      // token_id, so a class with N tokens would otherwise appear N times and
+      // inflate chunked settings requests when force-refreshing.
+      const progressFetchNFTClassIds = new Set<string>()
       res.data.forEach((nftClass) => {
         const nftClassId = nftClass.address.toLowerCase() as `0x${string}`
 
-        nftClassIds.value.add(nftClassId)
+        if (!seenNFTClassIds.has(nftClassId)) {
+          seenNFTClassIds.add(nftClassId)
+          nftClassIds.value.push(nftClassId)
+        }
         if (nftClass.token_id) {
           const existing = tokenIdsByNFTClassId.value[nftClassId] ?? []
           if (!existing.includes(nftClass.token_id)) {
@@ -91,29 +117,34 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
           nftStore.addNFTClassMetadata(nftClassId, nftClass.metadata)
         }
 
-        nftClassIdsForProgressFetch.push(nftClassId)
+        progressFetchNFTClassIds.add(nftClassId)
       })
 
-      await bookSettingsStore.fetchBatchSettings(nftClassIdsForProgressFetch)
+      await bookSettingsStore.fetchBatchSettings(Array.from(progressFetchNFTClassIds), { force: isRefresh })
+      if (isStale()) return
 
       nextKey.value = res.pagination.count < limit ? undefined : res.pagination.next_key
+      persistedWalletAddress.value = normalizedWalletAddress ?? null
+      lastError.value = null
     }
     catch (error) {
+      if (isStale()) return
       const statusCode = getErrorStatusCode(error)
       if (statusCode === 404) {
         // NOTE: For a new wallet address, the API will return 404
         nextKey.value = undefined
+        persistedWalletAddress.value = normalizedWalletAddress ?? null
+        lastError.value = null
         return
       }
-      throw createError({
-        statusCode,
-        statusMessage: getErrorMessage(error),
-        fatal: true,
-      })
+      console.warn('Failed to fetch bookshelf items:', error)
+      lastError.value = { statusCode: statusCode ?? 0, statusMessage: getErrorMessage(error) }
     }
     finally {
-      isFetching.value = false
-      hasFetched.value = true
+      if (!isStale()) {
+        isFetching.value = false
+        hasFetched.value = true
+      }
     }
   }
 
@@ -141,7 +172,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
   ) {
     const normalizedNFTClassId = nftClassId.toLowerCase()
 
-    const hasNFTClass = nftClassIds.value.has(normalizedNFTClassId)
+    const hasNFTClass = nftClassIds.value.includes(normalizedNFTClassId)
     const existingTokenIds = tokenIdsByNFTClassId.value[normalizedNFTClassId]
     const existingMetadata = nftStore.getNFTClassMetadataById(normalizedNFTClassId)
 
@@ -163,7 +194,9 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     }
 
     if (nftClassMetadata) {
-      nftClassIds.value.add(normalizedNFTClassId)
+      if (!nftClassIds.value.includes(normalizedNFTClassId)) {
+        nftClassIds.value.push(normalizedNFTClassId)
+      }
 
       if (tokenId) {
         tokenIdsByNFTClassId.value[normalizedNFTClassId] = [tokenId]
@@ -178,11 +211,14 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
   }
 
   function reset() {
+    resetGeneration += 1
     isFetching.value = false
     hasFetched.value = false
-    nftClassIds.value.clear()
+    nftClassIds.value = []
     tokenIdsByNFTClassId.value = {}
     nextKey.value = undefined
+    persistedWalletAddress.value = null
+    lastError.value = null
   }
 
   watch(hasLoggedIn, (value, oldValue) => {
@@ -193,9 +229,15 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
   })
 
   return {
+    // Must be returned so Pinia exposes them on $state for persist.pick.
+    nftClassIds,
+    tokenIdsByNFTClassId,
+    persistedWalletAddress,
+
     isFetching,
     hasFetched,
     nextKey,
+    lastError,
 
     items,
 
@@ -207,4 +249,8 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     updateProgress,
     reset,
   }
+}, {
+  persist: {
+    pick: ['nftClassIds', 'tokenIdsByNFTClassId', 'persistedWalletAddress'],
+  },
 })

@@ -18,7 +18,8 @@ export function useClaimableBooks() {
       nftClassIds.value = response
     }
     catch (error) {
-      await handleError(error)
+      // Soft-fail: a blocking error modal on every transient failure breaks the persisted shelf UX.
+      console.warn('Failed to fetch claimable free books:', error)
     }
     finally {
       isLoading.value = false

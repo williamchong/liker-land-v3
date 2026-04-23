@@ -122,27 +122,22 @@ const isReaderLoading = ref(true)
 
 const { loadingLabel, loadingPercentage, loadFileAsBuffer } = useBookFileLoader()
 
+const isOnline = useOnline()
+
 onMounted(async () => {
   isReaderLoading.value = true
-  try {
-    if (isUploadedBook.value) {
-      const uploadedBooksStore = useUploadedBooksStore()
-      if (!uploadedBooksStore.hasFetched) {
-        await uploadedBooksStore.fetchItems()
-      }
-    }
-    else {
-      await nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value)
+
+  // Fire-and-forget background metadata fetch so offline / slow API calls
+  // don't block the cache-first PDF load.
+  if (isUploadedBook.value) {
+    const uploadedBooksStore = useUploadedBooksStore()
+    if (!uploadedBooksStore.hasFetched) {
+      uploadedBooksStore.fetchItems()
     }
   }
-  catch (error) {
-    await handleError(error, {
-      title: $t('error_reader_fetch_metadata_failed'),
-      onClose: () => {
-        navigateTo(localeRoute({ name: 'shelf' }))
-      },
-    })
-    return
+  else {
+    nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value)
+      .catch(error => console.warn('Failed to fetch NFT metadata:', error))
   }
 
   try {
@@ -150,7 +145,9 @@ onMounted(async () => {
   }
   catch (error) {
     await handleError(error, {
-      title: $t('error_reader_load_pdf_failed'),
+      title: isOnline.value
+        ? $t('error_reader_load_pdf_failed')
+        : $t('error_reader_book_not_available_offline'),
       onClose: () => {
         navigateTo(localeRoute({ name: 'shelf' }))
       },
