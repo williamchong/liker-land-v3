@@ -2,8 +2,6 @@
 import type { ConfigDefaults } from 'posthog-js'
 
 const {
-  GA_TRACKING_ID,
-  AD_CONVERSION_ID,
   NODE_ENV,
   POSTHOG_PUBLIC_KEY,
   POSTHOG_HOST,
@@ -24,7 +22,6 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     'nuxt-security',
     'nuxt-svgo',
-    'nuxt-gtag',
     '@sentry/nuxt/module',
     '@nuxt/scripts',
     '@nuxtjs/sitemap',
@@ -66,6 +63,9 @@ export default defineNuxtConfig({
     uploadedBooksBucketPrefix: process.env.UPLOADED_BOOKS_BUCKET_PREFIX,
     public: {
       scripts: {
+        googleAnalytics: {
+          id: process.env.GA_TRACKING_ID || '',
+        },
         intercom: {
           app_id: '',
         },
@@ -81,7 +81,6 @@ export default defineNuxtConfig({
       cacheKeyPrefix: '3ook',
       commitSHA: process.env.COMMIT_SHA,
       customRpcUrl: process.env.CUSTOM_RPC_URL,
-      googleAdConversionId: process.env.AD_CONVERSION_ID,
       likeCoinAPIEndpoint: process.env.LIKECOIN_API_ENDPOINT,
       likeCoinStaticEndpoint: process.env.LIKECOIN_STATIC_ENDPOINT,
       likeCoinEVMChainAPIEndpoint: process.env.LIKECOIN_EVM_CHAIN_API_ENDPOINT,
@@ -94,7 +93,6 @@ export default defineNuxtConfig({
       likeCoinVeLikeLegacyRewardAddresses: process.env.LIKECOIN_VE_LIKE_LEGACY_REWARD_ADDRESSES,
       likeCoinV3BookMigrationSiteURL: process.env.LIKECOIN_V3_BOOK_MIGRATION_SITE_URL,
       likerLandSiteURL: process.env.LIKER_LAND_SITE_URL,
-      googleAnalyticsTrackingId: process.env.GA_TRACKING_ID,
       magicLinkAPIKey: process.env.MAGIC_LINK_API_KEY,
       magicLinkCustomLogoURL: process.env.MAGIC_LINK_CUSTOM_LOGO_URL,
       walletConnectProjectId: process.env.WALLET_CONNECT_PROJECT_ID,
@@ -183,15 +181,6 @@ export default defineNuxtConfig({
     },
   },
 
-  gtag: {
-    tags: [
-      GA_TRACKING_ID,
-      AD_CONVERSION_ID,
-    ].filter(Boolean).map(id => ({
-      id: id?.split('/')[0] as string,
-    })),
-  },
-
   i18n: {
     baseUrl: process.env.BASE_URL,
     locales: [
@@ -233,6 +222,7 @@ export default defineNuxtConfig({
   scripts: {
     privacy: false,
     registry: {
+      googleAnalytics: true,
       intercom: true,
       metaPixel: true,
       posthog: POSTHOG_PUBLIC_KEY
