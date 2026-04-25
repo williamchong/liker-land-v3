@@ -276,6 +276,7 @@ const trialPeriodDays = computed(() => {
     case '30d': return 30
     default:
       if (activeAffiliate.value?.giftOnTrial === false) return 0
+      if (coupon.value) return 0
       return DEFAULT_TRIAL_PERIOD_DAYS
   }
 })
