@@ -223,7 +223,9 @@ export default defineNuxtConfig({
     privacy: false,
     registry: {
       googleAnalytics: true,
-      intercom: true,
+      intercom: {
+        trigger: { idleTimeout: 3000 },
+      },
       metaPixel: true,
       posthog: POSTHOG_PUBLIC_KEY
         ? {
