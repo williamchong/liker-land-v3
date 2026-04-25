@@ -221,16 +221,15 @@ export function useSetLogUser(user: User | null, locale: string) {
     }
   }
 
-  // Set user info in Intercom
-  if (window?.Intercom) {
+  if (import.meta.client) {
     try {
-      const intercom = window.Intercom
       if (!user) {
-        intercom('shutdown')
-        return
+        const { app_id } = window.intercomSettings || {}
+        window.intercomSettings = app_id ? { app_id } : {}
+        window.Intercom?.('shutdown')
       }
       else {
-        intercom('update', {
+        const userSettings = {
           intercom_user_jwt: user.intercomToken,
           session_duration: 2592000000, // 30d
           user_id: user.likerId,
@@ -246,7 +245,9 @@ export function useSetLogUser(user: User | null, locale: string) {
           like_wallet: user.likeWallet,
           login_method: user.loginMethod,
           locale,
-        })
+        }
+        window.intercomSettings = { ...window.intercomSettings, ...userSettings }
+        window.Intercom?.('update', userSettings)
       }
     }
     catch (error) {
