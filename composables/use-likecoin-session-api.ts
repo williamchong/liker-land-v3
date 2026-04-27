@@ -524,6 +524,22 @@ export function useLikeCoinSessionAPI() {
     return fetch.value(`/plus/retry`, { method: 'POST' })
   }
 
+  function updateUserProfile({ displayName }: { displayName: string }) {
+    return fetch.value(`/users/update`, {
+      method: 'POST',
+      body: { displayName },
+    })
+  }
+
+  function uploadUserAvatar(file: File) {
+    const formData = new FormData()
+    formData.append('avatarFile', file)
+    return fetch.value<{ avatar: string }>(`/users/update/avatar`, {
+      method: 'POST',
+      body: formData,
+    })
+  }
+
   return {
     createNFTBookPurchase,
     createNFTBookCartPurchase,
@@ -541,5 +557,7 @@ export function useLikeCoinSessionAPI() {
     fetchClaimableFreeBooks,
     claimFreeBook,
     retryLikerPlusPayment,
+    updateUserProfile,
+    uploadUserAvatar,
   }
 }
