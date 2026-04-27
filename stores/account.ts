@@ -76,11 +76,11 @@ export const useAccountStore = defineStore('account', () => {
     () => user.value,
     async (user) => {
       useSetLogUser(user, locale.value)
-      if (user?.token) {
-        const hasValidPermissions = verifyTokenPermissions(user.token)
-        if (!hasValidPermissions) {
-          await logout()
-        }
+      // logout() awaits client-only composables (wagmi disconnect, $fetch, useOverlay);
+      // running it during SSR drops the Nuxt instance after the first await and 500s.
+      if (!import.meta.client) return
+      if (user?.token && !verifyTokenPermissions(user.token)) {
+        await logout()
       }
     },
     { immediate: true, deep: true },
