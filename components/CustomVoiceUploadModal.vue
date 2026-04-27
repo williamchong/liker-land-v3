@@ -70,22 +70,39 @@
           />
         </div>
 
-        <div class="flex flex-col gap-3">
+        <div class="flex flex-col gap-2">
           <p
             class="text-sm font-medium text-muted"
             v-text="$t('tts_custom_voice_preview_label')"
           />
+          <UTextarea
+            v-model="previewText"
+            class="w-full"
+            :placeholder="$t('tts_custom_voice_preview_text_placeholder')"
+            :rows="3"
+            :maxlength="PREVIEW_MAX_LENGTH"
+            autoresize
+          />
+          <p
+            class="text-xs text-dimmed text-right tabular-nums"
+            v-text="`${previewText.length} / ${PREVIEW_MAX_LENGTH}`"
+          />
           <div
-            v-for="lang in activePreviewLanguages"
-            :key="lang.value"
-            class="flex flex-col gap-1"
+            v-if="previewAudioSrc"
+            class="flex items-center gap-2"
           >
-            <span class="text-xs text-dimmed">{{ lang.label }}</span>
             <audio
               controls
               preload="none"
-              class="w-full h-8"
-              :src="getTTSPreviewUrl(lang.value)"
+              class="flex-1 min-w-0 h-8"
+              :src="previewAudioSrc"
+            />
+            <UButton
+              icon="i-material-symbols-download-rounded"
+              variant="outline"
+              :label="$t('tts_custom_voice_preview_download_button')"
+              :loading="isDownloadingPreview"
+              @click="handleDownloadPreview"
             />
           </div>
         </div>
@@ -536,21 +553,29 @@ const voiceLanguageOptions = computed(() =>
       ],
 )
 
-const activePreviewLanguages = computed((): { label: string, value: string }[] => {
-  const primary = voiceLanguageOptions.value.find(o => o.value === voiceLanguage.value)
-    ?? voiceLanguageOptions.value[0]
-    ?? { label: voiceLanguage.value, value: voiceLanguage.value }
-  if (voiceLanguage.value === 'en-US') {
-    return [primary]
-  }
-  return [primary, { label: 'English', value: 'en-US' }]
-})
-
 const PREVIEW_TEXT: Record<string, string> = {
   'zh-HK': '歡迎收聽，這是我的私人聲優。',
   'zh-TW': '歡迎收聽，這是我的私人聲優。',
   'en-US': 'Welcome, this is my private voice artist.',
 }
+
+const PREVIEW_MAX_LENGTH = 2000
+const previewText = ref(PREVIEW_TEXT[voiceLanguage.value] || '')
+const isDownloadingPreview = ref(false)
+
+const previewAudioSrc = computed(() => {
+  const text = previewText.value.trim()
+  if (!text) return ''
+  return getTTSPreviewUrl(voiceLanguage.value, text)
+})
+
+watch(voiceLanguage, (newLang, oldLang) => {
+  // Preserve any text the user typed themselves; only swap when the textarea
+  // still holds the previous language's default phrase (or is empty).
+  if (previewText.value.trim() === '' || previewText.value === PREVIEW_TEXT[oldLang]) {
+    previewText.value = PREVIEW_TEXT[newLang] || ''
+  }
+})
 
 onMounted(() => {
   hasMicrophone.value = !!navigator.mediaDevices?.getUserMedia
@@ -686,8 +711,7 @@ async function confirmDelete() {
   }
 }
 
-function getTTSPreviewUrl(language: string): string {
-  const text = PREVIEW_TEXT[language] || PREVIEW_TEXT['zh-HK'] || ''
+function getTTSPreviewUrl(language: string, text: string): string {
   const ttsKey = sessionUser.value?.ttsKey || ''
   const params = new URLSearchParams({
     text,
@@ -698,6 +722,27 @@ function getTTSPreviewUrl(language: string): string {
     _t: previewCacheBuster.value.toString(),
   })
   return `/api/reader/tts?${params.toString()}`
+}
+
+async function handleDownloadPreview() {
+  const url = previewAudioSrc.value
+  if (!url || isDownloadingPreview.value) return
+  isDownloadingPreview.value = true
+  try {
+    const response = await fetch(url)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const blob = await response.blob()
+    const rawName = customVoice.value?.voiceName || props.existingVoice?.voiceName || $t('tts_custom_voice_default_name')
+    const safeName = rawName.replace(/[^\p{L}\p{N}\-_]+/gu, '_').replace(/^_+|_+$/g, '').slice(0, 50) || 'voice'
+    await saveAs(blob, `${safeName}-${voiceLanguage.value}-${Date.now()}.mp3`)
+  }
+  catch (error: unknown) {
+    console.error('[CustomVoice] Preview download failed:', error)
+    errorMessage.value = $t('tts_custom_voice_preview_download_error')
+  }
+  finally {
+    isDownloadingPreview.value = false
+  }
 }
 
 function onOpenUpdate(open: boolean) {

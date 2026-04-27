@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import type { Writable } from 'node:stream'
 import type { H3Event } from 'h3'
 import { TTSQuerySchema } from '~/server/schemas/tts'
-import { computeLegacyTTSTextSig, computeTTSTextSig, decodeAffiliateVoiceId, isAffiliateVoiceId } from '~/shared/utils/tts-sig'
+import { computeLegacyTTSTextSig, computeTTSTextSig, decodeAffiliateVoiceId, isAffiliateVoiceId, TTS_PREVIEW_NFT_CLASS_ID } from '~/shared/utils/tts-sig'
 
 // Coalesces concurrent identical TTS requests (e.g. browser range probes)
 const inFlightWrites = new Map<string, Promise<void>>()
@@ -86,6 +86,14 @@ export default defineEventHandler(async (event) => {
   const isCustomVoice = voiceId === 'custom'
   const isAffiliateVoice = isAffiliateVoiceId(voiceId)
   const isPrivateVoice = isCustomVoice || isAffiliateVoice
+  const isPreviewClassId = nftClassId === TTS_PREVIEW_NFT_CLASS_ID
+
+  // System and affiliate voices rely on book-level gating for per-book quota
+  // accounting; the preview class id bypasses that, so it's restricted to the
+  // user's own cloned voice.
+  if (isPreviewClassId && !isCustomVoice) {
+    throw createError({ status: 403, message: 'PREVIEW_REQUIRES_CUSTOM_VOICE' })
+  }
 
   const ttsEventBase = {
     evmWallet: session.user.evmWallet,
@@ -260,7 +268,7 @@ export default defineEventHandler(async (event) => {
 
   publishEvent(event, 'TTSRequest', ttsEventBase)
 
-  if (nftClassId) {
+  if (nftClassId && !isPreviewClassId) {
     incrementBookTTSCharacterUsage(session.user.evmWallet, nftClassId, text.length)
       .catch(err => console.warn('[TTS] Failed to increment per-book TTS usage:', err))
   }
