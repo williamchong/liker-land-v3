@@ -131,13 +131,21 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
     console.error(`Failed to track event with Meta Pixel: ${eventName}`, eventParams)
   }
 
-  if (window?.Intercom && INTERCOM_EVENT_ALLOWLIST.has(eventName)) {
+  if (INTERCOM_EVENT_ALLOWLIST.has(eventName)) {
     try {
       const { items, ...params } = eventParams
       if (items) {
         params.items = JSON.stringify(items)
       }
-      window.Intercom('trackEvent', eventName, params)
+      // Forward via the native bridge when supported; otherwise use the
+      // web SDK. Older app builds without the bridge keep the web SDK
+      // active so events still reach Intercom for CS context.
+      if (isNativeWebView() && isNativeFeatureSupported('intercom')) {
+        postToNative({ type: 'intercomTrackEvent', name: eventName, metaData: params })
+      }
+      else if (window?.Intercom) {
+        window.Intercom('trackEvent', eventName, params)
+      }
     }
     catch (error) {
       console.error(`Failed to log event to Intercom: ${eventName}`, error)
@@ -226,7 +234,11 @@ export function useSetLogUser(user: User | null, locale: string) {
     }
   }
 
-  if (import.meta.client) {
+  // When the native Intercom bridge is supported, the native SDK owns
+  // identity (driven by the identifyUser/resetUser bridge below). Browser
+  // sessions and older app builds without the bridge sync via the web SDK
+  // so CS still has user context.
+  if (import.meta.client && (!isNativeWebView() || !isNativeFeatureSupported('intercom'))) {
     try {
       if (!user) {
         const { app_id } = window.intercomSettings || {}
@@ -299,6 +311,8 @@ export function useSetLogUser(user: User | null, locale: string) {
   }
 
   // Sync user identity to the native app for its own analytics SDKs
+  // and (when supported) the native Intercom SDK. Older app builds
+  // that don't know about intercomToken simply ignore the extra fields.
   if (isNativeWebView()) {
     if (user) {
       postToNative({
@@ -310,6 +324,11 @@ export function useSetLogUser(user: User | null, locale: string) {
         isLikerPlus: !!user.isLikerPlus,
         loginMethod: user.loginMethod,
         locale,
+        // Intercom Identity Verification token + correlation IDs.
+        intercomToken: user.intercomToken,
+        likerId: user.likerId,
+        evmWallet: user.evmWallet,
+        likeWallet: user.likeWallet,
       })
     }
     else {

@@ -279,6 +279,7 @@ const storePageState = useStorePageState()
 const isMobile = useMediaQuery('(max-width: 425px)')
 const isAdultContentEnabled = useAdultContentSetting()
 const { isApp } = useAppDetection()
+const intercom = useIntercom()
 
 const querySearchTerm = computed(() => getRouteQuery('q', ''))
 const queryAuthorName = computed(() => getRouteQuery('author', ''))
@@ -974,12 +975,7 @@ function handleClearSearchInputButton() {
 function handleContactUsClick() {
   useLogEvent('store_no_search_results_contact_click', { search_term: querySearchTerm.value })
   const searchTerm = querySearchTerm.value || queryAuthorName.value || queryPublisherName.value || queryOwnerWallet.value
-  if (window?.Intercom) {
-    window.Intercom('showNewMessage', $t('store_no_search_results_contact_prefill', { term: searchTerm }))
-  }
-  else {
-    window.open(`mailto:cs@3ook.com?subject=${encodeURIComponent($t('store_no_search_results_contact_prefill', { term: searchTerm }))}`, '_blank')
-  }
+  intercom.showNewMessage($t('store_no_search_results_contact_prefill', { term: searchTerm }))
 }
 
 async function handleSearchSubmit() {

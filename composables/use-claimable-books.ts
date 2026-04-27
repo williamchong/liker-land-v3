@@ -4,6 +4,7 @@ export function useClaimableBooks() {
   const blockingModal = useBlockingModal()
   const localeRoute = useLocaleRoute()
   const { handleError } = useErrorHandler()
+  const intercom = useIntercom()
 
   const nftClassIds = ref<string[]>([])
   const isLoading = ref(false)
@@ -52,9 +53,7 @@ export function useClaimableBooks() {
               {
                 label: $t('contact_cs'),
                 onClick: async () => {
-                  if (window.Intercom) {
-                    window.Intercom('show')
-                  }
+                  intercom.show()
                 },
               },
             ],
