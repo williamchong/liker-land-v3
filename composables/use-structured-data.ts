@@ -414,7 +414,6 @@ export function useStructuredData(
             return {
               '@type': 'VideoObject',
               'name': name,
-              'description': description,
               'contentUrl': url,
               ...(youtubeId && { embedUrl: `https://www.youtube.com/embed/${youtubeId}` }),
               'thumbnailUrl': youtubeId ? getYouTubeThumbnailUrl(youtubeId) : coverImage,
@@ -487,7 +486,6 @@ export function useStructuredData(
           return {
             '@type': 'VideoObject',
             'name': name,
-            'description': description,
             'contentUrl': url,
             ...(youtubeId && { embedUrl: `https://www.youtube.com/embed/${youtubeId}` }),
             'thumbnailUrl': youtubeId ? getYouTubeThumbnailUrl(youtubeId) : coverImage,
