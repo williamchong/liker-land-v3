@@ -222,7 +222,10 @@ export default defineNuxtConfig({
   scripts: {
     privacy: false,
     registry: {
-      googleAnalytics: true,
+      googleAnalytics: {
+        bundle: false,
+        proxy: false,
+      },
       intercom: {
         trigger: { idleTimeout: 3000 },
       },
