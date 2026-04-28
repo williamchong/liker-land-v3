@@ -159,6 +159,31 @@
         </AccountSettingsItem>
 
         <AccountSettingsItem
+          icon="i-material-symbols-account-balance-wallet-outline-rounded"
+          :label="$t('account_page_stripe_connect')"
+        >
+          <div
+            class="text-sm text-muted"
+            v-text="stripeConnectStatusLabel"
+          />
+          <div
+            v-if="stripeConnectStatus.isReady && stripeConnectStatus.email"
+            class="text-xs/5 text-muted font-mono"
+            v-text="stripeConnectStatus.email"
+          />
+
+          <template #right>
+            <UButton
+              :label="stripeConnectButtonLabel"
+              :variant="stripeConnectState === 'ready' ? 'outline' : 'solid'"
+              color="primary"
+              :loading="isStripeConnectLoading"
+              @click="handleStripeConnectButtonClick"
+            />
+          </template>
+        </AccountSettingsItem>
+
+        <AccountSettingsItem
           icon="i-material-symbols-key-outline-rounded"
           :label="$t('account_page_evm_wallet')"
         >
@@ -624,6 +649,7 @@ import { formatUnits } from 'viem'
 import { waitForTransactionReceipt } from '@wagmi/core'
 import { useSignMessage } from '@wagmi/vue'
 import { CustomVoiceUploadModal } from '#components'
+import type { FetchStripeConnectStatusResponseData } from '~/composables/use-likecoin-session-api'
 import likeCoinTokenImage from '~/assets/images/likecoin-token.png'
 
 const config = useRuntimeConfig()
@@ -674,6 +700,86 @@ const colorModeLabel = computed(
 
 const isPlusFeatureVisible = computed(() => !isApp.value || !!user.value?.isLikerPlus)
 
+const stripeConnectStatus = ref<FetchStripeConnectStatusResponseData>({
+  hasAccount: false,
+  isReady: false,
+})
+const isStripeConnectLoading = ref(false)
+
+type StripeConnectState = 'ready' | 'pending' | 'none'
+
+const STRIPE_CONNECT_LABEL_KEYS: Record<StripeConnectState, { status: string, button: string }> = {
+  ready: {
+    status: 'account_page_stripe_connect_status_ready',
+    button: 'account_page_stripe_connect_manage_button',
+  },
+  pending: {
+    status: 'account_page_stripe_connect_status_pending',
+    button: 'account_page_stripe_connect_resume_button',
+  },
+  none: {
+    status: 'account_page_stripe_connect_status_none',
+    button: 'account_page_stripe_connect_setup_button',
+  },
+}
+
+const stripeConnectState = computed<StripeConnectState>(() => {
+  if (stripeConnectStatus.value.isReady) return 'ready'
+  if (stripeConnectStatus.value.hasAccount) return 'pending'
+  return 'none'
+})
+
+const stripeConnectStatusLabel = computed(() =>
+  $t(STRIPE_CONNECT_LABEL_KEYS[stripeConnectState.value].status),
+)
+
+const stripeConnectButtonLabel = computed(() =>
+  $t(STRIPE_CONNECT_LABEL_KEYS[stripeConnectState.value].button),
+)
+
+async function loadStripeConnectStatus() {
+  if (!user.value?.evmWallet) return
+  try {
+    stripeConnectStatus.value = await likeCoinSessionAPI.fetchStripeConnectStatus({
+      wallet: user.value.evmWallet,
+    })
+  }
+  catch (error) {
+    console.error('Failed to fetch Stripe Connect status:', error)
+  }
+}
+
+async function refreshStripeConnectStatus() {
+  try {
+    await likeCoinSessionAPI.refreshStripeConnectStatus()
+  }
+  catch (error) {
+    console.error('Failed to refresh Stripe Connect status:', error)
+  }
+  await loadStripeConnectStatus()
+}
+
+async function handleStripeConnectButtonClick() {
+  if (isStripeConnectLoading.value) return
+  const isManage = stripeConnectState.value === 'ready'
+  isStripeConnectLoading.value = true
+  try {
+    useLogEvent(isManage ? 'stripe_connect_login' : 'stripe_connect_setup_started')
+    const { url } = isManage
+      ? await likeCoinSessionAPI.fetchStripeConnectLoginLink()
+      : await likeCoinSessionAPI.createStripeConnectAccount()
+    await navigateTo(url, { external: true })
+  }
+  catch (error) {
+    isStripeConnectLoading.value = false
+    await handleError(error, {
+      title: isManage
+        ? $t('account_page_stripe_connect_manage_failed')
+        : $t('account_page_stripe_connect_setup_failed'),
+    })
+  }
+}
+
 function handleAdultContentToggle(value: boolean) {
   if (value) {
     isAdultContentConfirmOpen.value = true
@@ -705,6 +811,14 @@ watchImmediate(hasLoggedIn, async (loggedIn) => {
       catch (error) {
         console.error('Failed to refresh session info:', error)
       }
+    }
+    if (route.query.action === 'stripe-connect-return') {
+      await refreshStripeConnectStatus()
+      const { action: _action, ...nextQuery } = route.query
+      await navigateTo({ query: nextQuery }, { replace: true })
+    }
+    else {
+      await callOnce('account-stripe-connect-status', loadStripeConnectStatus)
     }
     if (route.query.action === 'billing-return') {
       if (isPaymentPastDue.value) {
