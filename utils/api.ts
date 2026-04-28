@@ -14,8 +14,6 @@ export function fetchBookstoreCMSProductsByTagId(tagId: string, {
       limit,
       ts,
     },
-    credentials: 'include',
-    mode: 'no-cors',
   })
 }
 
@@ -35,8 +33,6 @@ export function fetchBookstoreCMSPublicationsBySearchTerm(searchTerm: string, {
       limit,
       ts,
     },
-    credentials: 'include',
-    mode: 'no-cors',
   })
 }
 
@@ -56,8 +52,6 @@ export function fetchBookstoreCMSPublicationsByGenre(genre: string, {
       limit,
       ts,
     },
-    credentials: 'include',
-    mode: 'no-cors',
   })
 }
 
@@ -76,16 +70,11 @@ export function fetchBookstoreCMSTagsForAll({
       limit,
       ts,
     },
-    credentials: 'include',
-    mode: 'no-cors',
   })
 }
 
 export function fetchBookstoreCMSTagById(tagId: string) {
-  return $fetch<BookstoreCMSTag>(`/api/store/tags/${tagId}`, {
-    credentials: 'include',
-    mode: 'no-cors',
-  })
+  return $fetch<BookstoreCMSTag>(`/api/store/tags/${tagId}`)
 }
 
 export function getEncryptedArweaveLinkAPIEndpoint() {

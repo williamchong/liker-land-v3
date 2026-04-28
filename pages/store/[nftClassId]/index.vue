@@ -1138,7 +1138,7 @@ useHead(() => ({
   ],
   link: [
     { rel: 'canonical', href: canonicalURL.value },
-    { rel: 'preload', href: bookCoverSrc.value, as: 'image' },
+    { rel: 'preload', href: bookCoverSrc.value, as: 'image', key: 'preload-book-cover' },
   ],
   script: structuredData.value
     ? [

@@ -343,6 +343,7 @@
           :price="item.minPrice"
           :like-rank="item.likeRank ?? 0"
           :lazy="index >= columnMax"
+          :priority="index < columnMax"
           :ll-medium="llMedium"
           ll-source="bookstore"
         />
@@ -804,6 +805,8 @@ useHead(() => {
       rel: 'preload',
       href: '/api/store/tags',
       as: 'fetch' as const,
+      crossorigin: 'anonymous' as const,
+      key: 'preload-store-tags',
     },
     ...(isStakingTagId.value
       ? [{
@@ -811,11 +814,14 @@ useHead(() => {
           href: `${runtimeConfig.public.likeCoinEVMChainCollectiveAPIEndpoint}/book-nfts?pagination.limit=100&sort_by=${mapTagIdToAPIStakingSortValue(tagId.value)}&sort_order=desc`,
           as: 'fetch' as const,
           crossorigin: 'anonymous' as const,
+          key: 'preload-staking-books',
         }]
       : [{
           rel: 'preload',
           href: `/api/store/products?tag=${tagId.value}&limit=100&ts=${getTimestampRoundedToMinute()}`,
           as: 'fetch' as const,
+          crossorigin: 'anonymous' as const,
+          key: 'preload-store-products',
         }]),
   ]
 
