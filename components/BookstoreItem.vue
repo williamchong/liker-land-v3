@@ -8,6 +8,7 @@
       :to="productPageRoute"
       :alt="bookName"
       :lazy="props.lazy"
+      :priority="props.priority"
       :has-shadow="true"
       @click="onBookCoverClick"
     />
@@ -79,6 +80,10 @@ const props = defineProps({
     default: 0,
   },
   lazy: {
+    type: Boolean,
+    default: false,
+  },
+  priority: {
     type: Boolean,
     default: false,
   },

@@ -138,18 +138,18 @@ useHead({
     },
     ...(likeCoinAPIEndpoint
       ? [
-          { rel: 'preconnect', href: likeCoinAPIEndpoint },
-          { rel: 'preconnect', href: likeCoinAPIEndpoint, crossorigin: '' },
+          { rel: 'preconnect', href: likeCoinAPIEndpoint, key: 'preconnect-like-api' },
+          { rel: 'preconnect', href: likeCoinAPIEndpoint, crossorigin: '', key: 'preconnect-like-api-crossorigin' },
         ]
       : []),
     ...(likeCoinStaticEndpoint
-      ? [{ rel: 'preconnect', href: likeCoinStaticEndpoint }]
+      ? [{ rel: 'preconnect', href: likeCoinStaticEndpoint, key: 'preconnect-like-static' }]
       : []),
     ...(posthogHost
-      ? [{ rel: 'preconnect', href: posthogHost, crossorigin: '' }]
+      ? [{ rel: 'preconnect', href: posthogHost, crossorigin: '', key: 'preconnect-posthog' }]
       : []),
     ...(!isApp.value
-      ? [{ rel: 'preconnect', href: 'https://js.stripe.com', crossorigin: '' }]
+      ? [{ rel: 'preconnect', href: 'https://js.stripe.com', crossorigin: '', key: 'preconnect-stripe' }]
       : []),
     ...(i18nHead.value.link || []),
   ],

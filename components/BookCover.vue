@@ -34,7 +34,7 @@
           '-translate-x-[10px]',
           'pointer-events-none',
         ]"
-        :style="{ backgroundImage: hasLoaded && !hasError ? `url(${props.src})` : '' }"
+        :style="{ backgroundImage: props.src && !hasError ? `url(${props.src})` : '' }"
       />
       <img
         ref="imgElement"
