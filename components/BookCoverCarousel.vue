@@ -10,7 +10,7 @@
       loop
       fade
       auto-height
-      :autoplay="{ delay: 3000, stopOnInteraction: true }"
+      :autoplay="{ delay: 5000, stopOnInteraction: true }"
       :ui="{
         item: 'basis-full aspect-2/3 cursor-pointer',
         dots: 'relative bottom-0 gap-2 mt-2',
