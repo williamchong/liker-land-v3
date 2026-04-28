@@ -1114,10 +1114,7 @@ const ogTitle = computed(() => {
   const titleWithSubtitle = subtitle ? `${title}${$t('text_separator_colon')}${subtitle}` : title
   return author ? `${titleWithSubtitle} - ${author}${ebookSuffix}` : `${titleWithSubtitle}${ebookSuffix}`
 })
-const ogDescription = computed(() => {
-  const description = bookInfo.description.value || ''
-  return description.length > 200 ? `${description.substring(0, 197)}...` : description
-})
+const ogDescription = computed(() => truncateText(bookInfo.description.value, 200))
 const canonicalURL = computed(() => {
   return `${baseURL}${route.path}`
 })
