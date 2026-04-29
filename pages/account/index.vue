@@ -12,15 +12,17 @@
           icon="i-material-symbols-person-2-rounded"
           size="3xl"
         />
-        <UButton
-          class="absolute -bottom-1 -right-1 rounded-full"
-          icon="i-material-symbols-edit-outline-rounded"
-          variant="outline"
-          color="primary"
-          :loading="isUploadingAvatar"
-          :aria-label="$t('account_page_avatar_change_avatar')"
-          @click="handleAvatarEditButtonClick"
-        />
+        <div class="absolute -bottom-1 -right-1 rounded-full bg-(--app-bg)">
+          <UButton
+            class="rounded-[inherit]"
+            icon="i-material-symbols-edit-outline-rounded"
+            variant="outline"
+            color="primary"
+            :loading="isUploadingAvatar"
+            :aria-label="$t('account_page_avatar_change_avatar')"
+            @click="handleAvatarEditButtonClick"
+          />
+        </div>
         <input
           ref="avatarFileInput"
           class="hidden"
