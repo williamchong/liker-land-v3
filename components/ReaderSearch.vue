@@ -1,7 +1,22 @@
 <template>
+  <!--
+    iOS Safari only opens the soft keyboard if .focus() runs synchronously
+    inside a user gesture; the slideover body is unmounted until open, so we
+    focus this hidden keeper on tap. text-base (16px) prevents the iOS
+    focus-zoom.
+  -->
+  <input
+    ref="mobileFocusKeeper"
+    class="sr-only laptop:hidden text-base"
+    type="search"
+    inputmode="search"
+    :aria-label="$t('reader_search_input_placeholder')"
+    tabindex="-1"
+  >
   <BottomSlideover
     v-model:open="isMobileOpen"
     :title="$t('reader_search_title')"
+    body-class="max-h-[75vh]"
     @update:open="handleOpenChange"
   >
     <UButton
@@ -9,6 +24,7 @@
       icon="i-material-symbols-search-rounded"
       variant="ghost"
       :aria-label="$t('reader_search_button')"
+      @click="handleMobileTriggerClick"
     />
     <template #body>
       <div class="flex flex-col gap-3 px-4 py-3">
@@ -38,15 +54,13 @@
           </template>
         </UInput>
       </div>
-      <div class="max-h-[40vh] overflow-y-auto">
-        <ReaderSearchResultList
-          :is-searching="isSearching"
-          :results="results"
-          :has-searched="hasSearched"
-          :query="submittedQuery"
-          @select="handleSelect"
-        />
-      </div>
+      <ReaderSearchResultList
+        :is-searching="isSearching"
+        :results="results"
+        :has-searched="hasSearched"
+        :query="submittedQuery"
+        @select="handleSelect"
+      />
     </template>
   </BottomSlideover>
 
@@ -146,6 +160,12 @@ const hasSearched = ref(false)
 
 const mobileInput = useTemplateRef<{ inputRef?: Ref<HTMLInputElement | null> } | null>('mobileInput')
 const desktopInput = useTemplateRef<{ inputRef?: Ref<HTMLInputElement | null> } | null>('desktopInput')
+const mobileFocusKeeper = useTemplateRef<HTMLInputElement | null>('mobileFocusKeeper')
+
+function handleMobileTriggerClick() {
+  if (isOpen.value) return
+  mobileFocusKeeper.value?.focus({ preventScroll: true })
+}
 
 let activeSearchController: AbortController | null = null
 

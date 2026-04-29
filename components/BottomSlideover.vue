@@ -18,7 +18,7 @@
     <template #body>
       <div
         ref="bodyWrapperElement"
-        class=" max-h-[40vh] overflow-y-auto pb-2"
+        :class="['overflow-y-auto pb-2', props.bodyClass]"
       >
         <slot name="body" />
       </div>
@@ -47,8 +47,10 @@ const props = withDefaults(defineProps<{
   title?: string
   isDisabled?: boolean
   showCloseButton?: boolean
+  bodyClass?: string
 }>(), {
   showCloseButton: true,
+  bodyClass: 'max-h-[40vh]',
 })
 
 const open = defineModel<boolean>('open')
