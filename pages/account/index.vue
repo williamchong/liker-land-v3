@@ -2,7 +2,7 @@
   <main class="flex flex-col space-y-4">
     <section
       v-if="hasLoggedIn"
-      class="flex flex-col items-center gap-3 pt-2"
+      class="flex flex-col items-center gap-3"
     >
       <div class="relative">
         <UAvatar
