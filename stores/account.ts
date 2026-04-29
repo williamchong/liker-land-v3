@@ -20,6 +20,8 @@ const JWT_PERMISSIONS = [
   'write:plus',
   'read:preferences',
   'write:preferences',
+  'read:profile',
+  'write:profile',
 ]
 
 function verifyTokenPermissions(token: string): boolean {

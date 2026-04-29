@@ -2,6 +2,39 @@
   <main class="flex flex-col space-y-4">
     <section
       v-if="hasLoggedIn"
+      class="flex flex-col items-center gap-3"
+    >
+      <div class="relative">
+        <UAvatar
+          class="bg-white border border-muted size-24"
+          :src="user?.avatar"
+          :alt="user?.displayName || ''"
+          icon="i-material-symbols-person-2-rounded"
+          size="3xl"
+        />
+        <div class="absolute -bottom-1 -right-1 rounded-full bg-(--app-bg)">
+          <UButton
+            class="rounded-[inherit]"
+            icon="i-material-symbols-edit-outline-rounded"
+            variant="outline"
+            color="primary"
+            :loading="isUploadingAvatar"
+            :aria-label="$t('account_page_avatar_change_avatar')"
+            @click="handleAvatarEditButtonClick"
+          />
+        </div>
+        <input
+          ref="avatarFileInput"
+          class="hidden"
+          type="file"
+          accept="image/*"
+          @change="handleAvatarFileChange"
+        >
+      </div>
+    </section>
+
+    <section
+      v-if="hasLoggedIn"
       class="space-y-3"
     >
       <UCard :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }">
@@ -77,7 +110,6 @@
         </AccountSettingsItem>
 
         <AccountSettingsItem
-          v-if="user?.displayName"
           icon="i-material-symbols-account-circle-outline"
           :label="$t('account_page_account_display_name')"
         >
@@ -94,9 +126,20 @@
           </template>
 
           <div
+            v-if="user?.displayName"
             class="text-sm font-mono"
-            v-text="user?.displayName"
+            v-text="user.displayName"
           />
+
+          <template #right>
+            <UButton
+              :label="$t('account_page_display_name_edit_button')"
+              icon="i-material-symbols-edit-outline-rounded"
+              variant="outline"
+              color="primary"
+              @click="handleDisplayNameEditButtonClick"
+            />
+          </template>
         </AccountSettingsItem>
 
         <AccountSettingsItem
@@ -461,6 +504,45 @@
     </template>
 
     <UModal
+      v-model:open="isDisplayNameEditModalOpen"
+      :title="$t('account_page_display_name_edit_title')"
+      :dismissible="!isUpdatingDisplayName"
+      :close="!isUpdatingDisplayName"
+      :ui="{
+        title: 'text-lg font-bold',
+        footer: 'flex justify-end gap-3',
+      }"
+    >
+      <template #body>
+        <UInput
+          v-model="displayNameInput"
+          class="w-full"
+          autofocus
+          :placeholder="$t('account_page_display_name_edit_placeholder')"
+          :disabled="isUpdatingDisplayName"
+          @keydown.enter="confirmDisplayNameEdit"
+        />
+      </template>
+
+      <template #footer>
+        <UButton
+          :label="$t('common_cancel')"
+          variant="outline"
+          color="neutral"
+          :disabled="isUpdatingDisplayName"
+          @click="isDisplayNameEditModalOpen = false"
+        />
+        <UButton
+          :label="$t('account_page_display_name_edit_save')"
+          color="primary"
+          :loading="isUpdatingDisplayName"
+          :disabled="!isDisplayNameInputValid"
+          @click="confirmDisplayNameEdit"
+        />
+      </template>
+    </UModal>
+
+    <UModal
       v-model:open="isAdultContentConfirmOpen"
       :title="$t('account_page_adult_content_confirm_title')"
       :description="$t('account_page_adult_content_confirm_description')"
@@ -555,6 +637,19 @@ const { isApp } = useAppDetection()
 
 const isAdultContentEnabled = useAdultContentSetting()
 const isAdultContentConfirmOpen = ref(false)
+
+const AVATAR_MAX_BYTES = 2 * 1024 * 1024
+
+const avatarFileInput = useTemplateRef<HTMLInputElement>('avatarFileInput')
+const isUploadingAvatar = ref(false)
+
+const isDisplayNameEditModalOpen = ref(false)
+const isUpdatingDisplayName = ref(false)
+const displayNameInput = ref('')
+const isDisplayNameInputValid = computed(() => {
+  const trimmed = displayNameInput.value.trim()
+  return trimmed.length > 0 && trimmed !== user.value?.displayName
+})
 
 const { locales } = useAutoLocale()
 const { currency, options: currencyOptions } = usePaymentCurrency()
@@ -710,6 +805,98 @@ const totalUnclaimedRewards = computed(() => stakingData.value.totalUnclaimedRew
 
 async function handleLogout() {
   await accountStore.logout()
+}
+
+function handleDisplayNameEditButtonClick() {
+  useLogEvent('account_display_name_edit_click')
+  displayNameInput.value = user.value?.displayName ?? ''
+  isDisplayNameEditModalOpen.value = true
+}
+
+async function confirmDisplayNameEdit() {
+  if (!isDisplayNameInputValid.value || isUpdatingDisplayName.value) return
+  const nextDisplayName = displayNameInput.value.trim()
+  isUpdatingDisplayName.value = true
+  try {
+    try {
+      await likeCoinSessionAPI.updateUserProfile({ displayName: nextDisplayName })
+    }
+    catch (error) {
+      await handleError(error, {
+        title: $t('account_page_display_name_update_failed'),
+      })
+      return
+    }
+    useLogEvent('account_display_name_update_success')
+    toast.add({
+      title: $t('account_page_display_name_update_success'),
+      color: 'success',
+    })
+    isDisplayNameEditModalOpen.value = false
+    try {
+      await accountStore.refreshSessionInfo()
+    }
+    catch (error) {
+      console.error('Failed to refresh session info after display name update:', error)
+    }
+  }
+  finally {
+    isUpdatingDisplayName.value = false
+  }
+}
+
+function handleAvatarEditButtonClick() {
+  if (isUploadingAvatar.value) return
+  useLogEvent('account_avatar_edit_click')
+  avatarFileInput.value?.click()
+}
+
+async function handleAvatarFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    toast.add({
+      title: $t('account_page_avatar_invalid_file'),
+      color: 'error',
+    })
+    return
+  }
+  if (file.size > AVATAR_MAX_BYTES) {
+    toast.add({
+      title: $t('account_page_avatar_too_large'),
+      color: 'error',
+    })
+    return
+  }
+  isUploadingAvatar.value = true
+  try {
+    try {
+      const resizedFile = await resizeImageFile(file, 256)
+      await likeCoinSessionAPI.uploadUserAvatar(resizedFile)
+    }
+    catch (error) {
+      await handleError(error, {
+        title: $t('account_page_avatar_update_failed'),
+      })
+      return
+    }
+    useLogEvent('account_avatar_update_success')
+    toast.add({
+      title: $t('account_page_avatar_update_success'),
+      color: 'success',
+    })
+    try {
+      await accountStore.refreshSessionInfo()
+    }
+    catch (error) {
+      console.error('Failed to refresh session info after avatar update:', error)
+    }
+  }
+  finally {
+    isUploadingAvatar.value = false
+  }
 }
 
 async function handleMagicButtonClick() {
