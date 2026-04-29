@@ -72,33 +72,45 @@ const emit = defineEmits<{
 
 const { t: $t } = useI18n()
 
-function splitExcerpt(excerpt: string, trimmedQuery: string): ExcerptSegment[] {
-  if (!trimmedQuery) return [{ text: excerpt, isMatch: false }]
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+// `section.find()` (EPUB) and `getTextContent()` (PDF) normalize whitespace in
+// ways that a literal indexOf can miss.
+function buildHighlightRegex(trimmedQuery: string): RegExp | null {
+  const tokens = trimmedQuery.split(/\s+/).filter(Boolean).map(escapeRegExp)
+  if (!tokens.length) return null
+  return new RegExp(tokens.join('\\s+'), 'gi')
+}
+
+function splitExcerpt(excerpt: string, regex: RegExp | null): ExcerptSegment[] {
+  if (!regex) return [{ text: excerpt, isMatch: false }]
 
   const segments: ExcerptSegment[] = []
-  const haystack = excerpt.toLowerCase()
-  const needle = trimmedQuery.toLowerCase()
   let cursor = 0
-  while (cursor < excerpt.length) {
-    const found = haystack.indexOf(needle, cursor)
-    if (found === -1) {
-      segments.push({ text: excerpt.slice(cursor), isMatch: false })
-      break
+  for (const match of excerpt.matchAll(regex)) {
+    const matchText = match[0]
+    if (!matchText) continue
+    const start = match.index ?? 0
+    if (start > cursor) {
+      segments.push({ text: excerpt.slice(cursor, start), isMatch: false })
     }
-    if (found > cursor) {
-      segments.push({ text: excerpt.slice(cursor, found), isMatch: false })
-    }
-    segments.push({ text: excerpt.slice(found, found + trimmedQuery.length), isMatch: true })
-    cursor = found + trimmedQuery.length
+    segments.push({ text: matchText, isMatch: true })
+    cursor = start + matchText.length
+  }
+  if (cursor < excerpt.length) {
+    segments.push({ text: excerpt.slice(cursor), isMatch: false })
   }
   return segments
 }
 
 const segmentedResults = computed(() => {
   const trimmedQuery = props.query.trim()
+  const regex = trimmedQuery ? buildHighlightRegex(trimmedQuery) : null
   return props.results.map(result => ({
     ...result,
-    segments: splitExcerpt(result.excerpt, trimmedQuery),
+    segments: splitExcerpt(result.excerpt, regex),
   }))
 })
 
