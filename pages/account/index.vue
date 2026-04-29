@@ -504,7 +504,7 @@
     </template>
 
     <UModal
-      v-model:open="isDisplayNameEditOpen"
+      v-model:open="isDisplayNameEditModalOpen"
       :title="$t('account_page_display_name_edit_title')"
       :dismissible="!isUpdatingDisplayName"
       :close="!isUpdatingDisplayName"
@@ -530,7 +530,7 @@
           variant="outline"
           color="neutral"
           :disabled="isUpdatingDisplayName"
-          @click="isDisplayNameEditOpen = false"
+          @click="isDisplayNameEditModalOpen = false"
         />
         <UButton
           :label="$t('account_page_display_name_edit_save')"
@@ -643,7 +643,7 @@ const AVATAR_MAX_BYTES = 2 * 1024 * 1024
 const avatarFileInput = useTemplateRef<HTMLInputElement>('avatarFileInput')
 const isUploadingAvatar = ref(false)
 
-const isDisplayNameEditOpen = ref(false)
+const isDisplayNameEditModalOpen = ref(false)
 const isUpdatingDisplayName = ref(false)
 const displayNameInput = ref('')
 const isDisplayNameInputValid = computed(() => {
@@ -810,7 +810,7 @@ async function handleLogout() {
 function handleDisplayNameEditButtonClick() {
   useLogEvent('account_display_name_edit_click')
   displayNameInput.value = user.value?.displayName ?? ''
-  isDisplayNameEditOpen.value = true
+  isDisplayNameEditModalOpen.value = true
 }
 
 async function confirmDisplayNameEdit() {
@@ -832,7 +832,7 @@ async function confirmDisplayNameEdit() {
       title: $t('account_page_display_name_update_success'),
       color: 'success',
     })
-    isDisplayNameEditOpen.value = false
+    isDisplayNameEditModalOpen.value = false
     try {
       await accountStore.refreshSessionInfo()
     }
