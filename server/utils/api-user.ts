@@ -2,6 +2,7 @@ import type { H3Event } from 'h3'
 import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import type { BookSettingsData } from '~/types/book-settings'
 import type { BookSettingsFirestoreData } from '~/server/types/book-settings'
+import type { BookSettingsUpdatePayload } from '~/shared/types/book-settings'
 import type { UserSettingsData } from '~/types/user-settings'
 import { FIRESTORE_IN_OPERATOR_LIMIT } from '~/constants/api'
 
@@ -89,7 +90,7 @@ export async function getBookSettings(
 export async function updateBookSettings(
   userWallet: string,
   nftClassId: string,
-  settings: Partial<BookSettingsData>,
+  settings: BookSettingsUpdatePayload,
 ): Promise<void> {
   const bookDocRef = getUserCollection()
     .doc(userWallet)
@@ -97,30 +98,26 @@ export async function updateBookSettings(
     .doc(nftClassId.toLowerCase())
 
   const {
-    updatedAt: _,
     completedAt,
     didNotFinishAt,
     archivedAt,
+    lastOpenedTime,
     ...restSettings
   } = settings
 
+  const markerWrites = Object.fromEntries(
+    Object.entries({ completedAt, didNotFinishAt, archivedAt })
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => [
+        key,
+        value === null ? FieldValue.delete() : FieldValue.serverTimestamp(),
+      ]),
+  )
+
   await bookDocRef.set({
     ...restSettings,
-    ...(completedAt !== undefined && {
-      completedAt: completedAt === null
-        ? FieldValue.delete()
-        : Timestamp.fromMillis(completedAt),
-    }),
-    ...(didNotFinishAt !== undefined && {
-      didNotFinishAt: didNotFinishAt === null
-        ? FieldValue.delete()
-        : Timestamp.fromMillis(didNotFinishAt),
-    }),
-    ...(archivedAt !== undefined && {
-      archivedAt: archivedAt === null
-        ? FieldValue.delete()
-        : Timestamp.fromMillis(archivedAt),
-    }),
+    ...markerWrites,
+    ...(lastOpenedTime !== undefined && { lastOpenedTime: Date.now() }),
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true })
 }

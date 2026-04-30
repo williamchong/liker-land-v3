@@ -2,6 +2,16 @@ import { useDebounceFn } from '@vueuse/core'
 import type { BookSettingsData } from '~/types/book-settings'
 import { FIRESTORE_IN_OPERATOR_LIMIT } from '~/constants/api'
 
+// Local cache keeps the client `Date.now()` so shelf sort updates immediately;
+// the wire payload sends a sentinel so the server stamps with its own clock.
+type ServerTimestampKey = 'completedAt' | 'didNotFinishAt' | 'archivedAt' | 'lastOpenedTime'
+const SERVER_TIMESTAMP_KEYS: ReadonlySet<string> = new Set<ServerTimestampKey>([
+  'completedAt',
+  'didNotFinishAt',
+  'archivedAt',
+  'lastOpenedTime',
+])
+
 interface BookSettingsEntry {
   data: BookSettingsData
   fetchedAt: number
@@ -196,7 +206,10 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
       ;(entry.data as Record<string, unknown>)[dbKey] = value
     }
 
-    addToBatch(nftClassId, dbKey, value)
+    const wireValue = SERVER_TIMESTAMP_KEYS.has(dbKey) && typeof value === 'number'
+      ? true
+      : value
+    addToBatch(nftClassId, dbKey, wireValue)
     const debouncedFlush = getDebouncedFlush(nftClassId)
     debouncedFlush()
   }

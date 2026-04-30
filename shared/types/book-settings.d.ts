@@ -14,3 +14,13 @@ export interface BaseBookSettingsData {
   'didNotFinishAt'?: number | null
   'archivedAt'?: number | null
 }
+
+export interface BookSettingsUpdatePayload extends Omit<
+  Partial<BaseBookSettingsData>,
+  'lastOpenedTime' | 'completedAt' | 'didNotFinishAt' | 'archivedAt'
+> {
+  lastOpenedTime?: true
+  completedAt?: true | null
+  didNotFinishAt?: true | null
+  archivedAt?: true | null
+}
