@@ -218,13 +218,13 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
 
   function markBookAsFinished(nftClassId: string) {
     const normalizedNFTClassId = nftClassId.toLowerCase()
-    bookSettingsStore.queueUpdate(normalizedNFTClassId, 'completedAt', Date.now())
+    bookSettingsStore.queueUpdate(normalizedNFTClassId, 'completedAt', true)
     bookSettingsStore.queueUpdate(normalizedNFTClassId, 'didNotFinishAt', null)
   }
 
   function markBookAsDidNotFinish(nftClassId: string) {
     const normalizedNFTClassId = nftClassId.toLowerCase()
-    bookSettingsStore.queueUpdate(normalizedNFTClassId, 'didNotFinishAt', Date.now())
+    bookSettingsStore.queueUpdate(normalizedNFTClassId, 'didNotFinishAt', true)
     bookSettingsStore.queueUpdate(normalizedNFTClassId, 'completedAt', null)
   }
 
@@ -236,7 +236,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
 
   function archiveBook(nftClassId: string) {
     const normalizedNFTClassId = nftClassId.toLowerCase()
-    bookSettingsStore.queueUpdate(normalizedNFTClassId, 'archivedAt', Date.now())
+    bookSettingsStore.queueUpdate(normalizedNFTClassId, 'archivedAt', true)
   }
 
   function unarchiveBook(nftClassId: string) {

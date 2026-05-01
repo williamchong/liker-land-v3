@@ -15,10 +15,9 @@ export interface BaseBookSettingsData {
   'archivedAt'?: number | null
 }
 
-export interface BookSettingsUpdatePayload extends Omit<
-  Partial<BaseBookSettingsData>,
-  'lastOpenedTime' | 'completedAt' | 'didNotFinishAt' | 'archivedAt'
-> {
+export type ServerTimestampField = 'lastOpenedTime' | 'completedAt' | 'didNotFinishAt' | 'archivedAt'
+
+export interface BookSettingsUpdatePayload extends Omit<Partial<BaseBookSettingsData>, ServerTimestampField> {
   lastOpenedTime?: true
   completedAt?: true | null
   didNotFinishAt?: true | null
