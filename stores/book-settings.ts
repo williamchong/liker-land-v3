@@ -1,11 +1,11 @@
 import { useDebounceFn } from '@vueuse/core'
 import type { BookSettingsData } from '~/types/book-settings'
-import type { ServerTimestampField } from '~/shared/types/book-settings'
+import type { BookTimestampField } from '~/shared/types/book-settings'
 import { FIRESTORE_IN_OPERATOR_LIMIT } from '~/constants/api'
 
 // Local cache keeps the client `Date.now()` so shelf sort updates immediately;
 // the wire payload sends a sentinel so the server stamps with its own clock.
-const SERVER_TIMESTAMP_KEYS: ReadonlySet<string> = new Set<ServerTimestampField>([
+const SERVER_TIMESTAMP_KEYS: ReadonlySet<string> = new Set<BookTimestampField>([
   'completedAt',
   'didNotFinishAt',
   'archivedAt',

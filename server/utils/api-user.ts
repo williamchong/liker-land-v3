@@ -125,7 +125,7 @@ export async function updateBookSettings(
     ...restSettings
   } = settings
 
-  const markerWrites = Object.fromEntries(
+  const timestampFields = Object.fromEntries(
     Object.entries({ completedAt, didNotFinishAt, archivedAt, lastOpenedTime })
       .filter(([, value]) => value !== undefined)
       .map(([key, value]) => [
@@ -136,7 +136,7 @@ export async function updateBookSettings(
 
   await bookDocRef.set({
     ...restSettings,
-    ...markerWrites,
+    ...timestampFields,
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true })
 }
