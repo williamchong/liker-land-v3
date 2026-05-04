@@ -118,7 +118,11 @@
           :description="campaignContent?.description"
           :is-compact="isShowTTSSamples || !!$slots['affiliate-promo']"
         />
-        <TTSSamplesSection v-if="isShowTTSSamples" />
+        <TTSSamplesSection
+          v-if="isShowTTSSamples"
+          :affiliate-voices="affiliateVoices"
+          :affiliate-liker-id="affiliateLikerId"
+        />
 
         <slot name="affiliate-promo" />
 
@@ -259,8 +263,10 @@ const isCustomVoiceCampaign = computed(() => {
   return getRouteQuery('utm_campaign').includes('custom-voice')
 })
 
+const hasAffiliateVoices = computed(() => (props.affiliateVoices?.length ?? 0) > 0)
+
 const shouldShowTTSSamples = computed(() => {
-  return getRouteQuery('samples') === '1' || isCustomVoiceCampaign.value
+  return getRouteQuery('samples') === '1' || isCustomVoiceCampaign.value || hasAffiliateVoices.value
 })
 
 const abTest = shouldShowTTSSamples.value

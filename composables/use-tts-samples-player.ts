@@ -1,15 +1,58 @@
+import type { AffiliateVoiceData } from '~/shared/types/custom-voice'
+import { encodeAffiliateVoiceId } from '~/shared/utils/tts-sig'
+import { getTTSSampleText } from '~/shared/utils/tts-sample'
+
 interface TTSSamplesPlayerOptions {
   onError?: (error: unknown) => void
   onEnd?: (sampleId: string | null) => void
+  affiliateVoices?: MaybeRefOrGetter<AffiliateVoiceData[] | undefined>
+  affiliateLikerId?: MaybeRefOrGetter<string | undefined>
 }
 
 export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
-  const { onError, onEnd } = options
+  const { onError, onEnd, affiliateVoices, affiliateLikerId } = options
   const { t: $t } = useI18n()
-  const { getVoiceAvatar } = useTTSVoice()
+  const affiliateVoicesComputed = computed(() => toValue(affiliateVoices) ?? [])
+  const { getVoiceAvatar } = useTTSVoice({ affiliateVoices: affiliateVoicesComputed })
 
-  const samples = computed<TTSSample[]>(() =>
-    [
+  const affiliateSamples = computed<TTSSample[]>(() => {
+    const voices = affiliateVoicesComputed.value
+    const likerId = toValue(affiliateLikerId)
+    if (!voices.length || !likerId) return []
+    return voices.map((voice) => {
+      const encodedVoiceId = encodeAffiliateVoiceId(voice.id)
+      const language = voice.language?.toLowerCase().startsWith('zh-tw') ? 'zh-TW' : 'zh-HK'
+      const sampleId = `affiliate-${voice.id}`
+      const text = getTTSSampleText(language)
+      const params = new URLSearchParams({
+        voice_id: encodedVoiceId,
+        language,
+        from: likerId,
+      })
+      const description = language === 'zh-TW'
+        ? $t('tts_sample_mandarin')
+        : $t('tts_sample_cantonese')
+      return {
+        id: sampleId,
+        title: voice.name,
+        description,
+        segments: [{
+          id: `${sampleId}-segment-0`,
+          text,
+          sectionIndex: 0,
+          cfi: undefined,
+          audioSrc: `/api/tts/sample?${params.toString()}`,
+        }],
+        language,
+        languageVoice: encodedVoiceId,
+        avatarSrc: getVoiceAvatar(encodedVoiceId),
+      }
+    })
+  })
+
+  const samples = computed<TTSSample[]>(() => {
+    if (affiliateSamples.value.length > 0) return affiliateSamples.value
+    return [
       {
         id: 'cantonese-pazu',
         title: $t('tts_sample_cantonese'),
@@ -59,8 +102,8 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
         languageVoice,
         avatarSrc: getVoiceAvatar(languageVoice),
       }
-    }),
-  )
+    })
+  })
 
   const activeSampleId = ref<string | null>(null)
   const isPlaying = ref(false)
@@ -176,7 +219,7 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
   })
 
   return {
-    samples: readonly(samples),
+    samples,
 
     activeSampleId: readonly(activeSampleId),
     isPlaying: readonly(isPlaying),
