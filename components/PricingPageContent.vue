@@ -123,8 +123,10 @@
           class="mb-4 laptop:mb-6"
           :title="campaignContent?.title"
           :description="campaignContent?.description"
-          :is-compact="isShowTTSSamples || !!$slots['affiliate-promo']"
+          :is-compact="isShowTTSSamples || !!$slots['affiliate-alert'] || !!$slots['affiliate-promo']"
         />
+        <slot name="affiliate-alert" />
+
         <TTSSamplesSection
           v-if="isShowTTSSamples"
           :affiliate-voices="affiliateVoices"
