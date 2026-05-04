@@ -31,6 +31,7 @@
       />
       <TTSVoiceSelector
         icon="i-material-symbols-check-circle-rounded"
+        :samples="ttsSamples"
         @voice-click="handleVoiceClick"
       />
     </template>
@@ -69,6 +70,7 @@ const emit = defineEmits<{
 
 const { t: $t } = useI18n()
 const { setTTSLanguageVoice } = useTTSVoice()
+const { samples: ttsSamples } = useTTSSamplesPlayer()
 
 const cantoneseVoiceABTest = useABTest({
   experimentKey: 'tts-try-modal-cantonese-voice',

@@ -20,6 +20,7 @@
       <TTSVoiceSelector
         :icon="getPlayButtonIcon(activeTTSSampleId)"
         :selected-voice-id="activeTTSSampleId"
+        :samples="ttsSamples"
         @voice-click="handleSampleClick"
       />
 
@@ -52,6 +53,13 @@
 </template>
 
 <script setup lang="ts">
+import type { AffiliateVoiceData } from '~/shared/types/custom-voice'
+
+const props = defineProps<{
+  affiliateVoices?: AffiliateVoiceData[]
+  affiliateLikerId?: string
+}>()
+
 const { handleError } = useErrorHandler()
 
 const {
@@ -68,6 +76,8 @@ const {
   onEnd: () => {
     useLogEvent('tts_sample_play_complete', { sample: activeTTSSampleId.value })
   },
+  affiliateVoices: () => props.affiliateVoices,
+  affiliateLikerId: () => props.affiliateLikerId,
 })
 
 function getPlayButtonIcon(sampleId: string | null) {

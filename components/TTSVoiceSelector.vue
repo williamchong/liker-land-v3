@@ -1,7 +1,7 @@
 <template>
   <ul class="flex flex-col gap-3 w-full flex-wrap">
     <li
-      v-for="sample in ttsSamples"
+      v-for="sample in samples"
       :key="sample.id"
       class="space-y-2"
     >
@@ -73,6 +73,7 @@
 withDefaults(defineProps<{
   icon?: string
   selectedVoiceId?: string | null
+  samples: TTSSample[]
 }>(), {
   icon: 'i-material-symbols-play-arrow-rounded',
   selectedVoiceId: undefined,
@@ -81,11 +82,6 @@ withDefaults(defineProps<{
 const emit = defineEmits<{
   voiceClick: [sample: { id: string, languageVoice: string }]
 }>()
-
-const { samples: ttsSamples } = useTTSSamplesPlayer({
-  onError: () => {},
-  onEnd: () => {},
-})
 
 function handleVoiceClick(sample: { id: string, languageVoice: string }) {
   emit('voiceClick', sample)

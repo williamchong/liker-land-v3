@@ -1,3 +1,5 @@
+import type { AffiliateVoiceData } from '~/shared/types/custom-voice'
+
 export interface PricingPageContentProps {
   modelValue?: SubscriptionPlan
   isProcessingSubscription?: boolean
@@ -7,4 +9,6 @@ export interface PricingPageContentProps {
   utmMedium?: string
   utmSource?: string
   coupon?: string
+  affiliateVoices?: AffiliateVoiceData[]
+  affiliateLikerId?: string
 }
