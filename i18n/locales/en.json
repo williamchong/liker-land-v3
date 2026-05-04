@@ -898,6 +898,8 @@
   "tts_sample_cantonese_description": "Read by Pazu",
   "tts_sample_mandarin": "Mandarin",
   "tts_sample_mandarin_description": "Read by Aurora",
+  "tts_samples_section_affiliate_books_note": "Available on selected books only — other books continue to use the standard Plus voices.",
+  "tts_samples_section_affiliate_exclusive_note": "An exclusive voice unlocked only when subscribing through this referral.",
   "tts_samples_section_footer": "Subscribe to Plus and unlock more voices to enjoy.",
   "tts_samples_section_title": "Try Text-to-Speech",
   "tts_session_expired_description": "Please log in again to continue listening.",

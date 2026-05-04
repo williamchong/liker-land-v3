@@ -27,12 +27,16 @@
 
     <template
       v-if="activeAffiliate"
+      #affiliate-alert
+    >
+      <AffiliateAlert class="mb-6" />
+    </template>
+
+    <template
+      v-if="activeAffiliate && isAffiliateGiftRedeemable"
       #affiliate-promo
     >
-      <AffiliateAlert class="mt-6" />
-
       <div
-        v-if="isAffiliateGiftRedeemable"
         class="mt-4 p-4 rounded-xl bg-elevated text-center"
       >
         <p
