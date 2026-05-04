@@ -461,7 +461,7 @@
       />
 
       <UCard
-        v-if="hasLoggedIn"
+        v-if="hasLoggedIn && !isApp"
         :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }"
       >
         <AccountSettingsItem
@@ -788,6 +788,7 @@ watch(() => user.value?.evmWallet, () => {
 })
 
 async function loadStripeConnectStatus() {
+  if (isApp.value) return
   if (!user.value?.evmWallet) return
   try {
     stripeConnectStatus.value = await likeCoinSessionAPI.fetchStripeConnectStatus({
@@ -800,6 +801,7 @@ async function loadStripeConnectStatus() {
 }
 
 async function refreshStripeConnectStatus() {
+  if (isApp.value) return
   try {
     await likeCoinSessionAPI.refreshStripeConnectStatus()
   }
