@@ -44,50 +44,6 @@
     >
       <UCard :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }">
         <AccountSettingsItem
-          v-if="isPlusFeatureVisible"
-          icon="i-material-symbols-diamond-outline-rounded"
-          :label="$t('account_page_subscription')"
-        >
-          <div
-            class="text-sm/5"
-            v-text="subscriptionStateLabel"
-          />
-
-          <template
-            v-if="!isApp && (user?.isLikerPlus || user?.isExpiredLikerPlus)"
-            #right
-          >
-            <UButton
-              :label="likerPlusButtonLabel"
-              :variant="user?.isLikerPlus ? 'outline' : 'solid'"
-              color="primary"
-              :loading="isOpeningBillingPortal"
-              @click="handleLikerPlusButtonClick"
-            />
-          </template>
-        </AccountSettingsItem>
-
-        <AccountSettingsItem
-          v-if="!isApp"
-          icon="i-material-symbols-featured-seasonal-and-gifts-rounded"
-          :label="$t('account_page_gift_plus')"
-        >
-          <div
-            class="text-sm/5"
-            v-text="$t('account_page_gift_plus_description')"
-          />
-
-          <template #right>
-            <UButton
-              :label="$t('account_page_gift_plus_button')"
-              color="primary"
-              variant="outline"
-              :to="localeRoute({ name: 'gift-plus' })"
-            />
-          </template>
-        </AccountSettingsItem>
-
-        <AccountSettingsItem
           v-if="user?.likerId"
           icon="i-material-symbols-3p-outline-rounded"
           :label="$t('account_page_account_id')"
@@ -187,7 +143,105 @@
             />
           </template>
         </AccountSettingsItem>
+      </UCard>
+    </section>
 
+    <section
+      v-if="hasLoggedIn && isPlusFeatureVisible"
+      class="space-y-3"
+    >
+      <h2
+        class="px-4 pt-4 text-lg font-bold"
+        v-text="$t('account_page_plus_title')"
+      />
+
+      <UCard :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }">
+        <AccountSettingsItem
+          v-if="hasLoggedIn"
+          icon="i-material-symbols-diamond-outline-rounded"
+          :label="$t('account_page_subscription')"
+        >
+          <div
+            class="text-sm/5"
+            v-text="subscriptionStateLabel"
+          />
+
+          <template
+            v-if="!isApp && (user?.isLikerPlus || user?.isExpiredLikerPlus)"
+            #right
+          >
+            <UButton
+              :label="likerPlusButtonLabel"
+              :variant="user?.isLikerPlus ? 'outline' : 'solid'"
+              color="primary"
+              :loading="isOpeningBillingPortal"
+              @click="handleLikerPlusButtonClick"
+            />
+          </template>
+        </AccountSettingsItem>
+
+        <AccountSettingsItem
+          v-if="hasLoggedIn && !isApp"
+          icon="i-material-symbols-featured-seasonal-and-gifts-rounded"
+          :label="$t('account_page_gift_plus')"
+        >
+          <div
+            class="text-sm/5"
+            v-text="$t('account_page_gift_plus_description')"
+          />
+
+          <template #right>
+            <UButton
+              :label="$t('account_page_gift_plus_button')"
+              color="primary"
+              variant="outline"
+              :to="localeRoute({ name: 'gift-plus' })"
+            />
+          </template>
+        </AccountSettingsItem>
+
+        <AccountSettingsItem
+          v-if="hasLoggedIn"
+          icon="i-material-symbols-record-voice-over-outline"
+          :label="$t('tts_custom_voice_section_title')"
+        >
+          <div
+            v-if="hasCustomVoice"
+            class="text-sm text-muted"
+            v-text="customVoice?.voiceName"
+          />
+
+          <template #right>
+            <UButton
+              v-if="user?.isLikerPlus"
+              :label="hasCustomVoice ? $t('tts_custom_voice_change_button') : $t('tts_custom_voice_upload_button')"
+              :variant="hasCustomVoice ? 'outline' : 'solid'"
+              color="primary"
+              @click="handleOpenCustomVoiceModal"
+            />
+            <UButton
+              v-else
+              :label="$t('account_page_upgrade_to_plus')"
+              icon="i-material-symbols-lock-outline"
+              variant="solid"
+              color="primary"
+              :to="localeRoute({ name: 'member', query: { ll_medium: 'custom-voice' } })"
+            />
+          </template>
+        </AccountSettingsItem>
+      </UCard>
+    </section>
+
+    <section
+      v-if="hasLoggedIn && (likeBalance > 0n || !!user?.likeWallet)"
+      class="space-y-3"
+    >
+      <h2
+        class="px-4 pt-4 text-lg font-bold"
+        v-text="$t('account_page_likecoin_title')"
+      />
+
+      <UCard :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }">
         <AccountSettingsItem
           v-if="!isApp || likeBalance > 0n"
           :label="$t('account_page_likecoin')"
@@ -328,36 +382,6 @@
 
       <UCard :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }">
         <AccountSettingsItem
-          v-if="hasLoggedIn && isPlusFeatureVisible"
-          icon="i-material-symbols-record-voice-over-outline"
-          :label="$t('tts_custom_voice_section_title')"
-        >
-          <div
-            v-if="hasCustomVoice"
-            class="text-sm text-muted"
-            v-text="customVoice?.voiceName"
-          />
-
-          <template #right>
-            <UButton
-              v-if="user?.isLikerPlus"
-              :label="hasCustomVoice ? $t('tts_custom_voice_change_button') : $t('tts_custom_voice_upload_button')"
-              :variant="hasCustomVoice ? 'outline' : 'solid'"
-              color="primary"
-              @click="handleOpenCustomVoiceModal"
-            />
-            <UButton
-              v-else
-              :label="$t('account_page_upgrade_to_plus')"
-              icon="i-material-symbols-lock-outline"
-              variant="solid"
-              color="primary"
-              :to="localeRoute({ name: 'member', query: { ll_medium: 'custom-voice' } })"
-            />
-          </template>
-        </AccountSettingsItem>
-
-        <AccountSettingsItem
           icon="i-material-symbols-language"
           :label="$t('account_page_locale')"
         >
@@ -433,6 +457,57 @@
     <section class="space-y-3">
       <h2
         class="px-4 pt-4 text-lg font-bold"
+        v-text="$t('account_page_author_title')"
+      />
+
+      <UCard
+        v-if="hasLoggedIn"
+        :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }"
+      >
+        <AccountSettingsItem
+          icon="i-material-symbols-account-balance-wallet-outline-rounded"
+          :label="$t('account_page_stripe_connect')"
+        >
+          <div class="flex flex-col gap-1 text-sm text-muted">
+            <div v-text="stripeConnectStatusLabel" />
+            <div
+              v-if="stripeConnectStatus.isReady && stripeConnectStatus.email"
+              class="text-xs/5 font-mono"
+              v-text="stripeConnectStatus.email"
+            />
+          </div>
+
+          <template #right>
+            <UButton
+              :label="stripeConnectButtonLabel"
+              :variant="stripeConnectState === 'ready' ? 'outline' : 'solid'"
+              color="primary"
+              :loading="isStripeConnectLoading"
+              @click="handleStripeConnectButtonClick"
+            />
+          </template>
+        </AccountSettingsItem>
+      </UCard>
+
+      <UCard :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }">
+        <UButton
+          :label="$t('account_page_publish_book')"
+          :to="publishBookURL"
+          target="_blank"
+          variant="link"
+          leading-icon="i-material-symbols-book-4-spark-rounded"
+          trailing-icon="i-material-symbols-open-in-new-rounded"
+          color="neutral"
+          size="lg"
+          block
+          @click="handlePublishBookButtonClick"
+        />
+      </UCard>
+    </section>
+
+    <section class="space-y-3">
+      <h2
+        class="px-4 pt-4 text-lg font-bold"
         v-text="$t('account_page_settings_and_help_title')"
       />
 
@@ -459,19 +534,6 @@
           color="neutral"
           size="lg"
           block
-        />
-
-        <UButton
-          :label="$t('account_page_publish_book')"
-          :to="publishBookURL"
-          target="_blank"
-          variant="link"
-          leading-icon="i-material-symbols-book-4-spark-rounded"
-          trailing-icon="i-material-symbols-open-in-new-rounded"
-          color="neutral"
-          size="lg"
-          block
-          @click="handlePublishBookButtonClick"
         />
       </UCard>
     </section>
@@ -624,6 +686,7 @@ import { formatUnits } from 'viem'
 import { waitForTransactionReceipt } from '@wagmi/core'
 import { useSignMessage } from '@wagmi/vue'
 import { CustomVoiceUploadModal } from '#components'
+import type { FetchStripeConnectStatusResponseData } from '~/composables/use-likecoin-session-api'
 import likeCoinTokenImage from '~/assets/images/likecoin-token.png'
 
 const config = useRuntimeConfig()
@@ -674,6 +737,99 @@ const colorModeLabel = computed(
 
 const isPlusFeatureVisible = computed(() => !isApp.value || !!user.value?.isLikerPlus)
 
+const stripeConnectStatus = ref<FetchStripeConnectStatusResponseData>({
+  hasAccount: false,
+  isReady: false,
+})
+const isStripeConnectLoading = ref(false)
+
+type StripeConnectState = 'ready' | 'pending' | 'none'
+
+const stripeConnectState = computed<StripeConnectState>(() => {
+  if (stripeConnectStatus.value.isReady) return 'ready'
+  if (stripeConnectStatus.value.hasAccount) return 'pending'
+  return 'none'
+})
+
+const stripeConnectStatusLabel = computed(() => {
+  switch (stripeConnectState.value) {
+    case 'ready':
+      return $t('account_page_stripe_connect_status_ready')
+    case 'pending':
+      return $t('account_page_stripe_connect_status_pending')
+    case 'none':
+      return $t('account_page_stripe_connect_status_none')
+  }
+  return ''
+})
+
+const stripeConnectButtonLabel = computed(() => {
+  switch (stripeConnectState.value) {
+    case 'ready':
+      return $t('account_page_stripe_connect_manage_button')
+    case 'pending':
+      return $t('account_page_stripe_connect_resume_button')
+    case 'none':
+      return $t('account_page_stripe_connect_setup_button')
+  }
+  return ''
+})
+
+function resetStripeConnectState() {
+  stripeConnectStatus.value = {
+    hasAccount: false,
+    isReady: false,
+  }
+  isStripeConnectLoading.value = false
+}
+
+watch(() => user.value?.evmWallet, () => {
+  resetStripeConnectState()
+})
+
+async function loadStripeConnectStatus() {
+  if (!user.value?.evmWallet) return
+  try {
+    stripeConnectStatus.value = await likeCoinSessionAPI.fetchStripeConnectStatus({
+      wallet: user.value.evmWallet,
+    })
+  }
+  catch (error) {
+    console.error('Failed to fetch Stripe Connect status:', error)
+  }
+}
+
+async function refreshStripeConnectStatus() {
+  try {
+    await likeCoinSessionAPI.refreshStripeConnectStatus()
+  }
+  catch (error) {
+    console.error('Failed to refresh Stripe Connect status:', error)
+  }
+  await loadStripeConnectStatus()
+}
+
+async function handleStripeConnectButtonClick() {
+  if (isStripeConnectLoading.value) return
+  const isManage = stripeConnectState.value === 'ready'
+  isStripeConnectLoading.value = true
+  try {
+    useLogEvent(isManage ? 'stripe_connect_login' : 'stripe_connect_setup_started')
+    const { url } = isManage
+      ? await likeCoinSessionAPI.fetchStripeConnectLoginLink()
+      : await likeCoinSessionAPI.createStripeConnectAccount()
+    await navigateTo(url, { external: true })
+  }
+  catch (error) {
+    isStripeConnectLoading.value = false
+    await handleError(error, {
+      title: isManage
+        ? $t('account_page_stripe_connect_manage_failed')
+        : $t('account_page_stripe_connect_setup_failed'),
+    })
+  }
+}
+
 function handleAdultContentToggle(value: boolean) {
   if (value) {
     isAdultContentConfirmOpen.value = true
@@ -705,6 +861,14 @@ watchImmediate(hasLoggedIn, async (loggedIn) => {
       catch (error) {
         console.error('Failed to refresh session info:', error)
       }
+    }
+    if (route.query.action === 'stripe-connect-return') {
+      await refreshStripeConnectStatus()
+      const { action: _action, ...nextQuery } = route.query
+      await navigateTo({ query: nextQuery }, { replace: true })
+    }
+    else {
+      await loadStripeConnectStatus()
     }
     if (route.query.action === 'billing-return') {
       if (isPaymentPastDue.value) {
