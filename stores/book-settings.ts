@@ -207,9 +207,11 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
     const entry = settingsMap.value[key]
     // Skip no-op writes (e.g. repeated `progress` updates landing on the same
     // value during scroll). Stamp-now keys always write — they're signalling
-    // intent ("set to now"), not a chosen value.
-    if (!isStampNow && entry?.data && (entry.data as Record<string, unknown>)[dbKey] === value) {
-      return
+    // intent ("set to now"), not a chosen value. Nullish-coalesce the comparison
+    // so clearing an already-absent field (undefined ↔ null) is also a no-op.
+    if (!isStampNow && entry?.data) {
+      const current = (entry.data as Record<string, unknown>)[dbKey]
+      if ((current ?? null) === (value ?? null)) return
     }
 
     const localValue = isStampNow ? Date.now() : value
