@@ -1,6 +1,16 @@
 import { useDebounceFn } from '@vueuse/core'
 import type { BookSettingsData } from '~/types/book-settings'
+import type { BookTimestampField } from '~/shared/types/book-settings'
 import { FIRESTORE_IN_OPERATOR_LIMIT } from '~/constants/api'
+
+// Local cache keeps the client `Date.now()` so shelf sort updates immediately;
+// the wire payload sends a sentinel so the server stamps with its own clock.
+const SERVER_TIMESTAMP_KEYS: ReadonlySet<string> = new Set<BookTimestampField>([
+  'completedAt',
+  'didNotFinishAt',
+  'archivedAt',
+  'lastOpenedTime',
+])
 
 interface BookSettingsEntry {
   data: BookSettingsData
@@ -190,13 +200,28 @@ export const useBookSettingsStore = defineStore('book-settings', () => {
   function queueUpdate(nftClassId: string, dbKey: string, value: unknown) {
     if (!hasLoggedIn.value) return
 
+    const isStampNow = SERVER_TIMESTAMP_KEYS.has(dbKey)
+      && (value === true || typeof value === 'number')
+
     const key = getKey(nftClassId)
     const entry = settingsMap.value[key]
-    if (entry) {
-      ;(entry.data as Record<string, unknown>)[dbKey] = value
+    // Skip no-op writes (e.g. repeated `progress` updates landing on the same
+    // value during scroll). Stamp-now keys always write — they're signalling
+    // intent ("set to now"), not a chosen value. Nullish-coalesce the comparison
+    // so clearing an already-absent field (undefined ↔ null) is also a no-op.
+    if (!isStampNow && entry?.data) {
+      const current = (entry.data as Record<string, unknown>)[dbKey]
+      if ((current ?? null) === (value ?? null)) return
     }
 
-    addToBatch(nftClassId, dbKey, value)
+    const localValue = isStampNow ? Date.now() : value
+    const wireValue = isStampNow ? true : value
+
+    if (entry) {
+      ;(entry.data as Record<string, unknown>)[dbKey] = localValue
+    }
+
+    addToBatch(nftClassId, dbKey, wireValue)
     const debouncedFlush = getDebouncedFlush(nftClassId)
     debouncedFlush()
   }

@@ -2,6 +2,7 @@ import type { H3Event } from 'h3'
 import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import type { BookSettingsData } from '~/types/book-settings'
 import type { BookSettingsFirestoreData } from '~/server/types/book-settings'
+import type { BookSettingsUpdatePayload } from '~/shared/types/book-settings'
 import type { UserSettingsData } from '~/types/user-settings'
 import { FIRESTORE_IN_OPERATOR_LIMIT } from '~/constants/api'
 
@@ -64,6 +65,32 @@ export async function updateUserTTSCharacterUsage(
   }, { merge: true })
 }
 
+function timestampToMillis(value: Timestamp | null | undefined): number | undefined {
+  return value instanceof Timestamp ? value.toMillis() : undefined
+}
+
+function normalizeBookSettings(data: BookSettingsFirestoreData): BookSettingsData {
+  // lastOpenedTime accepts a legacy number for records written before the
+  // Timestamp migration; new writes are always Timestamp.
+  const {
+    lastOpenedTime,
+    totalReadingTimeMs: _totalReadingTimeMs,
+    totalTTSListeningTimeMs: _totalTTSListeningTimeMs,
+    ttsCharactersUsed: _ttsCharactersUsed,
+    sessionCount: _sessionCount,
+    ...clientFields
+  } = data
+  const rawLastOpened = lastOpenedTime as Timestamp | number | undefined
+  return {
+    ...clientFields,
+    updatedAt: timestampToMillis(data.updatedAt),
+    completedAt: timestampToMillis(data.completedAt),
+    didNotFinishAt: timestampToMillis(data.didNotFinishAt),
+    archivedAt: timestampToMillis(data.archivedAt),
+    lastOpenedTime: rawLastOpened instanceof Timestamp ? rawLastOpened.toMillis() : rawLastOpened,
+  } as BookSettingsData
+}
+
 export async function getBookSettings(
   userWallet: string,
   nftClassId: string,
@@ -77,19 +104,13 @@ export async function getBookSettings(
   const data = bookDocRef.data() as BookSettingsFirestoreData | undefined
   if (!data) return undefined
 
-  return {
-    ...data,
-    updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toMillis() : undefined,
-    completedAt: data.completedAt instanceof Timestamp ? data.completedAt.toMillis() : undefined,
-    didNotFinishAt: data.didNotFinishAt instanceof Timestamp ? data.didNotFinishAt.toMillis() : undefined,
-    archivedAt: data.archivedAt instanceof Timestamp ? data.archivedAt.toMillis() : undefined,
-  } as BookSettingsData
+  return normalizeBookSettings(data)
 }
 
 export async function updateBookSettings(
   userWallet: string,
   nftClassId: string,
-  settings: Partial<BookSettingsData>,
+  settings: BookSettingsUpdatePayload,
 ): Promise<void> {
   const bookDocRef = getUserCollection()
     .doc(userWallet)
@@ -97,30 +118,25 @@ export async function updateBookSettings(
     .doc(nftClassId.toLowerCase())
 
   const {
-    updatedAt: _,
     completedAt,
     didNotFinishAt,
     archivedAt,
+    lastOpenedTime,
     ...restSettings
   } = settings
 
+  const timestampFields = Object.fromEntries(
+    Object.entries({ completedAt, didNotFinishAt, archivedAt, lastOpenedTime })
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => [
+        key,
+        value === null ? FieldValue.delete() : FieldValue.serverTimestamp(),
+      ]),
+  )
+
   await bookDocRef.set({
     ...restSettings,
-    ...(completedAt !== undefined && {
-      completedAt: completedAt === null
-        ? FieldValue.delete()
-        : Timestamp.fromMillis(completedAt),
-    }),
-    ...(didNotFinishAt !== undefined && {
-      didNotFinishAt: didNotFinishAt === null
-        ? FieldValue.delete()
-        : Timestamp.fromMillis(didNotFinishAt),
-    }),
-    ...(archivedAt !== undefined && {
-      archivedAt: archivedAt === null
-        ? FieldValue.delete()
-        : Timestamp.fromMillis(archivedAt),
-    }),
+    ...timestampFields,
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true })
 }
@@ -149,14 +165,7 @@ export async function getBatchBookSettings(
       .get()
 
     snapshot.forEach((doc) => {
-      const data = doc.data() as BookSettingsFirestoreData
-      result[doc.id] = {
-        ...data,
-        updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toMillis() : undefined,
-        completedAt: data.completedAt instanceof Timestamp ? data.completedAt.toMillis() : undefined,
-        didNotFinishAt: data.didNotFinishAt instanceof Timestamp ? data.didNotFinishAt.toMillis() : undefined,
-        archivedAt: data.archivedAt instanceof Timestamp ? data.archivedAt.toMillis() : undefined,
-      } as BookSettingsData
+      result[doc.id] = normalizeBookSettings(doc.data() as BookSettingsFirestoreData)
     })
   }
 
@@ -174,7 +183,7 @@ export async function getUserSettings(
     currency: data.currency,
     colorMode: data.colorMode,
     isAdultContentEnabled: data.isAdultContentEnabled,
-    updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toMillis() : undefined,
+    updatedAt: timestampToMillis(data.updatedAt),
   }
 }
 
