@@ -272,6 +272,7 @@ export default defineNuxtConfig({
               'https://secure.walletconnect.org',
               'https://www.youtube-nocookie.com',
               'https://www.youtube.com',
+              'https://www.facebook.com',
             ],
         'base-uri': [
           '\'self\'',
@@ -303,6 +304,7 @@ export default defineNuxtConfig({
         ],
         'form-action': [
           '\'self\'',
+          'https://www.facebook.com',
         ],
         'frame-ancestors': [
           '\'self\'',
