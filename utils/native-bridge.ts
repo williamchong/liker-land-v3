@@ -18,3 +18,11 @@ export function isNativeFeatureSupported(feature: string): boolean {
   const features = window.__nativeBridge?.features
   return Array.isArray(features) && features.includes(feature)
 }
+
+export function isNativeIntercomAvailable(): boolean {
+  return isNativeWebView() && isNativeFeatureSupported('intercom')
+}
+
+export function isWebIntercomReady(): boolean {
+  return typeof window !== 'undefined' && typeof window.Intercom === 'function'
+}

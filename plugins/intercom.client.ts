@@ -11,7 +11,7 @@ export default defineNuxtPlugin(() => {
   // routes through the WebView bridge instead. Older app builds without
   // the bridge keep the web SDK active (identity + events still flow);
   // the CSS hide below keeps the launcher invisible.
-  if (isNativeFeatureSupported('intercom')) {
+  if (isNativeIntercomAvailable()) {
     const noop = () => {}
     ;(window as unknown as { Intercom: (...args: unknown[]) => void }).Intercom = noop
   }

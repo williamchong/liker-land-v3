@@ -20,14 +20,14 @@ export function useIntercom() {
 
   function show(): OpenResult {
     if (isApp.value) {
-      if (isNativeFeatureSupported('intercom')) {
+      if (isNativeIntercomAvailable()) {
         postToNative({ type: 'intercomShow' })
         return { method: 'chat' }
       }
       openMailto()
       return { method: 'link' }
     }
-    if (typeof window?.Intercom === 'function') {
+    if (isWebIntercomReady()) {
       window.Intercom('show')
       return { method: 'chat' }
     }
@@ -37,14 +37,14 @@ export function useIntercom() {
 
   function showNewMessage(message?: string, mailtoSubject?: string): OpenResult {
     if (isApp.value) {
-      if (isNativeFeatureSupported('intercom')) {
+      if (isNativeIntercomAvailable()) {
         postToNative({ type: 'intercomShowNewMessage', message })
         return { method: 'chat' }
       }
       openMailto(mailtoSubject ?? message, message)
       return { method: 'link' }
     }
-    if (typeof window?.Intercom === 'function') {
+    if (isWebIntercomReady()) {
       window.Intercom('showNewMessage', message ?? '')
       return { method: 'chat' }
     }
@@ -53,11 +53,13 @@ export function useIntercom() {
   }
 
   function trackEvent(name: string, params?: Record<string, unknown>): void {
-    if (isApp.value && isNativeFeatureSupported('intercom')) {
+    if (isNativeIntercomAvailable()) {
       postToNative({ type: 'intercomTrackEvent', name, metaData: params })
       return
     }
-    window?.Intercom?.('trackEvent', name, params)
+    if (isWebIntercomReady()) {
+      window.Intercom('trackEvent', name, params)
+    }
   }
 
   return { show, showNewMessage, trackEvent }
