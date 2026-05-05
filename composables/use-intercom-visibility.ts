@@ -8,7 +8,7 @@ export function useIntercomVisibility() {
   function markIntercomVisible() {
     isIntercomVisible.value = true
     if (hasRegisteredIntercomHide) return
-    if (!window.Intercom) return
+    if (!isWebIntercomReady()) return
     window.Intercom('onHide', () => {
       isIntercomVisible.value = false
     })

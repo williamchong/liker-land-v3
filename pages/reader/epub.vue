@@ -817,6 +817,7 @@ let removeMouseUpListener: (() => void) | undefined
 let removeSelectionChangeListener: (() => void) | undefined
 let removeContextMenuListener: (() => void) | undefined
 const { isIntercomVisible, markIntercomVisible } = useIntercomVisibility()
+const intercom = useIntercom()
 useHead({
   htmlAttrs: {
     class: computed(() => (isIntercomVisible.value ? 'intercom-visible' : '')),
@@ -1862,14 +1863,10 @@ function handleAnnotationReportIssue() {
     cfi: selectedCfi.value,
   })
 
-  if (!isApp.value && window?.Intercom) {
+  const subject = $t('reader_annotation_report_issue_email_subject', { bookName: bookInfo.name.value })
+  const result = intercom.showNewMessage(prefillMessage, subject)
+  if (result.method === 'chat' && !isApp.value) {
     markIntercomVisible()
-    window.Intercom('showNewMessage', prefillMessage)
-  }
-  else {
-    const subject = $t('reader_annotation_report_issue_email_subject', { bookName: bookInfo.name.value })
-    const mailto = `mailto:cs@3ook.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(prefillMessage)}`
-    window.open(mailto, '_blank')
   }
 
   useLogEvent('reader_annotation_report_issue', {

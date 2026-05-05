@@ -702,6 +702,7 @@ const { handleError } = useErrorHandler()
 const toast = useToast()
 const { copy: copyToClipboard } = useClipboard()
 const { isApp } = useAppDetection()
+const intercom = useIntercom()
 
 const isAdultContentEnabled = useAdultContentSetting()
 const isAdultContentConfirmOpen = ref(false)
@@ -1100,21 +1101,7 @@ async function handleLikerPlusButtonClick() {
 }
 
 function openIntercomWithEmailFallback(prefillMessage?: string) {
-  if (!isApp.value && window?.Intercom) {
-    if (prefillMessage) {
-      window.Intercom('showNewMessage', prefillMessage)
-    }
-    else {
-      window.Intercom('show')
-    }
-    return 'chat'
-  }
-  let mailto = 'mailto:cs@3ook.com'
-  if (prefillMessage) {
-    mailto += `?subject=${encodeURIComponent(prefillMessage)}`
-  }
-  window.open(mailto, '_blank')
-  return 'link'
+  return (prefillMessage ? intercom.showNewMessage(prefillMessage) : intercom.show()).method
 }
 
 function handleCustomerServiceLinkButtonClick() {

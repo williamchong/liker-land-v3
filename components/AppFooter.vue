@@ -199,12 +199,11 @@ const { commitSHA } = useRuntimeConfig().public
 const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 const { isApp, buildVersion } = useAppDetection()
+const intercom = useIntercom()
 
 function onClickContactUs(event: MouseEvent) {
-  if (window?.Intercom) {
-    window.Intercom('show')
-    event.preventDefault()
-  }
+  event.preventDefault()
+  intercom.show()
 }
 
 function onClickAppStoreButton() {

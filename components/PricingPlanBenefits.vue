@@ -98,11 +98,10 @@ const isYearlyPlan = computed(() => {
 })
 
 const { t: $t } = useI18n()
+const intercom = useIntercom()
 
 function handleOpenIntercom() {
   useLogEvent('pricing_benefit_click_intercom')
-  if (window?.Intercom) {
-    window.Intercom('showNewMessage', $t('pricing_page_intercom_prefill'))
-  }
+  intercom.showNewMessage($t('pricing_page_intercom_prefill'))
 }
 </script>
