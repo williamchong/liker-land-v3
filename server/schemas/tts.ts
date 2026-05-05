@@ -22,3 +22,12 @@ export const TTSQuerySchema = v.object({
     v.nonEmpty('MISSING_SIG'),
   ),
 })
+
+export const TTSSampleQuerySchema = v.object({
+  language: v.picklist(['en-US', 'zh-TW', 'zh-HK'], 'INVALID_LANGUAGE'),
+  voice_id: v.pipe(
+    v.string('INVALID_VOICE_ID'),
+    v.nonEmpty('INVALID_VOICE_ID'),
+  ),
+  from: v.optional(v.string()),
+})

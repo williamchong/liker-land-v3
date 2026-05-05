@@ -9,6 +9,8 @@
     utm-source="website"
     utm-medium="web"
     :coupon="coupon"
+    :affiliate-voices="affiliateSampleVoices"
+    :affiliate-liker-id="affiliateLikerId"
     @open="handleOpen"
     @subscribe="handleSubscribe"
   >
@@ -25,13 +27,18 @@
 
     <template
       v-if="activeAffiliate"
+      #affiliate-alert
+    >
+      <AffiliateAlert class="mb-6" />
+    </template>
+
+    <template
+      v-if="activeAffiliate && isAffiliateGiftRedeemable"
       #affiliate-promo
     >
-      <AffiliateAlert class="mt-6" />
-
-      <div
-        v-if="isAffiliateGiftRedeemable"
-        class="mt-4 p-4 rounded-xl bg-elevated text-center"
+      <UCard
+        class="mt-4"
+        variant="subtle"
       >
         <p
           class="text-sm font-medium text-toned mb-3"
@@ -57,7 +64,7 @@
             />
           </div>
         </div>
-      </div>
+      </UCard>
     </template>
 
     <template
@@ -125,6 +132,7 @@ const affiliateVoiceNames = computed(() => {
   if (!voices?.length) return undefined
   return voices.map(v => v.name).join($t('text_separator_comma'))
 })
+const affiliateSampleVoices = computed(() => activeAffiliate.value?.customVoices ?? [])
 
 const { getResizedNormalizedImageURL } = useImageResize()
 const giftBookCoverSrc = computed(() => {

@@ -11,8 +11,8 @@ export interface TTSRequestParams {
   language: string
   voiceId: string
   customMiniMaxVoiceId?: string
-  session: Awaited<ReturnType<typeof requireUserSession>>
-  config: ReturnType<typeof useRuntimeConfig>
+  session?: Awaited<ReturnType<typeof requireUserSession>>
+  config?: ReturnType<typeof useRuntimeConfig>
 }
 
 export interface BaseTTSProvider {
