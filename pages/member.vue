@@ -36,8 +36,9 @@
       v-if="activeAffiliate && isAffiliateGiftRedeemable"
       #affiliate-promo
     >
-      <div
-        class="mt-4 p-4 rounded-xl bg-elevated text-center"
+      <UCard
+        class="mt-4"
+        variant="subtle"
       >
         <p
           class="text-sm font-medium text-toned mb-3"
@@ -63,7 +64,7 @@
             />
           </div>
         </div>
-      </div>
+      </UCard>
     </template>
 
     <template
