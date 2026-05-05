@@ -46,12 +46,12 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
         language,
         languageVoice: encodedVoiceId,
         avatarSrc: getVoiceAvatar(encodedVoiceId),
+        isAffiliateExclusive: true,
       }
     })
   })
 
-  const samples = computed<TTSSample[]>(() => {
-    if (affiliateSamples.value.length > 0) return affiliateSamples.value
+  const defaultSamples = computed<TTSSample[]>(() => {
     return [
       {
         id: 'cantonese-pazu',
@@ -104,6 +104,11 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
       }
     })
   })
+
+  const samples = computed<TTSSample[]>(() => [
+    ...defaultSamples.value,
+    ...affiliateSamples.value,
+  ])
 
   const activeSampleId = ref<string | null>(null)
   const isPlaying = ref(false)

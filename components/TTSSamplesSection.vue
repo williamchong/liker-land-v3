@@ -45,19 +45,10 @@
       </UCard>
     </div>
 
-    <footer class="mt-4 text-sm text-muted text-center">
-      <template v-if="hasAffiliateVoices">
-        <p v-text="$t('tts_samples_section_affiliate_exclusive_note')" />
-        <p
-          class="mt-1"
-          v-text="$t('tts_samples_section_affiliate_books_note')"
-        />
-      </template>
-      <p
-        v-else
-        v-text="$t('tts_samples_section_footer')"
-      />
-    </footer>
+    <footer
+      class="mt-4 text-sm text-muted text-center"
+      v-text="$t('tts_samples_section_footer')"
+    />
   </UCard>
 </template>
 
@@ -68,8 +59,6 @@ const props = defineProps<{
   affiliateVoices?: AffiliateVoiceData[]
   affiliateLikerId?: string
 }>()
-
-const hasAffiliateVoices = computed(() => (props.affiliateVoices?.length ?? 0) > 0)
 
 const { handleError } = useErrorHandler()
 

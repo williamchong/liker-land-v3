@@ -3,8 +3,19 @@
     <li
       v-for="sample in samples"
       :key="sample.id"
-      class="space-y-2"
+      class="relative space-y-2"
     >
+      <UBadge
+        v-if="sample.isAffiliateExclusive"
+        class="absolute top-0 right-3 -translate-y-1/2 z-10 pointer-events-none"
+        size="sm"
+        color="warning"
+        variant="solid"
+        :ui="{ base: ['rounded-full', 'font-bold'] }"
+      >
+        <span v-text="$t('tts_samples_section_affiliate_exclusive_badge')" />
+        <span aria-hidden="true">*</span>
+      </UBadge>
       <UButton
         :class="[
           'w-full',

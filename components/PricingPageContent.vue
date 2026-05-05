@@ -226,6 +226,14 @@
             </slot>
           </div>
         </div>
+
+        <p
+          v-if="hasAffiliateVoices"
+          class="mt-8 text-xs text-dimmed text-center"
+        >
+          <span aria-hidden="true">*&nbsp;</span>
+          <span v-text="$t('tts_samples_section_affiliate_books_note')" />
+        </p>
       </div>
     </div>
   </div>
