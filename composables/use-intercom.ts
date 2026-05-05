@@ -1,6 +1,9 @@
 // Single entry point for Intercom on web. Picks among the native RN SDK
 // bridge, the window.Intercom JS SDK, and a mailto fallback so call sites
-// don't have to branch on isApp / SDK availability themselves.
+// don't have to branch on bridge / SDK availability themselves. The web
+// SDK branch is gated on !isApp because plugins/intercom.client.ts hides
+// the messenger via CSS in app mode (real app or ?app=1) — calling
+// Intercom('show') there opens an invisible UI.
 
 const SUPPORT_EMAIL = 'cs@3ook.com'
 
@@ -18,38 +21,37 @@ function openMailto(subject?: string, body?: string): void {
 export function useIntercom() {
   const { isApp } = useAppDetection()
 
-  function show(): OpenResult {
-    if (isApp.value) {
-      if (isNativeIntercomAvailable()) {
-        postToNative({ type: 'intercomShow' })
-        return { method: 'chat' }
-      }
-      openMailto()
-      return { method: 'link' }
-    }
-    if (isWebIntercomReady()) {
-      window.Intercom('show')
+  function dispatch(
+    native: () => void,
+    web: () => void,
+    fallback: () => void,
+  ): OpenResult {
+    if (isNativeIntercomAvailable()) {
+      native()
       return { method: 'chat' }
     }
-    openMailto()
+    if (!isApp.value && isWebIntercomReady()) {
+      web()
+      return { method: 'chat' }
+    }
+    fallback()
     return { method: 'link' }
   }
 
+  function show(): OpenResult {
+    return dispatch(
+      () => postToNative({ type: 'intercomShow' }),
+      () => window.Intercom('show'),
+      () => openMailto(),
+    )
+  }
+
   function showNewMessage(message?: string, mailtoSubject?: string): OpenResult {
-    if (isApp.value) {
-      if (isNativeIntercomAvailable()) {
-        postToNative({ type: 'intercomShowNewMessage', message })
-        return { method: 'chat' }
-      }
-      openMailto(mailtoSubject ?? message, message)
-      return { method: 'link' }
-    }
-    if (isWebIntercomReady()) {
-      window.Intercom('showNewMessage', message ?? '')
-      return { method: 'chat' }
-    }
-    openMailto(mailtoSubject ?? message, message)
-    return { method: 'link' }
+    return dispatch(
+      () => postToNative({ type: 'intercomShowNewMessage', message }),
+      () => window.Intercom('showNewMessage', message ?? ''),
+      () => openMailto(mailtoSubject ?? message, message),
+    )
   }
 
   function trackEvent(name: string, params?: Record<string, unknown>): void {
