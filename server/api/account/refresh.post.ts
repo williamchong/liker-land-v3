@@ -25,6 +25,14 @@ export default defineEventHandler(async (event) => {
   }
   if (!userInfoRes) return
 
+  // The upstream /users/profile mints a fresh Intercom Identity Verification
+  // JWT (1d lifetime). Rotate it through the session so the once-per-day
+  // mount-time refresh in app.vue self-heals every active user. Fall back to
+  // the existing token if upstream omits it (e.g. INTERCOM_API_SECRET unset)
+  // rather than nulling out a still-valid one.
+  const intercomToken = userInfoRes.intercomToken ?? session.user.intercomToken
+  const hasIntercomTokenRotated = !!userInfoRes.intercomToken && userInfoRes.intercomToken !== session.user.intercomToken
+
   await setUserSession(event, {
     user: {
       ...session.user,
@@ -36,6 +44,7 @@ export default defineEventHandler(async (event) => {
       likerPlusPeriod: userInfoRes.likerPlusPeriod,
       likerPlusSubscriptionStatus: userInfoRes.likerPlusSubscriptionStatus,
       plusAffiliateFrom: userInfoRes.plusAffiliateFrom,
+      intercomToken,
       // Backfill ttsKey for sessions that pre-date its introduction so they
       // can use the per-user TTS sig path without re-login. Safe no-op for
       // sessions that already have one.
@@ -49,10 +58,10 @@ export default defineEventHandler(async (event) => {
     userDocRef.set({
       accessTimestamp: FieldValue.serverTimestamp(),
     }, { merge: true }),
-    session.user.evmWallet && session.user.token && session.user.jwtId
-      ? saveSessionTokens(session.user.evmWallet, session.user.jwtId, {
+    hasIntercomTokenRotated && session.user.evmWallet && session.user.token && session.user.jwtId
+      ? refreshSessionTokens(session.user.evmWallet, session.user.jwtId, {
           token: session.user.token,
-          intercomToken: session.user.intercomToken,
+          intercomToken,
           loginMethod: session.user.loginMethod,
         })
       : Promise.resolve(),
