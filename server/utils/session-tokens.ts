@@ -1,11 +1,13 @@
-import { FieldValue, Timestamp } from 'firebase-admin/firestore'
+import { FieldValue, GrpcStatus, Timestamp } from 'firebase-admin/firestore'
 import { jwtDecode } from 'jwt-decode'
 
 const SESSIONS_SUBCOLLECTION = 'sessions'
 
 const FALLBACK_SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000
 
-const FIRESTORE_ALREADY_EXISTS_CODE = 6
+function getFirestoreErrorCode(error: unknown): number | string | undefined {
+  return (error as { code?: number | string })?.code
+}
 
 export interface SessionTokenDoc {
   token: string
@@ -49,8 +51,32 @@ export async function saveSessionTokens(
     await getSessionDocRef(wallet, jwtId).create(docData)
   }
   catch (error) {
-    const code = (error as { code?: number | string })?.code
-    if (code === FIRESTORE_ALREADY_EXISTS_CODE || code === 'already-exists') return
+    if (getFirestoreErrorCode(error) === GrpcStatus.ALREADY_EXISTS) return
     console.warn('[SessionTokens] Failed to persist session tokens:', error)
   }
+}
+
+export async function refreshSessionTokens(
+  wallet: string,
+  jwtId: string,
+  data: {
+    token: string
+    intercomToken?: string
+    loginMethod?: string
+  },
+): Promise<void> {
+  if (data.intercomToken) {
+    try {
+      await getSessionDocRef(wallet, jwtId).update({ intercomToken: data.intercomToken })
+      return
+    }
+    catch (error) {
+      if (getFirestoreErrorCode(error) !== GrpcStatus.NOT_FOUND) {
+        console.warn('[SessionTokens] Failed to update intercom token:', error)
+        return
+      }
+      // NOT_FOUND: legacy session pre-dates the sessions subcollection. Backfill below.
+    }
+  }
+  await saveSessionTokens(wallet, jwtId, data)
 }

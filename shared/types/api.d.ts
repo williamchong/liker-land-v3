@@ -15,4 +15,5 @@ export interface LikerProfileResponseData extends LikerInfoResponseData {
   email?: string
   likerPlusPeriod?: LikerPlusStatus
   plusAffiliateFrom?: string
+  intercomToken?: string
 }
