@@ -9,18 +9,23 @@
       v-gsap.entrance.slide-bottom.stagger
       class="relative w-full overflow-hidden bg-theme-black"
     >
-      <div class="relative max-w-5xl mx-auto px-6 md:px-12 py-20 md:py-28 grid md:grid-cols-2 items-center gap-10">
-        <div class="relative max-md:order-2 flex flex-col items-center md:items-start space-y-6 text-center md:text-left">
-          <div class="flex items-center justify-center md:justify-start gap-4">
+      <div class="relative max-w-5xl mx-auto px-6 md:px-12 py-20 md:py-28 grid md:grid-cols-2 items-center">
+        <div class="relative max-md:order-2 flex flex-col items-center md:items-start space-y-6 laptop:-mr-40 text-center md:text-left">
+          <div class="flex max-md:flex-col items-center justify-center md:justify-start gap-4">
             <img
               src="~/assets/images/about/app-icon.webp"
               alt="3ook Reader App"
               class="size-16 md:size-20 rounded-2xl"
             >
-            <h1
+            <i18n-t
               class="text-3xl md:text-5xl font-bold text-white"
-              v-text="$t('app_page_hero_title')"
-            />
+              keypath="app_page_hero_title"
+              tag="h1"
+            >
+              <template #appName>
+                <span class="whitespace-nowrap">3ook Reader</span>
+              </template>
+            </i18n-t>
           </div>
 
           <p
@@ -45,7 +50,7 @@
         >
           <img
             v-gsap.entrance.fade="{ delay: 0.4, duration: 1, ease: 'power1.out' }"
-            class="-my-20 max-md:scale-200 origin-center object-contain"
+            class="-my-40 max-md:scale-200 origin-center object-contain"
             src="~/assets/images/about/app-mockup.png"
             alt="3ook Reader App"
           >
