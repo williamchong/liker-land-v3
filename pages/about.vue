@@ -701,10 +701,15 @@
               alt="3ook Reader App"
               class="size-16 md:size-20 rounded-2xl"
             >
-            <h2
-              class="text-2xl md:text-3xl font-bold text-white"
-              v-text="$t('about_page_app_title')"
-            />
+            <h2 class="text-2xl md:text-3xl font-bold text-white">
+              <NuxtLink
+                :to="localeRoute({ name: 'app' })"
+                class="hover:underline"
+                @click="onClickAppSectionTitle"
+              >
+                {{ $t('about_page_app_title') }}
+              </NuxtLink>
+            </h2>
           </div>
 
           <p
@@ -1028,6 +1033,10 @@ function onClickCtaStore() {
 
 function onClickPlusCta() {
   useLogEvent('about_plus_cta_click')
+}
+
+function onClickAppSectionTitle() {
+  useLogEvent('about_app_section_title_click')
 }
 
 function onClickAppStoreButton() {
