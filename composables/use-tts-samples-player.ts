@@ -125,13 +125,12 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
 
   const audio = ref<HTMLAudioElement | null>(null)
 
-  const segments = computed(() => {
-    if (!activeSampleId.value) return []
-    const activeSample = samples.value.find(
-      sample => sample.id === activeSampleId.value,
-    )
-    return activeSample?.segments || []
+  const activeSample = computed(() => {
+    if (!activeSampleId.value) return null
+    return samples.value.find(sample => sample.id === activeSampleId.value) ?? null
   })
+
+  const segments = computed(() => activeSample.value?.segments ?? [])
 
   const currentSegment = computed(() => {
     return segments.value[currentSegmentIndex.value]
@@ -235,6 +234,7 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
   return {
     samples,
 
+    activeSample,
     activeSampleId: readonly(activeSampleId),
     isPlaying: readonly(isPlaying),
     currentSegmentIndex: readonly(currentSegmentIndex),

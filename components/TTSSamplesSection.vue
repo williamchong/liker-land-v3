@@ -44,27 +44,22 @@
         </div>
       </UCard>
 
-      <ul
-        v-if="attributedSamples.length"
-        class="text-xs text-muted text-center space-y-1"
+      <div
+        v-if="activeAttribution"
+        class="text-xs text-muted text-center"
       >
-        <li
-          v-for="sample in attributedSamples"
-          :key="sample.id"
+        <NuxtLink
+          v-if="activeAttribution.nftClassId"
+          :to="localeRoute({ name: 'store-nftClassId', params: { nftClassId: activeAttribution.nftClassId } })"
+          class="underline hover:text-highlighted"
         >
-          <NuxtLink
-            v-if="sample.attribution.nftClassId"
-            :to="localeRoute({ name: 'store-nftClassId', params: { nftClassId: sample.attribution.nftClassId } })"
-            class="underline hover:text-highlighted"
-          >
-            <span v-text="sample.attribution.text" />
-          </NuxtLink>
-          <span
-            v-else
-            v-text="sample.attribution.text"
-          />
-        </li>
-      </ul>
+          <span v-text="activeAttribution.text" />
+        </NuxtLink>
+        <span
+          v-else
+          v-text="activeAttribution.text"
+        />
+      </div>
     </div>
 
     <footer
@@ -88,6 +83,7 @@ const { handleError } = useErrorHandler()
 
 const {
   samples: ttsSamples,
+  activeSample,
   activeSampleId: activeTTSSampleId,
   currentSegmentText,
   currentSegmentIndex,
@@ -105,10 +101,7 @@ const {
   affiliateExclusiveBadgeText: () => props.affiliateExclusiveBadgeText,
 })
 
-type AttributedSample = TTSSample & { attribution: TTSSampleAttribution }
-const attributedSamples = computed(
-  () => ttsSamples.value.filter((s): s is AttributedSample => !!s.attribution),
-)
+const activeAttribution = computed(() => activeSample.value?.attribution ?? null)
 
 function getPlayButtonIcon(sampleId: string | null) {
   return sampleId && activeTTSSampleId.value === sampleId && isPlayingSample.value
