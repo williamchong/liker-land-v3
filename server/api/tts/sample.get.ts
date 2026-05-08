@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import type { H3Event } from 'h3'
 import { TTSSampleQuerySchema } from '~/server/schemas/tts'
 import { decodeAffiliateVoiceId, isAffiliateVoiceId } from '~/shared/utils/tts-sig'
-import { getTTSSampleText } from '~/shared/utils/tts-sample'
+import { getAffiliateSampleScript, getTTSSampleText } from '~/shared/utils/tts-sample'
 
 // Public endpoint with deterministic URLs, so a cold cache can produce a
 // thundering herd of identical Minimax synthesis requests. The map collapses
@@ -55,16 +55,17 @@ async function serveCachedSample(
 }
 
 export default defineEventHandler(async (event) => {
-  const { language, voice_id: voiceId, from } = await getValidatedQuery(
+  const { language: requestedLanguage, voice_id: voiceId, from, seg } = await getValidatedQuery(
     event,
     createValidator(TTSSampleQuerySchema),
   )
 
-  const text = getTTSSampleText(language)
   const isAffiliate = isAffiliateVoiceId(voiceId)
 
   let customMiniMaxVoiceId: string | undefined
   let voiceDisplayName: string | undefined
+  let language = requestedLanguage
+  let text: string | undefined
 
   if (isAffiliate) {
     if (!from) {
@@ -84,6 +85,20 @@ export default defineEventHandler(async (event) => {
     }
     customMiniMaxVoiceId = affiliateVoice.providerVoiceId
     voiceDisplayName = affiliateVoice.name
+
+    const script = getAffiliateSampleScript(from, slot)
+    if (script) {
+      const segmentIndex = seg ?? 0
+      const segmentText = script.segments[segmentIndex]
+      if (!segmentText) {
+        throw createError({ status: 400, message: 'INVALID_SEG' })
+      }
+      language = script.language
+      text = segmentText
+    }
+    else if (seg !== undefined) {
+      throw createError({ status: 400, message: 'INVALID_SEG' })
+    }
   }
   else {
     if (!KNOWN_VOICE_IDS.has(voiceId)) {
@@ -91,6 +106,8 @@ export default defineEventHandler(async (event) => {
     }
     voiceDisplayName = getVoiceDisplayName(voiceId)
   }
+
+  text ??= getTTSSampleText(language)
 
   const provider = new MinimaxTTSProvider()
   const ttsModel = getMinimaxModel({ voiceId, customVoiceId: customMiniMaxVoiceId, language })

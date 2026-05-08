@@ -43,6 +43,28 @@
           </Transition>
         </div>
       </UCard>
+
+      <ul
+        v-if="attributedSamples.length"
+        class="text-xs text-muted text-center space-y-1"
+      >
+        <li
+          v-for="sample in attributedSamples"
+          :key="sample.id"
+        >
+          <NuxtLink
+            v-if="sample.attribution.nftClassId"
+            :to="localeRoute({ name: 'store-nftClassId', params: { nftClassId: sample.attribution.nftClassId } })"
+            class="underline hover:text-highlighted"
+          >
+            <span v-text="sample.attribution.text" />
+          </NuxtLink>
+          <span
+            v-else
+            v-text="sample.attribution.text"
+          />
+        </li>
+      </ul>
     </div>
 
     <footer
@@ -61,6 +83,7 @@ const props = defineProps<{
   affiliateExclusiveBadgeText?: string
 }>()
 
+const localeRoute = useLocaleRoute()
 const { handleError } = useErrorHandler()
 
 const {
@@ -81,6 +104,11 @@ const {
   affiliateLikerId: () => props.affiliateLikerId,
   affiliateExclusiveBadgeText: () => props.affiliateExclusiveBadgeText,
 })
+
+type AttributedSample = TTSSample & { attribution: TTSSampleAttribution }
+const attributedSamples = computed(
+  () => ttsSamples.value.filter((s): s is AttributedSample => !!s.attribution),
+)
 
 function getPlayButtonIcon(sampleId: string | null) {
   return sampleId && activeTTSSampleId.value === sampleId && isPlayingSample.value

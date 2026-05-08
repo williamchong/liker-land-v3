@@ -7,6 +7,11 @@ declare interface TTSSegment {
   audioSrc?: string
 }
 
+declare interface TTSSampleAttribution {
+  text: string
+  nftClassId?: string
+}
+
 declare interface TTSSample {
   id: string
   title: string
@@ -17,4 +22,5 @@ declare interface TTSSample {
   avatarSrc: string
   isAffiliateExclusive?: boolean
   affiliateExclusiveBadgeText?: string
+  attribution?: TTSSampleAttribution
 }
