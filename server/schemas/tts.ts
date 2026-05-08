@@ -32,6 +32,7 @@ export const TTSSampleQuerySchema = v.object({
   from: v.optional(v.string()),
   seg: v.optional(v.pipe(
     v.string(),
+    v.nonEmpty('INVALID_SEG'),
     v.transform(Number),
     v.number('INVALID_SEG'),
     v.integer('INVALID_SEG'),

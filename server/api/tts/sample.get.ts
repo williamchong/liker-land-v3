@@ -104,6 +104,9 @@ export default defineEventHandler(async (event) => {
     if (!KNOWN_VOICE_IDS.has(voiceId)) {
       throw createError({ status: 400, message: 'INVALID_VOICE_ID' })
     }
+    if (seg !== undefined) {
+      throw createError({ status: 400, message: 'INVALID_SEG' })
+    }
     voiceDisplayName = getVoiceDisplayName(voiceId)
   }
 
