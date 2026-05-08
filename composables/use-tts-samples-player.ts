@@ -1,6 +1,6 @@
 import type { AffiliateVoiceData } from '~/shared/types/custom-voice'
 import { encodeAffiliateVoiceId } from '~/shared/utils/tts-sig'
-import { getTTSSampleText } from '~/shared/utils/tts-sample'
+import { getAffiliateSampleScript, getTTSSampleText } from '~/shared/utils/tts-sample'
 
 interface TTSSamplesPlayerOptions {
   onError?: (error: unknown) => void
@@ -23,33 +23,39 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
     const exclusiveBadgeText = toValue(affiliateExclusiveBadgeText)
     return voices.map((voice) => {
       const encodedVoiceId = encodeAffiliateVoiceId(voice.id)
-      const language = voice.language?.toLowerCase().startsWith('zh-tw') ? 'zh-TW' : 'zh-HK'
+      const script = getAffiliateSampleScript(likerId, voice.id)
+      const language = script?.language
+        ?? (voice.language?.toLowerCase().startsWith('zh-tw') ? 'zh-TW' : 'zh-HK')
       const sampleId = `affiliate-${voice.id}`
-      const text = getTTSSampleText(language)
-      const params = new URLSearchParams({
-        voice_id: encodedVoiceId,
-        language,
-        from: likerId,
-      })
       const description = language === 'zh-TW'
         ? $t('tts_sample_mandarin')
         : $t('tts_sample_cantonese')
+      const segmentTexts = script?.segments ?? [getTTSSampleText(language)]
+      const baseQuery = new URLSearchParams({
+        voice_id: encodedVoiceId,
+        language,
+        from: likerId,
+      }).toString()
+      const segments = segmentTexts.map((text, index) => ({
+        id: `${sampleId}-segment-${index}`,
+        text,
+        sectionIndex: 0,
+        cfi: undefined,
+        audioSrc: script
+          ? `/api/tts/sample?${baseQuery}&seg=${index}`
+          : `/api/tts/sample?${baseQuery}`,
+      }))
       return {
         id: sampleId,
         title: voice.name,
         description,
-        segments: [{
-          id: `${sampleId}-segment-0`,
-          text,
-          sectionIndex: 0,
-          cfi: undefined,
-          audioSrc: `/api/tts/sample?${params.toString()}`,
-        }],
+        segments,
         language,
         languageVoice: encodedVoiceId,
         avatarSrc: getVoiceAvatar(encodedVoiceId),
         isAffiliateExclusive: true,
         affiliateExclusiveBadgeText: exclusiveBadgeText,
+        attribution: script?.attribution,
       }
     })
   })
@@ -119,13 +125,12 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
 
   const audio = ref<HTMLAudioElement | null>(null)
 
-  const segments = computed(() => {
-    if (!activeSampleId.value) return []
-    const activeSample = samples.value.find(
-      sample => sample.id === activeSampleId.value,
-    )
-    return activeSample?.segments || []
+  const activeSample = computed(() => {
+    if (!activeSampleId.value) return null
+    return samples.value.find(sample => sample.id === activeSampleId.value) ?? null
   })
+
+  const segments = computed(() => activeSample.value?.segments ?? [])
 
   const currentSegment = computed(() => {
     return segments.value[currentSegmentIndex.value]
@@ -229,6 +234,7 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
   return {
     samples,
 
+    activeSample,
     activeSampleId: readonly(activeSampleId),
     isPlaying: readonly(isPlaying),
     currentSegmentIndex: readonly(currentSegmentIndex),
