@@ -1,9 +1,6 @@
 // Single entry point for Intercom on web. Picks among the native RN SDK
 // bridge, the window.Intercom JS SDK, and a mailto fallback so call sites
-// don't have to branch on bridge / SDK availability themselves. The web
-// SDK branch is gated on !isApp because plugins/intercom.client.ts hides
-// the messenger via CSS in app mode (real app or ?app=1) — calling
-// Intercom('show') there opens an invisible UI.
+// don't have to branch on bridge / SDK availability themselves.
 
 const SUPPORT_EMAIL = 'cs@3ook.com'
 
@@ -19,8 +16,6 @@ function openMailto(subject?: string, body?: string): void {
 }
 
 export function useIntercom() {
-  const { isApp } = useAppDetection()
-
   function dispatch(
     native: () => void,
     web: () => void,
@@ -30,7 +25,7 @@ export function useIntercom() {
       native()
       return { method: 'chat' }
     }
-    if (!isApp.value && isWebIntercomReady()) {
+    if (isWebIntercomReady()) {
       web()
       return { method: 'chat' }
     }
