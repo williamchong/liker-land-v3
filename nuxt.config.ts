@@ -226,9 +226,6 @@ export default defineNuxtConfig({
         bundle: false,
         proxy: false,
       },
-      intercom: {
-        trigger: { idleTimeout: 3000 },
-      },
       metaPixel: {
         bundle: false,
         proxy: false,

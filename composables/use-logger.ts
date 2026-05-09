@@ -160,9 +160,6 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
       if (items) {
         params.items = JSON.stringify(items)
       }
-      // Forward via the native bridge when supported; otherwise use the
-      // web SDK. Older app builds without the bridge keep the web SDK
-      // active so events still reach Intercom for CS context.
       if (isNativeIntercomAvailable()) {
         postToNative({ type: 'intercomTrackEvent', name: eventName, metaData: params })
       }
@@ -259,10 +256,8 @@ export function useSetLogUser(user: User | null, locale: string) {
     }
   }
 
-  // When the native Intercom bridge is supported, the native SDK owns
-  // identity (driven by the identifyUser/resetUser bridge below). Browser
-  // sessions and older app builds without the bridge sync via the web SDK
-  // so CS still has user context.
+  // In app, the native SDK owns identity (driven by identifyUser/resetUser
+  // below). In the browser, sync identity via the web SDK.
   if (import.meta.client && !isNativeIntercomAvailable()) {
     try {
       if (!user) {

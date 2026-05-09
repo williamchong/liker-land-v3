@@ -517,7 +517,7 @@
           variant="link"
           class="cursor-pointer"
           leading-icon="i-material-symbols-contact-support"
-          :trailing-icon="isApp ? 'i-material-symbols-mail-outline' : 'i-material-symbols-chat-bubble-outline-rounded'"
+          trailing-icon="i-material-symbols-chat-bubble-outline-rounded"
           color="neutral"
           size="lg"
           block
