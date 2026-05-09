@@ -469,9 +469,57 @@ const tagName = computed(() => {
   return activeCMSTag.value?.name[normalizedLocale.value] || ''
 })
 
+const searchModeContext = computed(() => {
+  if (!isSearchMode.value) return null
+  if (querySearchTerm.value) {
+    return {
+      label: querySearchTerm.value,
+      titlePrefix: $t('store_search_prefix'),
+      description: $t('store_page_search_description', { term: querySearchTerm.value }),
+    }
+  }
+  if (queryAuthorName.value) {
+    return {
+      label: queryAuthorName.value,
+      titlePrefix: $t('store_author_prefix'),
+      description: $t('store_page_author_description', { author: queryAuthorName.value }),
+    }
+  }
+  if (queryPublisherName.value) {
+    return {
+      label: queryPublisherName.value,
+      titlePrefix: $t('store_publisher_prefix'),
+      description: $t('store_page_publisher_description', { publisher: queryPublisherName.value }),
+    }
+  }
+  if (queryOwnerWallet.value) {
+    const displayName = ownerWalletDisplayName.value || queryOwnerWallet.value
+    return {
+      label: displayName,
+      titlePrefix: $t('store_owner_wallet_prefix'),
+      description: $t('store_page_owner_description', { owner: displayName }),
+    }
+  }
+  if (queryGenre.value) {
+    return {
+      label: localizedGenreName.value,
+      titlePrefix: $t('store_genre_prefix'),
+      description: $t('store_page_genre_description', { genre: localizedGenreName.value }),
+    }
+  }
+  return null
+})
+
 const tagDescription = computed(() => {
-  if (isStakingTagId.value) return ''
-  return activeCMSTag.value?.description[normalizedLocale.value] || ''
+  if (searchModeContext.value) return searchModeContext.value.description
+  if (!isStakingTagId.value) {
+    const cmsDescription = activeCMSTag.value?.description[normalizedLocale.value]
+    if (cmsDescription) return cmsDescription
+  }
+  if (tagName.value) {
+    return $t('store_page_tag_description', { tag: tagName.value })
+  }
+  return $t('store_page_description')
 })
 
 const canonicalURL = computed(() => {
@@ -505,29 +553,13 @@ const canonicalURL = computed(() => {
 })
 
 const ogTitle = computed(() => {
-  let title = $t('store_page_title')
-  if (isSearchMode.value) {
-    if (querySearchTerm.value) {
-      title = `${$t('store_search_prefix')}${querySearchTerm.value} - ${$t('store_page_title')}`
-    }
-    else if (queryAuthorName.value) {
-      title = `${$t('store_author_prefix')}${queryAuthorName.value} - ${$t('store_page_title')}`
-    }
-    else if (queryPublisherName.value) {
-      title = `${$t('store_publisher_prefix')}${queryPublisherName.value} - ${$t('store_page_title')}`
-    }
-    else if (queryOwnerWallet.value) {
-      const displayName = ownerWalletDisplayName.value || queryOwnerWallet.value
-      title = `${$t('store_owner_wallet_prefix')}${displayName} - ${$t('store_page_title')}`
-    }
-    else if (queryGenre.value) {
-      title = `${$t('store_genre_prefix')}${localizedGenreName.value} - ${$t('store_page_title')}`
-    }
+  if (searchModeContext.value) {
+    return `${searchModeContext.value.titlePrefix}${searchModeContext.value.label} - ${$t('store_page_title')}`
   }
-  else if (tagName.value) {
-    title = [tagName.value, $t('store_page_title')].join(' - ')
+  if (tagName.value) {
+    return [tagName.value, $t('store_page_title')].join(' - ')
   }
-  return title
+  return $t('store_page_title')
 })
 
 const searchResults = computed<BookstoreItemList | null>(() => {
