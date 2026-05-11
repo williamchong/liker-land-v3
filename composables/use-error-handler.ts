@@ -57,6 +57,12 @@ export default function () {
           }
           break
 
+        case 'MAGIC_SESSION_EXPIRED':
+          handler = {
+            description: $t('error_wallet_session_expired'),
+          }
+          break
+
         default:
           break
       }

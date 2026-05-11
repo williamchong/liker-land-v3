@@ -1,12 +1,9 @@
-import { useConnect, useDisconnect } from '@wagmi/vue'
 import type { Magic } from 'magic-sdk'
 
 let pendingSessionCheck: Promise<void> | null = null
 
 export function useMagicSession() {
   const { $wagmiConfig } = useNuxtApp()
-  const { connectAsync } = useConnect()
-  const { disconnectAsync } = useDisconnect()
 
   async function doEnsureMagicSession() {
     const currentKey = $wagmiConfig.state.current
@@ -24,9 +21,23 @@ export function useMagicSession() {
       needsReauth = true
     }
 
-    if (needsReauth) {
-      await disconnectAsync()
-      await connectAsync({ connector, chainId: $wagmiConfig.chains[0].id })
+    if (!needsReauth) return
+
+    const accountStore = useAccountStore()
+    const { user } = useUserSession()
+    await accountStore.login({
+      connectorId: 'magic',
+      email: user.value?.email,
+    })
+
+    // accountStore.login() silently returns when the user dismisses Magic's UI,
+    // so confirm wagmi actually reconnected before letting the caller proceed.
+    const newKey = $wagmiConfig.state.current
+    if (!newKey || !$wagmiConfig.state.connections.get(newKey)) {
+      throw createError({
+        statusCode: 401,
+        message: 'MAGIC_SESSION_EXPIRED',
+      })
     }
   }
 
