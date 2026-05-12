@@ -11,6 +11,9 @@ export default function useAnnotations(params: {
   const hasFetched = ref(false)
   const fetchPromise = ref<Promise<void> | null>(null)
 
+  const highlights = computed(() => annotations.value.filter(a => a.type === 'highlight'))
+  const bookmarks = computed(() => annotations.value.filter(a => a.type === 'bookmark'))
+
   async function fetchAnnotations(): Promise<void> {
     if (!hasLoggedIn.value || !nftClassId.value) {
       return
@@ -42,13 +45,22 @@ export default function useAnnotations(params: {
     const annotation: Annotation = {
       id: crypto.randomUUID(),
       ...data,
-      note: data.note || '',
       chapterTitle: data.chapterTitle || '',
       createdAt: now,
       updatedAt: now,
     }
     annotations.value = [...annotations.value, annotation]
     return annotation
+  }
+
+  function matchesCreateData(a: Annotation, data: AnnotationCreateData): boolean {
+    if (a.type !== data.type) return false
+    if (data.type === 'bookmark') {
+      if (data.cfi !== undefined) return a.cfi === data.cfi
+      if (data.page !== undefined) return a.page === data.page
+      return false
+    }
+    return a.cfi === data.cfi
   }
 
   async function saveAnnotation(annotationId: string, data: AnnotationCreateData): Promise<Annotation | null> {
@@ -60,10 +72,7 @@ export default function useAnnotations(params: {
     try {
       const response = await $fetch<{ annotation: Annotation }>(`/api/books/${nftClassId.value}/annotations`, {
         method: 'POST',
-        body: {
-          ...data,
-          note: data.note || '',
-        },
+        body: data,
       })
 
       annotations.value = annotations.value.map(a =>
@@ -75,7 +84,7 @@ export default function useAnnotations(params: {
       annotations.value = annotations.value.filter(a => a.id !== annotationId)
       if (error instanceof FetchError && error.statusCode === 409) {
         await fetchAnnotations()
-        const existing = annotations.value.find(a => a.cfi === data.cfi)
+        const existing = annotations.value.find(a => matchesCreateData(a, data))
         if (existing) return existing
       }
       console.warn(`Failed to create annotation for ${nftClassId.value}:`, error)
@@ -89,9 +98,10 @@ export default function useAnnotations(params: {
     }
 
     const oldAnnotations = [...annotations.value]
-    annotations.value = annotations.value.map(a =>
-      a.id === annotationId ? { ...a, ...data, updatedAt: Date.now() } : a,
-    )
+    annotations.value = annotations.value.map((a) => {
+      if (a.id !== annotationId || a.type !== 'highlight') return a
+      return { ...a, ...data, updatedAt: Date.now() }
+    })
 
     try {
       const response = await $fetch<{ annotation: Annotation }>(`/api/books/${nftClassId.value}/annotations/${annotationId}`, {
@@ -119,30 +129,42 @@ export default function useAnnotations(params: {
       return false
     }
 
+    const deleted = annotations.value.find(a => a.id === annotationId)
+    if (!deleted) return false
+    annotations.value = annotations.value.filter(a => a.id !== annotationId)
+
     try {
       await $fetch(`/api/books/${nftClassId.value}/annotations/${annotationId}`, {
         method: 'DELETE',
       })
-
-      annotations.value = annotations.value.filter(a => a.id !== annotationId)
       return true
     }
     catch (error) {
+      // Re-insert only the removed item (preserving createdAt order) so
+      // concurrent changes to other annotations during the in-flight DELETE
+      // are not clobbered. Skip if a concurrent fetch already restored it.
+      if (!annotations.value.some(a => a.id === annotationId)) {
+        const insertAt = annotations.value.findIndex(a => a.createdAt > deleted.createdAt)
+        annotations.value = insertAt === -1
+          ? [...annotations.value, deleted]
+          : [...annotations.value.slice(0, insertAt), deleted, ...annotations.value.slice(insertAt)]
+      }
       console.warn(`Failed to delete annotation ${annotationId}:`, error)
       return false
     }
-  }
-
-  function getAnnotationByCfi(cfi: string): Annotation | undefined {
-    return annotations.value.find(a => a.cfi === cfi)
   }
 
   function getAnnotationById(id: string): Annotation | undefined {
     return annotations.value.find(a => a.id === id)
   }
 
+  function getBookmarkByPage(page: number): Annotation | undefined {
+    return bookmarks.value.find(a => a.page === page)
+  }
+
   return {
-    annotations: computed(() => annotations.value),
+    highlights,
+    bookmarks,
     isLoading: computed(() => isLoading.value),
     hasFetched: computed(() => hasFetched.value),
     fetchAnnotations,
@@ -150,7 +172,7 @@ export default function useAnnotations(params: {
     saveAnnotation,
     updateAnnotation,
     deleteAnnotation,
-    getAnnotationByCfi,
     getAnnotationById,
+    getBookmarkByPage,
   }
 }
