@@ -1,4 +1,5 @@
 import { setUser as setSentryUser } from '@sentry/nuxt'
+import { v5 as uuidv5 } from 'uuid'
 import { sha256 } from 'viem'
 import type { User } from '#auth-utils'
 
@@ -82,20 +83,27 @@ const INTERCOM_EVENT_ALLOWLIST = new Set<string>([
   'deposit_claim_rewards_button_click',
 ])
 
-// Events whose authoritative source is the API server (likecoin-api-public): the server
-// fires them via posthog-node from the Stripe webhook handler. The matching client-side
-// fire to PostHog is suppressed here to avoid duplication, because posthog-js's capture()
-// doesn't accept a custom uuid and the two fires can't dedupe on PostHog's side. GA4 and
-// Meta Pixel still fire from both sides — they dedupe on transaction_id / eventID via
-// CAPI respectively, independent of the PostHog uuid issue. Re-enable the PostHog leg
-// once https://github.com/PostHog/posthog-js/issues/3546 lands and both sides can emit a
-// deterministic uuidv5(`${eventName}:${transaction_id}`, NS).
-const POSTHOG_SERVER_AUTHORITATIVE_EVENTS = new Set<string>([
+// Events that the API server (likecoin-api-public) also fires via posthog-node from the
+// Stripe webhook handler. Both sides build the same URL string from (eventName,
+// transaction_id) and hash it under RFC 4122 NAMESPACE_URL to get a deterministic uuidv5,
+// which is passed as `CaptureOptions.uuid`. PostHog's ClickHouse dedup tuple
+// (timestamp, distinct_id, event, uuid) then collapses the pair into one row. The
+// matching server helper lives in likecoin-api-public/src/util/posthog.ts — the URL
+// format below is the contract; keep both sides identical or dedup breaks silently.
+// The 4 entries below are the subset of likecoin-api-public's SERVER_EVENT_MAP that the
+// browser also fires (from success pages after a user action).
+const POSTHOG_SERVER_MIRRORED_EVENTS = new Set<string>([
   'begin_checkout',
   'purchase',
   'start_trial',
   'subscribe',
 ])
+
+// The host must be a fixed literal: substituting useRuntimeConfig().public.siteUrl or
+// any env-aware hostname would flip between testnet/mainnet and silently break dedup.
+function derivePostHogEventUuid(eventName: string, transactionId: string): string {
+  return uuidv5(`https://3ook.com/posthog-dedup/${eventName}/${transactionId}`, uuidv5.URL)
+}
 
 export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
   try {
@@ -167,8 +175,6 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
     }
   }
 
-  if (POSTHOG_SERVER_AUTHORITATIVE_EVENTS.has(eventName)) return
-
   try {
     const { proxy } = useScriptPostHog()
     const posthogParams = { ...eventParams }
@@ -180,7 +186,13 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
         posthogParams.nft_class_ids = classIds.join(',')
       }
     }
-    proxy.posthog.capture(eventName, { app: '3ook', ...posthogParams })
+    const transactionId = typeof posthogParams.transaction_id === 'string'
+      ? posthogParams.transaction_id
+      : undefined
+    const captureOptions = POSTHOG_SERVER_MIRRORED_EVENTS.has(eventName) && transactionId
+      ? { uuid: derivePostHogEventUuid(eventName, transactionId) }
+      : undefined
+    proxy.posthog.capture(eventName, { app: '3ook', ...posthogParams }, captureOptions)
   }
   catch (error) {
     console.error(`Failed to log event to PostHog: ${eventName}`, error)
