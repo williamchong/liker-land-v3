@@ -5,7 +5,7 @@ import { jwtDecode } from 'jwt-decode'
 import type { Magic } from 'magic-sdk'
 import type { RouteLocationAsRelativeGeneric } from 'vue-router'
 
-import { LoginModal, RegistrationModal } from '#components'
+import { LazyLoginModal, LazyRegistrationModal } from '#components'
 
 const REGISTER_TIME_LIMIT_IN_TS = 15 * 60 * 1000 // 15 minutes
 
@@ -60,8 +60,8 @@ export const useAccountStore = defineStore('account', () => {
   const likeCoinSessionAPI = useLikeCoinSessionAPI()
 
   const { ensureMagicSession } = useMagicSession()
-  const loginModal = overlay.create(LoginModal)
-  const registrationFormModal = overlay.create(RegistrationModal)
+  const loginModal = overlay.create(LazyLoginModal)
+  const registrationFormModal = overlay.create(LazyRegistrationModal)
 
   const likeWallet = ref<string | null>(null)
   const isLoggingIn = ref(false)
