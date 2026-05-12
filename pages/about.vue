@@ -830,6 +830,14 @@ import glassesOnLogo from '~/assets/images/about/media/glasses-on.png'
 import scmpLogo from '~/assets/images/about/media/scmp.png'
 import unwireLogo from '~/assets/images/about/media/unwire.png'
 
+// Preload gsap chunks at module-eval time so the hero's above-the-fold
+// v-gsap entrance animation doesn't flash before the directive's lazy
+// loader fetches them on beforeMount.
+if (import.meta.client) {
+  void import('gsap')
+  void import('gsap/ScrollTrigger')
+}
+
 definePageMeta({
   layout: false,
   colorMode: 'light',
