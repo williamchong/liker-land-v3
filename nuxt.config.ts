@@ -241,6 +241,7 @@ export default defineNuxtConfig({
             config: {
               defaults: POSTHOG_DEFAULTS as ConfigDefaults | undefined,
               person_profiles: 'identified_only',
+              capture_exceptions: { capture_console_errors: true },
             },
           }
         : undefined,
