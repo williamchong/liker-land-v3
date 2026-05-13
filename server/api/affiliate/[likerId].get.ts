@@ -1,5 +1,5 @@
 import type { AffiliatePublicConfig } from '~/shared/types/affiliate'
-import { getAffiliateConfig } from '~/server/utils/affiliate'
+import { getAffiliateConfig, getAffiliatePlusDiscountAllowed } from '~/server/utils/affiliate'
 import { fetchLikeCoinNFTClassAggregatedMetadataById } from '~/shared/utils/api'
 
 export default defineEventHandler(async (event): Promise<AffiliatePublicConfig> => {
@@ -8,8 +8,13 @@ export default defineEventHandler(async (event): Promise<AffiliatePublicConfig> 
     throw createError({ statusCode: 400, message: 'MISSING_LIKER_ID' })
   }
 
+  // Sequential, not Promise.all: both getters share one cache entry, and
+  // running in parallel on a cold cache would fire two upstream fetches.
   const config = await getAffiliateConfig(likerId)
-  if (!config?.active) return { active: false }
+  const isPlusDiscountAllowed = await getAffiliatePlusDiscountAllowed(likerId)
+  if (!config?.active) {
+    return { active: false, isPlusDiscountAllowed }
+  }
 
   let giftBookName: string | undefined
   let giftBookCover: string | undefined
@@ -32,6 +37,7 @@ export default defineEventHandler(async (event): Promise<AffiliatePublicConfig> 
     giftBookName,
     giftBookCover,
     giftOnTrial: config.giftOnTrial,
+    isPlusDiscountAllowed,
     affiliateClassIds: config.affiliateClassIds,
     customVoices: config.customVoices.map(v => ({
       id: v.id,

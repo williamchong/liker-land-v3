@@ -1067,6 +1067,15 @@ const isCheckingBookList = ref(false)
 const isUpdatingBookList = ref(false)
 
 const from = computed(() => getRouteQuery('from') || undefined)
+
+// When the link affiliate (`?from=@likerId`) has opted in, Plus members keep
+// their 20% discount and the affiliate absorbs the cost from their channel share.
+const { config: linkAffiliateConfig } = useAffiliateConfig(from)
+const willPlusDiscountApply = computed(
+  () => isLikerPlus.value
+    && (!from.value || !!linkAffiliateConfig.value?.isPlusDiscountAllowed),
+)
+
 const utmCampaignMessage = computed(() => {
   switch (getRouteQuery('utm_campaign')) {
     case 'custom-voice-free': return $t('product_page_campaign_custom_voice_free')
@@ -1268,7 +1277,7 @@ const pricingItems = computed(() => {
   return bookInfo.pricingItems.value
     .filter(item => !isApp.value || item.price === 0)
     .map((item, index) => {
-      const shouldShowDiscount = !from.value && isLikerPlus.value && item.price > 0
+      const shouldShowDiscount = willPlusDiscountApply.value && item.price > 0
       return {
         ...item,
         label: item.isAutoDeliver ? item.name : $t('product_page_edition_title', { name: item.name }),
@@ -1678,7 +1687,10 @@ async function handlePurchaseButtonClick() {
       const tippingAmount = tippingResult?.tippingAmount || 0
       if (tippingAmount) {
         customPrice = calculateCustomPrice(tippingAmount, selectedPricingItem.value.price)
-        if (getPlusDiscountRate()) {
+        // Only inflate the tip to compensate for the upcoming Plus discount
+        // when it will actually apply — otherwise the customer is charged the
+        // scaled-up amount with no discount to offset it.
+        if (willPlusDiscountApply.value && getPlusDiscountRate()) {
           const scaledTip = Math.round(tippingAmount * (1 / getPlusDiscountRate()) * 100) / 100
           customPrice = Math.round((selectedPricingItem.value.price + scaledTip) * 100) / 100
         }
