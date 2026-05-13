@@ -6,7 +6,7 @@
     >
       <template #center>
         <div class="flex items-center gap-2">
-          <UButtonGroup>
+          <UButtonGroup class="-space-x-0.5">
             <UButton
               icon="i-material-symbols-chevron-left"
               :disabled="isAtFirstPage"
@@ -14,9 +14,19 @@
               variant="outline"
               @click="previousPage"
             />
-            <div class="flex items-center gap-1 px-2 border border-default rounded-[calc(var(--ui-radius)*1.5)]">
+            <div class="flex justify-center items-center gap-1 phone:pr-3 border-2 border-accented">
               <input
                 ref="pageInput"
+                :class="[
+                  'text-right max-phone:text-center',
+                  'text-sm',
+                  'bg-transparent',
+                  'outline-none',
+                  'appearance-none',
+                  '[&::-webkit-inner-spin-button]:appearance-none',
+                  '[&::-webkit-outer-spin-button]:appearance-none',
+                  '[-moz-appearance:textfield]',
+                ]"
                 :value="currentPage"
                 type="number"
                 :min="1"
@@ -24,11 +34,10 @@
                 :disabled="totalPages <= 0"
                 :aria-label="$t('reader_page_input_label')"
                 :style="{ width: `${Math.max(3, String(totalPages).length)}ch` }"
-                class="text-center text-sm bg-transparent outline-none appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]"
                 @change="onPageInputChange"
                 @keydown.enter="($event.target as HTMLInputElement)?.blur()"
               >
-              <span class="text-sm text-muted">/ {{ totalPages }}</span>
+              <span class="max-phone:hidden text-sm text-muted whitespace-nowrap">/ {{ totalPages }}</span>
             </div>
             <UButton
               icon="i-material-symbols-chevron-right"
@@ -39,7 +48,7 @@
             />
           </UButtonGroup>
 
-          <UButtonGroup>
+          <UButtonGroup class="max-phone:hidden -space-x-0.5">
             <UButton
               icon="i-material-symbols-zoom-out"
               :disabled="scale <= scaleMin"
@@ -48,7 +57,6 @@
               @click="zoomOut"
             />
             <UDropdownMenu
-              class="max-phone:hidden"
               :items="scaleMenuItems"
               :ui="{
                 item: 'justify-center',
@@ -57,7 +65,7 @@
               }"
             >
               <UButton
-                class="justify-center min-w-[64px]"
+                class="justify-center min-w-[64px] py-1"
                 :label="`${Math.round(scale * 100)}%`"
                 color="neutral"
                 variant="outline"
@@ -76,6 +84,39 @@
       </template>
       <template #trailing>
         <div class="flex items-center gap-2">
+          <USlideover
+            :title="$t('reader_display_options_button')"
+            :close="{
+              color: 'neutral',
+              variant: 'outline',
+              class: 'rounded-full',
+            }"
+            side="bottom"
+            :overlay="false"
+            :ui="{
+              content: 'max-w-(--breakpoint-phone) mx-auto rounded-t-lg',
+            }"
+          >
+            <UButton
+              icon="i-material-symbols-page-info-outline-rounded"
+              variant="ghost"
+              color="neutral"
+            />
+
+            <template #body>
+              <UTabs
+                v-model="pageMode"
+                :items="pageModeOptions"
+                class="w-full"
+                :content="false"
+              />
+
+              <div class="flex items-center justify-between gap-4 mt-3 py-3">
+                <span class="text-sm">{{ $t('reader_right_to_left') }}</span>
+                <USwitch v-model="isRightToLeft" />
+              </div>
+            </template>
+          </USlideover>
           <USlideover
             v-model:open="isLeftSidebarOpen"
             side="left"
@@ -149,6 +190,11 @@
               </UTabs>
             </template>
           </USlideover>
+          <ReaderSearch
+            v-model:open="isSearchOpen"
+            :search-handler="handleSearchPDF"
+            @navigate="handleSearchNavigate"
+          />
           <UButton
             :aria-label="$t('reader_bookmark_button')"
             :icon="isCurrentPageBookmarked ? 'i-material-symbols-bookmark-rounded' : 'i-material-symbols-bookmark-outline-rounded'"
@@ -157,24 +203,14 @@
             :disabled="!pdfDocument || totalPages <= 0"
             @click="handleBookmarkToggle"
           />
-          <ReaderSearch
-            v-model:open="isSearchOpen"
-            :search-handler="handleSearchPDF"
-            @navigate="handleSearchNavigate"
-          />
-
           <UButton
             :class="[
               'laptop:hidden',
               { 'opacity-50 cursor-not-allowed': isAudioHidden },
             ]"
-            :avatar="{
-              src: activeTTSLanguageVoiceAvatar,
-              alt: activeTTSLanguageVoiceLabel,
-            }"
-            trailing-icon="i-material-symbols-play-arrow-rounded"
-            variant="ghost"
-            color="neutral"
+            icon="i-material-symbols-volume-up-outline-rounded"
+            variant="solid"
+            color="primary"
             :loading="isTTSExtracting"
             @click="handleMobileTTSClick"
           />
@@ -183,55 +219,16 @@
             :text="$t('reader_text_to_speech_button_disabled_tooltip')"
           >
             <UButton
-              :ui="{
-                base: '!rounded-l-md',
-              }"
               class="max-laptop:hidden"
-              :avatar="{
-                src: activeTTSLanguageVoiceAvatar,
-                alt: activeTTSLanguageVoiceLabel,
-              }"
-              trailing-icon="i-material-symbols-play-arrow-rounded"
-              :label="$t('reader_text_to_speech_button')"
-              variant="ghost"
-              color="neutral"
+              icon="i-material-symbols-volume-up-outline-rounded"
+              :aria-label="$t('reader_text_to_speech_button')"
+              variant="solid"
+              color="primary"
               :loading="isTTSExtracting"
               :disabled="isAudioHidden"
               @click="onClickTTSPlay"
             />
           </UTooltip>
-          <USlideover
-            :title="$t('reader_display_options_button')"
-            :close="{
-              color: 'neutral',
-              variant: 'outline',
-              class: 'rounded-full',
-            }"
-            side="bottom"
-            :overlay="false"
-            :ui="{
-              content: 'max-w-(--breakpoint-phone) mx-auto rounded-t-lg',
-            }"
-          >
-            <UButton
-              icon="i-material-symbols-more-vert"
-              variant="ghost"
-            />
-
-            <template #body>
-              <UTabs
-                v-model="pageMode"
-                :items="pageModeOptions"
-                class="w-full"
-                :content="false"
-              />
-
-              <div class="flex items-center justify-between gap-4 mt-3 py-3">
-                <span class="text-sm">{{ $t('reader_right_to_left') }}</span>
-                <USwitch v-model="isRightToLeft" />
-              </div>
-            </template>
-          </USlideover>
         </div>
       </template>
     </ReaderHeader>
@@ -573,11 +570,6 @@ const emit = defineEmits<{
   ttsPlay: []
   pageChanged: [pageNumber: number]
 }>()
-
-const {
-  activeTTSLanguageVoiceAvatar,
-  activeTTSLanguageVoiceLabel,
-} = useTTSVoice()
 
 const { pixelRatio } = useDevicePixelRatio()
 
