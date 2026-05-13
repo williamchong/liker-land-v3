@@ -52,14 +52,21 @@ async function getAffiliateEntry(likerId: string): Promise<AffiliateEntry | null
     : null
 
   // Bound the cache so unknown/spammed likerIds can't grow memory unboundedly.
-  // FIFO eviction is sufficient; the Map preserves insertion order.
+  // Sweep expired entries first so short-TTL negatives don't evict valid positives;
+  // fall back to FIFO (Map preserves insertion order) if we're still at capacity.
   if (cache.size >= CACHE_MAX_ENTRIES) {
-    const oldestKey = cache.keys().next().value
-    if (oldestKey !== undefined) cache.delete(oldestKey)
+    const now = Date.now()
+    for (const [k, v] of cache) {
+      if (v.expiresAt <= now) cache.delete(k)
+    }
+    if (cache.size >= CACHE_MAX_ENTRIES) {
+      const oldestKey = cache.keys().next().value
+      if (oldestKey !== undefined) cache.delete(oldestKey)
+    }
   }
-  // Cache negatives briefly so a transient upstream blip doesn't lock legit
-  // affiliates out for the full positive TTL.
-  const ttl = entry ? CACHE_TTL_MS : NEGATIVE_CACHE_TTL_MS
+  // Cache negatives briefly so a transient upstream blip — or a not-yet-active
+  // affiliate flipping `active: true` — doesn't lock out for the full positive TTL.
+  const ttl = entry?.config ? CACHE_TTL_MS : NEGATIVE_CACHE_TTL_MS
   cache.set(key, { entry, expiresAt: Date.now() + ttl })
   return entry
 }
