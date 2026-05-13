@@ -101,7 +101,7 @@ const POSTHOG_SERVER_MIRRORED_EVENTS = new Set<string>([
 
 // The host must be a fixed literal: substituting useRuntimeConfig().public.siteUrl or
 // any env-aware hostname would flip between testnet/mainnet and silently break dedup.
-function derivePostHogEventUuid(eventName: string, transactionId: string): string {
+function derivePostHogEventUUID(eventName: string, transactionId: string): string {
   return uuidv5(`https://3ook.com/posthog-dedup/${eventName}/${transactionId}`, uuidv5.URL)
 }
 
@@ -190,7 +190,7 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
       ? posthogParams.transaction_id
       : undefined
     const captureOptions = POSTHOG_SERVER_MIRRORED_EVENTS.has(eventName) && transactionId
-      ? { uuid: derivePostHogEventUuid(eventName, transactionId) }
+      ? { uuid: derivePostHogEventUUID(eventName, transactionId) }
       : undefined
     proxy.posthog.capture(eventName, { app: '3ook', ...posthogParams }, captureOptions)
   }
