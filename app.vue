@@ -14,12 +14,14 @@ import { useDocumentVisibility } from '@vueuse/core'
 
 import { SESSION_REFRESH_TIMESTAMP_KEY } from '~/stores/account'
 
-const { t: $t } = useI18n()
+const { t: $t, locales } = useI18n()
 const config = useRuntimeConfig()
 const ogTitle = $t('app_title')
 const ogDescription = $t('app_description')
 const ogURL = config.public.baseURL
 const ogImage = `${ogURL}/images/og/default.jpg`
+const ogAlternateNames = ['Liker Land 電子書店', 'Liker Land']
+const ogLocaleCodes = locales.value.map(l => l.language || l.code)
 const isTestnet = !!config.public.isTestnet
 const likeCoinAPIEndpoint = config.public.likeCoinAPIEndpoint as string | undefined
 const likeCoinStaticEndpoint = config.public.likeCoinStaticEndpoint as string | undefined
@@ -210,11 +212,30 @@ useHead({
       type: 'application/ld+json',
       innerHTML: JSON.stringify([{
         '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        '@id': `${ogURL}/#website`,
+        'name': ogTitle,
+        'alternateName': ogAlternateNames,
+        'url': ogURL,
+        'inLanguage': ogLocaleCodes,
+        'publisher': { '@id': `${ogURL}/#organization` },
+        'potentialAction': {
+          '@type': 'SearchAction',
+          'target': {
+            '@type': 'EntryPoint',
+            'urlTemplate': `${ogURL}/store?q={search_term_string}`,
+          },
+          'query-input': 'required name=search_term_string',
+        },
+      },
+      {
+        '@context': 'https://schema.org',
         '@type': 'OnlineStore',
+        '@id': `${ogURL}/#organization`,
         'name': ogTitle,
         'legalName': 'Liker Land, Inc.',
         'description': ogDescription,
-        'alternateName': ['Liker Land 電子書店', 'Liker Land'],
+        'alternateName': ogAlternateNames,
         'sameAs': [
           'https://linktr.ee/3ookcom',
           'https://www.instagram.com/3ookcom',
