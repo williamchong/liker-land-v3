@@ -33,15 +33,16 @@ export default defineEventHandler(async (event) => {
   }
 
   // Sync locale to like.co user preferences API
-  if ('locale' in body && session.user.token) {
+  const token = session.secure?.token ?? session.user.token
+  if ('locale' in body && token) {
     try {
-      const decoded = jwtDecode<{ permissions?: string[] }>(session.user.token)
+      const decoded = jwtDecode<{ permissions?: string[] }>(token)
       const hasWritePreferences = decoded.permissions?.includes('write:preferences')
       if (hasWritePreferences) {
         await getLikeCoinAPIFetch()('/users/preferences', {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${session.user.token}`,
+            Authorization: `Bearer ${token}`,
           },
           body: {
             locale: body.locale?.startsWith('zh') ? 'zh' : 'en',

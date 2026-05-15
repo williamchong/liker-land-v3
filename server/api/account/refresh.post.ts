@@ -10,7 +10,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (!session.user.token) {
+  const token = session.secure?.token ?? session.user.token
+  if (!token) {
     throw createError({
       statusCode: 401,
       message: 'TOKEN_NOT_FOUND',
@@ -18,7 +19,7 @@ export default defineEventHandler(async (event) => {
   }
   let userInfoRes: LikerProfileResponseData | undefined = undefined
   try {
-    userInfoRes = await fetchLikerProfileInfo(session.user.token)
+    userInfoRes = await fetchLikerProfileInfo(token)
   }
   catch (error) {
     console.warn(`Failed to fetch user info for wallet ${walletAddress} in account refresh`, error)
@@ -50,7 +51,7 @@ export default defineEventHandler(async (event) => {
       // sessions that already have one.
       ttsKey: session.user.ttsKey ?? generateTTSKey(),
     },
-    secure: { token: session.user.token },
+    secure: { token },
   })
 
   const userDocRef = getUserCollection().doc(walletAddress)
@@ -58,9 +59,9 @@ export default defineEventHandler(async (event) => {
     userDocRef.set({
       accessTimestamp: FieldValue.serverTimestamp(),
     }, { merge: true }),
-    hasIntercomTokenRotated && session.user.evmWallet && session.user.token && session.user.jwtId
+    hasIntercomTokenRotated && session.user.evmWallet && session.user.jwtId
       ? refreshSessionTokens(session.user.evmWallet, session.user.jwtId, {
-          token: session.user.token,
+          token,
           intercomToken,
           loginMethod: session.user.loginMethod,
         })
