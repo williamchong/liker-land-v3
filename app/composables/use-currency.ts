@@ -32,24 +32,52 @@ export default function () {
     }).format(amount)}`
   }
 
-  function formatPrice(price: number) {
-    const convertedPrice = convertUSDPriceToCurrency(price, displayCurrency.value)
-    return formatCurrencyAmount(convertedPrice, displayCurrency.value)
+  // A per-book override (minor units, e.g. cents) takes precedence over the
+  // index-based ladder conversion. USD always uses the ladder/stored price.
+  function resolvePrice(
+    usdPrice: number,
+    priceInDecimalByCurrency?: BookPriceInDecimalByCurrency,
+  ): number {
+    const currency = displayCurrency.value
+    if (currency !== 'usd') {
+      const override = priceInDecimalByCurrency?.[currency]
+      if (typeof override === 'number' && override > 0) {
+        return override / 100
+      }
+    }
+    return convertUSDPriceToCurrency(usdPrice, currency)
   }
 
-  function formatDiscountedPrice(usdPrice: number, discountRate: number): string {
-    const convertedPrice = convertUSDPriceToCurrency(usdPrice, displayCurrency.value)
-    const discountedPrice = convertedPrice * (1 - discountRate)
+  function formatPrice(price: number, priceInDecimalByCurrency?: BookPriceInDecimalByCurrency) {
+    return formatCurrencyAmount(resolvePrice(price, priceInDecimalByCurrency), displayCurrency.value)
+  }
+
+  function formatDiscountedPrice(
+    usdPrice: number,
+    discountRate: number,
+    priceInDecimalByCurrency?: BookPriceInDecimalByCurrency,
+  ): string {
+    const discountedPrice = resolvePrice(usdPrice, priceInDecimalByCurrency) * (1 - discountRate)
     return formatCurrencyAmount(discountedPrice, displayCurrency.value)
   }
 
-  function convertPrice(usdPrice: number): number {
-    return convertUSDPriceToCurrency(usdPrice, displayCurrency.value)
+  function convertPrice(
+    usdPrice: number,
+    priceInDecimalByCurrency?: BookPriceInDecimalByCurrency,
+  ): number {
+    return resolvePrice(usdPrice, priceInDecimalByCurrency)
+  }
+
+  // Formats an amount already expressed in the display currency (e.g. a sum of
+  // per-line-item resolved prices), without re-applying ladder conversion.
+  function formatConvertedPrice(amount: number): string {
+    return formatCurrencyAmount(amount, displayCurrency.value)
   }
 
   return {
     formatPrice,
     formatDiscountedPrice,
     convertPrice,
+    formatConvertedPrice,
   }
 }

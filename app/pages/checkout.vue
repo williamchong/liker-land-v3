@@ -45,7 +45,7 @@
 
           <ul class="space-y-4">
             <li
-              v-for="item in cartItems"
+              v-for="item in cartLineItems"
               :key="`${item.classId}-${item.priceIndex}`"
               class="flex gap-4 p-4 border border-gray-200 rounded-lg"
             >
@@ -78,7 +78,7 @@
                     />
                     <span
                       class="text-green-600 font-semibold"
-                      v-text="formatPrice((item.pricingItem?.price || 0) * item.quantity)"
+                      v-text="formatConvertedPrice(item.convertedLineTotal)"
                     />
                   </div>
                 </div>
@@ -108,7 +108,7 @@
             <span v-text="$t('checkout_total_label')" />
             <span
               class="text-green-600"
-              v-text="formatPrice(totalPrice)"
+              v-text="formatConvertedPrice(totalPriceConverted)"
             />
           </div>
         </div>
@@ -175,7 +175,7 @@ const getRouteQuery = useRouteQuery()
 const { user } = useUserSession()
 const nftStore = useNFTStore()
 const bookstoreStore = useBookstoreStore()
-const { formatPrice } = useCurrency()
+const { convertPrice, formatConvertedPrice } = useCurrency()
 const { getCheckoutCurrency } = usePaymentCurrency()
 const { handleError } = useErrorHandler()
 const { getAnalyticsParameters } = useAnalytics()
@@ -270,6 +270,22 @@ const totalPrice = computed(() => {
     return total + (item.pricingItem?.price || 0) * item.quantity
   }, 0)
 })
+
+// Per-line totals resolved once in the buyer's currency (honouring any
+// per-tier override), so the line rows and the grand total cannot diverge.
+// `totalPrice` (USD) is kept for analytics where currency is reported as USD.
+const cartLineItems = computed(() => cartItems.value.map(item => ({
+  ...item,
+  convertedLineTotal: convertPrice(
+    item.pricingItem?.price || 0,
+    item.pricingItem?.priceInDecimalByCurrency,
+  ) * item.quantity,
+})))
+
+const totalPriceConverted = computed(() => cartLineItems.value.reduce(
+  (total, item) => total + item.convertedLineTotal,
+  0,
+))
 
 const eventPayload = computed(() => {
   const payload = {

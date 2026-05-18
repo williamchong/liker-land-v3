@@ -133,11 +133,16 @@ const bookName = computed(() => bookInfo.name.value || props.bookName)
 const authorName = computed(() => bookInfo.authorName.value)
 
 const price = computed(() => props.price || bookInfo.minPrice.value)
-const formattedPrice = computed(() => formatPrice(price.value))
+// Only the catalog's own min-tier carries an override; a price passed in via
+// props has no currency override context, so fall back to ladder conversion.
+const priceCurrencyOverride = computed(() => (
+  props.price ? undefined : bookInfo.minPricingItem.value?.priceInDecimalByCurrency
+))
+const formattedPrice = computed(() => formatPrice(price.value, priceCurrencyOverride.value))
 
 const formattedDiscountPrice = computed(() => {
   if (isLikerPlus.value && price.value > 0) {
-    return formatDiscountedPrice(price.value, PLUS_BOOK_PURCHASE_DISCOUNT)
+    return formatDiscountedPrice(price.value, PLUS_BOOK_PURCHASE_DISCOUNT, priceCurrencyOverride.value)
   }
   return null
 })
