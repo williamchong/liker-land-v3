@@ -1,3 +1,5 @@
+import type { LikerInfoResponseData } from '~~/shared/types/api'
+
 export function getLikeCoinAPIFetch() {
   const config = useRuntimeConfig()
   return createRetryingFetch({ baseURL: config.public.likeCoinAPIEndpoint })
