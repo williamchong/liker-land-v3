@@ -74,9 +74,17 @@ declare global {
     mayHaveMore?: boolean
   }
 
+  // Per-currency price overrides from the API, in that currency's minor units
+  // (e.g. cents). A missing currency falls back to ladder conversion.
+  interface BookPriceInDecimalByCurrency {
+    hkd?: number
+    twd?: number
+  }
+
   interface BookstorePrice {
     index: number
     price: number
+    priceInDecimalByCurrency?: BookPriceInDecimalByCurrency
     name: {
       en: string
       zh: string

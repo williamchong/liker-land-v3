@@ -255,6 +255,7 @@ export default function (
           name: localeString(item.name),
           description: localeString(item.description),
           price: item.price,
+          priceInDecimalByCurrency: item.priceInDecimalByCurrency,
           currency: item.price > 0 ? 'USD' : '',
           isSoldOut: item.isSoldOut,
           canTip: item.isAllowCustomPrice && item.isTippingEnabled,
@@ -263,10 +264,12 @@ export default function (
       })
   })
 
-  const minPrice = computed(() => {
-    if (!pricingItems.value.length) return 0
-    return Math.min(...pricingItems.value.map(item => item.price))
+  const minPricingItem = computed(() => {
+    if (!pricingItems.value.length) return undefined
+    return pricingItems.value.reduce((min, item) => (item.price < min.price ? item : min))
   })
+
+  const minPrice = computed(() => minPricingItem.value?.price ?? 0)
 
   const userOwnedNFTIds = computed(() => {
     return bookshelfStore.getTokenIdsByNFTClassId(toValue(nftClassId))
@@ -364,6 +367,7 @@ export default function (
     promotionalVideos,
 
     pricingItems,
+    minPricingItem,
     minPrice,
 
     userOwnedNFTIds,

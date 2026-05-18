@@ -1281,8 +1281,8 @@ const pricingItems = computed(() => {
       return {
         ...item,
         label: item.isAutoDeliver ? item.name : $t('product_page_edition_title', { name: item.name }),
-        originalPrice: formatPrice(item.price),
-        discountedPrice: shouldShowDiscount ? formatDiscountedPrice(item.price, PLUS_BOOK_PURCHASE_DISCOUNT) : null,
+        originalPrice: formatPrice(item.price, item.priceInDecimalByCurrency),
+        discountedPrice: shouldShowDiscount ? formatDiscountedPrice(item.price, PLUS_BOOK_PURCHASE_DISCOUNT, item.priceInDecimalByCurrency) : null,
         isSelected: index === selectedPricingItemIndex.value,
         renderedDescription: renderDescription(item.description || ''),
       }
