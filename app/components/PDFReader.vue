@@ -6,7 +6,7 @@
     >
       <template #center>
         <div class="flex items-center gap-2">
-          <UButtonGroup class="-space-x-0.5">
+          <UFieldGroup class="-space-x-0.5">
             <UButton
               icon="i-material-symbols-chevron-left"
               :disabled="isAtFirstPage"
@@ -46,9 +46,9 @@
               variant="outline"
               @click="nextPage"
             />
-          </UButtonGroup>
+          </UFieldGroup>
 
-          <UButtonGroup class="max-phone:hidden -space-x-0.5">
+          <UFieldGroup class="max-phone:hidden -space-x-0.5">
             <UButton
               icon="i-material-symbols-zoom-out"
               :disabled="scale <= scaleMin"
@@ -79,7 +79,7 @@
               variant="outline"
               @click="zoomIn"
             />
-          </UButtonGroup>
+          </UFieldGroup>
         </div>
       </template>
       <template #trailing>

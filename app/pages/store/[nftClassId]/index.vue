@@ -770,7 +770,7 @@
       />
 
       <template v-else-if="pricingItems.length">
-        <UButtonGroup
+        <UFieldGroup
           v-if="pricingItems.length > 1"
           size="xs"
         >
@@ -790,7 +790,7 @@
               class="cursor-pointer"
             />
           </UDropdownMenu>
-        </UButtonGroup>
+        </UFieldGroup>
 
         <div class="flex items-center justify-between">
           <span class="flex items-center gap-1 shrink-0">
