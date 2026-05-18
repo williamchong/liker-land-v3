@@ -47,27 +47,55 @@
       >
         <p
           class="text-sm font-medium text-toned mb-3"
-          v-text="$t('pricing_page_affiliate_gift_label')"
+          v-text="$t(giftBooks.length > 1
+            ? 'pricing_page_affiliate_gift_select_label'
+            : 'pricing_page_affiliate_gift_label')"
         />
-        <div class="flex items-center justify-center gap-3">
-          <BookCover
-            class="w-12 shrink-0"
-            :src="giftBookCoverSrc"
-            :alt="activeAffiliate.giftBookName || $t('pricing_page_affiliate_gift_label')"
-            has-shadow
+        <div
+          class="flex gap-3 py-2 -mx-1 px-1"
+          :class="giftBooks.length > 2
+            ? 'overflow-x-auto snap-x'
+            : 'justify-center'"
+        >
+          <button
+            v-for="book in giftBooks"
+            :key="book.classId"
+            type="button"
+            class="relative shrink-0 snap-start rounded-md transition-all duration-150 cursor-pointer"
+            :class="book.classId === selectedGiftClassId
+              ? 'ring-2 ring-primary scale-105'
+              : 'opacity-50 hover:opacity-90'"
+            :aria-pressed="book.classId === selectedGiftClassId"
+            @click="selectedGiftClassId = book.classId"
+          >
+            <BookCover
+              class="w-16"
+              :src="giftBookCover(book.cover)"
+              :alt="book.name || $t('pricing_page_affiliate_gift_label')"
+              has-shadow
+            />
+            <span
+              v-if="book.classId === selectedGiftClassId"
+              class="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-primary text-inverted"
+            >
+              <UIcon
+                name="i-material-symbols-check-rounded"
+                class="w-3.5 h-3.5"
+              />
+            </span>
+          </button>
+        </div>
+        <div class="mt-3 text-center">
+          <p
+            v-if="selectedGiftBook?.name"
+            class="text-sm font-bold text-highlighted"
+            v-text="selectedGiftBook.name"
           />
-          <div class="text-left">
-            <p
-              v-if="activeAffiliate.giftBookName"
-              class="text-sm font-bold text-highlighted"
-              v-text="activeAffiliate.giftBookName"
-            />
-            <p
-              v-if="affiliateVoiceNames"
-              class="text-xs text-muted"
-              v-text="$t('pricing_page_affiliate_voice_label', { name: affiliateVoiceNames })"
-            />
-          </div>
+          <p
+            v-if="affiliateVoiceNames"
+            class="text-xs text-muted"
+            v-text="$t('pricing_page_affiliate_voice_label', { name: affiliateVoiceNames })"
+          />
         </div>
       </UCard>
     </template>
@@ -143,10 +171,21 @@ const affiliateVoiceNames = computed(() => {
 const affiliateSampleVoices = computed(() => activeAffiliate.value?.customVoices ?? [])
 
 const { getResizedNormalizedImageURL } = useImageResize()
-const giftBookCoverSrc = computed(() => {
-  const src = activeAffiliate.value?.giftBookCover
+const giftBooks = computed(() => activeAffiliate.value?.giftBooks ?? [])
+const selectedGiftClassId = ref<string | undefined>(undefined)
+// Default to the first book and keep the pick valid as the list changes
+// (e.g. when the affiliate link / config loads asynchronously).
+watch(giftBooks, (books) => {
+  if (!books.some(b => b.classId === selectedGiftClassId.value)) {
+    selectedGiftClassId.value = books[0]?.classId
+  }
+}, { immediate: true })
+const selectedGiftBook = computed(() =>
+  giftBooks.value.find(b => b.classId === selectedGiftClassId.value),
+)
+function giftBookCover(src?: string) {
   return src ? getResizedNormalizedImageURL(src, { size: 300 }) : ''
-})
+}
 
 async function fetchAffiliateInfo() {
   if (!affiliateLikerId.value) {
@@ -299,7 +338,7 @@ const trialPeriodDays = computed(() => {
 
 const isAffiliateGiftRedeemable = computed(() => {
   const info = activeAffiliate.value
-  if (!info?.giftClassId) return false
+  if (!info?.giftBooks?.length) return false
   if (selectedPlan.value !== 'yearly') return false
   if (info.giftOnTrial === false && trialPeriodDays.value !== 0) return false
   return true
@@ -365,6 +404,11 @@ async function handleSubscribe(payload: {
   await checkout.startSubscription({
     ...payload,
     coupon: coupon.value,
+    // Carry the subscriber's chosen gift book; the API validates it against
+    // the affiliate's gift list and resolves the (free) price index itself.
+    nftClassId: isAffiliateGiftRedeemable.value
+      ? selectedGiftClassId.value
+      : undefined,
   })
 }
 

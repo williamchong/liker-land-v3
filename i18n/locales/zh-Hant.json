@@ -625,6 +625,7 @@
   "plus_subscribe_cta_yearly_gift": "年費訂閱，免費獲得本書",
   "price_free": "免費",
   "pricing_page_affiliate_gift_label": "訂閱年費即可免費獲得書籍",
+  "pricing_page_affiliate_gift_select_label": "選擇你的免費書籍",
   "pricing_page_affiliate_voice_label": "附帶 {name} 專屬語音朗讀",
   "pricing_page_coupon_applied_description": "最終折扣將在結帳時計算並顯示。",
   "pricing_page_coupon_applied_title": "已套用優惠碼 {code}",

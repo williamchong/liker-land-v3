@@ -7,11 +7,15 @@ export interface AffiliateCustomVoice {
   providerVoiceId: string
 }
 
+export interface AffiliateGiftBook {
+  classId: string
+  priceIndex: number
+}
+
 export interface AffiliateConfig {
   active: boolean
   affiliateClassIds: string[]
-  giftClassId?: string
-  giftPriceIndex?: number
+  giftBooks?: AffiliateGiftBook[]
   giftOnTrial?: boolean
   customVoices: AffiliateCustomVoice[]
 }

@@ -41,8 +41,9 @@ async function getAffiliateEntry(likerId: string): Promise<AffiliateEntry | null
           ? {
               active: true,
               affiliateClassIds: (upstream.affiliateClassIds ?? []).map(id => id.toLowerCase()),
-              giftClassId: upstream.giftClassId,
-              giftPriceIndex: upstream.giftPriceIndex,
+              giftBooks: (upstream.giftBooks ?? [])
+                .filter(b => typeof b?.classId === 'string' && !!b.classId)
+                .map(b => ({ classId: b.classId, priceIndex: b.priceIndex || 0 })),
               giftOnTrial: upstream.giftOnTrial,
               customVoices: (upstream.customVoices ?? []).filter(isValidCustomVoice),
             }
