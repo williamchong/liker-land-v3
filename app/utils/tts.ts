@@ -1,14 +1,22 @@
+// Fullwidth letters/digits/symbols (ＡＢＣ, １２３, ＊, （）) trip up Minimax,
+// so the fullwidth sweep normalizes them to basic ASCII. Fullwidth CJK
+// punctuation is excluded: ，；：！？ are the correct, prosody-bearing
+// forms for a Chinese-first engine — flattening them to ASCII flattens
+// intonation, and for ，；： also drops the clause boundary that server-side
+// injectTTSPauseMarkers depends on. 。、 are not in the fullwidth block,
+// so they are untouched.
+const FULLWIDTH_PUNCT_KEEP = new Set(['！', '，', '：', '；', '？'])
+
 export function sanitizeTTSText(text: string): string {
   if (!text) return ''
   return text
-    // Normalize fullwidth ASCII (U+FF01–U+FF5E) to basic ASCII
     .replace(/[\uFF01-\uFF5E]/g, c =>
-      String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+      FULLWIDTH_PUNCT_KEEP.has(c) ? c : String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
     .replace(/^\s*-{2,}\s*$/gm, '')
     .replace(/^\s*\.+\s*$/gm, '')
     .replace(/[*]/g, '')
     .replace(/[⋯︙…]+/g, '。')
-    .replace(/[—─―︱⸺]+/g, ',')
+    .replace(/[—─―︱⸺]+/g, '，')
     .replace(/﹁/g, '「')
     .replace(/﹂/g, '」')
     .replace(/﹃/g, '『')

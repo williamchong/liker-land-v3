@@ -69,18 +69,21 @@ export function getMinimaxModel(options: {
 // Minimax inline-pause syntax: <#seconds#>. 0.01s is imperceptible.
 const TTS_PAUSE_MARKER = '<#0.01#>'
 
-// Minimax speech-2.x degrades the rest of a synthesis call into garbled,
-// unintelligible noise when it hits an unpronounceable glyph; a pause marker
-// bounds that corruption to the clause between markers. Minimax also rejects
-// consecutive and trailing markers, so
-// we collapse punctuation runs and require a speakable char after. The
-// lookahead stays intentionally narrow: skipping a quote-opened clause only
-// weakens protection, but a looser test could emit a marker before a trailing
-// 」 with no speakable text after — the exact invalid input this avoids.
-// Segments arrive pre-split/speakable, so the run always has speakable text
-// before it.
-function injectTTSPauseMarkers(text: string): string {
-  return text.replace(/([，。]+)(?=\s*[\p{L}\p{N}])/gu, `$1${TTS_PAUSE_MARKER}`)
+// Minimax speech-2.x degrades the rest of a synthesis call into garbled noise
+// when it hits an unpronounceable glyph; a pause marker bounds that corruption
+// to the clause between markers. Minimax rejects consecutive and trailing
+// markers, so we collapse punctuation runs and require a speakable char after
+// (segments arrive pre-split/speakable, so there is a speakable char before
+// the run too). The narrow lookahead avoids emitting a marker before a
+// trailing 」 with no speakable text after — the exact invalid input Minimax
+// rejects. The class is the fullwidth/CJK clause set only: 。、 are CJK and
+// never normalized, and sanitizeTTSText keeps ，；： fullwidth (see its
+// comment for why). ASCII ,;: are excluded so Latin tokens like "12:30" or
+// "e.g.," don't get spurious markers.
+const TTS_PAUSE_BOUNDARY_RE = /([，。、；：]+)(?=\s*[\p{L}\p{N}])/gu
+
+export function injectTTSPauseMarkers(text: string): string {
+  return text.replace(TTS_PAUSE_BOUNDARY_RE, `$1${TTS_PAUSE_MARKER}`)
 }
 
 export class MinimaxTTSProvider implements BaseTTSProvider {

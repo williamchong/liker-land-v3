@@ -31,6 +31,14 @@ describe('sanitizeTTSText', () => {
     expect(sanitizeTTSText('＊')).toBe('')
   })
 
+  it('keeps fullwidth CJK punctuation for Minimax prosody', () => {
+    expect(sanitizeTTSText('好，壞；對：錯！嗎？')).toBe('好，壞；對：錯！嗎？')
+  })
+
+  it('normalizes fullwidth alphanumerics adjacent to kept punctuation', () => {
+    expect(sanitizeTTSText('Ａ，Ｂ；１２３')).toBe('A，B；123')
+  })
+
   it('removes asterisks including normalized fullwidth ones', () => {
     expect(sanitizeTTSText('**bold**')).toBe('bold')
     expect(sanitizeTTSText('＊重點＊')).toBe('重點')
@@ -62,12 +70,13 @@ describe('sanitizeTTSText', () => {
     expect(sanitizeTTSText('好⋯⋯⋯')).toBe('好。')
   })
 
-  // Regression: 3c114fd2 — em dashes had no pause, causing run-on speech
-  // Regression: 343dea3d — dashes now map to ASCII comma (not fullwidth ，)
-  it('replaces dash-like characters with comma', () => {
-    expect(sanitizeTTSText('好—壞')).toBe('好,壞')
-    expect(sanitizeTTSText('好──壞')).toBe('好,壞')
-    expect(sanitizeTTSText('好⸺壞')).toBe('好,壞')
+  // Regression: 3c114fd2 — em dashes had no pause, causing run-on speech.
+  // Dashes map to fullwidth ，(not ASCII): CJK punctuation is kept fullwidth
+  // for Minimax prosody, reverting the ASCII-comma mapping from 343dea3d.
+  it('replaces dash-like characters with a fullwidth comma', () => {
+    expect(sanitizeTTSText('好—壞')).toBe('好，壞')
+    expect(sanitizeTTSText('好──壞')).toBe('好，壞')
+    expect(sanitizeTTSText('好⸺壞')).toBe('好，壞')
   })
 
   // Regression: fbda87d9 — vertical quotation marks were only replaced once (no /g flag)
@@ -79,7 +88,7 @@ describe('sanitizeTTSText', () => {
   it('applies multiple sanitization rules together', () => {
     const input = '﹁好＊﹂\n---\n好⋯⋯好—壞'
     const result = sanitizeTTSText(input)
-    expect(result).toBe('「好」\n\n好。好,壞')
+    expect(result).toBe('「好」\n\n好。好，壞')
   })
 })
 
