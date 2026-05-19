@@ -8,6 +8,7 @@ export function useReaderProgress({
   bookProgressKeyPrefix: string
 }) {
   const bookshelfStore = useBookshelfStore()
+  const bookSettingsStore = useBookSettingsStore()
 
   function getProgressKeyWithSuffix(suffix: ReaderCacheKeySuffix) {
     return getReaderCacheKeyWithSuffix(bookProgressKeyPrefix, suffix)
@@ -31,7 +32,7 @@ export function useReaderProgress({
   if (import.meta.client) {
     useEventListener(document, 'visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
-        useBookSettingsStore().flushBatch(nftClassId)
+        bookSettingsStore.flushBatch(nftClassId)
       }
     })
   }
@@ -42,6 +43,11 @@ export function useReaderProgress({
       readingProgress.value,
       lastOpenedTime.value,
     )
+    // updateProgress only schedules a debounced (1s) flush. Force it out
+    // now so the final progress / lastOpenedTime reaches the server
+    // immediately on unmount, syncing to the shelf and other devices
+    // without a 1s lag.
+    bookSettingsStore.flushBatch(nftClassId)
   })
 
   return {
