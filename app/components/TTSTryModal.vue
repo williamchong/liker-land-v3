@@ -72,11 +72,6 @@ const { t: $t } = useI18n()
 const { setTTSLanguageVoice } = useTTSVoice()
 const { samples: ttsSamples } = useTTSSamplesPlayer()
 
-const cantoneseVoiceABTest = useABTest({
-  experimentKey: 'tts-try-modal-cantonese-voice',
-})
-const isPhoebeVariant = computed(() => cantoneseVoiceABTest.isVariant('test'))
-
 function handleRemindMeLater() {
   emit('snooze')
 }
@@ -86,17 +81,13 @@ function handleDismiss() {
 }
 
 function handleVoiceClick(sample: { id: string, languageVoice: string }) {
-  const { id: sampleId, languageVoice: sampleLanguageVoice } = sample
-  const languageVoice = sampleLanguageVoice === 'zh-HK_pazu' && isPhoebeVariant.value
-    ? 'zh-HK_phoebe'
-    : sampleLanguageVoice
+  const { id: sampleId, languageVoice } = sample
 
   setTTSLanguageVoice(languageVoice)
   useLogEvent('tts_try_voice_selected', {
     nft_class_id: props.nftClassId,
     sample: sampleId,
     languageVoice,
-    ab_variant: cantoneseVoiceABTest.variant.value,
   })
   emit('voiceSelected', languageVoice)
 }
@@ -105,7 +96,6 @@ onMounted(() => {
   emit('open')
   useLogEvent('tts_try_modal_open', {
     nft_class_id: props.nftClassId,
-    ab_variant: cantoneseVoiceABTest.variant.value,
   })
 })
 
