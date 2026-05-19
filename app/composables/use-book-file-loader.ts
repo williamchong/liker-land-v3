@@ -1,6 +1,7 @@
 export default function () {
   const { t: $t } = useI18n()
   const { user } = useUserSession()
+  const config = useRuntimeConfig()
 
   const loadingFilesize = ref(0)
   const loadedFilesize = ref(0)
@@ -28,11 +29,18 @@ export default function () {
     loadedFilesize.value = 0
 
     let res
+    let cachePutPromise: Promise<boolean> | undefined
     const req = new Request(url)
     if (cacheKey && window.caches) {
       try {
         const cache = await caches.open(cacheKey)
         res = await cache.match(req)
+        if (res) {
+          touchBookFileCacheEntry({
+            cacheKeyPrefix: config.public.cacheKeyPrefix,
+            cacheKey,
+          })
+        }
       }
       catch (error) {
         console.error(error)
@@ -61,12 +69,42 @@ export default function () {
       if (cacheKey && window.caches) {
         try {
           const cache = await caches.open(cacheKey)
-          cache.put(req, res.clone())
+          // Fire-and-forget: awaiting would drain the clone before our own
+          // stream loop starts, forcing the tee to buffer the whole response.
+          // On failure we delete the now-empty cache that caches.open() just
+          // created; otherwise pruneBookFileCaches would treat it as live and
+          // keep the index entry, inflating the LRU total.
+          cachePutPromise = cache.put(req, res.clone())
+            .then(() => true)
+            .catch((error) => {
+              console.error(error)
+              return caches.delete(cacheKey).catch(console.error).then(() => false)
+            })
         }
         catch (error) {
           console.error(error)
         }
       }
+    }
+
+    // Deferred until the body has finished streaming, since the byte size is
+    // only known then. Prune reuses the index record() just wrote so opening
+    // a book parses the localStorage index once, not twice.
+    function registerCachedFile(size: number) {
+      if (!cacheKey || !cachePutPromise) return
+      void cachePutPromise.then((didCache) => {
+        if (!didCache) return
+        const index = recordBookFileCacheEntry({
+          cacheKeyPrefix: config.public.cacheKeyPrefix,
+          cacheKey,
+          size,
+        })
+        void pruneBookFileCaches({
+          cacheKeyPrefix: config.public.cacheKeyPrefix,
+          keepCacheKey: cacheKey,
+          index,
+        })
+      })
     }
 
     const streamReader = res?.body?.getReader()
@@ -103,6 +141,7 @@ export default function () {
         loadedFilesize.value = offset
       }
       if (!overflow) {
+        registerCachedFile(offset)
         return offset < buffer.length
           ? buffer.buffer.slice(0, offset)
           : buffer.buffer
@@ -114,6 +153,7 @@ export default function () {
         combined.set(chunk, pos)
         pos += chunk.length
       }
+      registerCachedFile(offset)
       return combined.buffer
     }
 
@@ -135,6 +175,7 @@ export default function () {
       position += chunk.length
     }
 
+    registerCachedFile(receivedLength)
     return combinedChunks.buffer
   }
 

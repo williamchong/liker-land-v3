@@ -578,6 +578,8 @@ export const useAccountStore = defineStore('account', () => {
         })
       })
 
+      window.localStorage.removeItem(getBookFileCacheIndexKey(config.public.cacheKeyPrefix))
+
       getTTSConfigKeySuffixes().forEach((suffix) => {
         window.localStorage.removeItem(getTTSConfigKeyWithSuffix(TTS_CONFIG_KEY, suffix))
       })
