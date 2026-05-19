@@ -46,6 +46,7 @@
         variant="subtle"
       >
         <p
+          id="affiliate-gift-picker-label"
           class="text-sm font-medium text-toned mb-3"
           v-text="$t(giftBooks.length > 1
             ? 'pricing_page_affiliate_gift_select_label'
@@ -56,16 +57,20 @@
           :class="giftBooks.length > 2
             ? 'overflow-x-auto snap-x'
             : 'justify-center'"
+          role="radiogroup"
+          aria-labelledby="affiliate-gift-picker-label"
         >
           <button
             v-for="(book, index) in giftBooks"
             :key="book.classId"
             type="button"
+            role="radio"
             class="relative shrink-0 snap-start rounded-md transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             :class="book.classId === selectedGiftClassId
               ? 'ring-2 ring-primary scale-105'
               : 'opacity-50 hover:opacity-90'"
-            :aria-pressed="book.classId === selectedGiftClassId"
+            :aria-checked="book.classId === selectedGiftClassId"
+            :tabindex="(selectedGiftClassId ? book.classId === selectedGiftClassId : index === 0) ? 0 : -1"
             @click="selectedGiftClassId = book.classId"
           >
             <BookCover
