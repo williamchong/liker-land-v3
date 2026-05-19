@@ -52,16 +52,16 @@
             : 'pricing_page_affiliate_gift_label')"
         />
         <div
-          class="flex gap-3 py-2 -mx-1 px-1"
+          class="flex gap-3 py-6 -mx-2 px-2"
           :class="giftBooks.length > 2
             ? 'overflow-x-auto snap-x'
             : 'justify-center'"
         >
           <button
-            v-for="book in giftBooks"
+            v-for="(book, index) in giftBooks"
             :key="book.classId"
             type="button"
-            class="relative shrink-0 snap-start rounded-md transition-all duration-150 cursor-pointer"
+            class="relative shrink-0 snap-start rounded-md transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             :class="book.classId === selectedGiftClassId
               ? 'ring-2 ring-primary scale-105'
               : 'opacity-50 hover:opacity-90'"
@@ -70,8 +70,8 @@
           >
             <BookCover
               class="w-16"
-              :src="giftBookCover(book.cover)"
-              :alt="book.name || $t('pricing_page_affiliate_gift_label')"
+              :src="getGiftBookCover(book.cover)"
+              :alt="book.name || `${$t('pricing_page_affiliate_gift_label')} ${index + 1}`"
               has-shadow
             />
             <span
@@ -183,7 +183,7 @@ watch(giftBooks, (books) => {
 const selectedGiftBook = computed(() =>
   giftBooks.value.find(b => b.classId === selectedGiftClassId.value),
 )
-function giftBookCover(src?: string) {
+function getGiftBookCover(src?: string) {
   return src ? getResizedNormalizedImageURL(src, { size: 300 }) : ''
 }
 
