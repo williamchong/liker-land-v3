@@ -34,6 +34,12 @@ export function useSyncedBookSettings<T>({
 
   const localState = ref<T>(defaultValue)
 
+  // Settings load lazily via the shelf batch-fetch. When the reader is opened
+  // directly (a bookstore link, bypassing the shelf) a write can land before
+  // init resolves; without deferring it `queueUpdate` is skipped and the value
+  // (e.g. the `lastOpenedTime` stamp) is silently lost, never syncing.
+  let pendingWrite: { value: T } | null = null
+
   const storeValue = computed(() => {
     const settings = bookSettingsStore.getSettings(nftClassId)
     return settings?.[dbKey as keyof BookSettingsData] as T | undefined
@@ -52,12 +58,24 @@ export function useSyncedBookSettings<T>({
       if (bookSettingsStore.isInitialized(nftClassId)) {
         bookSettingsStore.queueUpdate(nftClassId, dbKey, newValue)
       }
+      else if (hasLoggedIn.value) {
+        pendingWrite = { value: newValue }
+      }
     },
   })
 
   async function loadFromServer() {
     await bookSettingsStore.ensureInitialized(nftClassId)
-    syncFromStore()
+    if (pendingWrite) {
+      // A local write raced ahead of init — it wins over the fetched value
+      // (the user just acted on this book) and must still reach the server.
+      const { value } = pendingWrite
+      pendingWrite = null
+      bookSettingsStore.queueUpdate(nftClassId, dbKey, value)
+    }
+    else {
+      syncFromStore()
+    }
   }
 
   watch(storeValue, (newValue) => {
