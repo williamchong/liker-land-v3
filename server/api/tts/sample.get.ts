@@ -170,7 +170,7 @@ export default defineEventHandler(async (event) => {
 
   let buffer: Buffer
   try {
-    const rawBuffer = await provider.processRequest({
+    const { audio: rawBuffer } = await provider.processRequest({
       text,
       language,
       voiceId,

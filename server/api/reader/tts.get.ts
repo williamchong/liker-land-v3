@@ -308,7 +308,7 @@ export default defineEventHandler(async (event) => {
   try {
     if (isBlocking) {
       // Blocking path: full buffer with content-length (needed by native app)
-      const rawBuffer = await provider.processRequest(requestParams)
+      const { audio: rawBuffer, extraInfo, traceId } = await provider.processRequest(requestParams)
       const buffer = Buffer.concat([id3Tag, rawBuffer])
 
       const etag = cacheKey
@@ -334,7 +334,7 @@ export default defineEventHandler(async (event) => {
         resolveInFlight?.()
       }
 
-      publishEvent(event, 'TTSComplete', { ...ttsEventBase, audioSize: buffer.length, mode: 'blocking' })
+      publishEvent(event, 'TTSComplete', { ...ttsEventBase, audioSize: buffer.length, mode: 'blocking', ...getTTSExtraInfoEventProps(extraInfo, traceId) })
 
       const rangeHeader = getHeader(event, 'range')
       if (rangeHeader) {
@@ -353,7 +353,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Streaming path (default): pipe audio chunks as they arrive
-    const stream = await provider.processRequestStream(requestParams)
+    const { audio: stream, extraInfo: extraInfoPromise, traceId: traceIdPromise } = await provider.processRequestStream(requestParams)
 
     if (cacheKey) {
       const etag = `"${createHash('sha256').update(cacheKey).digest('hex').substring(0, 16)}"`
@@ -408,9 +408,14 @@ export default defineEventHandler(async (event) => {
         }
         controller.enqueue(chunk)
       },
-      flush() {
+      async flush() {
         cacheWriteStream?.end()
-        publishEvent(event, 'TTSComplete', { ...ttsEventBase, audioSize: streamedBytes, mode: 'streaming' })
+        // Safe to await here: flush() runs only after the source SSE stream is
+        // fully drained, so these resolve from the just-consumed final chunk —
+        // settled or imminent, never a hang, and never reject (they resolve
+        // undefined on early/aborted streams, where flush() isn't reached).
+        const [extraInfo, traceId] = await Promise.all([extraInfoPromise, traceIdPromise])
+        publishEvent(event, 'TTSComplete', { ...ttsEventBase, audioSize: streamedBytes, mode: 'streaming', ...getTTSExtraInfoEventProps(extraInfo, traceId) })
       },
     })
 
