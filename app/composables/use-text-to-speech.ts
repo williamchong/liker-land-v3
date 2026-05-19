@@ -159,7 +159,7 @@ export function useTextToSpeech(options: TTSOptions) {
 
   const DEFAULT_PLAYBACK_RATE = 1.0
 
-  const ttsPlaybackRateOptions = computed(() => [0.75, 0.9, DEFAULT_PLAYBACK_RATE, 1.1, 1.25, 1.5].map(rate => ({
+  const ttsPlaybackRateOptions = computed(() => [0.9, DEFAULT_PLAYBACK_RATE, 1.1, 1.25, 1.5].map(rate => ({
     label: `${rate}x`,
     value: rate,
   })))
