@@ -56,6 +56,16 @@ const TTS_PRONUNCIATION_RULES: Record<string, PronunciationRule[]> = {
     { target: '頰', tone: '(gaap3)' },
     { target: '〇', tone: '(ling4)' },
     { target: '鬍子', tone: '(wu4)子' },
+    { target: '語塞', tone: '語(sak1)' },
+    { target: '自傳', tone: '自(zyun6)' },
+    { target: '彈結他', tone: '(taan4)結他' },
+    { target: '兮', tone: '(hai4)' },
+    { target: '柙', tone: '(haap6)' },
+    { target: '玩伴', tone: '(wun6)伴' },
+    { target: '命裡', tone: '命(leoi5)' },
+    { target: '命裏', tone: '命(leoi5)' },
+    { target: '膜拜', tone: '(mou4)拜' },
+    { target: '弶', tone: '(goeng6)' },
   ],
 }
 
