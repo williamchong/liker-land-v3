@@ -1,4 +1,4 @@
-import type { BaseTTSProvider, TTSRequestParams } from './api-tts'
+import type { BaseTTSProvider, TTSProviderResult, TTSProviderStreamResult, TTSRequestParams } from './api-tts'
 
 export const LANG_MAPPING = {
   'en-US': 'English',
@@ -139,7 +139,7 @@ export class MinimaxTTSProvider implements BaseTTSProvider {
   provider = 'minimax'
   format = 'audio/mpeg'
 
-  async processRequest(params: TTSRequestParams): Promise<Buffer> {
+  async processRequest(params: TTSRequestParams): Promise<TTSProviderResult> {
     const { text, language, voiceId, customMiniMaxVoiceId } = params
 
     if (!customMiniMaxVoiceId && !VOICE_CONFIG[voiceId]) {
@@ -166,10 +166,10 @@ export class MinimaxTTSProvider implements BaseTTSProvider {
       languageBoost: LANG_MAPPING[language as keyof typeof LANG_MAPPING],
     })
 
-    return result.audio
+    return { audio: result.audio, extraInfo: result.extraInfo, traceId: result.traceId }
   }
 
-  async processRequestStream(params: TTSRequestParams): Promise<ReadableStream<Buffer>> {
+  async processRequestStream(params: TTSRequestParams): Promise<TTSProviderStreamResult> {
     const { text, language, voiceId, customMiniMaxVoiceId } = params
 
     if (!customMiniMaxVoiceId && !VOICE_CONFIG[voiceId]) {
@@ -183,7 +183,7 @@ export class MinimaxTTSProvider implements BaseTTSProvider {
     const resolvedVoiceId = (customMiniMaxVoiceId || VOICE_CONFIG[voiceId]!.minimaxVoiceId) as string
     const model = getMinimaxModel({ voiceId, customVoiceId: customMiniMaxVoiceId, language })
 
-    const { audio } = await client.synthesizeStream({
+    const { audio, extraInfo, traceId } = await client.synthesizeStream({
       text: injectTTSPauseMarkers(text),
       model,
       voiceSetting: {
@@ -196,6 +196,6 @@ export class MinimaxTTSProvider implements BaseTTSProvider {
       languageBoost: LANG_MAPPING[language as keyof typeof LANG_MAPPING],
       streamOptions: { excludeAggregatedAudio: true },
     })
-    return audio
+    return { audio, extraInfo, traceId }
   }
 }
