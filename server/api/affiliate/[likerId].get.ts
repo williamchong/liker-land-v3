@@ -1,6 +1,6 @@
 import type { AffiliatePublicConfig } from '~~/shared/types/affiliate'
 import { getAffiliateConfig, getAffiliatePlusDiscountAllowed } from '~~/server/utils/affiliate'
-import { fetchLikeCoinNFTClassAggregatedMetadataById } from '~~/shared/utils/api'
+import { fetchCachedNFTClassAggregatedMetadata } from '~~/server/utils/likecoin-nft'
 
 export default defineEventHandler(async (event): Promise<AffiliatePublicConfig> => {
   const likerId = getRouterParam(event, 'likerId')
@@ -16,26 +16,31 @@ export default defineEventHandler(async (event): Promise<AffiliatePublicConfig> 
     return { active: false, isPlusDiscountAllowed }
   }
 
-  let giftBookName: string | undefined
-  let giftBookCover: string | undefined
-
-  if (config.giftClassId) {
-    try {
-      const metadata = await fetchLikeCoinNFTClassAggregatedMetadataById(
-        config.giftClassId,
-        { include: ['bookstore'] },
-      )
-      giftBookName = metadata?.bookstoreInfo?.name
-      giftBookCover = metadata?.bookstoreInfo?.thumbnailUrl
-    }
-    catch { /* ignore */ }
-  }
+  const giftBooks = await Promise.all(
+    (config.giftBooks ?? []).map(async (book) => {
+      let name: string | undefined
+      let cover: string | undefined
+      try {
+        const metadata = await fetchCachedNFTClassAggregatedMetadata(
+          book.classId,
+          ['bookstore'],
+        )
+        name = metadata?.bookstoreInfo?.name
+        cover = metadata?.bookstoreInfo?.thumbnailUrl
+      }
+      catch { /* ignore */ }
+      return {
+        classId: book.classId,
+        priceIndex: book.priceIndex,
+        name,
+        cover,
+      }
+    }),
+  )
 
   return {
     active: true,
-    giftClassId: config.giftClassId,
-    giftBookName,
-    giftBookCover,
+    giftBooks,
     giftOnTrial: config.giftOnTrial,
     isPlusDiscountAllowed,
     affiliateClassIds: config.affiliateClassIds,

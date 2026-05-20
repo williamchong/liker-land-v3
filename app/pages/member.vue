@@ -44,30 +44,93 @@
       <UCard
         class="mt-4"
         variant="subtle"
+        :ui="{ body: 'px-0 sm:px-0' }"
       >
-        <p
-          class="text-sm font-medium text-toned mb-3"
-          v-text="$t('pricing_page_affiliate_gift_label')"
+        <h3
+          id="affiliate-gift-picker-label"
+          class="px-4 sm:px-6 text-sm font-medium text-toned mb-3"
+          v-text="$t(giftBooks.length > 1
+            ? 'pricing_page_affiliate_gift_select_label'
+            : 'pricing_page_affiliate_gift_label')"
         />
-        <div class="flex items-center justify-center gap-3">
-          <BookCover
-            class="w-12 shrink-0"
-            :src="giftBookCoverSrc"
-            :alt="activeAffiliate.giftBookName || $t('pricing_page_affiliate_gift_label')"
-            has-shadow
+
+        <div class="relative">
+          <UButton
+            v-if="isGiftsListScrollable && hasMoreGiftsLeft"
+            class="absolute left-1 top-1/2 -translate-y-1/2 z-10 cursor-pointer rounded-full bg-default/90 shadow-md hover:bg-default"
+            icon="i-material-symbols-chevron-left-rounded"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            square
+            :aria-label="$t('pricing_page_affiliate_gift_scroll_prev')"
+            @click="scrollGiftsList(-1)"
           />
-          <div class="text-left">
-            <p
-              v-if="activeAffiliate.giftBookName"
-              class="text-sm font-bold text-highlighted"
-              v-text="activeAffiliate.giftBookName"
-            />
-            <p
-              v-if="affiliateVoiceNames"
-              class="text-xs text-muted"
-              v-text="$t('pricing_page_affiliate_voice_label', { name: affiliateVoiceNames })"
-            />
+
+          <div
+            ref="giftsListEl"
+            class="flex items-end gap-3 px-4 sm:px-6 pt-6 pb-12 scroll-px-4 sm:scroll-px-6 scrollbar-none"
+            :class="isGiftsListScrollable
+              ? 'overflow-x-auto snap-x'
+              : 'justify-center'"
+            role="radiogroup"
+            aria-labelledby="affiliate-gift-picker-label"
+          >
+            <button
+              v-for="(book, index) in giftBooks"
+              :key="book.classId"
+              type="button"
+              role="radio"
+              class="relative block shrink-0 snap-start rounded-lg transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              :class="book.classId === selectedGiftClassId
+                ? 'ring-2 ring-primary scale-105'
+                : 'opacity-50 hover:opacity-90'"
+              :aria-checked="book.classId === selectedGiftClassId"
+              :tabindex="(selectedGiftClassId ? book.classId === selectedGiftClassId : index === 0) ? 0 : -1"
+              @click="selectedGiftClassId = book.classId"
+            >
+              <BookCover
+                class="w-16 aspect-auto"
+                :src="getGiftBookCover(book.cover)"
+                :alt="book.name || `${$t('pricing_page_affiliate_gift_label')} ${index + 1}`"
+                has-shadow
+              />
+              <span
+                v-if="book.classId === selectedGiftClassId"
+                class="absolute top-0 right-0 flex items-center justify-center w-5 h-5 rounded-full bg-primary text-inverted translate-x-1/2 -translate-y-1/2"
+              >
+                <UIcon
+                  name="i-material-symbols-check-rounded"
+                  class="w-3.5 h-3.5 text-theme-cyan"
+                />
+              </span>
+            </button>
           </div>
+
+          <UButton
+            v-if="isGiftsListScrollable && hasMoreGiftsRight"
+            class="absolute right-1 top-1/2 -translate-y-1/2 z-10 cursor-pointer rounded-full bg-default/90 shadow-md hover:bg-default"
+            icon="i-material-symbols-chevron-right-rounded"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            square
+            :aria-label="$t('pricing_page_affiliate_gift_scroll_next')"
+            @click="scrollGiftsList(1)"
+          />
+        </div>
+
+        <div class="-mt-3 px-4 sm:px-6 text-center">
+          <p
+            v-if="selectedGiftBook?.name"
+            class="text-sm font-bold text-highlighted"
+            v-text="selectedGiftBook.name"
+          />
+          <p
+            v-if="affiliateVoiceNames"
+            class="text-xs text-muted"
+            v-text="$t('pricing_page_affiliate_voice_label', { name: affiliateVoiceNames })"
+          />
         </div>
       </UCard>
     </template>
@@ -143,10 +206,39 @@ const affiliateVoiceNames = computed(() => {
 const affiliateSampleVoices = computed(() => activeAffiliate.value?.customVoices ?? [])
 
 const { getResizedNormalizedImageURL } = useImageResize()
-const giftBookCoverSrc = computed(() => {
-  const src = activeAffiliate.value?.giftBookCover
+const giftBooks = computed(() => activeAffiliate.value?.giftBooks ?? [])
+const selectedGiftClassId = ref<string | undefined>(undefined)
+// Default to the first book and keep the pick valid as the list changes
+// (e.g. when the affiliate link / config loads asynchronously).
+watch(giftBooks, (books) => {
+  if (!books.some(b => b.classId === selectedGiftClassId.value)) {
+    selectedGiftClassId.value = books[0]?.classId
+  }
+}, { immediate: true })
+const selectedGiftBook = computed(() =>
+  giftBooks.value.find(b => b.classId === selectedGiftClassId.value),
+)
+function getGiftBookCover(src?: string) {
   return src ? getResizedNormalizedImageURL(src, { size: 300 }) : ''
+}
+
+const isGiftsListScrollable = computed(() => giftBooks.value.length > 2)
+const giftsListEl = useTemplateRef<HTMLElement>('giftsListEl')
+const { arrivedState: giftsListArrivedState, measure: measureGiftsListScroll } = useScroll(giftsListEl)
+const hasMoreGiftsLeft = computed(() => !giftsListArrivedState.left)
+const hasMoreGiftsRight = computed(() => !giftsListArrivedState.right)
+
+useResizeObserver(giftsListEl, () => measureGiftsListScroll())
+watch(giftBooks, async () => {
+  await nextTick()
+  measureGiftsListScroll()
 })
+
+function scrollGiftsList(direction: -1 | 1) {
+  const el = giftsListEl.value
+  if (!el) return
+  el.scrollBy({ left: el.clientWidth * 0.7 * direction, behavior: 'smooth' })
+}
 
 async function fetchAffiliateInfo() {
   if (!affiliateLikerId.value) {
@@ -299,7 +391,7 @@ const trialPeriodDays = computed(() => {
 
 const isAffiliateGiftRedeemable = computed(() => {
   const info = activeAffiliate.value
-  if (!info?.giftClassId) return false
+  if (!info?.giftBooks?.length) return false
   if (selectedPlan.value !== 'yearly') return false
   if (info.giftOnTrial === false && trialPeriodDays.value !== 0) return false
   return true
@@ -365,6 +457,11 @@ async function handleSubscribe(payload: {
   await checkout.startSubscription({
     ...payload,
     coupon: coupon.value,
+    // Carry the subscriber's chosen gift book; the API validates it against
+    // the affiliate's gift list and resolves the (free) price index itself.
+    nftClassId: isAffiliateGiftRedeemable.value
+      ? selectedGiftClassId.value
+      : undefined,
   })
 }
 

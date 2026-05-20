@@ -1,4 +1,5 @@
 import type { AffiliateConfig, AffiliateCustomVoice } from '~~/server/types/affiliate'
+import { normalizeNFTClassId } from '~~/shared/utils'
 import { getLikeCoinAPIFetch } from '~~/shared/utils/api'
 import { normalizeLikerId } from '~~/shared/utils/liker-id'
 
@@ -41,8 +42,15 @@ async function getAffiliateEntry(likerId: string): Promise<AffiliateEntry | null
           ? {
               active: true,
               affiliateClassIds: (upstream.affiliateClassIds ?? []).map(id => id.toLowerCase()),
-              giftClassId: upstream.giftClassId,
-              giftPriceIndex: upstream.giftPriceIndex,
+              giftBooks: (upstream.giftBooks ?? [])
+                .filter(b => typeof b?.classId === 'string' && !!b.classId)
+                .map((b) => {
+                  const priceIndex = Number(b.priceIndex)
+                  return {
+                    classId: normalizeNFTClassId(b.classId),
+                    priceIndex: Number.isInteger(priceIndex) && priceIndex >= 0 ? priceIndex : 0,
+                  }
+                }),
               giftOnTrial: upstream.giftOnTrial,
               customVoices: (upstream.customVoices ?? []).filter(isValidCustomVoice),
             }
