@@ -53,9 +53,9 @@
             : 'pricing_page_affiliate_gift_label')"
         />
         <div
-          class="flex gap-3 py-6 -mx-2 px-2"
+          class="flex gap-3 py-3 -mx-3 px-3"
           :class="giftBooks.length > 2
-            ? 'overflow-x-auto snap-x'
+            ? 'overflow-x-auto snap-x scroll-px-3'
             : 'justify-center'"
           role="radiogroup"
           aria-labelledby="affiliate-gift-picker-label"
@@ -77,7 +77,6 @@
               class="w-16"
               :src="getGiftBookCover(book.cover)"
               :alt="book.name || `${$t('pricing_page_affiliate_gift_label')} ${index + 1}`"
-              has-shadow
             />
             <span
               v-if="book.classId === selectedGiftClassId"
