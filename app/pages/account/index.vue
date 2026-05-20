@@ -14,7 +14,6 @@
         />
         <UserAvatarPlusBadge
           v-if="user?.isLikerPlus"
-          vertical-align="top"
           color="primary"
         />
         <div class="absolute -bottom-1 -right-1 rounded-full bg-(--app-bg)">
@@ -22,7 +21,7 @@
             class="rounded-[inherit]"
             icon="i-material-symbols-edit-outline-rounded"
             variant="outline"
-            color="primary"
+            color="neutral"
             :loading="isUploadingAvatar"
             :aria-label="$t('account_page_avatar_change_avatar')"
             @click="handleAvatarEditButtonClick"
@@ -65,7 +64,7 @@
               icon="i-material-symbols-favorite-outline-rounded"
               :label="$t('account_page_book_list')"
               variant="outline"
-              color="primary"
+              color="neutral"
             />
           </template>
         </AccountSettingsItem>
@@ -97,7 +96,7 @@
               :label="$t('account_page_display_name_edit_button')"
               icon="i-material-symbols-edit-outline-rounded"
               variant="outline"
-              color="primary"
+              color="neutral"
               @click="handleDisplayNameEditButtonClick"
             />
           </template>
@@ -150,11 +149,6 @@
       v-if="hasLoggedIn && isPlusFeatureVisible"
       class="space-y-3"
     >
-      <h2
-        class="px-4 pt-4 text-lg font-bold"
-        v-text="$t('account_page_plus_title')"
-      />
-
       <UCard :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }">
         <AccountSettingsItem
           v-if="hasLoggedIn"
@@ -173,7 +167,7 @@
             <UButton
               :label="likerPlusButtonLabel"
               :variant="user?.isLikerPlus ? 'outline' : 'solid'"
-              color="primary"
+              :color="user?.isLikerPlus ? 'neutral' : 'primary'"
               :loading="isOpeningBillingPortal"
               @click="handleLikerPlusButtonClick"
             />
@@ -194,7 +188,6 @@
             <UButton
               :label="$t('account_page_gift_plus_button')"
               color="primary"
-              variant="outline"
               :to="localeRoute({ name: 'gift-plus' })"
             />
           </template>
@@ -216,7 +209,7 @@
               v-if="user?.isLikerPlus"
               :label="hasCustomVoice ? $t('tts_custom_voice_change_button') : $t('tts_custom_voice_upload_button')"
               :variant="hasCustomVoice ? 'outline' : 'solid'"
-              color="primary"
+              color="neutral"
               @click="handleOpenCustomVoiceModal"
             />
             <UButton
@@ -236,11 +229,6 @@
       v-if="hasLoggedIn && (likeBalance > 0n || !!user?.likeWallet)"
       class="space-y-3"
     >
-      <h2
-        class="px-4 pt-4 text-lg font-bold"
-        v-text="$t('account_page_likecoin_title')"
-      />
-
       <UCard :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }">
         <AccountSettingsItem
           v-if="!isApp || likeBalance > 0n"
@@ -263,6 +251,8 @@
             <UButton
               :to="localeRoute({ name: 'account-deposit' })"
               :label="$t('account_page_governance_button')"
+              color="neutral"
+              variant="outline"
               size="lg"
             />
           </template>
@@ -281,6 +271,7 @@
           <template #right>
             <UButton
               :label="$t('account_page_staking_reward_claim_button')"
+              color="neutral"
               variant="outline"
               size="lg"
               :disabled="totalUnclaimedRewards <= 0n"
@@ -331,11 +322,6 @@
       v-if="!hasLoggedIn"
       class="space-y-3"
     >
-      <h2
-        class="px-4 pt-4 text-lg font-bold"
-        v-text="$t('account_page_learn_more_title')"
-      />
-
       <UCard
         :ui="{
           body: [
@@ -364,10 +350,10 @@
           v-if="!isApp"
           :label="$t('account_page_view_member')"
           :to="localeRoute({ name: 'member' })"
-          variant="link"
+          variant="solid"
           leading-icon="i-material-symbols-diamond-outline-rounded"
           trailing-icon="i-material-symbols-arrow-forward-rounded"
-          color="neutral"
+          color="primary"
           size="lg"
           block
         />
@@ -375,11 +361,6 @@
     </section>
 
     <section class="space-y-3">
-      <h2
-        class="px-4 pt-4 text-lg font-bold"
-        v-text="$t('account_page_app_settings_title')"
-      />
-
       <UCard :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }">
         <AccountSettingsItem
           icon="i-material-symbols-language"
@@ -455,16 +436,9 @@
     </section>
 
     <section class="space-y-3">
-      <h2
-        class="px-4 pt-4 text-lg font-bold"
-        v-text="$t('account_page_author_title')"
-      />
-
-      <UCard
-        v-if="hasLoggedIn && !isApp"
-        :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }"
-      >
+      <UCard :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }">
         <AccountSettingsItem
+          v-if="hasLoggedIn && !isApp"
           icon="i-material-symbols-account-balance-wallet-outline-rounded"
           :label="$t('account_page_stripe_connect')"
         >
@@ -480,16 +454,13 @@
           <template #right>
             <UButton
               :label="stripeConnectButtonLabel"
-              :variant="stripeConnectState === 'ready' ? 'outline' : 'solid'"
-              color="primary"
+              variant="outline"
+              color="neutral"
               :loading="isStripeConnectLoading"
               @click="handleStripeConnectButtonClick"
             />
           </template>
         </AccountSettingsItem>
-      </UCard>
-
-      <UCard :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }">
         <UButton
           :label="$t('account_page_publish_book')"
           :to="publishBookURL"
@@ -500,18 +471,14 @@
           color="neutral"
           size="lg"
           block
+          :ui="{ base: 'px-4 py-3' }"
           @click="handlePublishBookButtonClick"
         />
       </UCard>
     </section>
 
     <section class="space-y-3">
-      <h2
-        class="px-4 pt-4 text-lg font-bold"
-        v-text="$t('account_page_settings_and_help_title')"
-      />
-
-      <UCard :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }">
+      <UCard :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border) *:first:rounded-b-none' }">
         <UButton
           :label="$t('account_page_contact_support')"
           variant="link"
@@ -521,6 +488,7 @@
           color="neutral"
           size="lg"
           block
+          :ui="{ base: 'px-4 py-3' }"
           @click="handleCustomerServiceLinkButtonClick"
         />
 
@@ -534,6 +502,7 @@
           color="neutral"
           size="lg"
           block
+          :ui="{ base: 'px-4 py-3' }"
         />
       </UCard>
     </section>
