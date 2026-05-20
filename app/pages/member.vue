@@ -44,18 +44,20 @@
       <UCard
         class="mt-4"
         variant="subtle"
+        :ui="{ body: 'px-0 sm:px-0' }"
       >
-        <p
+        <h3
           id="affiliate-gift-picker-label"
-          class="text-sm font-medium text-toned mb-3"
+          class="px-4 sm:px-6 text-sm font-medium text-toned mb-3"
           v-text="$t(giftBooks.length > 1
             ? 'pricing_page_affiliate_gift_select_label'
             : 'pricing_page_affiliate_gift_label')"
         />
+
         <div
-          class="flex gap-3 py-3 -mx-3 px-3"
+          class="flex items-end gap-3 px-4 sm:px-6 pt-6 pb-12 scroll-px-4 sm:scroll-px-6 scrollbar-none"
           :class="giftBooks.length > 2
-            ? 'overflow-x-auto snap-x scroll-px-3'
+            ? 'overflow-x-auto snap-x'
             : 'justify-center'"
           role="radiogroup"
           aria-labelledby="affiliate-gift-picker-label"
@@ -65,7 +67,7 @@
             :key="book.classId"
             type="button"
             role="radio"
-            class="relative shrink-0 snap-start rounded-md transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            class="relative block shrink-0 snap-start rounded-lg transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             :class="book.classId === selectedGiftClassId
               ? 'ring-2 ring-primary scale-105'
               : 'opacity-50 hover:opacity-90'"
@@ -74,13 +76,14 @@
             @click="selectedGiftClassId = book.classId"
           >
             <BookCover
-              class="w-16"
+              class="w-16 aspect-auto"
               :src="getGiftBookCover(book.cover)"
               :alt="book.name || `${$t('pricing_page_affiliate_gift_label')} ${index + 1}`"
+              has-shadow
             />
             <span
               v-if="book.classId === selectedGiftClassId"
-              class="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-primary text-inverted"
+              class="absolute top-0 right-0 flex items-center justify-center w-5 h-5 rounded-full bg-primary text-inverted translate-x-1/2 -translate-y-1/2"
             >
               <UIcon
                 name="i-material-symbols-check-rounded"
@@ -89,7 +92,8 @@
             </span>
           </button>
         </div>
-        <div class="mt-3 text-center">
+
+        <div class="-mt-3 px-4 sm:px-6 text-center">
           <p
             v-if="selectedGiftBook?.name"
             class="text-sm font-bold text-highlighted"
