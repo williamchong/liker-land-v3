@@ -242,7 +242,7 @@ describe('mergeShortTTSSegments', () => {
   })
 
   // Regression: 415e73d3 — short fragments trigger extra TTS API calls
-  it('merges short adjacent segments in the same section/element/cfi', () => {
+  it('merges short adjacent segments in the same section/element', () => {
     const segments = [
       makeSegment('短文'),
       makeSegment('也是短文'),
@@ -260,12 +260,15 @@ describe('mergeShortTTSSegments', () => {
     expect(mergeShortTTSSegments(segments)).toHaveLength(2)
   })
 
-  it('does not merge segments with different cfi', () => {
+  // Per-segment cfis (each segment anchors its own text-node range) must still
+  // merge within a paragraph, so paragraph identity is keyed on elementIndex
+  // alone, not on cfi.
+  it('merges short adjacent segments even with different cfi in the same element', () => {
     const segments = [
       makeSegment('短', { cfi: '/a' }),
       makeSegment('文', { cfi: '/b' }),
     ]
-    expect(mergeShortTTSSegments(segments)).toHaveLength(2)
+    expect(mergeShortTTSSegments(segments)).toHaveLength(1)
   })
 
   it('does not merge segments with different elementIndex', () => {

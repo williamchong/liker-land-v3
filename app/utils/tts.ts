@@ -160,7 +160,6 @@ export function mergeShortTTSSegments(segments: TTSSegment[]): TTSSegment[] {
     if (
       prev
       && prev.sectionIndex === segment.sectionIndex
-      && prev.cfi === segment.cfi
       && prev.elementIndex === segment.elementIndex
       && (prev.text.length < MIN_SEGMENT_LENGTH || segment.text.length < MIN_SEGMENT_LENGTH)
       && prev.text.length + segment.text.length <= MAX_SEGMENT_LENGTH
