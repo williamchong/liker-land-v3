@@ -121,7 +121,10 @@ export function useTTSPlayerModal(options: TTSPlayerOptions) {
           // position so it still resolves when the current spine item has no
           // segments (full-page image spreads between text pages), whereas
           // the seed could only skip forward to the next text section
-          // ("read → listen jumps to next section" bug).
+          // ("read → listen jumps to next section" bug). Each segment carries
+          // its own text-range cfi (see extractTTSSegments in
+          // pages/reader/epub.vue), so `lastAtOrBefore` resolves directly to
+          // the segment whose start the page boundary most recently passed.
           const pageCFI = new EpubCFI(cfi)
           let lastAtOrBefore = -1
           let firstAfter = -1
@@ -137,12 +140,6 @@ export function useTTSPlayerModal(options: TTSPlayerOptions) {
             }
           }
           segmentIndex = lastAtOrBefore >= 0 ? lastAtOrBefore : Math.max(firstAfter, 0)
-          // A block split into multiple segments shares one element cfi; rewind
-          // to the first so playback starts at the block top, not mid-way.
-          const anchorCFI = segments[segmentIndex]?.cfi
-          while (segmentIndex > 0 && segments[segmentIndex - 1]?.cfi === anchorCFI) {
-            segmentIndex--
-          }
         }
       }
       catch {

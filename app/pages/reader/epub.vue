@@ -1191,6 +1191,11 @@ async function extractTTSSegments(book: Book) {
 
   const FOOTNOTE_CLASS_RE = /\b(footnote|endnote|fn\w*)\b/i
   const FOOTNOTE_SUP_RE = /^\(?\d+\)?$/
+  // Long enough to be unique within a paragraph in practice, short enough
+  // that any whitespace-normalization mismatch from mergeParts stays inside
+  // the anchor window.
+  const SEGMENT_CFI_ANCHOR_LENGTH = 20
+  const SEGMENT_WS_CHARS = '\\s\\u200B'
 
   for (const section of sections) {
     if (!loadedBook.value) break
@@ -1221,30 +1226,114 @@ async function extractTTSSegments(book: Book) {
         return true
       })
 
+      // Inline footnote subtrees are stripped from TTS playback. A walker
+      // operating on the original DOM skips the same elements that the
+      // previous clone-and-remove pass deleted; we walk the original (not a
+      // clone) so cfiFromRange below can resolve text-node positions back to
+      // CFIs in the section document.
+      const isInlineFootnote = (node: Element): boolean => {
+        if (FOOTNOTE_CLASS_RE.test(node.className || '')) return true
+        if (node.matches?.('a[role="doc-noteref"]')) return true
+        if (node.classList?.contains('footnote-number')) return true
+        if ((node.tagName === 'A' || node.tagName === 'SPAN')
+          && node.getAttribute('epub:type') === 'noteref') return true
+        if (node.tagName === 'A') {
+          const sup = node.querySelector(':scope > sup')
+          if (sup && FOOTNOTE_SUP_RE.test(sup.textContent?.trim() || '')) return true
+        }
+        return false
+      }
+
       elements.forEach((el, elIndex) => {
-        const clone = el.cloneNode(true) as Element
-        // Remove inline footnote markers in a single pass
-        clone.querySelectorAll('a[role="doc-noteref"], .footnote-number, a > sup').forEach((node) => {
-          if (node.tagName === 'SUP') {
-            if (FOOTNOTE_SUP_RE.test(node.textContent?.trim() || '')) node.parentElement?.remove()
+        const elementCFI = section.cfiFromElement(el)
+
+        const textNodes: Array<{ node: Text, startInConcat: number }> = []
+        let concatText = ''
+        const walk = (node: Node): void => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            const data = (node as Text).data
+            if (data) {
+              textNodes.push({ node: node as Text, startInConcat: concatText.length })
+              concatText += data
+            }
+            return
           }
-          else { node.remove() }
-        })
-        // Remove epub:type="noteref" elements (namespaced attr not selectable via CSS)
-        clone.querySelectorAll('a, span').forEach((child) => {
-          if (child.getAttribute('epub:type') === 'noteref') child.remove()
-        })
-        const text = clone.textContent?.trim() || ''
-        const cfi = section.cfiFromElement(el)
-        segments.push(
-          ...splitTextIntoSegments(text).map((segment, segIndex) => ({
-            text: segment,
+          if (node.nodeType !== Node.ELEMENT_NODE) return
+          const child = node as Element
+          if (isInlineFootnote(child)) return
+          for (const c of Array.from(child.childNodes)) walk(c)
+        }
+        walk(el)
+
+        const text = concatText.trim()
+        if (!text) return
+
+        const cfiAtConcatOffset = (offset: number): string => {
+          let lo = 0
+          let hi = textNodes.length - 1
+          let nodeIndex = 0
+          while (lo <= hi) {
+            const mid = (lo + hi) >> 1
+            if (textNodes[mid]!.startInConcat <= offset) {
+              nodeIndex = mid
+              lo = mid + 1
+            }
+            else {
+              hi = mid - 1
+            }
+          }
+          const entry = textNodes[nodeIndex]
+          if (!entry) return elementCFI
+          const offsetInNode = Math.min(Math.max(offset - entry.startInConcat, 0), entry.node.length)
+          try {
+            const range = chapter.createRange()
+            range.setStart(entry.node, offsetInNode)
+            range.setEnd(entry.node, offsetInNode)
+            return section.cfiFromRange(range) || elementCFI
+          }
+          catch {
+            return elementCFI
+          }
+        }
+
+        // mergeParts inside splitTextIntoSegments collapses whitespace runs and
+        // joins prefix punctuation onto the next speakable chunk, so segment
+        // texts are not guaranteed to be raw substrings of `text`. A
+        // whitespace-flexible regex over a short anchor at the start of each
+        // segment is enough to locate the boundary; fall back to elementCFI
+        // on a miss.
+        const leadTrim = concatText.length - concatText.trimStart().length
+        const leadWsRE = new RegExp(`^[${SEGMENT_WS_CHARS}]+`)
+        const wsRunRE = new RegExp(`[${SEGMENT_WS_CHARS}]+`, 'g')
+        let searchFrom = leadTrim
+
+        splitTextIntoSegments(text).forEach((segmentText, segIndex) => {
+          let cfi = elementCFI
+          const anchor = segmentText.replace(leadWsRE, '').slice(0, SEGMENT_CFI_ANCHOR_LENGTH)
+          if (anchor) {
+            const pattern = escapeRegExp(anchor).replace(wsRunRE, `[${SEGMENT_WS_CHARS}]+`)
+            const stickyRE = new RegExp(pattern, 'g')
+            stickyRE.lastIndex = searchFrom
+            const match = stickyRE.exec(concatText)
+            if (match) {
+              cfi = cfiAtConcatOffset(match.index)
+              // Advance past the full segment, not just the anchor: segment
+              // text is whitespace-normalized so its length is a lower bound
+              // on the span in concat — sufficient to keep the next segment's
+              // anchor from latching onto a recurring phrase inside the
+              // current segment's tail.
+              searchFrom = match.index + Math.max(match[0].length, segmentText.length)
+            }
+          }
+
+          segments.push({
+            text: segmentText,
             id: `${section.index}-${elIndex}-${segIndex}`,
             cfi,
             sectionIndex: section.index ?? 0,
             elementIndex: elIndex,
-          })),
-        )
+          })
+        })
       })
     }
     catch (err) {

@@ -95,3 +95,7 @@ export function truncateText(text: string, maxLength: number): string {
   if (maxLength === 1) return '…'
   return `${text.slice(0, maxLength - 1).replace(/\s+\S*$/, '')}…`
 }
+
+export function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}

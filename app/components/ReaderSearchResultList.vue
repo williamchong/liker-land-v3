@@ -72,10 +72,6 @@ const emit = defineEmits<{
 
 const { t: $t } = useI18n()
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 // `section.find()` (EPUB) and `getTextContent()` (PDF) normalize whitespace in
 // ways that a literal indexOf can miss.
 function buildHighlightRegex(trimmedQuery: string): RegExp | null {
