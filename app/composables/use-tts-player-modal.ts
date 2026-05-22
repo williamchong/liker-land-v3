@@ -101,46 +101,41 @@ export function useTTSPlayerModal(options: TTSPlayerOptions) {
       return index === -1 ? ttsSegments.value.length - 1 : index
     }
 
+    // Resolve a page/anchor cfi to the segment whose start it most recently
+    // passed (lastAtOrBefore), else the first segment after it; -1 when no
+    // segment is comparable.
+    const scanSegmentByCFI = (targetCFI: string): number => {
+      const target = new EpubCFI(targetCFI)
+      let lastAtOrBefore = -1
+      let firstAfter = -1
+      for (let i = 0; i < ttsSegments.value.length; i++) {
+        const segmentCFI = ttsSegments.value[i]?.cfi
+        if (!segmentCFI) continue // cfi is optional on TTSSegment
+        if (epubCFI.compare(segmentCFI, target) <= 0) {
+          lastAtOrBefore = i
+        }
+        else {
+          firstAfter = i
+          break
+        }
+      }
+      return lastAtOrBefore >= 0 ? lastAtOrBefore : firstAfter
+    }
+
     if (ttsIndex !== undefined && !isStoredIndexStale) {
       startIndex.value = ttsIndex
     }
     else if (cfi) {
-      const segments = ttsSegments.value
-      let segmentIndex = 0
+      let segmentIndex: number
       try {
-        // epub.js can report an inconsistent page range — start cfi *after*
-        // end cfi — for a reflowable chapter wedged between fixed-layout
-        // image spreads. The page cfi is then garbage, so anchor on the
-        // section the reader actually opened.
-        if (pageEndCFI && epubCFI.compare(cfi, pageEndCFI) > 0) {
-          segmentIndex = firstSegmentOfSection()
-        }
-        else {
-          // Anchor on the page-start cfi across ALL segments, not a
-          // `sectionIndex >= currentSection` seed: a cfi embeds its spine
-          // position so it still resolves when the current spine item has no
-          // segments (full-page image spreads between text pages), whereas
-          // the seed could only skip forward to the next text section
-          // ("read → listen jumps to next section" bug). Each segment carries
-          // its own text-range cfi (see extractTTSSegments in
-          // pages/reader/epub.vue), so `lastAtOrBefore` resolves directly to
-          // the segment whose start the page boundary most recently passed.
-          const pageCFI = new EpubCFI(cfi)
-          let lastAtOrBefore = -1
-          let firstAfter = -1
-          for (let i = 0; i < segments.length; i++) {
-            const segmentCFI = segments[i]?.cfi
-            if (!segmentCFI) continue // cfi is optional on TTSSegment
-            if (epubCFI.compare(segmentCFI, pageCFI) <= 0) {
-              lastAtOrBefore = i
-            }
-            else {
-              firstAfter = i
-              break
-            }
-          }
-          segmentIndex = lastAtOrBefore >= 0 ? lastAtOrBefore : Math.max(firstAfter, 0)
-        }
+        // Each segment carries its own text-range cfi (see extractTTSSegments
+        // in pages/reader/epub.vue), so the scan resolves directly to the
+        // segment whose start the page boundary most recently passed. epub-ts
+        // ≥0.6.4 recomputes a fast-path-induced start/end range inversion at
+        // the source (Mapping.page), so the page-start cfi is trustworthy and
+        // no inconsistent-range workaround is needed here.
+        const scanned = scanSegmentByCFI(cfi)
+        segmentIndex = scanned >= 0 ? scanned : firstSegmentOfSection()
       }
       catch {
         // Malformed/unsupported cfi — fall back to the section start.
