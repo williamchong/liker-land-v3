@@ -180,7 +180,7 @@ const { t: $t } = useI18n()
 const config = useRuntimeConfig()
 const baseURL = config.public.baseURL
 
-const { isApp } = useAppDetection()
+const { canStartSubscribeFlow } = useNativeIAP()
 const { loggedIn: hasLoggedIn } = useUserSession()
 const accountStore = useAccountStore()
 const { displayCurrency } = usePaymentCurrency()
@@ -466,7 +466,7 @@ async function handleSubscribe(payload: {
 }
 
 onMounted(async () => {
-  if (isApp.value) {
+  if (!canStartSubscribeFlow.value) {
     await navigateTo(localeRoute({ name: 'store' }))
     return
   }
