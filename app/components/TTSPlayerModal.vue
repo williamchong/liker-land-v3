@@ -126,7 +126,7 @@
 
               <template #body>
                 <div
-                  v-if="!isBookEnglish && (user?.isLikerPlus || !isApp) && !hasCustomVoice"
+                  v-if="!isBookEnglish && (user?.isLikerPlus || canStartSubscribeFlow) && !hasCustomVoice"
                   class="px-4 py-3 space-y-3 border-b border-b-muted"
                 >
                   <UButton
@@ -300,7 +300,7 @@ const affiliateUpsellVoiceValues = computed(() => {
   return new Set(bookOwnerUpsellVoices.value.map(v => encodeAffiliateVoiceId(v.id)))
 })
 
-const { isApp } = useAppDetection()
+const { canStartSubscribeFlow } = useNativeIAP()
 const isDesktopScreen = useDesktopScreen()
 
 const isFullscreen = computed(() => {
@@ -412,7 +412,9 @@ function handleTrialExhausted(source: 'server_402' | 'client_gate') {
   const payload = buildTTSEventPayload({ source })
   stopTextToSpeech()
   useLogEvent('tts_trial_exhausted', payload)
-  if (isApp.value) {
+  // Primary TTS→Plus conversion surface; only degrade to a notice when we
+  // genuinely can't route the user into a subscribe flow.
+  if (!canStartSubscribeFlow.value) {
     errorModal.open({
       title: $t('tts_free_trial_limit_error_title'),
       description: $t('tts_free_trial_limit_error_description_app'),

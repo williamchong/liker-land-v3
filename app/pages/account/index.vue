@@ -704,7 +704,7 @@ const { handleError } = useErrorHandler()
 const toast = useToast()
 const { copy: copyToClipboard } = useClipboard()
 const { isApp } = useAppDetection()
-const { isIAPSupported, restore: restorePurchases, manageSubscription: manageViaIAP } = useNativeIAP()
+const { isIAPSupported, canStartSubscribeFlow, restore: restorePurchases, manageSubscription: manageViaIAP } = useNativeIAP()
 const intercom = useIntercom()
 
 const isRestoringPurchases = ref(false)
@@ -790,7 +790,7 @@ const colorModeLabel = computed(
   () => colorModeOptions.value.find(o => o.value === colorModePreference.value)?.label ?? '',
 )
 
-const isPlusFeatureVisible = computed(() => !isApp.value || !!user.value?.isLikerPlus)
+const isPlusFeatureVisible = computed(() => canStartSubscribeFlow.value || !!user.value?.isLikerPlus)
 
 const stripeConnectStatus = ref<FetchStripeConnectStatusResponseData>({
   hasAccount: false,
@@ -943,7 +943,7 @@ watchImmediate(hasLoggedIn, async (loggedIn) => {
     const isCustomVoiceAction = route.query.action === 'custom-voice'
     if (isCustomVoiceAction) {
       if (!user.value?.isLikerPlus) {
-        if (!isApp.value) {
+        if (canStartSubscribeFlow.value) {
           subscription.openPaywallModal({ utmSource: 'custom_voice' })
         }
         return

@@ -67,6 +67,10 @@ export const useNativeIAP = createSharedComposable(() => {
 
   const isIAPSupported = computed(() => isApp.value && isNativeFeatureSupported('iap'))
 
+  // Inverse of the "no checkout in-app" anti-steering gate: true when the user
+  // can complete a purchase from the current surface (web Stripe or in-app IAP).
+  const canStartSubscribeFlow = computed(() => !isApp.value || isIAPSupported.value)
+
   let pendingPurchase: ((r: IAPPurchaseResult) => void) | null = null
   let pendingRestore: ((r: IAPRestoreResult) => void) | null = null
   let pendingOfferings: ((p: IAPOfferingPackage[]) => void) | null = null
@@ -242,5 +246,5 @@ export const useNativeIAP = createSharedComposable(() => {
     })
   }
 
-  return { isIAPSupported, purchase, restore, getOfferings, ensureOfferings, getIAPTrial, manageSubscription }
+  return { isIAPSupported, canStartSubscribeFlow, purchase, restore, getOfferings, ensureOfferings, getIAPTrial, manageSubscription }
 })

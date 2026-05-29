@@ -47,7 +47,7 @@
       <div
         :class="[
           'grid',
-          { 'sm:grid-cols-2': !isApp },
+          { 'sm:grid-cols-2': canStartSubscribeFlow },
           'gap-4',
           'justify-center',
           'items-center',
@@ -65,7 +65,7 @@
           @click="onClickHeroCtaStore"
         />
         <UButton
-          v-if="!isApp"
+          v-if="canStartSubscribeFlow"
           class="text-theme-white hover:bg-theme-white/20"
           :to="localeRoute({ name: 'member', query: { ll_source: 'about-page' } })"
           :label="$t('about_page_hero_cta_plus')"
@@ -182,12 +182,7 @@
                 class="text-primary"
               />
               <h3
-                v-if="isApp"
-                class="text-xl font-semibold text-gray-900"
-                v-text="$t('about_page_feature_ai_narration')"
-              />
-              <h3
-                v-else
+                v-if="canStartSubscribeFlow"
                 class="text-xl font-semibold text-gray-900"
               >
                 <NuxtLink
@@ -198,6 +193,11 @@
                   {{ $t('about_page_feature_ai_narration') }}
                 </NuxtLink>
               </h3>
+              <h3
+                v-else
+                class="text-xl font-semibold text-gray-900"
+                v-text="$t('about_page_feature_ai_narration')"
+              />
             </div>
             <p
               class="mt-4 text-gray-700"
@@ -602,7 +602,7 @@
 
     <!-- 3ook.com Plus Membership Section -->
     <section
-      v-if="!isApp"
+      v-if="canStartSubscribeFlow"
       id="plus"
       class="w-full bg-gradient-to-r from-primary/10 to-secondary/20 py-12 px-4"
     >
@@ -675,7 +675,6 @@
           </li>
         </ul>
         <UButton
-          v-if="!isApp"
           :to="localeRoute({ name: 'member', query: { ll_source: 'about-page' } })"
           :label="$t('about_page_plus_cta')"
           color="primary"
@@ -851,6 +850,7 @@ const newsletterEmail = ref('')
 
 const metadataStore = useMetadataStore()
 const { isApp } = useAppDetection()
+const { canStartSubscribeFlow } = useNativeIAP()
 
 const authorAvatars = import.meta.glob<{ default: string }>('~/assets/images/about/avatars/*.png', { eager: true })
 function getLocalAvatar(filename: string) {
