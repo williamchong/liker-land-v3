@@ -217,6 +217,42 @@ export default defineNuxtConfig({
     // a stale CDN/edge copy can't pin the old worker and block autoUpdate; they
     // revalidate cheaply via ETag (304). Without this the worker never updates.
     registerWebManifestInRouteRules: true,
+    workbox: {
+      // Under SSR there is no static index.html for Workbox to precache, so
+      // vite-plugin-pwa's default `navigateFallback: '/'` resolves to a URL that
+      // is never in the precache. Offline navigations then throw
+      // `non-precached-url` and render blank (the iOS/Android WebView symptom).
+      // Disable it; the NetworkFirst route below serves the last-seen document
+      // offline so the real app boots and its own offline handling takes over.
+      navigateFallback: undefined,
+      runtimeCaching: [
+        {
+          // Content-hashed build assets are immutable: cache on first request so
+          // the SPA's JS/CSS is available offline after a single online visit.
+          urlPattern: ({ url }) => url.pathname.startsWith('/_nuxt/'),
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'nuxt-build-assets',
+            expiration: { maxEntries: 256, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            cacheableResponse: { statuses: [0, 200] },
+          },
+        },
+        {
+          // Page navigations: prefer fresh network, fall back to the last cached
+          // document when offline so the app shell can boot. Skip API routes —
+          // they must never be served from a stale document cache.
+          urlPattern: ({ request, url }) =>
+            request.mode === 'navigate' && !url.pathname.startsWith('/api'),
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'html-pages',
+            networkTimeoutSeconds: 10,
+            expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 * 7 },
+            cacheableResponse: { statuses: [200] },
+          },
+        },
+      ],
+    },
     manifest: {
       name: '3ook.com',
       short_name: '3ook.com',
