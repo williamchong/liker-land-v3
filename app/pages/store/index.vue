@@ -281,8 +281,12 @@
 </template>
 
 <script setup lang="ts">
-import { getGenreI18nKey } from '~~/shared/constants/book-categories'
+import { FetchError } from 'ofetch'
 
+import { getGenreI18nKey } from '~~/shared/constants/book-categories'
+import { MAX_BOOKSTORE_PAGE_SIZE, isBookstoreBuiltInListType } from '~~/shared/utils/bookstore'
+
+const nuxtApp = useNuxtApp()
 const { t: $t, locale } = useI18n()
 const localeRoute = useLocaleRoute()
 const route = useRoute()
@@ -386,8 +390,27 @@ await callOnce(async () => {
     await navigateTo(localeRoute({ name: 'local-histories' }), { replace: true })
     return
   }
-  if (!tagId.value || isDefaultTagId.value || isStakingTagId.value) return
-  await bookstoreStore.fetchBookstoreCMSTag(tagId.value)
+
+  if (
+    !tagId.value
+    || isDefaultTagId.value
+    || isStakingTagId.value
+    || isBookstoreBuiltInListType(tagId.value)
+  ) return
+
+  let tag: BookstoreCMSTag | undefined
+  try {
+    tag = await bookstoreStore.fetchBookstoreCMSTag(tagId.value)
+  }
+  catch (error) {
+    // Ignore 404 error
+    if (!(error instanceof FetchError && error.statusCode === 404)) throw error
+  }
+  if (!tag) {
+    const { tag: _tag, ...query } = route.query
+    // Restore Nuxt context lost across the await before calling navigateTo/localeRoute.
+    await nuxtApp.runWithContext(() => navigateTo(localeRoute({ name: 'store', query }), { replace: true }))
+  }
 })
 
 const normalizedLocale = computed(() => locale.value === 'zh-Hant' ? 'zh' : 'en')
@@ -430,6 +453,8 @@ const allTagItems = computed(() => {
     }))
     .filter(option => tagId.value === option.value || option.isPublic)
 
+  // Built-in list types (latest/free/drm-free) are mirrored as CMS tags so editors
+  // control their ordering here, hence they surface through cmsTags like any other tag.
   const cmsTags = bookstoreStore.bookstoreCMSTags
     .filter((tag) => {
       return !!tag.isPublic || tag.id === tagId.value
@@ -439,11 +464,10 @@ const allTagItems = computed(() => {
       value: tag.id,
     }))
 
-  // While the full CMS tag list is still loading, surface the active CMS tag
-  // so the bar always renders the current selection.
+  // Always surface the active CMS tag even if it's absent from the cached list
+  // (e.g. a newly created tag not yet reflected in the cached tag list).
   if (
-    !bookstoreStore.hasFetchedBookstoreCMSTags
-    && activeCMSTag.value
+    activeCMSTag.value
     && !cmsTags.some(t => t.value === activeCMSTag.value!.id)
   ) {
     cmsTags.push({
@@ -452,15 +476,14 @@ const allTagItems = computed(() => {
     })
   }
 
-  const localHistoriesTag = {
-    label: $t('local_histories_page_title'),
-    value: 'local-histories',
-    isCustom: true,
+  // On mobile, pin the local-histories CMS tag last.
+  const ordered = [...stakingTags, ...cmsTags]
+  if (isMobile.value) {
+    const localHistoriesIndex = ordered.findIndex(tag => getIsLocalHistoriesTagId(tag.value))
+    if (localHistoriesIndex !== -1) {
+      ordered.push(...ordered.splice(localHistoriesIndex, 1))
+    }
   }
-
-  const ordered = isMobile.value
-    ? [...stakingTags, ...cmsTags, localHistoriesTag]
-    : [...stakingTags, localHistoriesTag, ...cmsTags]
 
   return ordered.map(item => ({
     ...item,
@@ -771,6 +794,7 @@ useHead(() => {
     }
   }
 
+  const encodedTagId = encodeURIComponent(tagId.value)
   const link = [
     {
       rel: 'canonical',
@@ -795,16 +819,13 @@ useHead(() => {
           crossorigin: 'anonymous' as const,
           key: 'preload-staking-books',
         }]
-      : []),
-    ...(!isStakingTagId.value
-      ? [{
+      : [{
           rel: 'preload',
-          href: `/api/store/products?tag=${tagId.value}&limit=100&ts=${getTimestampRoundedToMinute()}`,
+          href: `/api/store/products?tag=${encodedTagId}&limit=${MAX_BOOKSTORE_PAGE_SIZE}&ts=${getTimestampRoundedToMinute()}`,
           as: 'fetch' as const,
           crossorigin: 'anonymous' as const,
           key: 'preload-store-products',
-        }]
-      : []),
+        }]),
   ]
 
   return {
