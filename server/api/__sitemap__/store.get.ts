@@ -4,6 +4,11 @@ import { normalizeNFTClassId } from '~~/shared/utils/index'
 const SITEMAP_CLASS_IDS_CACHE_KEY = 'sitemap:store:class-ids'
 const SITEMAP_CLASS_IDS_CACHE_TTL = 3600
 const SITEMAP_PAGE_SIZE = 100
+// Bound the latest-books walk by page count (~2000 books at SITEMAP_PAGE_SIZE).
+// A sitemap doesn't need the entire long tail, and this caps upstream work per cache miss.
+// Bounding by pages (not accumulated ids) guarantees termination even if a page
+// returns records that all lack a classId.
+const SITEMAP_LATEST_MAX_PAGES = 20
 
 let inflightClassIds: Promise<string[]> | null = null
 
@@ -23,14 +28,22 @@ async function fetchTopStakedClassIds(): Promise<string[]> {
 }
 
 async function fetchLatestTagClassIds(): Promise<string[]> {
+  const classIds: string[] = []
+  let nextKey: string | undefined
   try {
-    const response = await fetchBookstoreBookListing(BUILT_IN_LIST_PATHS.latest, { pageSize: SITEMAP_PAGE_SIZE })
-    return response.records.flatMap(record => (record.classId ? [record.classId] : []))
+    for (let page = 0; page < SITEMAP_LATEST_MAX_PAGES; page += 1) {
+      const response = await fetchBookstoreBookListing(BUILT_IN_LIST_PATHS.latest, { pageSize: SITEMAP_PAGE_SIZE, nextKey })
+      classIds.push(...response.records.flatMap(record => (record.classId ? [record.classId] : [])))
+      // Stop on the last page, an empty page, or a cursor that didn't advance.
+      if (!response.hasMore || !response.records.length || response.offset === nextKey) break
+      nextKey = response.offset
+    }
   }
   catch (error) {
+    // Return whatever pages succeeded; partial coverage beats dropping the latest set entirely.
     console.error('[sitemap] Error fetching latest books:', error)
-    return []
   }
+  return classIds
 }
 
 async function collectStoreClassIds(): Promise<string[]> {
@@ -63,7 +76,7 @@ export default defineSitemapEventHandler(async (event) => {
       }
     }
 
-    setHeader(event, 'Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')
+    setHeader(event, 'Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400, stale-if-error=86400')
     return classIds.flatMap(classId => locales.map((locale) => {
       const localePath = locale.code === defaultLocale ? '' : `/${locale.code}`
       return {
