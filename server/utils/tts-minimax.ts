@@ -22,7 +22,7 @@ const VOICE_CONFIG: Record<string, VoiceConfig> = {
   aurora: { minimaxVoiceId: 'three_book_aurora_v1', displayName: 'Aurora' },
   karenly: { minimaxVoiceId: 'three_book_karenly_v0', displayName: 'Karenly' },
   pazu: { minimaxVoiceId: 'three_book_pazu_v3', displayName: 'Pazu' },
-  phoebe: { minimaxVoiceId: 'three_book_phoebe_v2', model: 'speech-2.6-hd', displayName: 'Phoebe' },
+  phoebe: { minimaxVoiceId: 'three_book_phoebe_v3', model: 'speech-2.6-hd', displayName: 'Phoebe' },
 }
 
 export const KNOWN_VOICE_IDS = new Set(Object.keys(VOICE_CONFIG))
