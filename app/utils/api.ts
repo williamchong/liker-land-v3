@@ -57,12 +57,14 @@ export function fetchBookstoreCMSProductsByTagId(tagId: string, {
 
 export function fetchBookstoreCMSPublicationsBySearchTerm(searchTerm: string, {
   offset,
-  limit = 100,
+  limit = MAX_BOOKSTORE_PAGE_SIZE,
   ts,
+  isLibrary = false,
 }: {
   offset?: string
   limit?: number
   ts?: number
+  isLibrary?: boolean
 } = {}) {
   return apiFetch<FetchBookstoreCMSProductsResponseData>('/store/search', {
     query: {
@@ -70,18 +72,21 @@ export function fetchBookstoreCMSPublicationsBySearchTerm(searchTerm: string, {
       offset,
       limit,
       ts,
+      library: isLibrary ? '1' : undefined,
     },
   })
 }
 
 export function fetchBookstoreCMSPublicationsByGenre(genre: string, {
   offset,
-  limit = 100,
+  limit = MAX_BOOKSTORE_PAGE_SIZE,
   ts,
+  isLibrary = false,
 }: {
   offset?: string
   limit?: number
   ts?: number
+  isLibrary?: boolean
 } = {}) {
   return apiFetch<FetchBookstoreCMSProductsResponseData>('/store/genre', {
     query: {
@@ -89,6 +94,7 @@ export function fetchBookstoreCMSPublicationsByGenre(genre: string, {
       offset,
       limit,
       ts,
+      library: isLibrary ? '1' : undefined,
     },
   })
 }

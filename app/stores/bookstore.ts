@@ -1,3 +1,10 @@
+import { getBookstoreScopedKey } from '~~/shared/utils/bookstore'
+
+interface BookstoreSearchOptions {
+  isRefresh?: boolean
+  isLibrary?: boolean
+}
+
 interface BookstoreCMSTagProducts {
   items: BookstoreCMSProduct[]
   isFetching: boolean
@@ -14,6 +21,7 @@ interface BookstoreSearchResults {
     imageUrl: string
     minPrice?: number
     minPriceInDecimalByCurrency?: BookPriceInDecimalByCurrency
+    isPlusReadingEnabled?: boolean
   }>
   isFetching: boolean
   hasFetched: boolean
@@ -144,18 +152,19 @@ export const useBookstoreStore = defineStore('bookstore', () => {
 
   const bookstoreSearchResultsByQueryMap = ref<Record<string, BookstoreSearchResults>>({})
 
-  const getBookstoreSearchResultsByQuery = computed(() => (query: string) => {
+  const getBookstoreSearchResultsByQuery = computed(() => (query: string, isLibrary = false) => {
+    const queryKey = getBookstoreScopedKey(query, isLibrary)
     const items
-      = (bookstoreSearchResultsByQueryMap.value[query]?.items || [])
+      = (bookstoreSearchResultsByQueryMap.value[queryKey]?.items || [])
         .filter((item) => {
           const bookstoreInfo = getBookstoreInfoByNFTClassId.value(item.classId)
           return bookstoreInfo !== null && !bookstoreInfo?.isHidden
         })
     return {
       items,
-      isFetchingItems: bookstoreSearchResultsByQueryMap.value[query]?.isFetching || false,
-      hasFetchedItems: bookstoreSearchResultsByQueryMap.value[query]?.hasFetched || false,
-      nextItemsKey: bookstoreSearchResultsByQueryMap.value[query]?.nextKey || undefined,
+      isFetchingItems: bookstoreSearchResultsByQueryMap.value[queryKey]?.isFetching || false,
+      hasFetchedItems: bookstoreSearchResultsByQueryMap.value[queryKey]?.hasFetched || false,
+      nextItemsKey: bookstoreSearchResultsByQueryMap.value[queryKey]?.nextKey || undefined,
     }
   })
 
@@ -197,11 +206,11 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     state.isFetching = false
   }
 
-  async function fetchTextSearch(searchTerm: string, queryKey: string, isRefresh: boolean) {
+  async function fetchTextSearch(searchTerm: string, queryKey: string, { isRefresh, isLibrary }: Required<BookstoreSearchOptions>) {
     const result = await fetchBookstoreCMSPublicationsBySearchTerm(searchTerm, {
       offset: isRefresh ? undefined : bookstoreSearchResultsByQueryMap.value[queryKey]?.nextKey,
-      limit: 100,
       ts: getTimestampRoundedToMinute(),
+      isLibrary,
     })
 
     const mappedItems = result.records
@@ -212,16 +221,17 @@ export const useBookstoreStore = defineStore('bookstore', () => {
         imageUrl: item.imageUrl!,
         minPrice: item.minPrice,
         minPriceInDecimalByCurrency: item.minPriceInDecimalByCurrency,
+        isPlusReadingEnabled: item.isPlusReadingEnabled,
       }))
 
     updateSearchResults(queryKey, mappedItems, result.offset, isRefresh)
   }
 
-  async function fetchGenreSearch(genre: string, queryKey: string, isRefresh: boolean) {
+  async function fetchGenreSearch(genre: string, queryKey: string, { isRefresh, isLibrary }: Required<BookstoreSearchOptions>) {
     const result = await fetchBookstoreCMSPublicationsByGenre(genre, {
       offset: isRefresh ? undefined : bookstoreSearchResultsByQueryMap.value[queryKey]?.nextKey,
-      limit: 100,
       ts: getTimestampRoundedToMinute(),
+      isLibrary,
     })
 
     const mappedItems = result.records
@@ -232,6 +242,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
         imageUrl: item.imageUrl!,
         minPrice: item.minPrice,
         minPriceInDecimalByCurrency: item.minPriceInDecimalByCurrency,
+        isPlusReadingEnabled: item.isPlusReadingEnabled,
       }))
 
     updateSearchResults(queryKey, mappedItems, result.offset, isRefresh)
@@ -290,12 +301,15 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     }
   }
 
-  async function fetchSearchResults(type: 'q' | 'author' | 'publisher' | 'owner_wallet' | 'genre', searchTerm: string, {
-    isRefresh = false,
-  }: {
-    isRefresh?: boolean
-  } = {}) {
-    const queryKey = `${type}:${searchTerm}`
+  async function fetchSearchResults(
+    type: 'q' | 'author' | 'publisher' | 'owner_wallet' | 'genre',
+    searchTerm: string,
+    {
+      isRefresh = false,
+      isLibrary = false,
+    }: BookstoreSearchOptions = {},
+  ) {
+    const queryKey = getBookstoreScopedKey(`${type}:${searchTerm}`, isLibrary)
 
     if (!checkAndInitializeSearchState(queryKey, isRefresh)) {
       return
@@ -303,10 +317,10 @@ export const useBookstoreStore = defineStore('bookstore', () => {
 
     try {
       if (type === 'q') {
-        await fetchTextSearch(searchTerm, queryKey, isRefresh)
+        await fetchTextSearch(searchTerm, queryKey, { isRefresh, isLibrary })
       }
       else if (type === 'genre') {
-        await fetchGenreSearch(searchTerm, queryKey, isRefresh)
+        await fetchGenreSearch(searchTerm, queryKey, { isRefresh, isLibrary })
       }
       else if (type === 'owner_wallet') {
         if (checkIsEVMAddress(searchTerm)) {
