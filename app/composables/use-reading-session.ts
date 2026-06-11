@@ -29,13 +29,13 @@ export function useReadingSession(options: ReadingSessionOptions) {
   let lastActiveTimestamp: number | null = null
   let lastTTSTimestamp: number | null = null
 
-  function resetSession() {
+  function resetSession({ seedTTSMs = 0 } = {}) {
     sessionId = crypto.randomUUID()
     startProgress = progress.value
     pagesViewed = new Set<number | string>()
     sessionFlushed = false
     activeReadingTimeMs = 0
-    ttsActiveTimeMs = 0
+    ttsActiveTimeMs = seedTTSMs
     sessionActiveReadingTimeMs = 0
     sessionTTSActiveTimeMs = 0
     lastActiveTimestamp = null
@@ -64,8 +64,8 @@ export function useReadingSession(options: ReadingSessionOptions) {
     else if (lastActiveTimestamp) {
       activeReadingTimeMs += Date.now() - lastActiveTimestamp
       lastActiveTimestamp = null
-      // When the tab is hidden the terminal beacon flushes reliably; a $fetch here
-      // would race it and may be cancelled, so only flush on idle-while-visible.
+      // Fires on idle-while-visible or the hide transition; on hide the terminal
+      // beacon flushes and a $fetch would race it, so restrict to the visible case.
       if (isTabVisible.value) flushDeltas()
     }
   }, { immediate: true })
@@ -77,8 +77,9 @@ export function useReadingSession(options: ReadingSessionOptions) {
     else if (lastTTSTimestamp) {
       ttsActiveTimeMs += Date.now() - lastTTSTimestamp
       lastTTSTimestamp = null
-      // Only flush while visible, same as the idle path above.
-      if (isTabVisible.value) flushDeltas()
+      // TTS plays in the background, so commit on pause/stop even while hidden;
+      // a server flush works from a hidden-but-alive tab (beacon covers unload).
+      flushDeltas()
     }
   }, { immediate: true })
 
@@ -99,6 +100,9 @@ export function useReadingSession(options: ReadingSessionOptions) {
     if (!chapterIndex && !pageIndex) {
       pagesViewed.add(Math.floor(progress.value))
     }
+    // TTS advances progress in the background too, so flush regardless of
+    // visibility — like the book-settings sync. Throttled; beacon covers unload.
+    flushDeltas()
   }, { immediate: true })
 
   function drainAccumulators(cap: number) {
@@ -215,7 +219,14 @@ export function useReadingSession(options: ReadingSessionOptions) {
       flushSessionBeacon()
     }
     else {
-      resetSession()
+      // Audio keeps playing while hidden, so carry that listening span into the
+      // new session; resetSession() nulls the clocks and the source refs don't
+      // toggle on return, so re-arm both here or they never restart.
+      const now = Date.now()
+      const carriedTTSMs = ttsActiveTimeMs + (lastTTSTimestamp ? now - lastTTSTimestamp : 0)
+      resetSession({ seedTTSMs: carriedTTSMs })
+      if (isTextToSpeechPlaying?.value) lastTTSTimestamp = now
+      if (isActivelyReading.value) lastActiveTimestamp = now
       logSessionStart()
       resumeHeartbeat()
     }
