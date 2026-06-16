@@ -745,11 +745,22 @@ const baseProducts = computed<BookstoreItemList>(() => {
   return cmsProducts.value
 })
 
+// Coalesce to an empty list: at the async-setup mount/hydration boundary the
+// upstream chain can briefly resolve undefined, which crashed the many reads
+// funnelling through products.value (.items, .nextItemsKey, …).
+const EMPTY_PRODUCTS: BookstoreItemList = {
+  items: [],
+  isFetchingItems: false,
+  hasFetchedItems: false,
+  nextItemsKey: undefined,
+}
+
 const products = computed<BookstoreItemList>(() => {
-  if (!isLibraryTab.value) return baseProducts.value
+  const base = baseProducts.value ?? EMPTY_PRODUCTS
+  if (!isLibraryTab.value) return base
   return {
-    ...baseProducts.value,
-    items: baseProducts.value.items.filter(getIsPlusReading),
+    ...base,
+    items: base.items.filter(getIsPlusReading),
   }
 })
 
