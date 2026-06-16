@@ -184,6 +184,8 @@
     <main
       class="flex flex-col items-center grow w-full max-w-[1440px] mx-auto pt-4 px-4 laptop:px-12 pb-16"
     >
+      <LibraryIntroBanner v-if="isLibraryTab && !isSearchMode && !entity" />
+
       <section
         v-if="entity && entityDescription"
         class="w-full mb-8 self-start text-left"
@@ -335,6 +337,7 @@ const nftStore = useNFTStore()
 const infiniteScrollDetectorElement = useTemplateRef<HTMLLIElement>('infiniteScrollDetector')
 const shouldLoadMore = useElementVisibility(infiniteScrollDetectorElement)
 const { handleError } = useErrorHandler()
+const { dismissLibraryIntroBanner } = useLibraryIntroBanner()
 const storePageState = useStorePageState(routeName)
 const isOnline = useOnline()
 const isMobile = useMediaQuery('(max-width: 425px)')
@@ -1204,6 +1207,9 @@ async function handleTagClick(tagValue?: string) {
   if (!tagValue || tagValue === tagId.value) {
     return
   }
+
+  // Engaging with a category means the intro has served its purpose.
+  if (isLibraryTab.value) dismissLibraryIntroBanner()
 
   if (tagValue === 'local-histories') {
     useLogEvent('store_tag_click', { tag_id: tagValue })
