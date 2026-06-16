@@ -80,9 +80,10 @@ export async function recordPacedReadingUsage(input: RecordPacedReadingUsageInpu
     console.warn('[ReadingUsage] Failed to publish event:', err)
   }
 
-  // No-ops internally when the paced delta is zero or the user isn't paid Plus.
-  // Awaited so it settles before the serverless handler returns.
-  await forwardPlusReadingUsage({
+  // No-ops internally only when every paced delta is zero; otherwise forwards
+  // rev-share-eligible and non-library engagement separately. Awaited so it
+  // settles before the serverless handler returns.
+  await forwardReadingUsage({
     isPaidPlus,
     isBorrowed,
     readerWallet: wallet,

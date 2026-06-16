@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { API_MAX_RETRIES } from '~~/shared/utils/fetch-retry'
 
-interface PlusReadingUsageInput {
+interface ReadingUsageInput {
   isPaidPlus: boolean
   isBorrowed: boolean
   readerWallet: string
@@ -25,15 +25,15 @@ interface PlusReadingUsageInput {
  * and the API skips an already-seen id. That's what makes enabling retry here safe — it must
  * stay paired with the API-side dedup (deploy the API before this).
  */
-export async function forwardPlusReadingUsage(input: PlusReadingUsageInput): Promise<void> {
+export async function forwardReadingUsage(input: ReadingUsageInput): Promise<void> {
   const { readerWallet, classId } = input
   // Rev-share funds only borrowed (Plus-library) reads by paid (non-trial) Plus; the
   // rest is non-library engagement, reported to publishers but never funding the pool.
-  const revShareEligible = input.isPaidPlus && input.isBorrowed
-  const readingTimeMs = revShareEligible ? input.readingTimeMs : 0
-  const ttsTimeMs = revShareEligible ? input.ttsTimeMs : 0
-  const nonLibraryReadingTimeMs = input.readingTimeMs - readingTimeMs
-  const nonLibraryTtsTimeMs = input.ttsTimeMs - ttsTimeMs
+  const isRevShareEligible = input.isPaidPlus && input.isBorrowed
+  const readingTimeMs = isRevShareEligible ? input.readingTimeMs : 0
+  const ttsTimeMs = isRevShareEligible ? input.ttsTimeMs : 0
+  const nonLibraryReadingTimeMs = isRevShareEligible ? 0 : input.readingTimeMs
+  const nonLibraryTtsTimeMs = isRevShareEligible ? 0 : input.ttsTimeMs
   if (readingTimeMs <= 0 && ttsTimeMs <= 0
     && nonLibraryReadingTimeMs <= 0 && nonLibraryTtsTimeMs <= 0) return
 
@@ -59,10 +59,10 @@ export async function forwardPlusReadingUsage(input: PlusReadingUsageInput): Pro
       // safe now that the API dedups on `id`. Must equal API_MAX_RETRIES — the backoff
       // curve assumes a retry budget starting there.
       retry: API_MAX_RETRIES,
-      timeout: 2000, // bound heartbeat/session latency on a hung upstream; failures are swallowed below
+      timeout: 2000, // per-attempt cap on a hung upstream; total may exceed it across retries (failures swallowed below)
     })
   }
   catch (error) {
-    console.warn('[PlusRevShare] Failed to forward reading usage:', error)
+    console.warn('[ReadingUsage] Failed to forward reading usage:', error)
   }
 }
