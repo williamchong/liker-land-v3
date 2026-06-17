@@ -60,6 +60,10 @@ body {
   --breakpoint-widescreen: 90rem;
 }
 
+@utility section-container {
+  @apply w-full max-w-[1440px] mx-auto px-4 laptop:px-12;
+}
+
 @layer utilities {
   .bottom-safe {
     bottom: env(safe-area-inset-bottom);

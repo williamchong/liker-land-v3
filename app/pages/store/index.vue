@@ -9,10 +9,7 @@
         ...(isSearchMode ? [] : gridClasses),
         'gap-4',
 
-        'w-full',
-        'max-w-[1440px]',
-        'mx-auto',
-        'px-4 laptop:px-12',
+        'section-container',
         'py-4',
 
         'bg-linear-to-b from-(--app-bg)/90 to-(--app-bg)/0',
@@ -181,11 +178,14 @@
       </div>
     </header>
 
-    <main
-      class="flex flex-col items-center grow w-full max-w-[1440px] mx-auto pt-4 px-4 laptop:px-12 pb-16"
+    <div
+      v-if="isLibraryTab && !isSearchMode && !entity"
+      class="section-container"
     >
-      <LibraryIntroBanner v-if="isLibraryTab && !isSearchMode && !entity" />
+      <LibraryIntroBanner />
+    </div>
 
+    <main class="section-container flex flex-col items-center grow pt-6 pb-16">
       <section
         v-if="entity && entityDescription"
         class="w-full mb-8 self-start text-left"
