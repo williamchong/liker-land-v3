@@ -767,6 +767,7 @@
   "reader_display_orientation_vertical": "直排",
   "reader_display_restore_defaults_button": "恢復預設",
   "reader_epub_rendition_display_failed": "無法顯示該頁。",
+  "reader_footnote_return_button": "返回閱讀內容",
   "reader_menu_button": "閱讀器選單",
   "reader_page_input_label": "頁碼",
   "reader_page_mode_dual": "雙頁顯示",
