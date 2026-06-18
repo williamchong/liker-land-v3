@@ -27,6 +27,20 @@ export function isSpeakableText(text: string): boolean {
   return SPEAKABLE_REGEX.test(sanitizeTTSText(text))
 }
 
+// PDF text extraction emits each glyph as its own item, so joining items with a
+// space injects a space between every CJK character (此 時 校 內). CJK scripts
+// don't use inter-character spaces, and the gaps confuse the TTS model, so
+// collapse whitespace sitting between two CJK characters. Latin text (where the
+// joining space separates real words) is left untouched. Tabs and ideographic
+// spaces (U+3000) can leak in from glyph items too, so the separator covers them.
+const CJK_CHAR = '\\u2E80-\\u2EFF\\u2F00-\\u2FDF\\u3000-\\u303F\\u3040-\\u30FF\\u3100-\\u312F\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uF900-\\uFAFF\\uFF00-\\uFFEF'
+const CJK_SPACE_REGEX = new RegExp(`([${CJK_CHAR}])[ \\t\\u3000]+(?=[${CJK_CHAR}])`, 'g')
+
+export function removeRedundantCJKSpaces(text: string): string {
+  if (!text) return ''
+  return text.replace(CJK_SPACE_REGEX, '$1')
+}
+
 const CLOSING_PUNCT = '[」』】》）)\u2019\u201D]'
 const SENTENCE_REGEX = new RegExp(`([.!?。！？…⋯︙]${CLOSING_PUNCT}*[\\s\\u200B]*)`)
 const CLAUSE_REGEX = new RegExp(`([;:,，；：、—─―︱⸺]${CLOSING_PUNCT}*[\\s\\u200B]*)`)
