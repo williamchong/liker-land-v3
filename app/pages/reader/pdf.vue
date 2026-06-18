@@ -215,11 +215,12 @@ async function extractTTSSegmentsFromPDF(pdfDocument: PDFDocumentProxy) {
           return yPosition < headerThreshold && yPosition > footerThreshold
         })
 
-      const pageText = mainContentItems
-        .filter((item: (TextItem | TextMarkedContent)) => 'str' in item)
-        .map((item: TextItem) => item.str)
-        .join(' ')
-        .trim()
+      const pageText = removeRedundantCJKSpaces(
+        mainContentItems
+          .filter((item: (TextItem | TextMarkedContent)) => 'str' in item)
+          .map((item: TextItem) => item.str)
+          .join(' '),
+      ).trim()
 
       if (pageText) {
         pagesWithText++

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   sanitizeTTSText,
+  removeRedundantCJKSpaces,
   isSpeakableText,
   splitTextIntoSegments,
   mergeShortTTSSegments,
@@ -89,6 +90,42 @@ describe('sanitizeTTSText', () => {
     const input = '﹁好＊﹂\n---\n好⋯⋯好—壞'
     const result = sanitizeTTSText(input)
     expect(result).toBe('「好」\n\n好。好，壞')
+  })
+})
+
+describe('removeRedundantCJKSpaces', () => {
+  it('returns empty string for falsy input', () => {
+    expect(removeRedundantCJKSpaces('')).toBe('')
+  })
+
+  it('collapses spaces between CJK characters', () => {
+    expect(removeRedundantCJKSpaces('此 時 校 內')).toBe('此時校內')
+  })
+
+  it('collapses spaces around CJK punctuation', () => {
+    expect(removeRedundantCJKSpaces('校 園 閒 逛 ， 慢慢 回 想')).toBe('校園閒逛，慢慢回想')
+  })
+
+  // Kangxi radicals (U+2F00–U+2FDF) appear in place of normal glyphs in some PDFs
+  it('handles Kangxi radical characters', () => {
+    expect(removeRedundantCJKSpaces('享 ⽤ 午 餐')).toBe('享⽤午餐')
+  })
+
+  it('collapses tabs and ideographic spaces between CJK characters', () => {
+    expect(removeRedundantCJKSpaces('此\t時　校')).toBe('此時校')
+  })
+
+  it('keeps spaces inside Latin text', () => {
+    expect(removeRedundantCJKSpaces('hello world')).toBe('hello world')
+  })
+
+  it('keeps spaces between CJK and Latin tokens', () => {
+    expect(removeRedundantCJKSpaces('第 3 章')).toBe('第 3 章')
+  })
+
+  it('handles a full extracted PDF line', () => {
+    const input = '此 時 校 內 最 熱 鬧 的 地 ⽅ 就 是 ⼩ 賣 部。少 年 在 享 ⽤ 午 餐 後 於 校 園 閒 逛 ， 慢慢 回 想 起 ⾃ ⼰ ⼊ 讀 這 所 學 校 的 原 因。'
+    expect(removeRedundantCJKSpaces(input)).toBe('此時校內最熱鬧的地⽅就是⼩賣部。少年在享⽤午餐後於校園閒逛，慢慢回想起⾃⼰⼊讀這所學校的原因。')
   })
 })
 
