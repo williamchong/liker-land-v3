@@ -128,8 +128,14 @@ describe('removeRedundantCJKSpaces', () => {
     expect(removeRedundantCJKSpaces('hello world')).toBe('hello world')
   })
 
+  // Fullwidth Latin is in the CJK forms block but word-spaced like ASCII Latin
+  it('keeps spaces between fullwidth Latin words', () => {
+    expect(removeRedundantCJKSpaces('ＨＥＬＬＯ ＷＯＲＬＤ')).toBe('ＨＥＬＬＯ ＷＯＲＬＤ')
+  })
+
   it('keeps spaces between CJK and Latin tokens', () => {
     expect(removeRedundantCJKSpaces('第 3 章')).toBe('第 3 章')
+    expect(removeRedundantCJKSpaces('第 ３ 章')).toBe('第 ３ 章')
   })
 
   it('handles a full extracted PDF line', () => {
