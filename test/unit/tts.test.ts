@@ -36,6 +36,15 @@ describe('sanitizeTTSText', () => {
     expect(sanitizeTTSText('好，壞；對：錯！嗎？')).toBe('好，壞；對：錯！嗎？')
   })
 
+  // Regression: PDF extraction emits Kangxi/CJK radical look-alikes (⽅ U+2F45,
+  // ⼩ U+2F29) that Minimax cannot pronounce; NFKC folds them to ideographs.
+  it('normalizes CJK radical look-alikes to ideographs', () => {
+    expect(sanitizeTTSText('地⽅')).toBe('地方')
+    expect(sanitizeTTSText('⼩賣部')).toBe('小賣部')
+    expect(sanitizeTTSText('此時校內最熱鬧的地⽅就是⼩賣部，慢慢回想。'))
+      .toBe('此時校內最熱鬧的地方就是小賣部，慢慢回想。')
+  })
+
   it('normalizes fullwidth alphanumerics adjacent to kept punctuation', () => {
     expect(sanitizeTTSText('Ａ，Ｂ；１２３')).toBe('A，B；123')
   })
