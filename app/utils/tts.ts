@@ -7,9 +7,15 @@
 // so they are untouched.
 const FULLWIDTH_PUNCT_KEEP = new Set(['！', '，', '：', '；', '？'])
 
+// PDF extraction emits CJK radical look-alikes (U+2E80-U+2EFF, U+2F00-U+2FDF)
+// that look like ideographs but the TTS model can't pronounce. Fold per-character
+// via NFKC; a whole-string NFKC would also flatten the fullwidth punctuation below.
+const CJK_RADICAL_REGEX = /[\u2E80-\u2EFF\u2F00-\u2FDF]/g
+
 export function sanitizeTTSText(text: string): string {
   if (!text) return ''
   return text
+    .replace(CJK_RADICAL_REGEX, c => c.normalize('NFKC'))
     .replace(/[\uFF01-\uFF5E]/g, c =>
       FULLWIDTH_PUNCT_KEEP.has(c) ? c : String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
     .replace(/^\s*-{2,}\s*$/gm, '')
