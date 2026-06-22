@@ -46,6 +46,27 @@
             />
           </div>
         </div>
+        <div
+          v-else-if="queryAffiliate"
+          class="flex items-center gap-3 min-w-0 flex-1"
+        >
+          <UAvatar
+            :src="affiliateAvatarSrc"
+            :alt="affiliateDisplayName"
+            icon="i-material-symbols-person-2-rounded"
+            size="lg"
+          />
+          <div class="flex flex-col min-w-0 flex-1">
+            <p
+              class="text-xs text-muted uppercase tracking-wide"
+              v-text="$t('store_affiliate_prefix')"
+            />
+            <h1
+              class="text-xl laptop:text-2xl font-bold text-default truncate"
+              v-text="affiliateDisplayName"
+            />
+          </div>
+        </div>
         <h1 v-else-if="searchModeContext">
           <PillButton
             is-active
@@ -200,6 +221,48 @@
         </ExpandableContent>
       </section>
 
+      <!-- Affiliate publisher drill-down: header chrome, not a grid section. The
+        affiliate view loads only each publisher's first page, so link to the
+        full owner_wallet listing. -->
+      <section
+        v-if="queryAffiliate && affiliatePublishers.length"
+        class="w-full mb-8 self-start text-left flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted"
+      >
+        <span
+          class="font-bold text-highlighted"
+          v-text="$t('store_affiliate_publishers_label')"
+        />
+        <NuxtLink
+          v-for="publisher in affiliatePublishers"
+          :key="publisher.wallet"
+          :to="localeRoute({ name: routeName, query: { owner_wallet: publisher.wallet } })"
+          class="group inline-flex items-center gap-1 hover:text-primary"
+        >
+          <span v-text="publisher.name" />
+          <UIcon
+            name="i-material-symbols-arrow-forward-rounded"
+            class="size-4"
+          />
+        </NuxtLink>
+      </section>
+
+      <!-- Prompt non-Plus visitors to subscribe through this affiliate to unlock
+        the exclusive voice these curated books can be read with. -->
+      <UAlert
+        v-if="isAffiliateCTAVisible"
+        class="w-full mb-8 self-start"
+        :color="plusBannerColor"
+        variant="subtle"
+        icon="i-material-symbols-graphic-eq-rounded"
+        :title="$t('store_affiliate_cta_title', { name: affiliateDisplayName })"
+        :description="$t('store_affiliate_cta_description', { name: affiliateDisplayName })"
+        :actions="[{
+          label: $t('store_affiliate_cta_button'),
+          color: plusBannerColor,
+          to: affiliateSubscribeRoute,
+        }]"
+      />
+
       <div
         v-if="isLoadingInitialItems"
         class="flex justify-center py-48"
@@ -325,10 +388,12 @@ import { FetchError } from 'ofetch'
 
 import { getGenreI18nKey } from '~~/shared/constants/book-categories'
 import { MAX_BOOKSTORE_PAGE_SIZE, isBookstoreBuiltInListType } from '~~/shared/utils/bookstore'
+import { normalizeLikerId } from '~~/shared/utils/liker-id'
 
 const nuxtApp = useNuxtApp()
 const { t: $t, locale } = useI18n()
 const localeRoute = useLocaleRoute()
+const colorMode = useColorMode()
 const route = useRoute()
 const getRouteBaseNameString = useRouteBaseNameString()
 // /store and /library share this file; the route name selects the mode.
@@ -349,12 +414,17 @@ const isMobile = useMediaQuery('(max-width: 425px)')
 const isAdultContentEnabled = useAdultContentSetting()
 const { isApp } = useAppDetection()
 const intercom = useIntercom()
+const { user } = useUserSession()
+const isLikerPlus = computed(() => !!user.value?.isLikerPlus)
 
 const querySearchTerm = computed(() => getRouteQuery('q', ''))
 const queryAuthorName = computed(() => getRouteQuery('author', ''))
 const queryPublisherName = computed(() => getRouteQuery('publisher', ''))
 const queryOwnerWallet = computed(() => getRouteQuery('owner_wallet', ''))
 const queryGenre = computed(() => getRouteQuery('genre', ''))
+// Normalize so a stray leading `@` (manual URL, or `from=@id` reuse) resolves
+// the same as a bare likerId for profile lookup, config fetch, and the subscribe CTA.
+const queryAffiliate = computed(() => normalizeLikerId(getRouteQuery('affiliate', '')))
 
 const ownerWalletInfo = computed(() => {
   if (!queryOwnerWallet.value) return null
@@ -367,8 +437,47 @@ const ownerWalletDisplayName = computed(() => {
   return ownerWalletInfo.value?.displayName || ''
 })
 
+const affiliateInfo = computed(() => {
+  if (!queryAffiliate.value) return null
+  return metadataStore.getLikerInfoById(queryAffiliate.value) || null
+})
+const affiliateDisplayName = computed(() => affiliateInfo.value?.displayName || queryAffiliate.value)
+const affiliateAvatarSrc = computed(() => affiliateInfo.value?.avatarSrc || '')
+const affiliateConfig = computed(() => {
+  if (!queryAffiliate.value) return null
+  return bookstoreStore.getAffiliateConfigByLikerId(queryAffiliate.value)
+})
+// Publisher drill-down links rendered as header chrome — the affiliate view only
+// loads each publisher's first page, so these point at the full owner_wallet list.
+const affiliatePublishers = computed(() => {
+  if (!affiliateConfig.value?.active) return []
+  return affiliateConfig.value.affiliatePublisherWallets.map(wallet => ({
+    wallet,
+    name: metadataStore.getLikerInfoByWalletAddress(wallet)?.displayName || shortenWalletAddress(wallet),
+  }))
+})
+// Only affiliates that actually ship a voice can promise voice playback; some
+// affiliates curate books without one.
+const affiliateHasVoices = computed(() =>
+  !!(affiliateConfig.value?.active && affiliateConfig.value.customVoices?.length),
+)
+// Gate on a real voice so we never promise narration the affiliate doesn't offer.
+const isAffiliateCTAVisible = computed(() =>
+  !!queryAffiliate.value && !isLikerPlus.value && affiliateHasVoices.value,
+)
+const affiliateSubscribeRoute = computed(() => localeRoute({
+  name: 'member',
+  query: { from: `@${queryAffiliate.value}`, ll_medium: 'affiliate-store' },
+}))
+
+// Match the product page's Plus TTS tag: soft secondary (green) in light mode,
+// theme (cyan) in dark, so the CTA reads as Plus without a sharp fill.
+const plusBannerColor = computed(() => colorMode.value === 'dark' ? 'primary' : 'secondary')
+
+
 // Search query key for bookstore store
 const searchQuery = computed(() => {
+  if (queryAffiliate.value) return `affiliate:${queryAffiliate.value}`
   if (querySearchTerm.value) return `q:${querySearchTerm.value}`
   if (queryAuthorName.value) return `author:${queryAuthorName.value}`
   if (queryPublisherName.value) return `publisher:${queryPublisherName.value}`
@@ -566,6 +675,15 @@ const tagName = computed(() => {
 
 const searchModeContext = computed(() => {
   if (!isSearchMode.value) return null
+  if (queryAffiliate.value) {
+    return {
+      label: affiliateDisplayName.value,
+      titlePrefix: $t('store_affiliate_prefix'),
+      description: affiliateHasVoices.value
+        ? $t('store_page_affiliate_description', { name: affiliateDisplayName.value })
+        : $t('store_page_affiliate_description_no_voice', { name: affiliateDisplayName.value }),
+    }
+  }
   if (querySearchTerm.value) {
     return {
       label: querySearchTerm.value,
@@ -645,6 +763,9 @@ const canonicalURL = computed(() => {
   }
   if (queryGenre.value) {
     canonicalParams.set('genre', queryGenre.value)
+  }
+  if (queryAffiliate.value) {
+    canonicalParams.set('affiliate', queryAffiliate.value)
   }
 
   const queryString = canonicalParams.toString()
@@ -958,10 +1079,23 @@ watch(
 )
 
 // Watch for changes in search parameters
-watch([querySearchTerm, queryAuthorName, queryPublisherName, queryOwnerWallet, queryGenre], async () => {
+watch([querySearchTerm, queryAuthorName, queryPublisherName, queryOwnerWallet, queryGenre, queryAffiliate], async () => {
   if (isSearchMode.value) {
     await fetchItems({ lazy: true })
   }
+})
+
+// Resolve the affiliate's own profile (header) and its publishers' names (links).
+watchImmediate(queryAffiliate, async (likerId) => {
+  if (!likerId) return
+  await metadataStore.lazyFetchLikerInfoById(likerId).catch((error) => {
+    console.error('Failed to fetch affiliate info:', error)
+  })
+})
+watch(affiliatePublishers, (publishers) => {
+  publishers.forEach(({ wallet }) => {
+    metadataStore.lazyFetchLikerInfoByWalletAddress(wallet).catch(() => { /* ignore */ })
+  })
 })
 
 watch(queryOwnerWallet, async (wallet) => {
@@ -1076,7 +1210,13 @@ async function fetchItems({ lazy = false, isRefresh = false } = {}): Promise<boo
   if (isSearchMode.value) {
     try {
       const [type, searchTerm] = searchQuery.value.split(':', 2)
-      if (type && searchTerm) {
+      if (type === 'affiliate' && searchTerm) {
+        await bookstoreStore.fetchAffiliateBooks(searchTerm, {
+          isRefresh,
+          isLibrary: isLibraryTab.value,
+        })
+      }
+      else if (type && searchTerm) {
         await bookstoreStore.fetchSearchResults(
           type as 'q' | 'author' | 'publisher' | 'owner_wallet' | 'genre',
           searchTerm,

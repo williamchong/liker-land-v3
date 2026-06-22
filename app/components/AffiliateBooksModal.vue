@@ -76,6 +76,17 @@
           class="py-4 text-sm text-muted text-center"
           v-text="$t('tts_samples_section_affiliate_books_modal_empty')"
         />
+
+        <UButton
+          v-if="bookClassIds.length || publishers.length"
+          :to="affiliateStoreRoute"
+          :label="$t('tts_samples_section_affiliate_books_modal_view_all')"
+          color="primary"
+          variant="soft"
+          block
+          trailing-icon="i-material-symbols-arrow-forward-rounded"
+          @click="open = false"
+        />
       </template>
     </template>
   </UModal>
@@ -105,6 +116,10 @@ const publishers = computed(() => publisherWallets.value.map(wallet => ({
 function getPublisherStoreRoute(wallet: string) {
   return localeRoute({ name: 'store', query: { owner_wallet: wallet } })
 }
+
+const affiliateStoreRoute = computed(() =>
+  localeRoute({ name: 'store', query: { affiliate: props.affiliateLikerId } }),
+)
 
 async function loadData() {
   if (config.value || isLoading.value) return

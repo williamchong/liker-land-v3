@@ -62,7 +62,7 @@
             size="xl"
             variant="ghost"
             block
-            :to="localeRoute({ name: 'store' })"
+            :to="backToStoreRoute"
           />
         </template>
         <template
@@ -78,7 +78,7 @@
             :label="$t('claim_page_back_to_bookstore_button_label')"
             size="xl"
             block
-            :to="localeRoute({ name: 'store' })"
+            :to="backToStoreRoute"
           />
         </template>
       </BookLoadingScreen>
@@ -228,6 +228,16 @@ const hasBypassedIndexer = ref(false)
 
 const isPlusPromoBannerVisible = computed(() => {
   return bookInfo.isPlusPromoEnabled.value && !user.value?.isLikerPlus && !isApp.value
+})
+
+// Members who subscribed through an affiliate (including a yearly checkout gift)
+// return to that affiliate's curated store view rather than the bare store, so
+// they discover the books their exclusive voice covers.
+const backToStoreRoute = computed(() => {
+  const affiliateFrom = user.value?.plusAffiliateFrom
+  return localeRoute(affiliateFrom
+    ? { name: 'store', query: { affiliate: affiliateFrom } }
+    : { name: 'store' })
 })
 
 onMounted(async () => {

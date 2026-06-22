@@ -1,3 +1,4 @@
+import type { AffiliatePublicConfig } from '~~/shared/types/affiliate'
 import { getBookstoreScopedKey } from '~~/shared/utils/bookstore'
 
 interface BookstoreSearchOptions {
@@ -340,6 +341,95 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     }
   }
 
+  /* Affiliate Books */
+
+  // Null-prototype: keyed by a raw likerId from the route, so guard against keys
+  // like `__proto__`/`constructor` polluting the prototype or returning inherited members.
+  const affiliateConfigByLikerIdMap = ref<Record<string, AffiliatePublicConfig | null>>(Object.create(null))
+  const getAffiliateConfigByLikerId = computed(() => (likerId: string) => {
+    return affiliateConfigByLikerIdMap.value[likerId] ?? null
+  })
+
+  // The affiliate store view unions the affiliate's hand-picked classIds with the
+  // first page of books from each affiliate publisher wallet, deduped into one
+  // flat list reusing the search-results pipeline. No pagination: publisher
+  // overflow is reached via the per-publisher owner_wallet link in the header.
+  async function fetchAffiliateBooks(likerId: string, { isRefresh = false, isLibrary = false }: BookstoreSearchOptions = {}) {
+    const queryKey = getBookstoreScopedKey(`affiliate:${likerId}`, isLibrary)
+
+    if (!checkAndInitializeSearchState(queryKey, isRefresh)) {
+      return
+    }
+
+    try {
+      const config = await apiFetch<AffiliatePublicConfig>(`/affiliate/${encodeURIComponent(likerId)}`)
+      affiliateConfigByLikerIdMap.value[likerId] = config
+
+      if (!config?.active) {
+        updateSearchResults(queryKey, [], undefined, true)
+        return
+      }
+
+      const nftStore = useNFTStore()
+      const seen = new Set<string>()
+      const items: BookstoreSearchResults['items'] = []
+
+      // Resolve hand-picked classIds (so their titles/covers render and the
+      // getBookstoreSearchResultsByQuery info-filter keeps them) and each
+      // publisher's first page concurrently — the two batches are independent.
+      const [, walletResults] = await Promise.all([
+        Promise.all(config.affiliateClassIds.map(classId =>
+          nftStore.fetchNFTClassAggregatedMetadataById(classId).catch(() => { /* ignore */ }),
+        )),
+        Promise.all(config.affiliatePublisherWallets.map(wallet =>
+          fetchNFTClassesByOwnerWalletAddress(wallet, { limit: 100, isBooksOnly: true }).catch(() => null),
+        )),
+      ])
+
+      // Library gates on isPlusReadingEnabled, absent on indexer-sourced publisher
+      // books; revalidate their bookstore info (queued, fire-and-forget) so the
+      // Plus-reading filter keeps them — isRevalidatingMetadata holds the skeleton.
+      if (isLibrary) {
+        nftStore.revalidateNFTClassAggregatedMetadata(
+          walletResults.flatMap(result => result?.data?.map(nftClass => nftClass.address) ?? []),
+        )
+      }
+
+      config.affiliateClassIds.forEach((rawClassId) => {
+        const classId = normalizeNFTClassId(rawClassId)
+        if (seen.has(classId)) return
+        const info = getBookstoreInfoByNFTClassId.value(classId)
+        if (!info || info.isHidden) return
+        seen.add(classId)
+        items.push({
+          classId,
+          title: info.name,
+          imageUrl: info.thumbnailUrl,
+          isPlusReadingEnabled: info.isPlusReadingEnabled,
+        })
+      })
+
+      // Append the first page of each publisher wallet's books.
+      walletResults.forEach((result) => {
+        result?.data?.forEach((nftClass) => {
+          const classId = normalizeNFTClassId(nftClass.address)
+          if (seen.has(classId)) return
+          seen.add(classId)
+          items.push({
+            classId,
+            title: nftClass.name || '',
+            imageUrl: nftClass.metadata?.image || '',
+          })
+        })
+      })
+
+      updateSearchResults(queryKey, items, undefined, true)
+    }
+    finally {
+      finalizeSearchState(queryKey)
+    }
+  }
+
   /* Staking Books */
 
   const stakingBooksMap = ref<Record<string, StakingBooks>>({})
@@ -442,6 +532,12 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     getBookstoreSearchResultsByQuery,
 
     fetchSearchResults,
+
+    /* Affiliate Books */
+
+    getAffiliateConfigByLikerId,
+
+    fetchAffiliateBooks,
 
     /* Staking Books */
 
