@@ -5,6 +5,7 @@ import { isUploadedBookId } from '~~/shared/utils/uploaded-book'
 
 interface TTSPlayerOptions {
   nftClassId: MaybeRef<string>
+  isLibraryBook?: MaybeRef<boolean>
   onSegmentChange?: (segment: TTSSegment & { index: number, isResync?: boolean }) => void
   onClose?: () => void
 }
@@ -30,6 +31,7 @@ export function useTTSPlayerModal(options: TTSPlayerOptions) {
     bookAuthorName: bookInfo.authorName.value,
     bookLanguage: bookInfo.inLanguage.value,
     nftClassId: toValue(options.nftClassId),
+    isLibraryBook: toValue(options.isLibraryBook),
     segments: ttsSegments.value,
     chapterTitlesBySection: chapterTitlesBySection.value,
     startIndex: startIndex.value,
@@ -40,6 +42,13 @@ export function useTTSPlayerModal(options: TTSPlayerOptions) {
   const overlay = useOverlay()
   const modal = overlay.create(TTSPlayerModal, {
     props: ttsPlayerModalProps.value,
+  })
+
+  // `overlay.create` snapshots props once, but the reader confirms
+  // `isLibraryBook` asynchronously — sync it so an open player doesn't tag TTS
+  // analytics with the stale initial value. Harmless when the modal is closed.
+  watch(() => toValue(options.isLibraryBook), () => {
+    updateTTSPlayerModalProps()
   })
 
   const route = useRoute()
