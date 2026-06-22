@@ -55,6 +55,7 @@ const coupon = computed(() => getRouteQuery('coupon'))
 const isRefreshing = ref(true)
 const isRedirecting = ref(false)
 const isLikerPlus = computed(() => user.value?.isLikerPlus)
+const affiliateFrom = computed(() => user.value?.plusAffiliateFrom)
 // The route `period` query is in SubscriptionPlan form ('yearly'/'monthly')
 // while the session stores LikerPlusStatus ('year'/'month'). Map between them,
 // otherwise the comparison below never matches and the onMounted retry loop
@@ -199,8 +200,18 @@ onMounted(async () => {
       const redirectRoute = accountStore.plusRedirectRoute
 
       if (redirectRoute && redirectRoute.name) {
+        // Book-purchase/upsell: return to the book the user came from.
         accountStore.savePlusRedirectRoute(null)
         await navigateTo(localeRoute(redirectRoute), { replace: true })
+      }
+      else if (affiliateFrom.value) {
+        // Pure member who subscribed through an affiliate: land on the affiliate's
+        // curated store view so the exclusive voice has somewhere to point, instead
+        // of the bare store where every book looks like it has the affiliate voice.
+        await navigateTo(localeRoute({
+          name: 'store',
+          query: { affiliate: affiliateFrom.value },
+        }), { replace: true })
       }
       else {
         isRefreshing.value = false
