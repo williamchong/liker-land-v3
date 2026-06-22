@@ -321,10 +321,11 @@
         <Transition name="reader-load">
           <UButton
             v-if="footnoteReturnCfi && !isReaderLoading"
-            class="absolute bottom-6 left-1/2 -translate-x-1/2 shadow-lg z-10"
+            class="absolute bottom-4.5 left-1/2 -translate-x-1/2 shadow-lg z-10"
             icon="i-material-symbols-u-turn-left-rounded"
             color="neutral"
             variant="solid"
+            size="sm"
             :label="$t('reader_footnote_return_button')"
             @click="handleFootnoteReturn"
           />
@@ -658,6 +659,10 @@ const currentPageHref = ref<string>('')
 const footnoteReturnCfi = ref<string>('')
 // Captured at link-click, confirmed once `relocated` lands on a different page.
 let pendingFootnoteReturnCfi: string | null = null
+function dismissFootnoteReturn() {
+  footnoteReturnCfi.value = ''
+  pendingFootnoteReturnCfi = null
+}
 const currentCfi = useSyncedBookSettings({
   nftClassId: nftClassId.value,
   key: 'cfi',
@@ -993,7 +998,14 @@ async function loadEPub() {
         if (element.tagName === 'A') {
           const href = element.getAttribute('href') || ''
           if (href && !isExternalLink(href)) {
-            pendingFootnoteReturnCfi = currentPageStartCfi.value || currentCfi.value
+            // A further in-book jump while a return is pending/active means the
+            // user is navigating onward — dismiss rather than chain origins.
+            if (footnoteReturnCfi.value || pendingFootnoteReturnCfi) {
+              dismissFootnoteReturn()
+            }
+            else {
+              pendingFootnoteReturnCfi = currentPageStartCfi.value || currentCfi.value || null
+            }
           }
           return
         }
@@ -1404,6 +1416,8 @@ async function setActiveNavItem(item: NavItem, { isSilentError = false } = {}) {
   activeTTSElementIndex.value = undefined
   activeNavItemHref.value = item.href
   isPageLoading.value = true
+  // Explicit TOC navigation isn't a footnote jump; drop any pending return.
+  dismissFootnoteReturn()
 
   let hasDisplayed = await displayRendition(item.href, { isSilentError: true })
   if (hasDisplayed) return
@@ -1700,10 +1714,10 @@ function handleMobileTTSClick() {
 }
 async function handleFootnoteReturn() {
   const target = footnoteReturnCfi.value
-  if (!target) return
+  if (!target || !rendition.value) return
   isPageLoading.value = true
   try {
-    await rendition.value?.display(target)
+    await rendition.value.display(target)
     // Keep the button on failure so the user can retry; clear only on success.
     footnoteReturnCfi.value = ''
   }
