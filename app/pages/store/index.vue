@@ -413,7 +413,6 @@ import { normalizeLikerId } from '~~/shared/utils/liker-id'
 const nuxtApp = useNuxtApp()
 const { t: $t, locale } = useI18n()
 const localeRoute = useLocaleRoute()
-const colorMode = useColorMode()
 const route = useRoute()
 const getRouteBaseNameString = useRouteBaseNameString()
 // /store and /library share this file; the route name selects the mode.
@@ -493,9 +492,9 @@ const affiliateSubscribeRoute = computed(() => localeRoute({
   query: { from: `@${queryAffiliate.value}`, ll_medium: 'affiliate-store' },
 }))
 
-// Match the product page's Plus TTS tag: soft secondary (green) in light mode,
-// theme (cyan) in dark, so the CTA reads as Plus without a sharp fill.
-const plusBannerColor = computed(() => colorMode.value === 'dark' ? 'primary' : 'secondary')
+// Soft secondary (green) so the CTA reads as Plus without a sharp fill. Only
+// non-Plus visitors see this banner, and they're always in light mode.
+const plusBannerColor = 'secondary'
 
 // Only greet actual members, so a shared/bookmarked `welcome` link can't surface
 // the banner for non-subscribers.
