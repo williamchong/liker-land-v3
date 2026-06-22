@@ -5,6 +5,7 @@
     :ui="{
       content: 'sm:max-w-md',
       body: 'flex flex-col gap-6',
+      footer: 'flex justify-center',
     }"
   >
     <template #body>
@@ -76,18 +77,21 @@
           class="py-4 text-sm text-muted text-center"
           v-text="$t('tts_samples_section_affiliate_books_modal_empty')"
         />
-
-        <UButton
-          v-if="bookClassIds.length || publishers.length"
-          :to="affiliateStoreRoute"
-          :label="$t('tts_samples_section_affiliate_books_modal_view_all')"
-          color="primary"
-          variant="soft"
-          block
-          trailing-icon="i-material-symbols-arrow-forward-rounded"
-          @click="open = false"
-        />
       </template>
+    </template>
+
+    <template
+      v-if="bookClassIds.length || publishers.length"
+      #footer
+    >
+      <UButton
+        :to="affiliateStoreRoute"
+        :label="$t('tts_samples_section_affiliate_books_modal_view_all')"
+        color="primary"
+        variant="outline"
+        trailing-icon="i-material-symbols-arrow-forward-rounded"
+        @click="open = false"
+      />
     </template>
   </UModal>
 </template>
