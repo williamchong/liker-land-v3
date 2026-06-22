@@ -205,6 +205,26 @@
     </div>
 
     <main class="section-container flex flex-col items-center grow pt-6 pb-16">
+      <UAlert
+        v-if="isWelcomeBannerVisible"
+        class="w-full mb-8 self-start"
+        color="neutral"
+        variant="soft"
+        icon="i-material-symbols-celebration-rounded"
+        :title="$t('plus_welcome_banner_title')"
+        :description="queryAffiliate && affiliateHasVoices
+          ? $t('plus_welcome_banner_affiliate_description', { name: affiliateDisplayName })
+          : $t('plus_welcome_banner_description')"
+        :close="{ variant: 'ghost', color: 'neutral', ui: { base: 'rounded-full text-theme-black hover:bg-theme-black/10' } }"
+        :ui="{
+          root: 'rounded-xl bg-theme-cyan text-gray-700',
+          title: 'font-bold text-theme-black',
+          description: 'text-gray-700',
+          icon: 'text-theme-black',
+        }"
+        @update:open="handleWelcomeBannerDismiss"
+      />
+
       <section
         v-if="entity && entityDescription"
         class="w-full mb-8 self-start text-left"
@@ -414,8 +434,9 @@ const isMobile = useMediaQuery('(max-width: 425px)')
 const isAdultContentEnabled = useAdultContentSetting()
 const { isApp } = useAppDetection()
 const intercom = useIntercom()
-const { user } = useUserSession()
-const isLikerPlus = computed(() => !!user.value?.isLikerPlus)
+// Effective Plus (canonical flag OR optimistic device-store entitlement) so a
+// just-subscribed member isn't briefly treated as non-Plus before the webhook lands.
+const { isPlusOrDevicePlus } = useDevicePlusEntitlement()
 
 const querySearchTerm = computed(() => getRouteQuery('q', ''))
 const queryAuthorName = computed(() => getRouteQuery('author', ''))
@@ -425,6 +446,8 @@ const queryGenre = computed(() => getRouteQuery('genre', ''))
 // Normalize so a stray leading `@` (manual URL, or `from=@id` reuse) resolves
 // the same as a bare likerId for profile lookup, config fetch, and the subscribe CTA.
 const queryAffiliate = computed(() => normalizeLikerId(getRouteQuery('affiliate', '')))
+// Set by the post-purchase redirect (plus/success) to greet a just-subscribed member.
+const queryWelcome = computed(() => getRouteQuery('welcome', ''))
 
 const ownerWalletInfo = computed(() => {
   if (!queryOwnerWallet.value) return null
@@ -463,7 +486,7 @@ const affiliateHasVoices = computed(() =>
 )
 // Gate on a real voice so we never promise narration the affiliate doesn't offer.
 const isAffiliateCTAVisible = computed(() =>
-  !!queryAffiliate.value && !isLikerPlus.value && affiliateHasVoices.value,
+  !!queryAffiliate.value && !isPlusOrDevicePlus.value && affiliateHasVoices.value,
 )
 const affiliateSubscribeRoute = computed(() => localeRoute({
   name: 'member',
@@ -473,6 +496,14 @@ const affiliateSubscribeRoute = computed(() => localeRoute({
 // Match the product page's Plus TTS tag: soft secondary (green) in light mode,
 // theme (cyan) in dark, so the CTA reads as Plus without a sharp fill.
 const plusBannerColor = computed(() => colorMode.value === 'dark' ? 'primary' : 'secondary')
+
+// Only greet actual members, so a shared/bookmarked `welcome` link can't surface
+// the banner for non-subscribers.
+const isWelcomeBannerVisible = computed(() => !!queryWelcome.value && isPlusOrDevicePlus.value)
+function handleWelcomeBannerDismiss() {
+  const { welcome: _welcome, ...query } = route.query
+  navigateTo(localeRoute({ name: routeName.value, query }), { replace: true })
+}
 
 // Search query key for bookstore store
 const searchQuery = computed(() => {
