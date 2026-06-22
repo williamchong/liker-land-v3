@@ -54,20 +54,18 @@
               v-for="publisher in publishers"
               :key="publisher.wallet"
             >
-              <NuxtLink
+              <UButton
                 :to="getPublisherStoreRoute(publisher.wallet)"
-                class="group flex items-center gap-2 text-sm text-muted"
+                :label="$t('tts_samples_section_affiliate_books_modal_publisher_books', { name: publisher.name })"
+                leading-icon="i-material-symbols-store-outline-rounded"
+                color="neutral"
+                variant="link"
+                :ui="{
+                  base: 'px-0',
+                  label: 'border-b border-current pb-0.5',
+                }"
                 @click="open = false"
-              >
-                <UIcon
-                  name="i-material-symbols-store-outline-rounded"
-                  class="shrink-0 text-dimmed"
-                />
-                <span
-                  class="group-hover:text-primary"
-                  v-text="$t('tts_samples_section_affiliate_books_modal_publisher_books', { name: publisher.name })"
-                />
-              </NuxtLink>
+              />
             </li>
           </ul>
         </section>
