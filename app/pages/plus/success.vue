@@ -20,7 +20,7 @@
       :label="$t('subscription_success_continue_button')"
       color="primary"
       :loading="isRedirecting"
-      @click="redirectToStore"
+      @click="redirectToLibrary"
     />
     <UButton
       v-else
@@ -210,12 +210,12 @@ onMounted(async () => {
         // of the bare store where every book looks like it has the affiliate voice.
         await navigateTo(localeRoute({
           name: 'store',
-          query: { affiliate: affiliateFrom.value },
+          query: { affiliate: affiliateFrom.value, welcome: '1' },
         }), { replace: true })
       }
       else {
         isRefreshing.value = false
-        setTimeout(redirectToStore, 1000)
+        setTimeout(redirectToLibrary, 1000)
       }
     }
   }
@@ -228,10 +228,15 @@ onMounted(async () => {
   }
 })
 
-async function redirectToStore() {
+async function redirectToLibrary() {
+  // Guard against a double fire — the auto setTimeout and a user button click can
+  // both call this, overlapping navigations or stranding the redirecting state.
+  if (isRedirecting.value) return
   isRedirecting.value = true
   try {
-    await navigateTo(localeRoute({ name: 'store' }))
+    // Library (not store) surfaces the books they can now read with Plus;
+    // `welcome` triggers the greeting banner there.
+    await navigateTo(localeRoute({ name: 'library', query: { welcome: '1' } }))
   }
   catch (error) {
     await handleError(error)
