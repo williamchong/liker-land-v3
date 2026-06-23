@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { Writable } from 'node:stream'
 import type { H3Event } from 'h3'
+import type { AffiliateCustomVoice } from '~~/server/types/affiliate'
 import { TTSQuerySchema } from '~~/server/schemas/tts'
 import { computeLegacyTTSTextSig, computeTTSTextSig, decodeAffiliateVoiceId, isAffiliateVoiceId, TTS_PREVIEW_NFT_CLASS_ID } from '~~/shared/utils/tts-sig'
 import { buildTTSServerTiming, TTS_SERVER_SOURCE, type TTSServerSource } from '~~/shared/utils/tts-server-timing'
@@ -165,28 +166,43 @@ export default defineEventHandler(async (event) => {
     if (!isLikerPlus) {
       throw createError({ status: 402, message: 'REQUIRE_LIKER_PLUS' })
     }
-    const plusAffiliateFrom = session.user.plusAffiliateFrom
-    if (!plusAffiliateFrom) {
-      throw createError({ status: 403, message: 'NO_PLUS_AFFILIATE' })
-    }
     if (!affiliateVoiceSlot) {
       throw createError({ status: 400, message: 'INVALID_AFFILIATE_VOICE' })
     }
-    const affiliateConfig = await getAffiliateConfig(plusAffiliateFrom)
-    if (!affiliateConfig?.active) {
-      throw createError({ status: 403, message: 'AFFILIATE_INACTIVE' })
+    // Resolve across every source the user may use — their own publisher voices
+    // and the affiliate they were referred by. Ownership is gated at the
+    // reader-page level; the scope check is a sanity boundary to stop an
+    // arbitrary book from riding an affiliate voice URL.
+    const sources = await getUserAffiliateSources(session.user)
+    // Resolve the requested slot in each source, then keep only those whose config
+    // scopes this book. Voice ids are globally unique across affiliates, so at most
+    // one source should own a slot for a given book.
+    const slotMatches = sources.flatMap((source) => {
+      const voice = source.config.customVoices.find(v => v.id === affiliateVoiceSlot)
+      return voice?.providerVoiceId ? [{ source, voice }] : []
+    })
+    const inScopeVoices: AffiliateCustomVoice[] = []
+    for (const { source, voice } of slotMatches) {
+      if (await isBookInAffiliateVoiceScope(source.config, nftClassId)) {
+        inScopeVoices.push(voice)
+      }
     }
-    // Ownership is gated at the reader-page level; this check is a sanity
-    // boundary to stop an arbitrary book from riding an affiliate voice URL.
-    if (!(await isBookInAffiliateVoiceScope(affiliateConfig, nftClassId))) {
-      throw createError({ status: 403, message: 'BOOK_NOT_IN_AFFILIATE' })
+    // Fail loud only when the in-scope sources disagree on the provider voice — an
+    // out-of-scope duplicate slot must not block a voice that legitimately scopes
+    // this book. Uniqueness should hold upstream, so this guards a broken invariant.
+    if (new Set(inScopeVoices.map(voice => voice.providerVoiceId)).size > 1) {
+      throw createError({ status: 409, message: 'AFFILIATE_VOICE_AMBIGUOUS' })
     }
-    const affiliateVoice = affiliateConfig.customVoices.find(v => v.id === affiliateVoiceSlot)
-    if (!affiliateVoice?.providerVoiceId) {
-      throw createError({ status: 404, message: 'AFFILIATE_VOICE_NOT_FOUND' })
+    const matchedVoice = inScopeVoices[0]
+    if (!matchedVoice) {
+      // A slot match that survived nowhere means the book is out of scope; no slot
+      // match at all means the voice id is unknown to this user's sources.
+      throw createError(slotMatches.length
+        ? { status: 403, message: 'BOOK_NOT_IN_AFFILIATE' }
+        : { status: 404, message: 'AFFILIATE_VOICE_NOT_FOUND' })
     }
-    customMiniMaxVoiceId = affiliateVoice.providerVoiceId
-    voiceDisplayName = affiliateVoice.name
+    customMiniMaxVoiceId = matchedVoice.providerVoiceId
+    voiceDisplayName = matchedVoice.name
     provider = new MinimaxTTSProvider()
   }
   else if (isCustomVoice) {
