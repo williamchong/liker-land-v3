@@ -11,8 +11,12 @@
       @submit.prevent="handleConnect({ id: 'magic', email: normalizeEmail(emailInput) })"
     >
       <UInput
+        id="email"
         v-model="emailInput"
         type="email"
+        name="email"
+        autocomplete="email"
+        autocapitalize="off"
         :placeholder="$t('login_panel_email_placeholder')"
         size="lg"
         @input.once="useLogEvent('login_panel_email_input')"
