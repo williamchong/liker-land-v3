@@ -48,21 +48,21 @@
         </div>
         <div
           v-else-if="queryAffiliate"
-          class="flex items-center gap-3 min-w-0 flex-1"
+          class="flex items-center min-w-0 ring-inset ring-2 ring-theme-black dark:ring-muted bg-(--app-bg) rounded-full"
         >
           <UAvatar
             :src="affiliateAvatarSrc"
             :alt="affiliateDisplayName"
             icon="i-material-symbols-person-2-rounded"
-            size="lg"
+            :ui="{ root: 'size-8 tablet:size-9 border border-2 border-theme-black dark:border-muted' }"
           />
-          <div class="flex flex-col min-w-0 flex-1">
-            <p
-              class="text-xs text-muted uppercase tracking-wide"
+          <div class="flex flex-col justify-center min-w-0 pt-0.5 pl-2 pr-4">
+            <span
+              class="text-[0.625rem] tablet:text-xs text-muted uppercase tracking-wide leading-none"
               v-text="$t('store_affiliate_prefix')"
             />
             <h1
-              class="text-xl laptop:text-2xl font-bold text-default truncate"
+              class="-mt-1 font-bold text-sm tablet:text-default truncate"
               v-text="affiliateDisplayName"
             />
           </div>
@@ -197,17 +197,60 @@
       </div>
     </header>
 
-    <div
-      v-if="isLibraryTab && !isSearchMode && !entity"
-      class="section-container"
+    <!-- Alerts section, don't put them in <main/> -->
+    <section
+      v-if="isLibraryIntroBannerVisible || isAffiliateCTAVisible || isWelcomeBannerVisible"
+      class="section-container flex flex-col gap-2"
     >
-      <LibraryIntroBanner />
-    </div>
+      <LibraryIntroBanner v-if="isLibraryIntroBannerVisible" />
 
-    <main class="section-container flex flex-col items-center grow pt-6 pb-16">
+      <!--
+      Prompt non-Plus visitors to subscribe through this affiliate
+      to unlock the exclusive voice these curated books can be read with.
+      -->
+      <UAlert
+        v-if="isAffiliateCTAVisible"
+        color="neutral"
+        variant="subtle"
+        :title="$t('store_affiliate_cta_title', { name: affiliateDisplayName })"
+        :description="$t('store_affiliate_cta_description', { name: affiliateDisplayName })"
+        :actions="[
+          {
+            label: $t('store_affiliate_cta_button'),
+            color: 'primary',
+            to: affiliateSubscribeRoute,
+          },
+        ]"
+        :style="{ '--backdrop-image': `url(${affiliateCTABackdropImageSrc})` }"
+        :ui="{
+          root: 'max-phone:flex-row-reverse affiliate-cta-banner bg-cover laptop:bg-size-[50%] bg-no-repeat bg-right rounded-xl',
+          title: 'text-highlighted text-lg font-bold',
+        }"
+      >
+        <template #leading>
+          <div class="relative">
+            <UAvatar
+              :src="affiliateAvatarSrc"
+              :alt="affiliateDisplayName"
+              icon="i-material-symbols-person-2-rounded"
+              :ui="{
+                root: 'size-14 phone:size-18',
+                image: 'border border-2 border-theme-cyan',
+              }"
+            />
+            <!-- For deco -->
+            <UAvatar
+              class="absolute -bottom-0.5 -right-0.5 bg-theme-black"
+              icon="i-material-symbols-graphic-eq-rounded"
+              size="xs"
+              :ui="{ icon: 'text-theme-cyan' }"
+            />
+          </div>
+        </template>
+      </UAlert>
+
       <UAlert
         v-if="isWelcomeBannerVisible"
-        class="w-full mb-8 self-start"
         color="neutral"
         variant="soft"
         icon="i-material-symbols-celebration-rounded"
@@ -215,16 +258,70 @@
         :description="queryAffiliate && affiliateHasVoices
           ? $t('plus_welcome_banner_affiliate_description', { name: affiliateDisplayName })
           : $t('plus_welcome_banner_description')"
-        :close="{ variant: 'ghost', color: 'neutral', ui: { base: 'rounded-full text-theme-black hover:bg-theme-black/10' } }"
+        :close="{
+          variant: 'soft',
+          color: 'neutral',
+          ui: { base: 'rounded-full' },
+        }"
+        :style="{ '--backdrop-image': `url(${plusWelcomeBannerBackdropImageSrc})` }"
         :ui="{
-          root: 'rounded-xl bg-theme-cyan text-gray-700',
-          title: 'font-bold text-theme-black',
-          description: 'text-gray-700',
-          icon: 'text-theme-black',
+          root: 'plus-welcome-banner items-center text-theme-black bg-cover laptop:bg-size-[50%] bg-no-repeat bg-right rounded-xl',
+          title: 'text-lg font-bold',
         }"
         @update:open="handleWelcomeBannerDismiss"
+      >
+        <template #leading>
+          <UIcon
+            name="i-material-symbols-celebration-rounded"
+            class="size-8"
+          />
+
+          <!-- Plus deco -->
+          <img
+            :class="[
+              'absolute',
+              'right-1/2', 'phone:right-0',
+              'w-12',
+              'phone:mr-10',
+              'opacity-35', 'phone:opacity-50',
+              'scale-700', 'phone:scale-500',
+              'origin-center', 'phone:origin-right',
+              'mix-blend-multiply',
+            ]"
+            :src="plusLogoSrc"
+          >
+        </template>
+      </UAlert>
+    </section>
+
+    <!--
+    Affiliate publisher drill-down: header chrome, not a grid section.
+    The affiliate view loads only each publisher's first page,
+    so link to the full owner_wallet listing.
+    -->
+    <section
+      v-if="queryAffiliate && affiliatePublishers.length"
+      class="flex flex-col items-center w-full mt-6 pb-6"
+    >
+      <h2
+        class="mb-2 text-xl text-highlighted font-bold"
+        v-text="$t('store_affiliate_publishers_label')"
       />
 
+      <ul class="flex flex-wrap gap-2">
+        <li
+          v-for="publisher in affiliatePublishers"
+          :key="publisher.wallet"
+        >
+          <PillButton
+            :label="publisher.name"
+            :to="localeRoute({ name: routeName, query: { owner_wallet: publisher.wallet } })"
+          />
+        </li>
+      </ul>
+    </section>
+
+    <main class="section-container flex flex-col items-center grow pt-6 pb-16">
       <section
         v-if="entity && entityDescription"
         class="w-full mb-8 self-start text-left"
@@ -240,48 +337,6 @@
           />
         </ExpandableContent>
       </section>
-
-      <!-- Affiliate publisher drill-down: header chrome, not a grid section. The
-        affiliate view loads only each publisher's first page, so link to the
-        full owner_wallet listing. -->
-      <section
-        v-if="queryAffiliate && affiliatePublishers.length"
-        class="w-full mb-8 self-start text-left flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted"
-      >
-        <span
-          class="font-bold text-highlighted"
-          v-text="$t('store_affiliate_publishers_label')"
-        />
-        <NuxtLink
-          v-for="publisher in affiliatePublishers"
-          :key="publisher.wallet"
-          :to="localeRoute({ name: routeName, query: { owner_wallet: publisher.wallet } })"
-          class="group inline-flex items-center gap-1 hover:text-primary"
-        >
-          <span v-text="publisher.name" />
-          <UIcon
-            name="i-material-symbols-arrow-forward-rounded"
-            class="size-4"
-          />
-        </NuxtLink>
-      </section>
-
-      <!-- Prompt non-Plus visitors to subscribe through this affiliate to unlock
-        the exclusive voice these curated books can be read with. -->
-      <UAlert
-        v-if="isAffiliateCTAVisible"
-        class="w-full mb-8 self-start"
-        :color="plusBannerColor"
-        variant="subtle"
-        icon="i-material-symbols-graphic-eq-rounded"
-        :title="$t('store_affiliate_cta_title', { name: affiliateDisplayName })"
-        :description="$t('store_affiliate_cta_description', { name: affiliateDisplayName })"
-        :actions="[{
-          label: $t('store_affiliate_cta_button'),
-          color: plusBannerColor,
-          to: affiliateSubscribeRoute,
-        }]"
-      />
 
       <div
         v-if="isLoadingInitialItems"
@@ -353,6 +408,12 @@
         />
       </div>
 
+      <h2
+        v-if="queryAffiliate && itemsCount > 0"
+        class="mb-6 text-xl text-highlighted font-bold"
+        v-text="$t('store_affiliate_books_label')"
+      />
+
       <ul
         v-if="itemsCount > 0"
         :class="[
@@ -409,6 +470,10 @@ import { FetchError } from 'ofetch'
 import { getGenreI18nKey } from '~~/shared/constants/book-categories'
 import { MAX_BOOKSTORE_PAGE_SIZE, isBookstoreBuiltInListType } from '~~/shared/utils/bookstore'
 import { normalizeLikerId } from '~~/shared/utils/liker-id'
+
+import affiliateCTABackdropImageSrc from '~/assets/images/affiliate-cta-banner-backdrop.webp'
+import plusLogoSrc from '~/assets/images/plus-logo.svg?url'
+import plusWelcomeBannerBackdropImageSrc from '~/assets/images/plus-welcome-banner-backdrop.webp'
 
 const nuxtApp = useNuxtApp()
 const { t: $t, locale } = useI18n()
@@ -492,10 +557,6 @@ const affiliateSubscribeRoute = computed(() => localeRoute({
   query: { from: `@${queryAffiliate.value}`, ll_medium: 'affiliate-store' },
 }))
 
-// Soft secondary (green) so the CTA reads as Plus without a sharp fill. Only
-// non-Plus visitors see this banner, and they're always in light mode.
-const plusBannerColor = 'secondary'
-
 // Only greet actual members, so a shared/bookmarked `welcome` link can't surface
 // the banner for non-subscribers.
 const isWelcomeBannerVisible = computed(() => !!queryWelcome.value && isPlusOrDevicePlus.value)
@@ -522,6 +583,7 @@ const localizedGenreName = computed(() => {
 })
 
 const isSearchMode = computed(() => !!searchQuery.value)
+const isLibraryIntroBannerVisible = computed(() => isLibraryTab.value && !isSearchMode.value && !entity.value)
 
 const STAKING_SORT_TAG_PREFIX = 'staking-'
 const STAKING_SORT_OPTIONS = [
@@ -1471,3 +1533,33 @@ async function handleSearchSubmit() {
   await navigateTo({ query: { [query]: searchInputValue.value } })
 }
 </script>
+
+<style scoped>
+.affiliate-cta-banner {
+  --banner-tint: #f0fdf9;
+  background-color: var(--banner-tint);
+  background-image:
+    linear-gradient(
+      to right,
+      var(--banner-tint),
+      color-mix(in oklab, var(--banner-tint) 85%, transparent)
+    ),
+    var(--backdrop-image);
+}
+
+.dark .affiliate-cta-banner {
+  --banner-tint: #052e2a;
+}
+
+.plus-welcome-banner {
+  --banner-tint: var(--color-theme-cyan);
+  background-color: var(--banner-tint);
+  background-image:
+    linear-gradient(
+      to right,
+      var(--banner-tint),
+      color-mix(in oklab, var(--banner-tint) 85%, transparent)
+    ),
+    var(--backdrop-image);
+}
+</style>
