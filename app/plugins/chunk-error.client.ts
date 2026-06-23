@@ -1,4 +1,4 @@
-import { useSessionStorage } from '@vueuse/core'
+import { useLocalStorage } from '@vueuse/core'
 
 const CHUNK_ERROR_PATTERNS = [
   'Failed to fetch dynamically imported module',
@@ -6,12 +6,22 @@ const CHUNK_ERROR_PATTERNS = [
   'Importing a module script failed',
 ]
 
-const RELOAD_COOLDOWN_MS = 10_000
 const RELOAD_FLUSH_DELAY_MS = 200
+const SW_UPDATE_TIMEOUT_MS = 1500
+// Treat chunk errors within this window as one incident. The ladder (soft reload
+// → cache purge → give up) advances one step per error inside the window, and
+// resets once a fresh error lands after it — so an unrelated failure days later
+// starts over from a soft reload rather than going straight to the cache purge.
+const INCIDENT_WINDOW_MS = 5 * 60_000
 
 export default defineNuxtPlugin((nuxtApp) => {
-  const lastReloadAt = useSessionStorage<number>('chunk_error_reload', 0)
-  const hasEscalated = useSessionStorage<boolean>('chunk_error_escalated', false)
+  // localStorage, not sessionStorage: the native WebView keeps its service worker
+  // and storage when the user force-quits, so a relaunch re-serves the same stale
+  // "/" shell referencing deleted chunk hashes. Persisting the ladder lets a
+  // relaunch advance to the cache purge instead of restarting from a soft reload
+  // that can't fix it — otherwise "kill the app" never recovers, only a reinstall.
+  const firstErrorAt = useLocalStorage<number>('chunk_error_first_at', 0)
+  const reloadCount = useLocalStorage<number>('chunk_error_reloads', 0)
   const pwa = usePWA()
   let hasHandled = false
 
@@ -21,7 +31,14 @@ export default defineNuxtPlugin((nuxtApp) => {
     if (hasHandled) return
     hasHandled = true
 
-    const isLooping = Date.now() - lastReloadAt.value < RELOAD_COOLDOWN_MS
+    const now = Date.now()
+    // Fresh incident if the previous chunk error was long ago — reset the ladder.
+    if (now - firstErrorAt.value > INCIDENT_WINDOW_MS) {
+      firstErrorAt.value = now
+      reloadCount.value = 0
+    }
+    const attempt = reloadCount.value
+
     let hadSW = false
     try {
       hadSW = !!(await navigator.serviceWorker?.getRegistration())
@@ -39,17 +56,22 @@ export default defineNuxtPlugin((nuxtApp) => {
         had_sw: hadSW,
       })
 
-    if (isLooping && hasEscalated.value) {
+    // Third error in the incident: both the soft reload and the cache purge
+    // failed (e.g. the network is genuinely unreachable). Stop reloading and
+    // surface the error instead of looping.
+    if (attempt >= 2) {
       logChunkError(false, true)
       console.error('[chunk-error] already escalated, surfacing error', error)
       return
     }
 
-    if (isLooping) {
-      // Cooperative reload didn't fix it — purge SW + caches and force a clean
-      // fetch. Targets iOS WebKit where the cached "/" shell keeps re-serving
-      // references to deleted chunk hashes after deploy.
-      hasEscalated.value = true
+    // Advance the ladder for the two reload branches below (give-up returned above).
+    reloadCount.value = attempt + 1
+
+    if (attempt >= 1) {
+      // Soft reload didn't fix it — purge SW + caches and force a clean fetch.
+      // Targets iOS WebKit where the cached "/" shell (NetworkFirst document
+      // cache) keeps re-serving references to deleted chunk hashes after deploy.
       logChunkError(true, true)
       try {
         const regs = (await navigator.serviceWorker?.getRegistrations()) ?? []
@@ -62,26 +84,31 @@ export default defineNuxtPlugin((nuxtApp) => {
       }
       setTimeout(() => {
         const url = new URL(window.location.href)
-        url.searchParams.set('_swrefresh', String(Date.now()))
+        url.searchParams.set('_swrefresh', String(now))
         window.location.replace(url.toString())
       }, RELOAD_FLUSH_DELAY_MS)
       return
     }
 
-    lastReloadAt.value = Date.now()
+    // First error: activate any newly deployed worker, then reload once it has
+    // claimed the page (controllerchange) — reloading before then would just
+    // re-load the same stale build. If no worker is waiting it never fires, so a
+    // timeout forces the reload and we never strand on the blank page.
     logChunkError(true, false)
-    // Give PostHog/GA a window to flush the event before navigating away
-    setTimeout(async () => {
-      try {
-        if (pwa?.updateServiceWorker) {
-          await pwa.updateServiceWorker(true)
-          return
-        }
+    setTimeout(() => {
+      let reloaded = false
+      const reload = () => {
+        if (reloaded) return
+        reloaded = true
+        window.location.reload()
       }
-      catch (e) {
+      navigator.serviceWorker?.addEventListener('controllerchange', reload, { once: true })
+      // .then() defers the call so a synchronous throw also lands in .catch,
+      // otherwise it would skip the timeout fallback below and strand the page.
+      Promise.resolve().then(() => pwa?.updateServiceWorker?.(false)).catch((e) => {
         console.warn('[chunk-error] updateServiceWorker failed', e)
-      }
-      window.location.reload()
+      })
+      setTimeout(reload, SW_UPDATE_TIMEOUT_MS)
     }, RELOAD_FLUSH_DELAY_MS)
   }
 
