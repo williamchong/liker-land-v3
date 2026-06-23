@@ -47,7 +47,7 @@
           </div>
         </div>
         <div
-          v-else-if="queryAffiliate"
+          v-else-if="queryAffiliate && !isAffiliateNotFound"
           class="flex items-center min-w-0 ring-inset ring-2 ring-theme-black dark:ring-muted bg-(--app-bg) rounded-full"
         >
           <UAvatar
@@ -339,7 +339,32 @@
       </section>
 
       <div
-        v-if="isLoadingInitialItems"
+        v-if="isAffiliateNotFound"
+        class="flex flex-col items-center m-auto py-16 text-center"
+      >
+        <UIcon
+          class="opacity-20 mb-4"
+          name="i-material-symbols-person-off-rounded"
+          size="128"
+        />
+        <h2
+          class="text-xl font-bold text-highlighted mb-2"
+          v-text="$t('store_affiliate_not_found_title')"
+        />
+        <p
+          class="text-muted mb-4"
+          v-text="$t('store_affiliate_not_found_description')"
+        />
+        <UButton
+          :label="$t('store_affiliate_not_found_back_button')"
+          :to="localeRoute({ name: routeName })"
+          color="primary"
+          trailing-icon="i-material-symbols-arrow-forward-rounded"
+        />
+      </div>
+
+      <div
+        v-else-if="isLoadingInitialItems"
         class="flex justify-center py-48"
       >
         <UIcon
@@ -557,6 +582,29 @@ const affiliateSubscribeRoute = computed(() => localeRoute({
   query: { from: `@${queryAffiliate.value}`, ll_medium: 'affiliate-store' },
 }))
 
+// Resolve the affiliate's profile during SSR so its display name and avatar land
+// in the title/OG tags (the watcher-based client fetch happens too late for that),
+// and detect an invalid affiliate id (404) to render a not-found state. Populates
+// the shared metadata store, so the client hydrates from the payload without refetching.
+const { data: isAffiliateLookupNotFound } = await useAsyncData(
+  'store-affiliate-info',
+  async () => {
+    const likerId = queryAffiliate.value
+    if (!likerId) return false
+    try {
+      await metadataStore.lazyFetchLikerInfoById(likerId)
+      return false
+    }
+    catch (error) {
+      if (error instanceof FetchError && error.statusCode === 404) return true
+      console.error('Failed to fetch affiliate info:', error)
+      return false
+    }
+  },
+  { watch: [queryAffiliate] },
+)
+const isAffiliateNotFound = computed(() => !!queryAffiliate.value && !!isAffiliateLookupNotFound.value)
+
 // Only greet actual members, so a shared/bookmarked `welcome` link can't surface
 // the banner for non-subscribers.
 const isWelcomeBannerVisible = computed(() => queryWelcome.value === '1' && isPlusOrDevicePlus.value)
@@ -767,6 +815,9 @@ const tagName = computed(() => {
 const searchModeContext = computed(() => {
   if (!isSearchMode.value) return null
   if (queryAffiliate.value) {
+    // Suppress affiliate chrome/title for an unknown id so the raw liker id never
+    // surfaces as a name; the page falls back to the generic store title instead.
+    if (isAffiliateNotFound.value) return null
     return {
       label: affiliateDisplayName.value,
       titlePrefix: $t('store_affiliate_prefix'),
@@ -874,6 +925,10 @@ const ogTitle = computed(() => {
 })
 
 const ogImage = computed(() => {
+  // Surface the affiliate's avatar on their curated store link when resolved.
+  if (queryAffiliate.value && affiliateAvatarSrc.value) {
+    return affiliateAvatarSrc.value
+  }
   const tab = isLibraryTab.value ? 'library' : 'store'
   return `${runtimeConfig.public.baseURL}/images/og/${tab}.jpg`
 })
@@ -1067,7 +1122,7 @@ useHead(() => {
   const meta = []
   const script = []
 
-  if (isSearchResultEmpty.value) {
+  if (isSearchResultEmpty.value || isAffiliateNotFound.value) {
     meta.push({
       name: 'robots',
       content: 'noindex, nofollow',
@@ -1184,13 +1239,8 @@ watch([querySearchTerm, queryAuthorName, queryPublisherName, queryOwnerWallet, q
   }
 })
 
-// Resolve the affiliate's own profile (header) and its publishers' names (links).
-watchImmediate(queryAffiliate, async (likerId) => {
-  if (!likerId) return
-  await metadataStore.lazyFetchLikerInfoById(likerId).catch((error) => {
-    console.error('Failed to fetch affiliate info:', error)
-  })
-})
+// The affiliate's own profile (header/title/OG) is resolved by the SSR-aware
+// useAsyncData above; here we only resolve its publishers' names (links).
 // Watch the raw wallet list, not affiliatePublishers — that computed reads each
 // publisher's liker info, so it recomputes as profiles load, re-running this
 // fetch loop (lazyFetch has no in-flight dedupe → duplicate concurrent requests).
