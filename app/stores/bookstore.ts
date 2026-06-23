@@ -120,7 +120,12 @@ export const useBookstoreStore = defineStore('bookstore', () => {
 
   const bookstoreCMSTagsMapById = ref<Record<string, BookstoreCMSTag>>({})
   const bookstoreCMSTagIds = ref<string[]>([])
-  const bookstoreCMSTags = computed(() => bookstoreCMSTagIds.value.map(tagId => bookstoreCMSTagsMapById.value[tagId]!))
+  // Drop ids missing from the map: persisted ids and the persisted map can desync
+  // (older build, partial write, edited storage), and an undefined entry here
+  // crashes consumers that read tag.isPublic / tag.isForLibrary.
+  const bookstoreCMSTags = computed(() => bookstoreCMSTagIds.value
+    .map(tagId => bookstoreCMSTagsMapById.value[tagId])
+    .filter((tag): tag is BookstoreCMSTag => !!tag))
   const isFetchingBookstoreCMSTags = ref(false)
   const hasFetchedBookstoreCMSTags = ref(false)
 
