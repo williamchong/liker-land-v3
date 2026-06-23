@@ -1,5 +1,5 @@
 import type { AffiliatePublicConfig } from '~~/shared/types/affiliate'
-import { getAffiliateConfig, getAffiliatePlusDiscountAllowed } from '~~/server/utils/affiliate'
+import { getAffiliateConfig, getAffiliatePlusDiscountAllowed, toPublicAffiliateVoices } from '~~/server/utils/affiliate'
 import { fetchCachedNFTClassAggregatedMetadata } from '~~/server/utils/likecoin-nft'
 
 export default defineEventHandler(async (event): Promise<AffiliatePublicConfig> => {
@@ -45,11 +45,6 @@ export default defineEventHandler(async (event): Promise<AffiliatePublicConfig> 
     isPlusDiscountAllowed,
     affiliateClassIds: config.affiliateClassIds,
     affiliatePublisherWallets: config.affiliatePublisherWallets,
-    customVoices: config.customVoices.map(v => ({
-      id: v.id,
-      name: v.name,
-      language: v.language,
-      avatarUrl: v.avatarUrl,
-    })),
+    customVoices: toPublicAffiliateVoices(config.customVoices),
   }
 })

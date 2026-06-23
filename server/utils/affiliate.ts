@@ -1,4 +1,5 @@
 import type { AffiliateConfig, AffiliateCustomVoice } from '~~/server/types/affiliate'
+import type { AffiliateVoiceData } from '~~/shared/types/custom-voice'
 import { fetchCachedNFTClassAggregatedMetadata } from '~~/server/utils/likecoin-nft'
 import { checkIsEVMAddress, checksumEVMAddress, normalizeNFTClassId } from '~~/shared/utils'
 import { getLikeCoinAPIFetch } from '~~/shared/utils/api'
@@ -86,6 +87,42 @@ async function getAffiliateEntry(likerId: string): Promise<AffiliateEntry | null
 
 export async function getAffiliateConfig(likerId: string): Promise<AffiliateConfig | null> {
   return (await getAffiliateEntry(likerId))?.config ?? null
+}
+
+export interface AffiliateVoiceSourceInternal {
+  likerId: string
+  isSelf: boolean
+  config: AffiliateConfig
+}
+
+// Drop providerVoiceId so only browser-safe voice metadata crosses the API.
+export function toPublicAffiliateVoices(voices: AffiliateCustomVoice[]): AffiliateVoiceData[] {
+  return voices.map(voice => ({
+    id: voice.id,
+    name: voice.name,
+    language: voice.language,
+    avatarUrl: voice.avatarUrl,
+  }))
+}
+
+// The affiliate configs a Plus user may draw voices from: their own publisher
+// config plus the affiliate they were referred by. Both resolve through the
+// existing per-likerId cache, so this adds no new upstream surface.
+export async function getUserAffiliateSources(
+  user: { likerId?: string, plusAffiliateFrom?: string },
+): Promise<AffiliateVoiceSourceInternal[]> {
+  const selfLikerId = user.likerId ? normalizeLikerId(user.likerId) : undefined
+  const referrerLikerId = user.plusAffiliateFrom ? normalizeLikerId(user.plusAffiliateFrom) : undefined
+  const likerIds = [selfLikerId, referrerLikerId]
+    .filter((id, i, arr) => !!id && arr.indexOf(id) === i) as string[]
+  const configs = await Promise.all(likerIds.map(id => getAffiliateConfig(id)))
+  const sources: AffiliateVoiceSourceInternal[] = []
+  likerIds.forEach((likerId, i) => {
+    const config = configs[i]
+    if (!config?.active) return
+    sources.push({ likerId, isSelf: likerId === selfLikerId, config })
+  })
+  return sources
 }
 
 export async function getAffiliatePlusDiscountAllowed(likerId: string): Promise<boolean> {
