@@ -326,6 +326,7 @@
             color="neutral"
             variant="solid"
             size="sm"
+            :disabled="isPageLoading"
             :label="$t('reader_footnote_return_button')"
             @click="handleFootnoteReturn"
           />
@@ -1715,6 +1716,7 @@ function handleMobileTTSClick() {
 async function handleFootnoteReturn() {
   const target = footnoteReturnCfi.value
   if (!target || !rendition.value) return
+  if (isPageLoading.value) return
   isPageLoading.value = true
   try {
     await rendition.value.display(target)
