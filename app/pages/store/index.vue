@@ -46,6 +46,27 @@
             />
           </div>
         </div>
+        <div
+          v-else-if="queryAffiliate"
+          class="flex items-center min-w-0 ring-inset ring-2 ring-theme-black dark:ring-muted bg-(--app-bg) rounded-full"
+        >
+          <UAvatar
+            :src="affiliateAvatarSrc"
+            :alt="affiliateDisplayName"
+            icon="i-material-symbols-person-2-rounded"
+            :ui="{ root: 'size-8 tablet:size-9 border border-2 border-theme-black dark:border-muted' }"
+          />
+          <div class="flex flex-col justify-center min-w-0 pt-0.5 pl-2 pr-4">
+            <span
+              class="text-[0.625rem] tablet:text-xs text-muted uppercase tracking-wide leading-none"
+              v-text="$t('store_affiliate_prefix')"
+            />
+            <h1
+              class="-mt-1 font-bold text-sm tablet:text-default truncate"
+              v-text="affiliateDisplayName"
+            />
+          </div>
+        </div>
         <h1 v-else-if="searchModeContext">
           <PillButton
             is-active
@@ -176,12 +197,129 @@
       </div>
     </header>
 
-    <div
-      v-if="isLibraryTab && !isSearchMode && !entity"
-      class="section-container"
+    <!-- Alerts section, don't put them in <main/> -->
+    <section
+      v-if="isLibraryIntroBannerVisible || isAffiliateCTAVisible || isWelcomeBannerVisible"
+      class="section-container flex flex-col gap-2"
     >
-      <LibraryIntroBanner />
-    </div>
+      <LibraryIntroBanner v-if="isLibraryIntroBannerVisible" />
+
+      <!--
+      Prompt non-Plus visitors to subscribe through this affiliate
+      to unlock the exclusive voice these curated books can be read with.
+      -->
+      <UAlert
+        v-if="isAffiliateCTAVisible"
+        color="neutral"
+        variant="subtle"
+        :title="$t('store_affiliate_cta_title', { name: affiliateDisplayName })"
+        :description="$t('store_affiliate_cta_description', { name: affiliateDisplayName })"
+        :actions="[
+          {
+            label: $t('store_affiliate_cta_button'),
+            color: 'primary',
+            to: affiliateSubscribeRoute,
+          },
+        ]"
+        :style="{ '--backdrop-image': `url(${affiliateCTABackdropImageSrc})` }"
+        :ui="{
+          root: 'max-phone:flex-row-reverse affiliate-cta-banner bg-cover laptop:bg-size-[50%] bg-no-repeat bg-right rounded-xl',
+          title: 'text-highlighted text-lg font-bold',
+        }"
+      >
+        <template #leading>
+          <div class="relative">
+            <UAvatar
+              :src="affiliateAvatarSrc"
+              :alt="affiliateDisplayName"
+              icon="i-material-symbols-person-2-rounded"
+              :ui="{
+                root: 'size-14 phone:size-18',
+                image: 'border border-2 border-theme-cyan',
+              }"
+            />
+            <!-- For deco -->
+            <UAvatar
+              class="absolute -bottom-0.5 -right-0.5 bg-theme-black"
+              icon="i-material-symbols-graphic-eq-rounded"
+              size="xs"
+              :ui="{ icon: 'text-theme-cyan' }"
+            />
+          </div>
+        </template>
+      </UAlert>
+
+      <UAlert
+        v-if="isWelcomeBannerVisible"
+        color="neutral"
+        variant="soft"
+        icon="i-material-symbols-celebration-rounded"
+        :title="$t('plus_welcome_banner_title')"
+        :description="queryAffiliate && affiliateHasVoices
+          ? $t('plus_welcome_banner_affiliate_description', { name: affiliateDisplayName })
+          : $t('plus_welcome_banner_description')"
+        :close="{
+          variant: 'soft',
+          color: 'neutral',
+          ui: { base: 'rounded-full' },
+        }"
+        :style="{ '--backdrop-image': `url(${plusWelcomeBannerBackdropImageSrc})` }"
+        :ui="{
+          root: 'plus-welcome-banner items-center text-theme-black bg-cover laptop:bg-size-[50%] bg-no-repeat bg-right rounded-xl',
+          title: 'text-lg font-bold',
+        }"
+        @update:open="handleWelcomeBannerDismiss"
+      >
+        <template #leading>
+          <UIcon
+            name="i-material-symbols-celebration-rounded"
+            class="size-8"
+          />
+
+          <!-- Plus deco -->
+          <img
+            :class="[
+              'absolute',
+              'right-1/2', 'phone:right-0',
+              'w-12',
+              'phone:mr-10',
+              'opacity-35', 'phone:opacity-50',
+              'scale-700', 'phone:scale-500',
+              'origin-center', 'phone:origin-right',
+              'mix-blend-multiply',
+            ]"
+            :src="plusLogoSrc"
+          >
+        </template>
+      </UAlert>
+    </section>
+
+    <!--
+    Affiliate publisher drill-down: header chrome, not a grid section.
+    The affiliate view loads only each publisher's first page,
+    so link to the full owner_wallet listing.
+    -->
+    <section
+      v-if="queryAffiliate && affiliatePublishers.length"
+      class="flex flex-col items-center w-full mt-6 pb-6"
+    >
+      <h2
+        class="mb-2 text-xl text-highlighted font-bold"
+        v-text="$t('store_affiliate_publishers_label')"
+      />
+
+      <ul class="flex flex-wrap gap-2">
+        <li
+          v-for="publisher in affiliatePublishers"
+          :key="publisher.wallet"
+        >
+          <PillButton
+            :label="publisher.name"
+            :to="localeRoute({ name: routeName, query: { owner_wallet: publisher.wallet } })"
+          />
+        </li>
+      </ul>
+    </section>
 
     <main class="section-container flex flex-col items-center grow pt-6 pb-16">
       <section
@@ -270,6 +408,12 @@
         />
       </div>
 
+      <h2
+        v-if="queryAffiliate && itemsCount > 0"
+        class="mb-6 text-xl text-highlighted font-bold"
+        v-text="$t('store_affiliate_books_label')"
+      />
+
       <ul
         v-if="itemsCount > 0"
         :class="[
@@ -325,6 +469,11 @@ import { FetchError } from 'ofetch'
 
 import { getGenreI18nKey } from '~~/shared/constants/book-categories'
 import { MAX_BOOKSTORE_PAGE_SIZE, isBookstoreBuiltInListType } from '~~/shared/utils/bookstore'
+import { normalizeLikerId } from '~~/shared/utils/liker-id'
+
+import affiliateCTABackdropImageSrc from '~/assets/images/affiliate-cta-banner-backdrop.webp'
+import plusLogoSrc from '~/assets/images/plus-logo.svg?url'
+import plusWelcomeBannerBackdropImageSrc from '~/assets/images/plus-welcome-banner-backdrop.webp'
 
 const nuxtApp = useNuxtApp()
 const { t: $t, locale } = useI18n()
@@ -349,12 +498,20 @@ const isMobile = useMediaQuery('(max-width: 425px)')
 const isAdultContentEnabled = useAdultContentSetting()
 const { isApp } = useAppDetection()
 const intercom = useIntercom()
+// Effective Plus (canonical flag OR optimistic device-store entitlement) so a
+// just-subscribed member isn't briefly treated as non-Plus before the webhook lands.
+const { isPlusOrDevicePlus } = useDevicePlusEntitlement()
 
 const querySearchTerm = computed(() => getRouteQuery('q', ''))
 const queryAuthorName = computed(() => getRouteQuery('author', ''))
 const queryPublisherName = computed(() => getRouteQuery('publisher', ''))
 const queryOwnerWallet = computed(() => getRouteQuery('owner_wallet', ''))
 const queryGenre = computed(() => getRouteQuery('genre', ''))
+// Normalize so a stray leading `@` (manual URL, or `from=@id` reuse) resolves
+// the same as a bare likerId for profile lookup, config fetch, and the subscribe CTA.
+const queryAffiliate = computed(() => normalizeLikerId(getRouteQuery('affiliate', '')))
+// Set by the post-purchase redirect (plus/success) to greet a just-subscribed member.
+const queryWelcome = computed(() => getRouteQuery('welcome', ''))
 
 const ownerWalletInfo = computed(() => {
   if (!queryOwnerWallet.value) return null
@@ -367,8 +524,50 @@ const ownerWalletDisplayName = computed(() => {
   return ownerWalletInfo.value?.displayName || ''
 })
 
+const affiliateInfo = computed(() => {
+  if (!queryAffiliate.value) return null
+  return metadataStore.getLikerInfoById(queryAffiliate.value) || null
+})
+const affiliateDisplayName = computed(() => affiliateInfo.value?.displayName || queryAffiliate.value)
+const affiliateAvatarSrc = computed(() => affiliateInfo.value?.avatarSrc || '')
+const affiliateConfig = computed(() => {
+  if (!queryAffiliate.value) return null
+  return bookstoreStore.getAffiliateConfigByLikerId(queryAffiliate.value)
+})
+// Publisher drill-down links rendered as header chrome — the affiliate view only
+// loads each publisher's first page, so these point at the full owner_wallet list.
+const affiliatePublishers = computed(() => {
+  if (!affiliateConfig.value?.active) return []
+  return affiliateConfig.value.affiliatePublisherWallets.map(wallet => ({
+    wallet,
+    name: metadataStore.getLikerInfoByWalletAddress(wallet)?.displayName || shortenWalletAddress(wallet),
+  }))
+})
+// Only affiliates that actually ship a voice can promise voice playback; some
+// affiliates curate books without one.
+const affiliateHasVoices = computed(() =>
+  !!(affiliateConfig.value?.active && affiliateConfig.value.customVoices?.length),
+)
+// Gate on a real voice so we never promise narration the affiliate doesn't offer.
+const isAffiliateCTAVisible = computed(() =>
+  !!queryAffiliate.value && !isPlusOrDevicePlus.value && affiliateHasVoices.value,
+)
+const affiliateSubscribeRoute = computed(() => localeRoute({
+  name: 'member',
+  query: { from: `@${queryAffiliate.value}`, ll_medium: 'affiliate-store' },
+}))
+
+// Only greet actual members, so a shared/bookmarked `welcome` link can't surface
+// the banner for non-subscribers.
+const isWelcomeBannerVisible = computed(() => queryWelcome.value === '1' && isPlusOrDevicePlus.value)
+function handleWelcomeBannerDismiss() {
+  const { welcome: _welcome, ...query } = route.query
+  navigateTo(localeRoute({ name: routeName.value, query }), { replace: true })
+}
+
 // Search query key for bookstore store
 const searchQuery = computed(() => {
+  if (queryAffiliate.value) return `affiliate:${queryAffiliate.value}`
   if (querySearchTerm.value) return `q:${querySearchTerm.value}`
   if (queryAuthorName.value) return `author:${queryAuthorName.value}`
   if (queryPublisherName.value) return `publisher:${queryPublisherName.value}`
@@ -384,6 +583,7 @@ const localizedGenreName = computed(() => {
 })
 
 const isSearchMode = computed(() => !!searchQuery.value)
+const isLibraryIntroBannerVisible = computed(() => isLibraryTab.value && !isSearchMode.value && !entity.value)
 
 const STAKING_SORT_TAG_PREFIX = 'staking-'
 const STAKING_SORT_OPTIONS = [
@@ -566,6 +766,15 @@ const tagName = computed(() => {
 
 const searchModeContext = computed(() => {
   if (!isSearchMode.value) return null
+  if (queryAffiliate.value) {
+    return {
+      label: affiliateDisplayName.value,
+      titlePrefix: $t('store_affiliate_prefix'),
+      description: affiliateHasVoices.value
+        ? $t('store_page_affiliate_description', { name: affiliateDisplayName.value })
+        : $t('store_page_affiliate_description_no_voice', { name: affiliateDisplayName.value }),
+    }
+  }
   if (querySearchTerm.value) {
     return {
       label: querySearchTerm.value,
@@ -645,6 +854,9 @@ const canonicalURL = computed(() => {
   }
   if (queryGenre.value) {
     canonicalParams.set('genre', queryGenre.value)
+  }
+  if (queryAffiliate.value) {
+    canonicalParams.set('affiliate', queryAffiliate.value)
   }
 
   const queryString = canonicalParams.toString()
@@ -800,9 +1012,17 @@ const products = computed<BookstoreItemList>(() => {
 const itemsCount = computed(() => products.value.items.length)
 // In library mode the staking gate hides candidates until their Plus flags are
 // revalidated, so keep the skeleton up while that's in flight to avoid an
-// empty-state flash on cold load.
-const isLoadingInitialItems = computed(() => itemsCount.value === 0
-  && (products.value.isFetchingItems || (isLibraryTab.value && nftStore.isRevalidatingMetadata)))
+// empty-state flash on cold load. Search/affiliate listings fetch only client-side
+// in onMounted, so also treat the not-yet-fetched state as loading — otherwise the
+// SSR/pre-hydration paint shows a blank grid with no spinner until the fetch starts.
+const isLoadingInitialItems = computed(() => (
+  itemsCount.value === 0
+  && (
+    products.value.isFetchingItems
+    || (isSearchMode.value && !products.value.hasFetchedItems)
+    || (isLibraryTab.value && nftStore.isRevalidatingMetadata)
+  )
+))
 const hasMoreItems = computed(() => !!products.value.nextItemsKey || !!products.value.mayHaveMore || !products.value.hasFetchedItems)
 
 const itemsForStructuredData = computed(() => products.value.items.slice(0, Math.min(20, itemsCount.value)))
@@ -958,11 +1178,30 @@ watch(
 )
 
 // Watch for changes in search parameters
-watch([querySearchTerm, queryAuthorName, queryPublisherName, queryOwnerWallet, queryGenre], async () => {
+watch([querySearchTerm, queryAuthorName, queryPublisherName, queryOwnerWallet, queryGenre, queryAffiliate], async () => {
   if (isSearchMode.value) {
     await fetchItems({ lazy: true })
   }
 })
+
+// Resolve the affiliate's own profile (header) and its publishers' names (links).
+watchImmediate(queryAffiliate, async (likerId) => {
+  if (!likerId) return
+  await metadataStore.lazyFetchLikerInfoById(likerId).catch((error) => {
+    console.error('Failed to fetch affiliate info:', error)
+  })
+})
+// Watch the raw wallet list, not affiliatePublishers — that computed reads each
+// publisher's liker info, so it recomputes as profiles load, re-running this
+// fetch loop (lazyFetch has no in-flight dedupe → duplicate concurrent requests).
+watchImmediate(
+  () => (affiliateConfig.value?.active ? affiliateConfig.value.affiliatePublisherWallets : undefined),
+  (wallets) => {
+    wallets?.forEach((wallet) => {
+      metadataStore.lazyFetchLikerInfoByWalletAddress(wallet).catch(() => { /* ignore */ })
+    })
+  },
+)
 
 watch(queryOwnerWallet, async (wallet) => {
   if (wallet) {
@@ -1076,7 +1315,13 @@ async function fetchItems({ lazy = false, isRefresh = false } = {}): Promise<boo
   if (isSearchMode.value) {
     try {
       const [type, searchTerm] = searchQuery.value.split(':', 2)
-      if (type && searchTerm) {
+      if (type === 'affiliate' && searchTerm) {
+        await bookstoreStore.fetchAffiliateBooks(searchTerm, {
+          isRefresh,
+          isLibrary: isLibraryTab.value,
+        })
+      }
+      else if (type && searchTerm) {
         await bookstoreStore.fetchSearchResults(
           type as 'q' | 'author' | 'publisher' | 'owner_wallet' | 'genre',
           searchTerm,
@@ -1302,3 +1547,33 @@ async function handleSearchSubmit() {
   await navigateTo({ query: { [query]: searchInputValue.value } })
 }
 </script>
+
+<style scoped>
+.affiliate-cta-banner {
+  --banner-tint: #f0fdf9;
+  background-color: var(--banner-tint);
+  background-image:
+    linear-gradient(
+      to right,
+      var(--banner-tint),
+      color-mix(in oklab, var(--banner-tint) 85%, transparent)
+    ),
+    var(--backdrop-image);
+}
+
+.dark .affiliate-cta-banner {
+  --banner-tint: #052e2a;
+}
+
+.plus-welcome-banner {
+  --banner-tint: var(--color-theme-cyan);
+  background-color: var(--banner-tint);
+  background-image:
+    linear-gradient(
+      to right,
+      var(--banner-tint),
+      color-mix(in oklab, var(--banner-tint) 85%, transparent)
+    ),
+    var(--backdrop-image);
+}
+</style>

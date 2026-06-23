@@ -20,7 +20,7 @@
       :label="$t('subscription_success_continue_button')"
       color="primary"
       :loading="isRedirecting"
-      @click="redirectToStore"
+      @click="redirectToLibrary"
     />
     <UButton
       v-else
@@ -55,6 +55,7 @@ const coupon = computed(() => getRouteQuery('coupon'))
 const isRefreshing = ref(true)
 const isRedirecting = ref(false)
 const isLikerPlus = computed(() => user.value?.isLikerPlus)
+const affiliateFrom = computed(() => user.value?.plusAffiliateFrom)
 // The route `period` query is in SubscriptionPlan form ('yearly'/'monthly')
 // while the session stores LikerPlusStatus ('year'/'month'). Map between them,
 // otherwise the comparison below never matches and the onMounted retry loop
@@ -199,12 +200,22 @@ onMounted(async () => {
       const redirectRoute = accountStore.plusRedirectRoute
 
       if (redirectRoute && redirectRoute.name) {
+        // Book-purchase/upsell: return to the book the user came from.
         accountStore.savePlusRedirectRoute(null)
         await navigateTo(localeRoute(redirectRoute), { replace: true })
       }
+      else if (affiliateFrom.value) {
+        // Pure member who subscribed through an affiliate: land on the affiliate's
+        // curated store view so the exclusive voice has somewhere to point, instead
+        // of the bare store where every book looks like it has the affiliate voice.
+        await navigateTo(localeRoute({
+          name: 'store',
+          query: { affiliate: affiliateFrom.value, welcome: '1' },
+        }), { replace: true })
+      }
       else {
         isRefreshing.value = false
-        setTimeout(redirectToStore, 1000)
+        setTimeout(redirectToLibrary, 1000)
       }
     }
   }
@@ -217,10 +228,15 @@ onMounted(async () => {
   }
 })
 
-async function redirectToStore() {
+async function redirectToLibrary() {
+  // Guard against a double fire — the auto setTimeout and a user button click can
+  // both call this, overlapping navigations or stranding the redirecting state.
+  if (isRedirecting.value) return
   isRedirecting.value = true
   try {
-    await navigateTo(localeRoute({ name: 'store' }))
+    // Library (not store) surfaces the books they can now read with Plus;
+    // `welcome` triggers the greeting banner there.
+    await navigateTo(localeRoute({ name: 'library', query: { welcome: '1' } }))
   }
   catch (error) {
     await handleError(error)

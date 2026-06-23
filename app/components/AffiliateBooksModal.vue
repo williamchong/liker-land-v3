@@ -5,6 +5,7 @@
     :ui="{
       content: 'sm:max-w-md',
       body: 'flex flex-col gap-6',
+      footer: 'flex justify-center',
     }"
   >
     <template #body>
@@ -53,20 +54,18 @@
               v-for="publisher in publishers"
               :key="publisher.wallet"
             >
-              <NuxtLink
+              <UButton
                 :to="getPublisherStoreRoute(publisher.wallet)"
-                class="group flex items-center gap-2 text-sm text-muted"
+                :label="$t('tts_samples_section_affiliate_books_modal_publisher_books', { name: publisher.name })"
+                leading-icon="i-material-symbols-store-outline-rounded"
+                color="neutral"
+                variant="link"
+                :ui="{
+                  base: 'px-0',
+                  label: 'border-b border-current pb-0.5',
+                }"
                 @click="open = false"
-              >
-                <UIcon
-                  name="i-material-symbols-store-outline-rounded"
-                  class="shrink-0 text-dimmed"
-                />
-                <span
-                  class="group-hover:text-primary"
-                  v-text="$t('tts_samples_section_affiliate_books_modal_publisher_books', { name: publisher.name })"
-                />
-              </NuxtLink>
+              />
             </li>
           </ul>
         </section>
@@ -77,6 +76,20 @@
           v-text="$t('tts_samples_section_affiliate_books_modal_empty')"
         />
       </template>
+    </template>
+
+    <template
+      v-if="bookClassIds.length || publishers.length"
+      #footer
+    >
+      <UButton
+        :to="affiliateStoreRoute"
+        :label="$t('tts_samples_section_affiliate_books_modal_view_all')"
+        color="primary"
+        variant="outline"
+        trailing-icon="i-material-symbols-arrow-forward-rounded"
+        @click="open = false"
+      />
     </template>
   </UModal>
 </template>
@@ -105,6 +118,10 @@ const publishers = computed(() => publisherWallets.value.map(wallet => ({
 function getPublisherStoreRoute(wallet: string) {
   return localeRoute({ name: 'store', query: { owner_wallet: wallet } })
 }
+
+const affiliateStoreRoute = computed(() =>
+  localeRoute({ name: 'store', query: { affiliate: props.affiliateLikerId } }),
+)
 
 async function loadData() {
   if (config.value || isLoading.value) return
