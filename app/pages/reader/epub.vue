@@ -317,6 +317,20 @@
           class="absolute bottom-6 right-12 text-xs text-muted"
           v-text="percentageLabel"
         />
+
+        <Transition name="reader-load">
+          <UButton
+            v-if="footnoteReturnCfi && !isReaderLoading"
+            class="absolute bottom-4.5 left-1/2 -translate-x-1/2 shadow-lg z-10"
+            icon="i-material-symbols-u-turn-left-rounded"
+            color="neutral"
+            variant="solid"
+            size="sm"
+            :disabled="isPageLoading"
+            :label="$t('reader_footnote_return_button')"
+            @click="handleFootnoteReturn"
+          />
+        </Transition>
       </div>
     </div>
 
@@ -644,6 +658,14 @@ const isAtFirstPage = computed(() => {
 const currentPageStartCfi = ref<string>('')
 const currentPageEndCfi = ref<string>('')
 const currentPageHref = ref<string>('')
+// Origin page to return to after a footnote jump; '' hides the return button.
+const footnoteReturnCfi = ref<string>('')
+// Captured at link-click, confirmed once `relocated` lands on a different page.
+let pendingFootnoteReturnCfi: string | null = null
+function dismissFootnoteReturn() {
+  footnoteReturnCfi.value = ''
+  pendingFootnoteReturnCfi = null
+}
 const currentCfi = useSyncedBookSettings({
   nftClassId: nftClassId.value,
   key: 'cfi',
@@ -974,8 +996,20 @@ async function loadEPub() {
     }
     cleanUpClickListener = useEventListener(view.window, 'click', (event) => {
       for (const element of event.composedPath() as HTMLElement[]) {
-        // NOTE: Ignore clicks on links
+        // NOTE: Ignore clicks on links, but record the current page first so a
+        // footnote/in-book jump can offer a way back (confirmed in `relocated`).
         if (element.tagName === 'A') {
+          const href = element.getAttribute('href') || ''
+          if (href && !isExternalLink(href)) {
+            // A further in-book jump while a return is pending/active means the
+            // user is navigating onward — dismiss rather than chain origins.
+            if (footnoteReturnCfi.value || pendingFootnoteReturnCfi) {
+              dismissFootnoteReturn()
+            }
+            else {
+              pendingFootnoteReturnCfi = currentPageStartCfi.value || currentCfi.value || null
+            }
+          }
           return
         }
       }
@@ -1117,6 +1151,17 @@ async function loadEPub() {
     const href = location.start.href
     currentPageHref.value = href
     activeNavItemHref.value = resolveActiveNavItemHref(href)
+    // Footnote return: a just-clicked in-book link drove this relocation; offer
+    // a way back only if we actually landed on a different page. Otherwise drop
+    // the button once the user is back on the origin page by any other means.
+    if (pendingFootnoteReturnCfi) {
+      const origin = pendingFootnoteReturnCfi
+      pendingFootnoteReturnCfi = null
+      footnoteReturnCfi.value = origin && !isSegmentOnCurrentPage(origin) ? origin : ''
+    }
+    else if (footnoteReturnCfi.value && isSegmentOnCurrentPage(footnoteReturnCfi.value)) {
+      footnoteReturnCfi.value = ''
+    }
     // During listen mode `onSegmentChange` owns progress: it writes the
     // segment-accurate position, while `relocated` only sees the page start
     // (and stale data while the modal covers the reader on native).
@@ -1162,6 +1207,13 @@ function openTTSTryModal() {
     onDismiss: () => setTTSQueryParam(false),
   })
 }
+// Absolute (scheme or protocol-relative) links open externally; everything else
+// is an in-book link that epub.js navigates via display().
+const EXTERNAL_LINK_RE = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i
+function isExternalLink(href: string): boolean {
+  return EXTERNAL_LINK_RE.test(href)
+}
+
 function getHrefBasePath(href: string): string {
   return href.split('#')[0] ?? href
 }
@@ -1367,6 +1419,8 @@ async function setActiveNavItem(item: NavItem, { isSilentError = false } = {}) {
   activeTTSElementIndex.value = undefined
   activeNavItemHref.value = item.href
   isPageLoading.value = true
+  // Explicit TOC navigation isn't a footnote jump; drop any pending return.
+  dismissFootnoteReturn()
 
   let hasDisplayed = await displayRendition(item.href, { isSilentError: true })
   if (hasDisplayed) return
@@ -1661,6 +1715,31 @@ function handleMobileTTSClick() {
   }
   onClickTTSPlay()
 }
+async function handleFootnoteReturn() {
+  const target = footnoteReturnCfi.value
+  if (!target || !rendition.value) return
+  if (isPageLoading.value) return
+  isPageLoading.value = true
+  try {
+    await rendition.value.display(target)
+    // Keep the button on failure so the user can retry; clear only on success.
+    footnoteReturnCfi.value = ''
+  }
+  catch (error) {
+    console.error('Failed to return from footnote:', error)
+    toast.add({
+      title: $t('reader_epub_rendition_display_failed'),
+      color: 'error',
+      duration: 3000,
+      progress: false,
+    })
+  }
+  finally {
+    isPageLoading.value = false
+  }
+  useLogEvent('reader_footnote_return', { nft_class_id: nftClassId.value })
+}
+
 function handleLeftArrowButtonClick() {
   turnPageLeft()
   useLogEvent('reader_navigate_button_arrow')

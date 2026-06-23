@@ -770,6 +770,7 @@
   "reader_display_orientation_vertical": "Vertical",
   "reader_display_restore_defaults_button": "Restore Defaults",
   "reader_epub_rendition_display_failed": "The page cannot be displayed.",
+  "reader_footnote_return_button": "Return to reading",
   "reader_menu_button": "Reader Menu",
   "reader_page_input_label": "Page number",
   "reader_page_mode_dual": "Two-page view",
