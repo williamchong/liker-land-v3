@@ -1012,9 +1012,17 @@ const products = computed<BookstoreItemList>(() => {
 const itemsCount = computed(() => products.value.items.length)
 // In library mode the staking gate hides candidates until their Plus flags are
 // revalidated, so keep the skeleton up while that's in flight to avoid an
-// empty-state flash on cold load.
-const isLoadingInitialItems = computed(() => itemsCount.value === 0
-  && (products.value.isFetchingItems || (isLibraryTab.value && nftStore.isRevalidatingMetadata)))
+// empty-state flash on cold load. Search/affiliate listings fetch only client-side
+// in onMounted, so also treat the not-yet-fetched state as loading — otherwise the
+// SSR/pre-hydration paint shows a blank grid with no spinner until the fetch starts.
+const isLoadingInitialItems = computed(() => (
+  itemsCount.value === 0
+  && (
+    products.value.isFetchingItems
+    || (isSearchMode.value && !products.value.hasFetchedItems)
+    || (isLibraryTab.value && nftStore.isRevalidatingMetadata)
+  )
+))
 const hasMoreItems = computed(() => !!products.value.nextItemsKey || !!products.value.mayHaveMore || !products.value.hasFetchedItems)
 
 const itemsForStructuredData = computed(() => products.value.items.slice(0, Math.min(20, itemsCount.value)))
