@@ -418,6 +418,7 @@ export const useAccountStore = defineStore('account', () => {
       if (!connector) return
 
       let magicEmailInput: HTMLInputElement | undefined
+      let removeMagicOTPHint: (() => void) | undefined
       if (connectorId === 'magic' && magicEmail) {
         document.getElementById(MAGIC_EMAIL_INPUT_ELEMENT_ID)?.remove()
         magicEmailInput = document.createElement('input')
@@ -426,6 +427,9 @@ export const useAccountStore = defineStore('account', () => {
         magicEmailInput.value = magicEmail
         magicEmailInput.style.display = 'none'
         document.body.appendChild(magicEmailInput)
+        // Magic owns the OTP entry UI; surface a hint above it asking the user
+        // to confirm the address and check spam if the code never arrives.
+        removeMagicOTPHint = showMagicOTPHint($t('login_magic_otp_hint', { email: magicEmail }))
       }
 
       isLoggingIn.value = true
@@ -439,8 +443,9 @@ export const useAccountStore = defineStore('account', () => {
       }
       finally {
         if (connectorId === 'magic') {
-          // Clean up the Magic email input if exists
+          // Clean up the Magic email input and OTP hint if they exist
           magicEmailInput?.remove()
+          removeMagicOTPHint?.()
         }
       }
 
