@@ -619,7 +619,7 @@
   "local_histories_units_title": "Local history units",
   "login_button": "Sign in / Sign up",
   "login_button_app": "Sign in",
-  "login_magic_otp_hint": "Code sent to {email}. Check the address is correct, and look in your spam folder if it doesn't arrive.",
+  "login_magic_otp_hint": "Code sent to {email}. Check that the address is correct, and look in your spam folder if it doesn't arrive.",
   "login_panel_continue_with_email": "Continue with email",
   "login_panel_email_placeholder": "Email address",
   "login_panel_or_separator": "OR",

@@ -619,7 +619,7 @@
   "local_histories_units_title": "地方誌單位",
   "login_button": "登入 / 註冊",
   "login_button_app": "登入",
-  "login_magic_otp_hint": "驗證碼已寄至 {email}。請確認電郵地址無誤，若未收到請查看垃圾郵件匣。",
+  "login_magic_otp_hint": "驗證碼已寄至 {email}。請確認電子信箱地址無誤，若未收到請查看垃圾郵件匣。",
   "login_panel_continue_with_email": "以電子信箱登入",
   "login_panel_email_placeholder": "電子信箱地址",
   "login_panel_or_separator": "或",

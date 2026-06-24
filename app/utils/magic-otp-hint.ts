@@ -4,13 +4,19 @@ const MAGIC_OTP_HINT_ELEMENT_ID = 'MagicOTPHint'
 // and DOM order (not z-index) decides which wins — see keepOnTop below.
 const MAGIC_OVERLAY_MAX_Z_INDEX = '2147483647'
 
-// Magic SDK renders its email-OTP entry screen inside a full-viewport iframe
-// (`.magic-iframe`, z-index 2147483647) that we can't reach into. This pins a
-// non-interactive hint just above that iframe, so it reads as a note below the
-// OTP card. Returns a cleanup function that removes the hint.
+// Only one hint exists at a time; track its observer so a re-show can tear the
+// previous one down instead of leaking it.
+let activeObserver: MutationObserver | undefined
+
+// Magic renders its email-OTP screen in a full-viewport iframe we can't reach
+// into, so this pins a non-interactive hint above it that reads as a note below
+// the OTP card. Returns a cleanup function.
 export function showMagicOTPHint(message: string): () => void {
   if (!import.meta.client) return () => {}
 
+  // Disconnect a still-running observer first; otherwise its keepOnTop would
+  // re-append the node we're about to remove.
+  activeObserver?.disconnect()
   document.getElementById(MAGIC_OTP_HINT_ELEMENT_ID)?.remove()
 
   const hint = document.createElement('div')
@@ -43,10 +49,12 @@ export function showMagicOTPHint(message: string): () => void {
     }
   }
   const observer = new MutationObserver(keepOnTop)
+  activeObserver = observer
   observer.observe(document.body, { childList: true })
 
   return () => {
     observer.disconnect()
+    if (activeObserver === observer) activeObserver = undefined
     hint.remove()
   }
 }
