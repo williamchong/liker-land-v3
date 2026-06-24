@@ -72,24 +72,12 @@
           </i18n-t>
         </li>
       </template>
-      <li v-if="selectedPlan === undefined || isYearlyPlan">
-        <UIcon name="i-material-symbols-check" />
-        <span
-          v-if="isYearlyPlan"
-          v-text="$t('pricing_page_feature_6_yearly')"
-        />
-        <span
-          v-else
-          v-text="$t('pricing_page_feature_6')"
-        />
-      </li>
     </ul>
   </div>
 </template>
 
 <script lang="ts" setup>
-const props = withDefaults(defineProps<{
-  selectedPlan?: SubscriptionPlan
+withDefaults(defineProps<{
   title?: string
   isTitleCenter?: boolean
   isTitleHidden?: boolean
@@ -104,10 +92,6 @@ const props = withDefaults(defineProps<{
   isCompact: false,
   isAudioHidden: false,
   prependedFeatures: () => [],
-})
-
-const isYearlyPlan = computed(() => {
-  return props.selectedPlan === 'yearly'
 })
 
 const { t: $t } = useI18n()

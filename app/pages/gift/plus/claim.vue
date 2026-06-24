@@ -67,7 +67,6 @@
           v-if="!isExistingPlusMember"
           class="mt-6"
           :title="$t('gift_plus_claim_info_title')"
-          :selected-plan="period"
           :is-title-center="true"
           :is-dark-background="true"
           :is-compact="true"
