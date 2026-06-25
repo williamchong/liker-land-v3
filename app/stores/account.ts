@@ -638,6 +638,21 @@ export const useAccountStore = defineStore('account', () => {
     return inFlightRefresh
   }
 
+  // Resolves the live Magic SDK instance for the current Magic user, ensuring an
+  // active session first. Throws if the user isn't connected through Magic.
+  async function getMagicInstance(): Promise<Magic> {
+    await ensureMagicSession()
+    const connector = connectors.find((c: { id: string }) => c.id === 'magic')
+    if (!connector || !('getMagic' in connector)) {
+      throw createError({
+        statusCode: 400,
+        message: $t('error_connect_wallet_failed'),
+        fatal: true,
+      })
+    }
+    return (connector as unknown as { getMagic: () => Promise<Magic> }).getMagic()
+  }
+
   async function exportPrivateKey() {
     // NOTE: This function is only for login with Magic Link
     if (user.value?.loginMethod !== 'magic') {
@@ -649,22 +664,37 @@ export const useAccountStore = defineStore('account', () => {
     }
 
     try {
-      await ensureMagicSession()
-      const connector = connectors.find((c: { id: string }) => c.id === 'magic')
-      if (!connector || !('getMagic' in connector)) {
-        throw createError({
-          statusCode: 400,
-          message: $t('error_connect_wallet_failed'),
-          fatal: true,
-        })
-      }
-
-      const magic = await (connector as unknown as { getMagic: () => Promise<Magic> }).getMagic()
+      const magic = await getMagicInstance()
       await magic.user.revealEVMPrivateKey()
     }
     catch (error) {
       if (error instanceof Error && error.message.includes('User canceled action.')) {
         return
+      }
+      throw error
+    }
+  }
+
+  // Changes a Magic user's login email through Magic's OTP-verified flow (showUI),
+  // which preserves the wallet/issuer. Returns a fresh DID token for the new email
+  // so the backend can keep isEmailVerified=true; returns undefined if the user
+  // cancels. Caller is responsible for the our-DB pre-check and persisting via API.
+  async function updateMagicEmail(email: string): Promise<string | undefined> {
+    if (user.value?.loginMethod !== 'magic') {
+      throw createError({
+        statusCode: 400,
+        message: $t('account_page_email_update_unsupported_login_method'),
+        fatal: true,
+      })
+    }
+    try {
+      const magic = await getMagicInstance()
+      await magic.auth.updateEmailWithUI({ email })
+      return await magic.user.getIdToken()
+    }
+    catch (error) {
+      if (error instanceof Error && error.message.includes('User canceled action.')) {
+        return undefined
       }
       throw error
     }
@@ -688,6 +718,7 @@ export const useAccountStore = defineStore('account', () => {
     refreshSessionInfo,
     restoreConnection,
     exportPrivateKey,
+    updateMagicEmail,
     clearCaches,
     plusRedirectRoute,
     savePlusRedirectRoute,

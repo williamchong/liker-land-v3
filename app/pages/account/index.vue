@@ -104,14 +104,29 @@
         </AccountSettingsItem>
 
         <AccountSettingsItem
-          v-if="user?.email"
           icon="i-material-symbols-mail-outline-rounded"
           :label="$t('account_page_email')"
         >
           <div
+            v-if="user?.email"
             class="text-sm"
-            v-text="user?.email"
+            v-text="user.email"
           />
+          <div
+            v-else
+            class="text-sm text-muted"
+            v-text="$t('account_page_email_empty')"
+          />
+
+          <template #right>
+            <UButton
+              :label="$t('account_page_email_edit_button')"
+              icon="i-material-symbols-edit-outline-rounded"
+              variant="outline"
+              color="neutral"
+              @click="handleEmailEditButtonClick"
+            />
+          </template>
         </AccountSettingsItem>
 
         <AccountSettingsItem
@@ -613,6 +628,54 @@
     </UModal>
 
     <UModal
+      v-model:open="isEmailEditModalOpen"
+      :title="$t('account_page_email_edit_title')"
+      :dismissible="!isUpdatingEmail"
+      :close="!isUpdatingEmail"
+      :ui="{
+        title: 'text-lg font-bold',
+        footer: 'flex justify-end gap-3',
+      }"
+    >
+      <template #body>
+        <div class="space-y-3">
+          <UInput
+            v-model="emailInput"
+            class="w-full"
+            type="email"
+            autofocus
+            :placeholder="$t('account_page_email_edit_placeholder')"
+            :disabled="isUpdatingEmail"
+            @keydown.enter="confirmEmailEdit"
+          />
+          <p
+            class="text-xs text-muted"
+            v-text="accountStore.isLoginWithMagic
+              ? $t('account_page_email_edit_hint_magic')
+              : $t('account_page_email_edit_hint_wallet')"
+          />
+        </div>
+      </template>
+
+      <template #footer>
+        <UButton
+          :label="$t('common_cancel')"
+          variant="outline"
+          color="neutral"
+          :disabled="isUpdatingEmail"
+          @click="isEmailEditModalOpen = false"
+        />
+        <UButton
+          :label="$t('account_page_email_edit_save')"
+          color="primary"
+          :loading="isUpdatingEmail"
+          :disabled="!isEmailInputValid"
+          @click="confirmEmailEdit"
+        />
+      </template>
+    </UModal>
+
+    <UModal
       v-model:open="isAdultContentConfirmOpen"
       :title="$t('account_page_adult_content_confirm_title')"
       :description="$t('account_page_adult_content_confirm_description')"
@@ -773,6 +836,14 @@ const displayNameInput = ref('')
 const isDisplayNameInputValid = computed(() => {
   const trimmed = displayNameInput.value.trim()
   return trimmed.length > 0 && trimmed !== user.value?.displayName
+})
+
+const isEmailEditModalOpen = ref(false)
+const isUpdatingEmail = ref(false)
+const emailInput = ref('')
+const isEmailInputValid = computed(() => {
+  const normalized = normalizeEmail(emailInput.value)
+  return validateEmail(normalized) && normalized !== normalizeEmail(user.value?.email ?? '')
 })
 
 const { locales } = useAutoLocale()
@@ -1093,6 +1164,70 @@ async function confirmDisplayNameEdit() {
   }
   finally {
     isUpdatingDisplayName.value = false
+  }
+}
+
+function handleEmailEditButtonClick() {
+  useLogEvent('account_email_edit_click')
+  emailInput.value = user.value?.email ?? ''
+  isEmailEditModalOpen.value = true
+}
+
+async function confirmEmailEdit() {
+  if (!isEmailInputValid.value || isUpdatingEmail.value) return
+  const nextEmail = normalizeEmail(emailInput.value)
+  const isMagic = accountStore.isLoginWithMagic
+  isUpdatingEmail.value = true
+  try {
+    try {
+      // Pre-check the email is free in our DB before any Magic OTP round-trip.
+      await likeCoinSessionAPI.checkEmailAvailability(nextEmail)
+      if (isMagic) {
+        // Close our modal before Magic opens its own OTP UI; our modal's focus
+        // trap and backdrop would otherwise block interaction with Magic's popup.
+        isEmailEditModalOpen.value = false
+        // Magic's OTP-verified change preserves the wallet and returns a fresh
+        // DID token, or undefined if the user cancels — abort quietly on cancel.
+        const magicDIDToken = await accountStore.updateMagicEmail(nextEmail)
+        if (!magicDIDToken) return
+        await likeCoinSessionAPI.updateUserEmail({ email: nextEmail, magicDIDToken })
+      }
+      else {
+        await likeCoinSessionAPI.updateUserEmail({ email: nextEmail })
+      }
+    }
+    catch (error) {
+      await handleError(error, { title: $t('account_page_email_update_failed') })
+      return
+    }
+
+    // Wallet users verify via our own email; non-fatal if the send fails.
+    if (!isMagic) {
+      try {
+        await likeCoinSessionAPI.sendEmailVerification()
+      }
+      catch (error) {
+        console.error('Failed to send verification email after email update:', error)
+      }
+    }
+
+    useLogEvent('account_email_update_success')
+    toast.add({
+      title: isMagic
+        ? $t('account_page_email_update_success')
+        : $t('account_page_email_verification_sent'),
+      color: 'success',
+    })
+    isEmailEditModalOpen.value = false
+    try {
+      await accountStore.refreshSessionInfo()
+    }
+    catch (error) {
+      console.error('Failed to refresh session info after email update:', error)
+    }
+  }
+  finally {
+    isUpdatingEmail.value = false
   }
 }
 
