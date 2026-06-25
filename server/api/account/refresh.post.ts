@@ -40,6 +40,9 @@ export default defineEventHandler(async (event) => {
       likerId: userInfoRes.user,
       displayName: userInfoRes.displayName,
       avatar: userInfoRes.avatar,
+      // Surface email so a self-serve email change reflects after refresh
+      // without requiring re-login; fall back to the existing session value.
+      email: userInfoRes.email ?? session.user.email,
       isLikerPlus: userInfoRes.isLikerPlus || false,
       isLikerPlusTrial: userInfoRes.isLikerPlusTrial || false,
       isExpiredLikerPlus: userInfoRes.isExpiredLikerPlus || false,

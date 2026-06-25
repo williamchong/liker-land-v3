@@ -558,6 +558,34 @@ export function useLikeCoinSessionAPI() {
     })
   }
 
+  // Advisory pre-check that the new login email is free in our DB, run before
+  // triggering Magic's email change. Throws EMAIL_ALREADY_USED if taken.
+  function checkEmailAvailability(email: string) {
+    return fetch.value(`/users/email/check`, {
+      method: 'POST',
+      body: { email },
+    })
+  }
+
+  // Persists the new email. For Magic users a matching magicDIDToken keeps the
+  // email verified (Magic already OTP-verified it); wallet users get a reset
+  // verified flag and a separate verification email (see sendEmailVerification).
+  function updateUserEmail({ email, magicDIDToken }: { email: string, magicDIDToken?: string }) {
+    return fetch.value(`/users/update`, {
+      method: 'POST',
+      body: { email, ...(magicDIDToken ? { magicDIDToken } : {}) },
+    })
+  }
+
+  function sendEmailVerification() {
+    const likerId = user.value?.likerId
+    if (!likerId) throw new Error('MISSING_LIKER_ID')
+    return fetch.value(`/email/verify/user/${likerId}/`, {
+      method: 'POST',
+      body: { ref: 'account' },
+    })
+  }
+
   async function fetchStripeConnectStatus({ wallet }: { wallet: string }) {
     try {
       return await fetch.value<FetchStripeConnectStatusResponseData>(
@@ -621,6 +649,9 @@ export function useLikeCoinSessionAPI() {
     claimFreeBook,
     retryLikerPlusPayment,
     updateUserProfile,
+    checkEmailAvailability,
+    updateUserEmail,
+    sendEmailVerification,
     uploadUserAvatar,
     fetchStripeConnectStatus,
     createStripeConnectAccount,
