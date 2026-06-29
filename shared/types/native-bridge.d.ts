@@ -3,6 +3,9 @@ interface InstallAttribution {
   attribution: Record<string, string>
   // Epoch ms of first capture, for freshness gating (e.g. fbclid).
   installedAt: number
+  // Affiliate/channel id (`from`) — money-routing, kept separate from the
+  // analytics `attribution` map so it never feeds the last-touch UTM fallback.
+  affiliateFrom?: string
 }
 
 interface Window {
