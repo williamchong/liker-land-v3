@@ -24,6 +24,7 @@ const APP_STORE_PROVIDER_TOKEN = ''
 
 export function useAppDownloadUrls(placement: AppDownloadPlacement) {
   const attribution = usePostHogAttribution()
+  const getRouteQuery = useRouteQuery()
 
   const params: Record<string, string> = {
     utm_source: attribution.utm_source || STATIC_SOURCE,
@@ -34,6 +35,10 @@ export function useAppDownloadUrls(placement: AppDownloadPlacement) {
   for (const key of ['utm_content', 'utm_term', 'gclid', 'gad_source', 'fbclid'] as const) {
     if (attribution[key]) params[key] = attribution[key]
   }
+  // Affiliate/channel id rides the referrer as its own `from` key (never folded
+  // into utm) so the native shell can credit an affiliate-driven install.
+  const affiliateFrom = getRouteQuery('from')
+  if (affiliateFrom) params.from = affiliateFrom
 
   // Play wants the whole UTM string as one URL-encoded `referrer` value.
   const referrer = encodeURIComponent(new URLSearchParams(params).toString())
