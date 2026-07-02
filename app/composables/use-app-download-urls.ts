@@ -7,7 +7,6 @@ import { APP_STORE_URL, GOOGLE_PLAY_URL } from '~/utils/app-store'
 // Apple campaign tokens (pt/ct) surface in App Store Connect App Analytics only.
 
 export const APP_DOWNLOAD_PLACEMENTS = [
-  'footer',
   'about',
   'app_page_hero',
   'app_page_cta',

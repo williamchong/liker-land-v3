@@ -24,8 +24,13 @@
       <ULink
         class="flex justify-center"
         :to="localeRoute({ name: 'about' })"
+        :title="$t('footer_about')"
       >
-        <AppLogo v-if="props.isShowLogo" />
+        <AppLogo
+          v-if="props.isShowLogo"
+          role="img"
+          :aria-label="$t('footer_about')"
+        />
       </ULink>
       <div class="flex items-center gap-2 leading-5">
         <ULink
@@ -39,17 +44,12 @@
       </div>
       <nav>
         <ul class="flex justify-center items-center flex-wrap gap-4 gap-y-1">
-          <li>
+          <li v-if="!isApp">
             <ULink
               class="block border-y border-t-transparent leading-5"
-              :to="localeRoute({ name: 'about' })"
-            >{{ $t("footer_about") }}</ULink>
-          </li>
-          <li>
-            <ULink
-              class="block border-y border-t-transparent leading-5"
-              :to="localeRoute({ name: 'member' })"
-            >{{ $t("footer_plus") }}</ULink>
+              :to="localeRoute({ name: 'app' })"
+              @click="handleAppLinkClick"
+            >{{ $t("footer_app") }}</ULink>
           </li>
           <li>
             <ULink
@@ -132,14 +132,6 @@
       </ul>
     </div>
 
-    <AppDownloadButtons
-      v-if="!isApp"
-      class="mx-auto"
-      placement="footer"
-      @click-app-store="onClickAppStoreButton"
-      @click-google-play="onClickGooglePlayButton"
-    />
-
     <div
       v-if="commitSHA || buildVersion !== undefined"
       :class="[
@@ -202,11 +194,7 @@ const privacyURL = computed(() => getDocsArticleURL('privacy', locale.value))
 const termsURL = computed(() => getDocsArticleURL('terms', locale.value))
 const shippingReturnRefundURL = computed(() => getDocsArticleURL('shippingReturnRefund', locale.value))
 
-function onClickAppStoreButton() {
-  useLogEvent('footer_app_store_click')
-}
-
-function onClickGooglePlayButton() {
-  useLogEvent('footer_google_play_click')
+function handleAppLinkClick() {
+  useLogEvent('footer_app_link_click')
 }
 </script>
