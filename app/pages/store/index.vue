@@ -199,9 +199,11 @@
 
     <!-- Alerts section, don't put them in <main/> -->
     <section
-      v-if="isLibraryIntroBannerVisible || isAffiliateCTAVisible || isWelcomeBannerVisible"
+      v-if="isStoreIntroBannerVisible || isLibraryIntroBannerVisible || isAffiliateCTAVisible || isWelcomeBannerVisible"
       class="section-container flex flex-col gap-2"
     >
+      <StoreIntroBanner v-if="isStoreIntroBannerVisible" />
+
       <LibraryIntroBanner v-if="isLibraryIntroBannerVisible" />
 
       <!--
@@ -613,6 +615,31 @@ function handleWelcomeBannerDismiss() {
   const { welcome: _welcome, ...query } = route.query
   navigateTo(localeRoute({ name: routeName.value, query }), { replace: true })
 }
+
+// "Organic or direct" = the bare store landing with no campaign/affiliate attribution.
+// Campaign, paid, and affiliate traffic always carry one of these query params.
+const STORE_INTRO_ATTRIBUTION_KEYS = [
+  'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+  'gclid', 'gad_source', 'fbclid', 'll_source', 'll_medium', 'affiliate', 'from',
+]
+const hasCampaignAttribution = computed(() =>
+  STORE_INTRO_ATTRIBUTION_KEYS.some(key => !!getRouteQuery(key)),
+)
+// Welcome a fresh organic/direct visitor on the bare store landing. Gate on mount
+// and the persisted dismiss so the alerts section collapses instead of leaving an
+// empty wrapper, and skip `tag` deep-links since those are category pages.
+const { isDismissed: isStoreIntroBannerDismissed, dismissStoreIntroBanner } = useStoreIntroBanner()
+const isMounted = useMounted()
+const isStoreIntroBannerVisible = computed(() =>
+  isMounted.value
+  && !isStoreIntroBannerDismissed.value
+  && !isApp.value
+  && !isLibraryTab.value
+  && !isSearchMode.value
+  && !isWelcomeBannerVisible.value
+  && !getRouteQuery('tag')
+  && !hasCampaignAttribution.value,
+)
 
 // Search query key for bookstore store
 const searchQuery = computed(() => {
@@ -1534,6 +1561,7 @@ async function handleTagClick(tagValue?: string) {
 
   // Engaging with a category means the intro has served its purpose.
   if (isLibraryTab.value) dismissLibraryIntroBanner()
+  else dismissStoreIntroBanner()
 
   if (tagValue === 'local-histories') {
     useLogEvent(isLibraryTab.value ? 'library_tag_click' : 'store_tag_click', { tag_id: tagValue })
