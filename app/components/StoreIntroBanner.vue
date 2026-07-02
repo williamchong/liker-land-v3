@@ -1,6 +1,5 @@
 <template>
   <UAlert
-    v-if="isVisible"
     :description="$t('store_intro_banner_description')"
     :actions="actions"
     :close="{
@@ -12,7 +11,7 @@
     variant="subtle"
     :style="{ '--backdrop-image': `url(${backdropImageSrc})` }"
     :ui="{
-      root: 'store-intro-banner rounded-xl bg-cover bg-cover tablet:bg-size-[60%] bg-no-repeat bg-right phone:bg-right light:ring-0',
+      root: 'store-intro-banner rounded-xl bg-cover tablet:bg-size-[60%] bg-no-repeat bg-right light:ring-0',
       wrapper: 'pr-16',
       title: 'flex items-center gap-1.5 font-bold text-theme-cyan text-lg',
       description: 'text-theme-white',
@@ -46,24 +45,23 @@
           'origin-right',
         ]"
         :src="mockupImageSrc"
+        alt=""
+        aria-hidden="true"
       >
     </template>
   </UAlert>
 </template>
 
 <script setup lang="ts">
-import { useMounted } from '@vueuse/core'
-
 import mockupImageSrc from '~/assets/images/mockup.png'
 import backdropImageSrc from '~/assets/images/plus-welcome-banner-backdrop.webp'
 
 const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 
-const { isDismissed, dismissStoreIntroBanner } = useStoreIntroBanner()
-// Gate behind mount so the SSR'd grid doesn't hydrate-mismatch on persisted state.
-const isMounted = useMounted()
-const isVisible = computed(() => isMounted.value && !isDismissed.value)
+// Visibility (mount + persisted dismiss) is owned by the parent's v-if, so this
+// component just renders and logs its own view.
+const { dismissStoreIntroBanner } = useStoreIntroBanner()
 
 const actions = computed(() => [{
   label: $t('store_intro_banner_cta'),
@@ -79,7 +77,7 @@ const actions = computed(() => [{
 }])
 
 onMounted(() => {
-  if (isVisible.value) useLogEvent('store_intro_view')
+  useLogEvent('store_intro_view')
 })
 
 function handleDismiss() {
@@ -93,9 +91,9 @@ function handleCTAClick() {
 </script>
 
 <style scoped>
-/* Soft mint, opaque on the left for legible text, fading full-width into the
-   backdrop. The 25% tint floor keeps the right from going to harsh black so the
-   left↔right contrast stays gentle. */
+/* Dark tint, opaque on the left for legible text, fading full-width into the
+   backdrop. The 70% tint floor keeps the right from going fully transparent so
+   the left↔right contrast stays gentle. */
 .store-intro-banner {
   --banner-tint: var(--color-theme-black);
   background-color: var(--banner-tint);

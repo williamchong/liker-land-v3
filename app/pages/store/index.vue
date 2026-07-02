@@ -625,16 +625,21 @@ const STORE_INTRO_ATTRIBUTION_KEYS = [
 const hasCampaignAttribution = computed(() =>
   STORE_INTRO_ATTRIBUTION_KEYS.some(key => !!getRouteQuery(key)),
 )
-// Welcome a fresh organic/direct visitor on the store tab. The persisted dismiss
-// gate lives inside StoreIntroBanner (mount-guarded to avoid hydrate mismatch).
+// Welcome a fresh organic/direct visitor on the bare store landing. Gate on mount
+// and the persisted dismiss so the alerts section collapses instead of leaving an
+// empty wrapper, and skip `tag` deep-links since those are category pages.
+const { isDismissed: isStoreIntroBannerDismissed, dismissStoreIntroBanner } = useStoreIntroBanner()
+const isMounted = useMounted()
 const isStoreIntroBannerVisible = computed(() =>
-  !isApp.value
+  isMounted.value
+  && !isStoreIntroBannerDismissed.value
+  && !isApp.value
   && !isLibraryTab.value
   && !isSearchMode.value
   && !isWelcomeBannerVisible.value
+  && !getRouteQuery('tag')
   && !hasCampaignAttribution.value,
 )
-const { dismissStoreIntroBanner } = useStoreIntroBanner()
 
 // Search query key for bookstore store
 const searchQuery = computed(() => {
