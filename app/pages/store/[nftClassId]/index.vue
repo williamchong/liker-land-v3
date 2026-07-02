@@ -734,6 +734,19 @@
               </UTooltip>
             </li>
           </ul>
+
+          <p
+            v-if="!isLibrary && selectedPricingItem"
+            class="px-4 text-xs text-muted text-center leading-4"
+          >
+            <span v-text="deliveryRefundNote" />
+            <ULink
+              class="underline ml-1"
+              :href="shippingReturnRefundURL"
+              target="_blank"
+              rel="noopener noreferrer"
+            >{{ $t('product_page_delivery_refund_note_link') }}</ULink>
+          </p>
         </div>
       </div>
     </section>
@@ -989,6 +1002,13 @@ const {
   getPlusDiscountRate,
   openUpsellPlusModalIfEligible,
 } = useSubscriptionModal()
+
+const shippingReturnRefundURL = computed(() => getDocsArticleURL('shippingReturnRefund', locale.value))
+const deliveryRefundNote = computed(() =>
+  selectedPricingItem.value?.isAutoDeliver
+    ? $t('product_page_delivery_refund_note_instant')
+    : $t('product_page_delivery_refund_note_signed'),
+)
 
 const colorMode = useColorMode()
 const ttsTagColor = computed(() => colorMode.value === 'dark' ? 'primary' : 'secondary')

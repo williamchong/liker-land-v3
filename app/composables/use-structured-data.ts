@@ -102,7 +102,7 @@ function generateBookOffer({
     'seller': {
       '@type': 'Organization',
       'name': '3ook.com',
-      'legalName': 'Liker Land, Inc.',
+      'legalName': COMPANY_LEGAL_NAME,
       'url': baseURL,
     },
     'url': `${canonicalURL}?price_index=${priceIndex}`,
@@ -114,6 +114,8 @@ function generateBookOffer({
     'hasMerchantReturnPolicy': {
       '@type': 'MerchantReturnPolicy',
       'returnPolicyCategory': 'https://schema.org/MerchantReturnNotPermitted',
+      // English policy page for ads/search reviewers; content matches the zh-TW version
+      'merchantReturnLink': getDocsArticleURL('shippingReturnRefund', 'en'),
     },
   }
 

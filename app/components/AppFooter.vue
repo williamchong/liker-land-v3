@@ -35,7 +35,7 @@
           rel="noopener noreferrer"
         >{{ $t('footer_license') }}</ULink>
         <span>·</span>
-        <span>Liker Land, Inc.</span>
+        <span v-text="COMPANY_LEGAL_NAME" />
       </div>
       <nav>
         <ul class="flex justify-center items-center flex-wrap gap-4 gap-y-1">
@@ -54,7 +54,7 @@
           <li>
             <ULink
               class="block border-y border-t-transparent leading-5"
-              href="https://link.3ook.com/privacy"
+              :href="privacyURL"
               target="_blank"
               rel="noopener noreferrer"
             >{{ $t("footer_privacy") }}</ULink>
@@ -62,7 +62,7 @@
           <li>
             <ULink
               class="block border-y border-t-transparent leading-5"
-              href="https://link.3ook.com/terms"
+              :href="termsURL"
               target="_blank"
               rel="noopener noreferrer"
             >{{ $t("footer_terms") }}</ULink>
@@ -70,7 +70,7 @@
           <li>
             <ULink
               class="block border-y border-t-transparent leading-5"
-              href="https://link.3ook.com/shipping-return-refund"
+              :href="shippingReturnRefundURL"
               target="_blank"
               rel="noopener noreferrer"
             >{{ $t("footer_shipping_return") }}</ULink>
@@ -78,10 +78,7 @@
           <li>
             <ULink
               class="block border-y border-t-transparent leading-5"
-              href="mailto:cs@3ook.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              @click="onClickContactUs"
+              :to="localeRoute({ name: 'contact' })"
             >{{ $t("footer_contact_us") }}</ULink>
           </li>
         </ul>
@@ -197,15 +194,13 @@ const props = defineProps({
 })
 
 const { commitSHA } = useRuntimeConfig().public
-const { t: $t } = useI18n()
+const { t: $t, locale } = useI18n()
 const localeRoute = useLocaleRoute()
 const { isApp, buildVersion } = useAppDetection()
-const intercom = useIntercom()
 
-function onClickContactUs(event: MouseEvent) {
-  event.preventDefault()
-  intercom.show()
-}
+const privacyURL = computed(() => getDocsArticleURL('privacy', locale.value))
+const termsURL = computed(() => getDocsArticleURL('terms', locale.value))
+const shippingReturnRefundURL = computed(() => getDocsArticleURL('shippingReturnRefund', locale.value))
 
 function onClickAppStoreButton() {
   useLogEvent('footer_app_store_click')

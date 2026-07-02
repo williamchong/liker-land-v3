@@ -238,7 +238,7 @@ useHead({
         '@type': 'OnlineStore',
         '@id': `${ogURL}/#organization`,
         'name': ogTitle,
-        'legalName': 'Liker Land, Inc.',
+        'legalName': COMPANY_LEGAL_NAME,
         'description': ogDescription,
         'alternateName': ogAlternateNames,
         'sameAs': [
@@ -252,18 +252,13 @@ useHead({
         ],
         'url': ogURL,
         'logo': ogImage,
-        'email': 'cs@3ook.com',
+        'email': CUSTOMER_SERVICE_EMAIL,
         'contactPoint': [
           {
             '@type': 'ContactPoint',
             'contactType': 'customer service',
-            'email': 'cs@3ook.com',
-            'availableLanguage': ['English', 'Chinese'],
-          },
-          {
-            '@type': 'ContactPoint',
-            'contactType': 'customer service',
-            'url': 'https://wa.me/15558049733',
+            'email': CUSTOMER_SERVICE_EMAIL,
+            'url': `${ogURL}/contact`,
             'availableLanguage': ['English', 'Chinese'],
           },
         ],
