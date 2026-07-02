@@ -783,6 +783,11 @@
       </ul>
     </section>
 
+    <AppFooter
+      v-if="!isApp"
+      class="mt-auto"
+    />
+
     <!-- Mobile sticky bottom bar -->
     <aside
       v-if="isUserBookOwner || isPlusReadingCTAVisible || (!isLibrary && pricingItems.length)"
