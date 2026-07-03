@@ -2,12 +2,10 @@
 // bridge, the window.Intercom JS SDK, and a mailto fallback so call sites
 // don't have to branch on bridge / SDK availability themselves.
 
-const SUPPORT_EMAIL = 'cs@3ook.com'
-
 type OpenResult = { method: 'chat' | 'link' }
 
 function openMailto(subject?: string, body?: string): void {
-  let mailto = `mailto:${SUPPORT_EMAIL}`
+  let mailto = `mailto:${CUSTOMER_SERVICE_EMAIL}`
   const params: string[] = []
   if (subject) params.push(`subject=${encodeURIComponent(subject)}`)
   if (body) params.push(`body=${encodeURIComponent(body)}`)

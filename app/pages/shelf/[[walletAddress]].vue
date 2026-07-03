@@ -45,7 +45,7 @@
         :actions="shelfNotice.actions"
       />
       <UCard
-        v-if="!walletAddress && !hasLoggedIn"
+        v-if="isGuestShelf"
         class="w-full max-w-(--breakpoint-phone) mt-4"
         :ui="{
           header: 'flex justify-center items-center p-4 sm:p-4 bg-theme-black',
@@ -354,6 +354,8 @@
         </template>
       </template>
     </main>
+
+    <AppFooter v-if="isGuestShelf && !isApp" />
   </div>
 </template>
 
@@ -704,6 +706,8 @@ const walletAddress = computed(() => {
 const isMyBookshelf = computed(() => {
   return walletAddress.value === user.value?.evmWallet?.toLowerCase()
 })
+
+const isGuestShelf = computed(() => !walletAddress.value && !hasLoggedIn.value)
 
 const shelfOwner = computed(() => {
   return metadataStore.getLikerInfoByWalletAddress(walletAddress.value)

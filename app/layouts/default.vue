@@ -32,7 +32,7 @@
       <slot />
     </div>
 
-    <AppFooter v-show="isFooterVisible" />
+    <AppFooter v-if="isFooterVisible" />
 
     <AppTabBar v-show="isTabBarVisible" />
   </div>

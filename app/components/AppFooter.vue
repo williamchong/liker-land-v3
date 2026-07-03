@@ -24,8 +24,13 @@
       <ULink
         class="flex justify-center"
         :to="localeRoute({ name: 'about' })"
+        :title="$t('footer_about')"
       >
-        <AppLogo v-if="props.isShowLogo" />
+        <AppLogo
+          v-if="props.isShowLogo"
+          role="img"
+          :aria-label="$t('footer_about')"
+        />
       </ULink>
       <div class="flex items-center gap-2 leading-5">
         <ULink
@@ -35,26 +40,21 @@
           rel="noopener noreferrer"
         >{{ $t('footer_license') }}</ULink>
         <span>·</span>
-        <span>Liker Land, Inc.</span>
+        <span v-text="COMPANY_LEGAL_NAME" />
       </div>
       <nav>
         <ul class="flex justify-center items-center flex-wrap gap-4 gap-y-1">
-          <li>
+          <li v-if="!isApp">
             <ULink
               class="block border-y border-t-transparent leading-5"
-              :to="localeRoute({ name: 'about' })"
-            >{{ $t("footer_about") }}</ULink>
+              :to="localeRoute({ name: 'app' })"
+              @click="handleAppLinkClick"
+            >{{ $t("footer_app") }}</ULink>
           </li>
           <li>
             <ULink
               class="block border-y border-t-transparent leading-5"
-              :to="localeRoute({ name: 'member' })"
-            >{{ $t("footer_plus") }}</ULink>
-          </li>
-          <li>
-            <ULink
-              class="block border-y border-t-transparent leading-5"
-              href="https://link.3ook.com/privacy"
+              :href="privacyURL"
               target="_blank"
               rel="noopener noreferrer"
             >{{ $t("footer_privacy") }}</ULink>
@@ -62,7 +62,7 @@
           <li>
             <ULink
               class="block border-y border-t-transparent leading-5"
-              href="https://link.3ook.com/terms"
+              :href="termsURL"
               target="_blank"
               rel="noopener noreferrer"
             >{{ $t("footer_terms") }}</ULink>
@@ -70,7 +70,7 @@
           <li>
             <ULink
               class="block border-y border-t-transparent leading-5"
-              href="https://link.3ook.com/shipping-return-refund"
+              :href="shippingReturnRefundURL"
               target="_blank"
               rel="noopener noreferrer"
             >{{ $t("footer_shipping_return") }}</ULink>
@@ -78,10 +78,7 @@
           <li>
             <ULink
               class="block border-y border-t-transparent leading-5"
-              href="mailto:cs@3ook.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              @click="onClickContactUs"
+              :to="localeRoute({ name: 'contact' })"
             >{{ $t("footer_contact_us") }}</ULink>
           </li>
         </ul>
@@ -134,14 +131,6 @@
         </li>
       </ul>
     </div>
-
-    <AppDownloadButtons
-      v-if="!isApp"
-      class="mx-auto"
-      placement="footer"
-      @click-app-store="onClickAppStoreButton"
-      @click-google-play="onClickGooglePlayButton"
-    />
 
     <div
       v-if="commitSHA || buildVersion !== undefined"
@@ -197,21 +186,15 @@ const props = defineProps({
 })
 
 const { commitSHA } = useRuntimeConfig().public
-const { t: $t } = useI18n()
+const { t: $t, locale } = useI18n()
 const localeRoute = useLocaleRoute()
 const { isApp, buildVersion } = useAppDetection()
-const intercom = useIntercom()
 
-function onClickContactUs(event: MouseEvent) {
-  event.preventDefault()
-  intercom.show()
-}
+const privacyURL = computed(() => getDocsArticleURL('privacy', locale.value))
+const termsURL = computed(() => getDocsArticleURL('terms', locale.value))
+const shippingReturnRefundURL = computed(() => getDocsArticleURL('shippingReturnRefund', locale.value))
 
-function onClickAppStoreButton() {
-  useLogEvent('footer_app_store_click')
-}
-
-function onClickGooglePlayButton() {
-  useLogEvent('footer_google_play_click')
+function handleAppLinkClick() {
+  useLogEvent('footer_app_link_click')
 }
 </script>

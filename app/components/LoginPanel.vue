@@ -74,7 +74,7 @@
       <template #terms>
         <ULink
           class="underline text-default hover:text-highlighted"
-          href="https://docs.3ook.com/zh-TW/articles/11847208-%E6%9C%8D%E5%8B%99%E6%A2%9D%E6%AC%BE"
+          :href="getDocsArticleURL('terms', locale)"
           target="_blank"
           rel="noopener noreferrer"
         >{{ $t('login_panel_terms_link') }}</ULink>
@@ -82,7 +82,7 @@
       <template #privacy>
         <ULink
           class="underline text-default hover:text-highlighted"
-          href="https://docs.3ook.com/zh-TW/articles/11847198-%E7%A7%81%E9%9A%B1%E6%A2%9D%E6%AC%BE"
+          :href="getDocsArticleURL('privacy', locale)"
           target="_blank"
           rel="noopener noreferrer"
         >{{ $t('login_panel_privacy_link') }}</ULink>
@@ -104,7 +104,7 @@ import { useConnect } from '@wagmi/vue'
 
 const emit = defineEmits<{ connect: [{ id: string, email?: string }] }>()
 
-const { t: $t } = useI18n()
+const { t: $t, locale } = useI18n()
 const { connectors, error } = useConnect()
 const { isApp } = useAppDetection()
 const getRouteQuery = useRouteQuery()
