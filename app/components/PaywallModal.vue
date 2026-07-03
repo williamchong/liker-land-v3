@@ -3,7 +3,7 @@
     :title="$t('pricing_page_subscription')"
     :description="$t('pricing_page_subscription_description')"
     :fullscreen="isFullscreenModal"
-    :dismissible="props.isBackdropDismissible"
+    :dismissible="canDismissBackdrop"
     :transition="props.hasTransition"
     :modal="isModalityOn"
     :ui="{ content: modalContentClass }"
@@ -29,13 +29,16 @@
       >
         <template #header-action>
           <UButton
-            v-if="!props.isCloseButtonHidden"
+            v-if="isCloseButtonVisible"
             icon="i-material-symbols-close"
             :class="[
               'absolute',
               'z-10',
-              'top-0 phone:top-4',
-              'right-0 phone:right-4',
+              // Offset below the status bar / notch on fullscreen mobile so the
+              // close button stays reachable (the phone: variants only kick in
+              // on larger screens where the modal is windowed).
+              'top-[max(8px,env(safe-area-inset-top))] phone:top-4',
+              'right-1 phone:right-4',
               'max-phone:scale-75',
               'max-laptop:text-white',
               'cursor-pointer',
@@ -84,8 +87,15 @@ const props = withDefaults(
 
 const { t: $t } = useI18n()
 const isScreenSmall = useMediaQuery('(max-width: 1023px)')
+const { isIAPSupported } = useNativeIAP()
 
 const isFullscreenModal = computed(() => props.isFullscreen || isScreenSmall.value)
+
+// Never let a backdrop tap dismiss the paywall while the native purchase sheet is
+// loading in IAP mode — the user must resolve the purchase or use the X instead,
+// so keep the close button reachable there regardless of isCloseButtonHidden.
+const canDismissBackdrop = computed(() => props.isBackdropDismissible && !isIAPSupported.value)
+const isCloseButtonVisible = computed(() => !props.isCloseButtonHidden || isIAPSupported.value)
 
 const modalContentClass = computed(() => {
   const classes = [
