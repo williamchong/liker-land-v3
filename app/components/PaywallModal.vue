@@ -91,9 +91,9 @@ const { isIAPSupported } = useNativeIAP()
 
 const isFullscreenModal = computed(() => props.isFullscreen || isScreenSmall.value)
 
-// Never let a backdrop tap dismiss the paywall while the native purchase sheet is
-// loading in IAP mode — the user must resolve the purchase or use the X instead,
-// so keep the close button reachable there regardless of isCloseButtonHidden.
+// In the native app (IAP-supported), don't allow backdrop tap-to-dismiss: keep the
+// paywall visible until the user explicitly closes it or completes purchase.
+// Ensure the close button stays reachable in this mode regardless of isCloseButtonHidden.
 const canDismissBackdrop = computed(() => props.isBackdropDismissible && !isIAPSupported.value)
 const isCloseButtonVisible = computed(() => !props.isCloseButtonHidden || isIAPSupported.value)
 
