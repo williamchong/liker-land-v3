@@ -76,11 +76,20 @@ export function useSubscriptionModal() {
     props: getUpsellPlusModalProps(),
   })
 
-  const route = useRoute()
-  watch(() => route.path, () => {
+  // Close on committed navigation via router.afterEach rather than
+  // watch(() => route.path): callers such as the reader page unmount when
+  // checkout navigates (embedded plus-checkout, IAP plus-success). A route-path
+  // watcher's async-flushed callback can be torn down with the page before it
+  // runs, leaking the app-root overlay onto the next page; afterEach fires
+  // synchronously during navigation, before unmount. Guard on path so in-place
+  // query updates (e.g. UTM persistence) don't dismiss the modal.
+  const router = useRouter()
+  const stopCloseOnNavigate = router.afterEach((to, from) => {
+    if (to.path === from.path) return
     paywallModal.close()
     upsellPlusModal.close()
   })
+  onScopeDispose(stopCloseOnNavigate)
 
   async function openPaywallModal(options: OpenPaywallModalOptions = {}) {
     if (paywallModal.isOpen) {
@@ -93,7 +102,11 @@ export function useSubscriptionModal() {
       ...baseProps,
       ...modalProps,
       onSubscribe: (payload) => {
-        paywallModal.close()
+        // Keep the paywall open while checkout starts so the user is never dropped
+        // back to the book: the native IAP sheet takes a moment to appear, and the
+        // Stripe flow either navigates away (closing the tab's page) or, on error,
+        // leaves the paywall in place to retry. A successful in-app/embedded flow
+        // changes the route, which closes the modal via router.afterEach below.
         startSubscription({ ...payload, redirectRoute })
       },
     }
