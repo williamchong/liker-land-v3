@@ -250,6 +250,7 @@ const {
   charactersUsed: trialCharactersUsed,
   charactersRemaining: trialCharactersRemaining,
   isExhausted: isTrialExhausted,
+  limit: trialCharacterLimit,
 } = useTTSTrialUsage()
 const localeRoute = useLocaleRoute()
 const route = useRoute()
@@ -731,6 +732,7 @@ function buildChipEventPayload() {
     nft_class_id: props.nftClassId,
     characters_used: trialCharactersUsed.value,
     chars_remaining: trialCharactersRemaining.value,
+    trial_char_limit: trialCharacterLimit.value,
     is_exhausted: isTrialExhausted.value,
     voice_language: currentVoiceLanguage.value,
   }
