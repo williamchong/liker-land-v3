@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import type { H3Event } from 'h3'
-import { TTS_TRIAL_CHARACTER_LIMIT } from '~~/shared/utils/tts-trial'
+import { getTTSTrialDailyCharactersUsed, TTS_TRIAL_DAILY_CHARACTER_LIMIT } from '~~/shared/utils/tts-trial'
 
 export function generateTTSKey(): string {
   return randomBytes(16).toString('hex')
@@ -69,6 +69,5 @@ export async function getUserTTSAvailable(event: H3Event): Promise<boolean> {
   const isLikerPlus = session.user.isLikerPlus || false
   if (isLikerPlus) return true
   const userDoc = await getUserDoc(session.user.evmWallet)
-  if (!userDoc || !userDoc.ttsCharactersUsed || userDoc.ttsCharactersUsed as number < TTS_TRIAL_CHARACTER_LIMIT) return true
-  return false
+  return getTTSTrialDailyCharactersUsed(userDoc) < TTS_TRIAL_DAILY_CHARACTER_LIMIT
 }

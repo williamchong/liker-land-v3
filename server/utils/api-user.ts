@@ -4,6 +4,7 @@ import type { BookSettingsData, BookSettingsUpdatePayload } from '~~/shared/type
 import type { BookSettingsFirestoreData } from '~~/server/types/book-settings'
 import type { UserSettingsData } from '~~/shared/types/user-settings'
 import { FIRESTORE_IN_OPERATOR_LIMIT } from '~~/shared/constants/api'
+import { getTTSTrialDate } from '~~/shared/utils/tts-trial'
 
 // Single gate for authenticated routes: resolves the session and its EVM wallet,
 // throwing 401 if either is missing. Routes gate on evmWallet only — the Cosmos
@@ -57,6 +58,10 @@ export interface CustomVoiceDocData {
 
 export interface UserDocData {
   ttsCharactersUsed?: number
+  // Daily trial quota pair: characters spent on `ttsTrialUsageDate` (a UTC date
+  // string). A stored date other than today means the quota has reset to 0.
+  ttsTrialDailyCharactersUsed?: number
+  ttsTrialUsageDate?: string
   ttsLastUsed?: typeof FieldValue.serverTimestamp
   registerTimestamp?: typeof FieldValue.serverTimestamp
   loginTimestamp?: typeof FieldValue.serverTimestamp
@@ -85,12 +90,34 @@ export async function getUserDoc(
 export async function updateUserTTSCharacterUsage(
   userWallet: string,
   charactersUsed: number,
+  isLikerPlus = false,
 ): Promise<void> {
   const userDocRef = getUserCollection().doc(userWallet)
-  await userDocRef.set({
-    ttsCharactersUsed: FieldValue.increment(charactersUsed),
-    ttsLastUsed: FieldValue.serverTimestamp(),
-  }, { merge: true })
+  // Plus users are never gated by the daily quota, so spare them the
+  // read-modify-write transaction on the hot generation path — its doc lock
+  // would also serialize concurrent segment preloads for the same wallet.
+  if (isLikerPlus) {
+    await userDocRef.set({
+      ttsCharactersUsed: FieldValue.increment(charactersUsed),
+      ttsLastUsed: FieldValue.serverTimestamp(),
+    }, { merge: true })
+    return
+  }
+  const today = getTTSTrialDate()
+  // Transaction (not a blind merge) because the daily counter must reset when
+  // the stored date rolls over, which FieldValue.increment alone cannot express.
+  await getFirestoreDb().runTransaction(async (transaction) => {
+    const doc = await transaction.get(userDocRef)
+    const isSameDay = doc.data()?.ttsTrialUsageDate === today
+    transaction.set(userDocRef, {
+      ttsCharactersUsed: FieldValue.increment(charactersUsed),
+      ttsTrialDailyCharactersUsed: isSameDay
+        ? FieldValue.increment(charactersUsed)
+        : charactersUsed,
+      ttsTrialUsageDate: today,
+      ttsLastUsed: FieldValue.serverTimestamp(),
+    }, { merge: true })
+  })
 }
 
 function timestampToMillis(value: Timestamp | null | undefined): number | undefined {

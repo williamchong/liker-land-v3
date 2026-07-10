@@ -43,6 +43,7 @@ export function useTTSAnalytics(options: TTSAnalyticsOptions) {
         ? {
             cumulative_chars_used: ttsTrialUsage.charactersUsed.value,
             chars_remaining: ttsTrialUsage.charactersRemaining.value,
+            trial_char_limit: ttsTrialUsage.limit.value,
           }
         : {}),
       book_language: toValue(options.bookLanguage) || undefined,
