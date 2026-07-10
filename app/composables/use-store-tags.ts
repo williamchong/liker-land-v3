@@ -28,11 +28,11 @@ export function useStoreTags({ routeName, isLibraryTab }: StoreTagsOptions) {
     value: `${STAKING_SORT_TAG_PREFIX}${option.value}`,
   }))
   const STAKING_TAG_DEFAULT = STAKING_SORT_OPTIONS[0]!.value
-  // The library always lands on the staking-ranked (熱門) tab regardless of login
-  // status. On the store, signed-in readers land on the freshest titles while
-  // signed-out visitors get the staking-ranked landing as the default tab.
+  // The library always lands on the usage-ranked (熱門) tab regardless of login status.
+  // On the store, signed-in readers land on the freshest titles while signed-out
+  // visitors get the staking-ranked landing as the default tab.
   const defaultTagId = computed(() => {
-    if (isLibraryTab.value) return STAKING_TAG_DEFAULT
+    if (isLibraryTab.value) return BOOKSTORE_POPULAR_LIST_TYPE
     return hasLoggedIn.value ? BOOKSTORE_DEFAULT_LIST_TYPE : STAKING_TAG_DEFAULT
   })
 
@@ -68,6 +68,7 @@ export function useStoreTags({ routeName, isLibraryTab }: StoreTagsOptions) {
   })
   const isDefaultTagId = computed(() => getIsDefaultTagId(tagId.value))
   const isStakingTagId = computed(() => getIsStakingTagId(tagId.value))
+  const isPopularTagId = computed(() => tagId.value === BOOKSTORE_POPULAR_LIST_TYPE)
 
   const normalizedLocale = computed(() => locale.value === 'zh-Hant' ? 'zh' : 'en')
 
@@ -102,12 +103,15 @@ export function useStoreTags({ routeName, isLibraryTab }: StoreTagsOptions) {
   }
 
   const allTagItems = computed(() => {
-    const stakingTags = STAKING_SORT_OPTIONS
-      .map(option => ({
-        ...option,
-        label: getStakingTagLabel(option.value),
-      }))
-      .filter(option => tagId.value === option.value || option.isPublic)
+    // Stake ranking is a storefront signal; the library ranks by reading instead.
+    const stakingTags = isLibraryTab.value
+      ? []
+      : STAKING_SORT_OPTIONS
+          .map(option => ({
+            ...option,
+            label: getStakingTagLabel(option.value),
+          }))
+          .filter(option => tagId.value === option.value || option.isPublic)
 
     // Built-in list types (latest/free/drm-free) are mirrored as CMS tags so editors
     // control their ordering here, hence they surface through cmsTags like any other tag.
@@ -179,6 +183,7 @@ export function useStoreTags({ routeName, isLibraryTab }: StoreTagsOptions) {
     tagId,
     isDefaultTagId,
     isStakingTagId,
+    isPopularTagId,
     getIsLocalHistoriesTagId,
     normalizedLocale,
     activeCMSTag,
