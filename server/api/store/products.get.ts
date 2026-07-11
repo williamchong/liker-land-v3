@@ -6,6 +6,7 @@ import {
   respondWithBookstoreAPI,
 } from '~~/server/utils/bookstore'
 import { StoreProductsQuerySchema } from '~~/server/schemas/store'
+import { checkIsEVMAddress } from '~~/shared/utils'
 import { BOOKSTORE_DEFAULT_LIST_TYPE, BOOKSTORE_POPULAR_LIST_TYPE, isBookstoreBuiltInListType } from '~~/shared/utils/bookstore'
 
 export default defineEventHandler(async (event) => {
@@ -16,7 +17,7 @@ export default defineEventHandler(async (event) => {
     return respondWithBookstoreAPI(
       event,
       opts => fetchBookstorePopularListing(BUILT_IN_LIST_PATHS[BOOKSTORE_POPULAR_LIST_TYPE], opts),
-      { hasOpaqueCursor: true, notFoundStatusCode: 501, notFoundStatusMessage: 'LIST_NOT_IMPLEMENTED' },
+      { validateCursor: checkIsEVMAddress, notFoundStatusCode: 501, notFoundStatusMessage: 'LIST_NOT_IMPLEMENTED' },
     )
   }
   if (isBookstoreBuiltInListType(tag)) {

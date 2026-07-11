@@ -215,22 +215,26 @@ export async function respondWithBookstoreAPI(
   {
     notFoundStatusCode = 404,
     notFoundStatusMessage = 'NOT_FOUND',
-    hasOpaqueCursor = false,
+    validateCursor,
   }: {
     notFoundStatusCode?: number
     notFoundStatusMessage?: string
-    // Pass the offset through unvalidated for fetchers whose cursor isn't a number.
-    hasOpaqueCursor?: boolean
+    // Fetchers whose cursor isn't a number supply their own format check, so junk is
+    // rejected before it reaches the upstream API or the cached response below.
+    validateCursor?: (cursor: string) => boolean
   } = {},
 ) {
   const query = getQuery(event)
   const offsetRaw = Array.isArray(query.offset) ? query.offset[0] : query.offset
   const pageSize = parseBookstorePageSize(query.limit as string | string[] | undefined)
   const isLibrary = (Array.isArray(query.library) ? query.library[0] : query.library) === '1'
-  // Validate offset as a non-negative integer; treat 0 the same as omitted so page-1 stays cacheable.
+  // Default to a non-negative integer offset; treat 0 the same as omitted so page-1 stays cacheable.
   let nextKey: string | undefined
   if (offsetRaw !== undefined && offsetRaw !== '') {
-    if (hasOpaqueCursor) {
+    if (validateCursor) {
+      if (!validateCursor(offsetRaw)) {
+        throw createError({ statusCode: 400, statusMessage: 'INVALID_OFFSET' })
+      }
       nextKey = offsetRaw
     }
     else {
