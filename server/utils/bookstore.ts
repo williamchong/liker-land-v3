@@ -9,6 +9,7 @@ export const BUILT_IN_LIST_PATHS: Record<BookstoreBuiltInListType, string> = {
   'latest': `${BOOKSTORE_API_BASE_PATH}/list`,
   'free': `${BOOKSTORE_API_BASE_PATH}/list/free`,
   'drm-free': `${BOOKSTORE_API_BASE_PATH}/list/drm-free`,
+  'popular': `${BOOKSTORE_API_BASE_PATH}/list/popular`,
 }
 
 interface NFTBookPrice {
@@ -44,9 +45,17 @@ interface NFTBookListResponse {
   nextKey?: number | null
 }
 
+interface NFTBookPopularListResponse {
+  list: NFTBookListingInfo[]
+  // /list/popular resumes from the previous page's last class id: ranking ties
+  // (most of the catalogue sits at zero reading time) can't be resumed from a value.
+  nextKey?: string | null
+}
+
 interface BookstoreListingFetchOptions {
   pageSize?: number
-  // Pagination cursor: numeric offset for /cms/list, timestamp key for /list*.
+  // Pagination cursor: numeric offset for /cms/list, timestamp key for /list*,
+  // class id for /list/popular.
   nextKey?: string
   // When true, restricts results to Plus-reading titles via the upstream `library` flag.
   isLibrary?: boolean
@@ -162,6 +171,32 @@ export async function fetchBookstoreBookListing(
   }
 }
 
+// Kept separate from fetchBookstoreBookListing rather than merged behind a flag: that
+// one coerces the cursor with `Number(key)`, which silently parses a class id as hex
+// (`Number('0x1a') === 26`). The dialects must not share a code path.
+export async function fetchBookstorePopularListing(
+  path: string,
+  {
+    pageSize = MAX_BOOKSTORE_PAGE_SIZE,
+    nextKey: key,
+    isLibrary = false,
+  }: BookstoreListingFetchOptions = {},
+): Promise<FetchBookstoreCMSProductsResponseData> {
+  const fetch = getLikeCoinAPIFetch()
+  const { list, nextKey } = await fetch<NFTBookPopularListResponse>(path, {
+    query: {
+      limit: pageSize,
+      key,
+      library: isLibrary ? '1' : undefined,
+    },
+  })
+  return {
+    records: (list || []).map(normalizeBookListingToProduct),
+    offset: nextKey || undefined,
+    hasMore: !!nextKey,
+  }
+}
+
 // Parse a raw `limit` query value into a valid page size. An invalid/missing/empty
 // limit falls back to the max, while `limit=0` clamps to 1 (not the max — `0 || max`
 // would have swallowed it). `limit=` alone is treated as missing so it doesn't slip
@@ -180,23 +215,35 @@ export async function respondWithBookstoreAPI(
   {
     notFoundStatusCode = 404,
     notFoundStatusMessage = 'NOT_FOUND',
+    validateCursor,
   }: {
     notFoundStatusCode?: number
     notFoundStatusMessage?: string
+    // Fetchers whose cursor isn't a number supply their own format check, so junk is
+    // rejected before it reaches the upstream API or the cached response below.
+    validateCursor?: (cursor: string) => boolean
   } = {},
 ) {
   const query = getQuery(event)
   const offsetRaw = Array.isArray(query.offset) ? query.offset[0] : query.offset
   const pageSize = parseBookstorePageSize(query.limit as string | string[] | undefined)
   const isLibrary = (Array.isArray(query.library) ? query.library[0] : query.library) === '1'
-  // Validate offset as a non-negative integer; treat 0 the same as omitted so page-1 stays cacheable.
+  // Default to a non-negative integer offset; treat 0 the same as omitted so page-1 stays cacheable.
   let nextKey: string | undefined
   if (offsetRaw !== undefined && offsetRaw !== '') {
-    const offsetNum = Number(offsetRaw)
-    if (!Number.isInteger(offsetNum) || offsetNum < 0) {
-      throw createError({ statusCode: 400, statusMessage: 'INVALID_OFFSET' })
+    if (validateCursor) {
+      if (!validateCursor(offsetRaw)) {
+        throw createError({ statusCode: 400, statusMessage: 'INVALID_OFFSET' })
+      }
+      nextKey = offsetRaw
     }
-    nextKey = offsetNum === 0 ? undefined : String(offsetNum)
+    else {
+      const offsetNum = Number(offsetRaw)
+      if (!Number.isInteger(offsetNum) || offsetNum < 0) {
+        throw createError({ statusCode: 400, statusMessage: 'INVALID_OFFSET' })
+      }
+      nextKey = offsetNum === 0 ? undefined : String(offsetNum)
+    }
   }
   try {
     const result = await fetcher({ pageSize, nextKey, isLibrary })

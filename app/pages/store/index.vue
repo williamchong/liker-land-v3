@@ -446,6 +446,7 @@ const {
   tagId,
   isDefaultTagId,
   isStakingTagId,
+  isPopularTagId,
   getIsLocalHistoriesTagId,
   normalizedLocale,
   activeCMSTag,
@@ -639,7 +640,9 @@ const cmsProducts = computed<BookstoreItemList>(() => {
       ...item,
       totalStaked: stakingInfo?.totalStaked ?? 0n,
       stakerCount: stakingInfo?.stakerCount ?? 0,
-      likeRank: stakingInfo?.likeRank ?? 0,
+      // `likeRank` is a stake rank linking to the staking page, so it's meaningless on
+      // the reading-ranked popular list — suppress the badge rather than mislabel it.
+      likeRank: isPopularTagId.value ? 0 : (stakingInfo?.likeRank ?? 0),
     }
   })
 
@@ -878,9 +881,11 @@ useHead(() => {
           crossorigin: 'anonymous' as const,
           key: 'preload-staking-books',
         }]
+      // The library scopes its listing with `library=1`; preloading without it primes a
+      // different response than the one the page goes on to fetch.
       : [{
           rel: 'preload',
-          href: `/api/store/products?tag=${encodedTagId}&limit=${MAX_BOOKSTORE_PAGE_SIZE}&ts=${getTimestampRoundedToMinute()}`,
+          href: `/api/store/products?tag=${encodedTagId}&limit=${MAX_BOOKSTORE_PAGE_SIZE}&ts=${getTimestampRoundedToMinute()}${isLibraryTab.value ? '&library=1' : ''}`,
           as: 'fetch' as const,
           crossorigin: 'anonymous' as const,
           key: 'preload-store-products',
@@ -986,6 +991,9 @@ async function fetchTags() {
 
 async function fetchTagItems({ isRefresh = false } = {}) {
   const currentTagId = tagId.value
+  // Captured with currentTagId: both guards below run after awaits, and reading the
+  // reactive computed there would follow a mid-fetch tab switch instead of this batch.
+  const isPopularTag = isPopularTagId.value
   const apiSortValue = mapTagIdToAPIStakingSortValue(isStakingTagId.value ? currentTagId : STAKING_TAG_DEFAULT)
 
   if (isStakingTagId.value) {
@@ -1001,10 +1009,13 @@ async function fetchTagItems({ isRefresh = false } = {}) {
     return
   }
 
-  // Fetch staking books first so CMS tag items can be sorted by staking
-  await bookstoreStore.fetchStakingBooks(apiSortValue, { isRefresh, limit: 100 }).catch((error) => {
-    console.warn('[store] Failed to fetch staking data for CMS tag sorting:', error)
-  })
+  // Fetch staking books first so CMS tag items can be sorted by staking. The popular
+  // list arrives ranked by reading time, so it needs neither the fetch nor the sort.
+  if (!isPopularTag) {
+    await bookstoreStore.fetchStakingBooks(apiSortValue, { isRefresh, limit: 100 }).catch((error) => {
+      console.warn('[store] Failed to fetch staking data for CMS tag sorting:', error)
+    })
+  }
 
   // Capture the items array reference before fetch so we can detect
   // if the store replaced it (e.g. on refresh or expired-offset retry)
@@ -1013,8 +1024,9 @@ async function fetchTagItems({ isRefresh = false } = {}) {
   const countBefore = isRefresh ? 0 : (itemsBefore?.length ?? 0)
   await bookstoreStore.fetchCMSProductsByTagId(currentTagId, { isRefresh, isLibrary: isLibraryTab.value })
 
-  // Sort only the new batch by staking amount (skip 'latest' which preserves Airtable order)
-  if (currentTagId !== 'latest') {
+  // Sort only the new batch by staking amount (skip 'latest' which preserves Airtable
+  // order, and 'popular' which arrives ranked by reading time)
+  if (currentTagId !== 'latest' && !isPopularTag) {
     const items = bookstoreStore.bookstoreCMSProductsByTagKeyMap[currentTagKey]?.items
     if (items === itemsBefore && items?.length === countBefore) return
     // If the array was replaced (refresh or offset-refresh), sort from 0
