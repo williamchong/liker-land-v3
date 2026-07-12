@@ -54,6 +54,7 @@ export const ReadingSessionSchema = v.object({
     v.minValue(0, 'INVALID_PAGE_INDEX'),
     v.integer('INVALID_PAGE_INDEX'),
   )),
+  isPreview: v.optional(v.boolean('INVALID_IS_PREVIEW')),
 })
 
 export const HeartbeatSchema = v.object({
@@ -72,4 +73,5 @@ export const HeartbeatSchema = v.object({
     v.minValue(0, 'INVALID_TTS_ACTIVE_TIME_DELTA'),
     v.maxValue(MAX_HEARTBEAT_DELTA_MS, 'TTS_ACTIVE_TIME_DELTA_TOO_LARGE'),
   ),
+  isPreview: v.optional(v.boolean('INVALID_IS_PREVIEW')),
 })

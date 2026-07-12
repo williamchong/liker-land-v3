@@ -16,8 +16,16 @@ export default function (params: {
     ? useUploadedBookInfo({ bookId: nftClassId })
     : useBookInfo({ nftClassId })
 
+  // Reflects route intent only; entitlement is enforced by the reader.vue
+  // gate and ultimately by the server when fetching the truncated file.
+  const isPreviewMode = computed(() =>
+    !isUploadedBook.value && getRouteQuery('preview') === '1',
+  )
+
   const nftId = computed(() => {
     if (isUploadedBook.value) return undefined
+    // The preview file variant conflicts with nft_id server-side.
+    if (isPreviewMode.value) return undefined
     const id = getRouteQuery('nft_id')
     return id || ('firstUserOwnedNFTId' in bookInfo ? bookInfo.firstUserOwnedNFTId.value : undefined)
   })
@@ -37,6 +45,9 @@ export default function (params: {
       nftId.value,
       fileIndex.value,
       bookInfo.isCustomMessageEnabled.value ? '1' : '0',
+      // Explicit marker: a Plus borrow also carries no nftId, so without it
+      // the truncated preview and the full borrowed file would share a cache.
+      isPreviewMode.value ? 'preview' : undefined,
     ].filter(value => value !== undefined).join('-')
   })
 
@@ -57,6 +68,7 @@ export default function (params: {
       nftId: nftId.value,
       fileIndex: fileIndex.value,
       isCustomMessageEnabled: !shouldCustomMessageDisabled.value && bookInfo.isCustomMessageEnabled.value,
+      isPreview: isPreviewMode.value,
     })
   })
 
@@ -65,6 +77,7 @@ export default function (params: {
     nftId,
     fileIndex,
     isUploadedBook,
+    isPreviewMode,
 
     bookInfo,
     bookCoverSrc,

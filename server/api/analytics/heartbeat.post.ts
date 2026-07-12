@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
     sessionId,
     activeReadingTimeMsDelta,
     ttsActiveTimeMsDelta,
+    isPreview = false,
   } = body
 
   if (activeReadingTimeMsDelta <= 0 && ttsActiveTimeMsDelta <= 0) {
@@ -36,6 +37,7 @@ export default defineEventHandler(async (event) => {
       isLikerPlus,
       isPaidPlus,
       isBorrowed,
+      isPreview,
       paced,
       rawDelta: { activeReadingTimeMsDelta, ttsActiveTimeMsDelta },
     })

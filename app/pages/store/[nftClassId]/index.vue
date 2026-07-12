@@ -450,6 +450,16 @@
                   @click="handlePlusReadButtonClick"
                 />
               </footer>
+
+              <UButton
+                v-if="isPreviewCTAVisible"
+                class="w-full cursor-pointer justify-center"
+                variant="outline"
+                color="primary"
+                size="lg"
+                :label="$t('product_page_preview_button_label')"
+                @click="handlePreviewButtonClick"
+              />
             </div>
 
             <div
@@ -564,6 +574,7 @@
       :is-library="isLibrary"
       :is-user-book-owner="isUserBookOwner"
       :is-plus-reading-cta-visible="isPlusReadingCTAVisible"
+      :is-preview-cta-visible="isPreviewCTAVisible"
       :plus-reading-cta-label="plusReadingCTALabel"
       :plus-reading-cta-variant="plusReadingCTAVariant"
       :read-button-variant="readButtonVariant"
@@ -579,6 +590,7 @@
       :is-updating-book-list="isUpdatingBookList"
       @read="handleReadButtonClick"
       @plus-read="handlePlusReadButtonClick"
+      @preview="handlePreviewButtonClick"
       @gift="handleGiftButtonClick"
       @book-list="handleBookListButtonClickDebounced"
       @purchase="handleStickyPurchaseButtonClick"
@@ -760,6 +772,13 @@ const isPlusReadingCTAVisible = computed(() =>
 // An active Plus member who already borrowed this book reads it now, so the CTA shows Read instead of Borrow.
 const isBookBorrowed = computed(() =>
   isLikerPlus.value && bookshelfStore.plusReadingBookIds.includes(nftClassId.value.toLowerCase()),
+)
+// 試閱: non-owners may read the first chapters free when the listing opted in;
+// hidden for Plus members who can already borrow the full book.
+const isPreviewCTAVisible = computed(() =>
+  !isUserBookOwner.value
+  && bookInfo.isPreviewEnabled.value
+  && !(isLikerPlus.value && isPlusReadingEnabled.value),
 )
 const plusReadingCTALabel = computed(() =>
   isBookBorrowed.value
@@ -1427,8 +1446,8 @@ async function handleReadButtonClick() {
 
 // Omitting nftId opens a Plus reading session: the reader fetches the generic
 // file, which ebook-cors serves to active Plus subscribers without ownership.
-async function openContentURL(contentURL: ContentURL, nftId?: string) {
-  const readerRoute = bookInfo.getReaderRoute.value({ nftId, contentURL })
+async function openContentURL(contentURL: ContentURL, nftId?: string, { isPreview = false } = {}) {
+  const readerRoute = bookInfo.getReaderRoute.value({ nftId, contentURL, isPreview })
   await navigateTo(readerRoute)
 }
 
@@ -1471,6 +1490,28 @@ async function handlePlusReadButtonClick() {
     }
 
     await openContentURL(contentURL)
+  }
+  catch (error) {
+    await handleError(error)
+  }
+}
+
+async function handlePreviewButtonClick() {
+  useLogEvent('product_page_preview_button_click', { nft_class_id: nftClassId.value })
+
+  // The preview file variant requires login server-side; prompt guests first.
+  if (!hasLoggedIn.value) {
+    await accountStore.login()
+    if (!hasLoggedIn.value) return
+  }
+
+  try {
+    const contentURL = bookInfo.defaultContentURL.value
+    if (!contentURL) {
+      throw createError({ data: { description: $t('error_book_content_url_empty') } })
+    }
+
+    await openContentURL(contentURL, undefined, { isPreview: true })
   }
   catch (error) {
     await handleError(error)

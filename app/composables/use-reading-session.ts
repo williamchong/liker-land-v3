@@ -13,10 +13,13 @@ interface ReadingSessionOptions {
   // True when this is a borrowed Plus-library read. Resolved asynchronously,
   // so it may still be false when the session starts but is set by session end.
   isLibraryBook?: Ref<boolean>
+  // True when reading the server-truncated 試閱 file: progress is relative to
+  // the preview, so the server must not treat it as full-book completion.
+  isPreview?: Ref<boolean>
 }
 
 export function useReadingSession(options: ReadingSessionOptions) {
-  const { readerType, progress, isTextToSpeechPlaying, chapterIndex, pageIndex, isLibraryBook } = options
+  const { readerType, progress, isTextToSpeechPlaying, chapterIndex, pageIndex, isLibraryBook, isPreview } = options
   const nftClassId = toRef(options.nftClassId)
 
   const { loggedIn, user: sessionUser } = useUserSession()
@@ -155,6 +158,7 @@ export function useReadingSession(options: ReadingSessionOptions) {
       readerType,
       chapterIndex: chapterIndex?.value,
       pageIndex: pageIndex?.value,
+      isPreview: !!isPreview?.value,
     }
   }
 
@@ -177,6 +181,7 @@ export function useReadingSession(options: ReadingSessionOptions) {
       pages_viewed: payload.pagesViewed,
       is_liker_plus_at_event_time: !!sessionUser.value?.isLikerPlus,
       is_library_book: !!isLibraryBook?.value,
+      is_preview: !!isPreview?.value,
     })
   }
 
@@ -194,6 +199,7 @@ export function useReadingSession(options: ReadingSessionOptions) {
           sessionId,
           activeReadingTimeMsDelta: drained.activeReadingTimeMs,
           ttsActiveTimeMsDelta: drained.ttsActiveTimeMs,
+          isPreview: !!isPreview?.value,
         },
       })
     }
@@ -210,6 +216,7 @@ export function useReadingSession(options: ReadingSessionOptions) {
       nft_class_id: toValue(nftClassId),
       reader_type: readerType,
       is_library_book: !!isLibraryBook?.value,
+      is_preview: !!isPreview?.value,
     })
   }
 

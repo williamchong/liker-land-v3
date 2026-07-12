@@ -40,6 +40,14 @@
           v-text="props.chapterTitle"
         />
       </div>
+
+      <UBadge
+        v-if="props.isPreview"
+        class="shrink-0"
+        color="primary"
+        variant="subtle"
+        :label="$t('reader_preview_badge')"
+      />
     </div>
 
     <slot name="center" />
@@ -60,7 +68,12 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  isPreview: {
+    type: Boolean,
+    default: false,
+  },
 })
 
+const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 </script>

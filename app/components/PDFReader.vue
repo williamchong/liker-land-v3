@@ -3,6 +3,7 @@
     <ReaderHeader
       :book-name="props.bookName"
       :chapter-title="pageDisplayText"
+      :is-preview="props.isPreview"
     >
       <template #center>
         <div class="flex items-center gap-2">
@@ -294,6 +295,7 @@ interface Props {
   pdfBuffer?: ArrayBuffer | null
   isAudioHidden?: boolean
   isTtsExtracting?: boolean
+  isPreview?: boolean
   bookFileCacheKey: string
   bookProgressKeyPrefix: string
   nftClassId: string

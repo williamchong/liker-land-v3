@@ -6,6 +6,7 @@ export interface ProductStickyBarProps {
   isLibrary: boolean
   isUserBookOwner: boolean
   isPlusReadingCtaVisible: boolean
+  isPreviewCtaVisible: boolean
   plusReadingCtaLabel: string
   plusReadingCtaVariant: 'outline' | 'solid'
   readButtonVariant: 'outline' | 'solid'

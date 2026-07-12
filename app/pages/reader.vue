@@ -73,11 +73,27 @@ else {
   ])
   // Only a non-owner Plus member on a Plus-reading book can borrow.
   const canBorrowWithPlus = !isOwner && isLikerPlus.value && bookInfo.isPlusReadingEnabled.value
-  if (!isOwner && !canBorrowWithPlus) {
+  const isPreviewRequested = getRouteQuery('preview') === '1'
+  if (isPreviewRequested && (isOwner || canBorrowWithPlus)) {
+    // Real access wins over preview: strip the param (and canonicalize nft_id
+    // for owners, as the block below would) so the full file is fetched and a
+    // borrow is registered/resumed as usual.
+    const query = { ...route.query }
+    delete query.preview
+    if (!nftId.value && bookInfo.firstUserOwnedNFTId.value) {
+      query.nft_id = bookInfo.firstUserOwnedNFTId.value
+    }
+    await navigateTo(localeRoute({
+      name: getRouteBaseName(route),
+      query,
+    }), { replace: true })
+  }
+  const canPreview = isPreviewRequested && bookInfo.isPreviewEnabled.value
+  if (!isOwner && !canBorrowWithPlus && !canPreview) {
     await navigateTo(localeRoute({ name: 'shelf', query: route.query }))
   }
 
-  if (!nftId.value && bookInfo.firstUserOwnedNFTId.value) {
+  if (!isPreviewRequested && !nftId.value && bookInfo.firstUserOwnedNFTId.value) {
     await navigateTo(localeRoute({
       name: getRouteBaseName(route),
       query: {

@@ -21,6 +21,10 @@ interface RecordPacedReadingUsageInput {
   isLikerPlus: boolean
   isPaidPlus: boolean
   isBorrowed: boolean
+  // 試閱 sessions read the server-truncated file. isBorrowed is never true for
+  // a preview (so it can't fund rev-share), but ES needs the flag to segment
+  // preview reads from owned reads.
+  isPreview: boolean
   paced: PacedDeltas
   rawDelta: PacedDeltas
   // Present only for session flushes, which carry cumulative totals and progress.
@@ -44,6 +48,7 @@ export async function recordPacedReadingUsage(input: RecordPacedReadingUsageInpu
     isLikerPlus,
     isPaidPlus,
     isBorrowed,
+    isPreview,
     paced,
     rawDelta,
     session,
@@ -58,6 +63,7 @@ export async function recordPacedReadingUsage(input: RecordPacedReadingUsageInpu
       evmWallet: wallet,
       isLikerPlus,
       isBorrowed,
+      isPreview,
       nftClassId,
       sessionId,
       activeReadingTimeMsDelta: rawDelta.activeReadingTimeMsDelta,
