@@ -24,6 +24,7 @@ const route = useRoute()
 const getRouteQuery = useRouteQuery()
 const localeRoute = useLocaleRoute()
 const getRouteBaseName = useRouteBaseName()
+const { loggedIn: hasLoggedIn } = useUserSession()
 const { t: $t } = useI18n()
 
 const nftClassId = computed(() => getRouteQuery('nft_class_id'))
@@ -64,43 +65,50 @@ else {
     }), { replace: true })
   }
 
-  // Resolve ownership and the Plus-reading flag together: a non-owner may still
-  // borrow when they're an active Plus member and the book allows Plus reading.
-  const [isOwner] = await Promise.all([
-    checkOwnership(),
-    nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value)
-      .catch(error => console.warn('Failed to fetch NFT metadata:', error)),
-  ])
-  // Only a non-owner Plus member on a Plus-reading book can borrow.
-  const canBorrowWithPlus = !isOwner && isLikerPlus.value && bookInfo.isPlusReadingEnabled.value
-  const isPreviewRequested = getRouteQuery('preview') === '1'
-  if (isPreviewRequested && (isOwner || canBorrowWithPlus)) {
-    // Real access wins over preview: strip the param (and canonicalize nft_id
-    // for owners, as the block below would) so the full file is fetched and a
-    // borrow is registered/resumed as usual.
-    const query = { ...route.query }
-    delete query.preview
-    if (!nftId.value && bookInfo.firstUserOwnedNFTId.value) {
-      query.nft_id = bookInfo.firstUserOwnedNFTId.value
-    }
-    await navigateTo(localeRoute({
-      name: getRouteBaseName(route),
-      query,
-    }), { replace: true })
-  }
-  const canPreview = isPreviewRequested && bookInfo.isPreviewEnabled.value
-  if (!isOwner && !canBorrowWithPlus && !canPreview) {
+  // Owning, borrowing with Plus and previewing all require a session — the
+  // preview file variant included — so a guest can never open the reader.
+  if (!hasLoggedIn.value) {
     await navigateTo(localeRoute({ name: 'shelf', query: route.query }))
   }
+  else {
+    // Resolve ownership and the Plus-reading flag together: a non-owner may still
+    // borrow when they're an active Plus member and the book allows Plus reading.
+    const [isOwner] = await Promise.all([
+      checkOwnership(),
+      nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value)
+        .catch(error => console.warn('Failed to fetch NFT metadata:', error)),
+    ])
+    // Only a non-owner Plus member on a Plus-reading book can borrow.
+    const canBorrowWithPlus = !isOwner && isLikerPlus.value && bookInfo.isPlusReadingEnabled.value
+    const isPreviewRequested = getRouteQuery('preview') === '1'
+    if (isPreviewRequested && (isOwner || canBorrowWithPlus)) {
+      // Real access wins over preview: strip the param (and canonicalize nft_id
+      // for owners, as the block below would) so the full file is fetched and a
+      // borrow is registered/resumed as usual.
+      const query = { ...route.query }
+      delete query.preview
+      if (!nftId.value && bookInfo.firstUserOwnedNFTId.value) {
+        query.nft_id = bookInfo.firstUserOwnedNFTId.value
+      }
+      await navigateTo(localeRoute({
+        name: getRouteBaseName(route),
+        query,
+      }), { replace: true })
+    }
+    const canPreview = isPreviewRequested && bookInfo.isPreviewEnabled.value
+    if (!isOwner && !canBorrowWithPlus && !canPreview) {
+      await navigateTo(localeRoute({ name: 'shelf', query: route.query }))
+    }
 
-  if (!isPreviewRequested && !nftId.value && bookInfo.firstUserOwnedNFTId.value) {
-    await navigateTo(localeRoute({
-      name: getRouteBaseName(route),
-      query: {
-        ...route.query,
-        nft_id: bookInfo.firstUserOwnedNFTId.value,
-      },
-    }), { replace: true })
+    if (!isPreviewRequested && !nftId.value && bookInfo.firstUserOwnedNFTId.value) {
+      await navigateTo(localeRoute({
+        name: getRouteBaseName(route),
+        query: {
+          ...route.query,
+          nft_id: bookInfo.firstUserOwnedNFTId.value,
+        },
+      }), { replace: true })
+    }
   }
 
   useHead({
