@@ -39,6 +39,16 @@
     </template>
 
     <template
+      v-if="!affiliateLikerId"
+      #pricing-footer
+    >
+      <PricingPageReferrerInput
+        class="mt-4"
+        @applied="handleReferrerApplied"
+      />
+    </template>
+
+    <template
       v-if="activeAffiliate && isAffiliateGiftRedeemable"
       #affiliate-promo
     >
@@ -165,7 +175,7 @@ import type { ResolvableArray, ResolvableLink } from '@unhead/vue'
 import type { PricingPagePromoPricing } from '~/components/PricingPageContent.props'
 import type { AffiliatePublicConfig } from '~~/shared/types/affiliate'
 import { getAffiliatePricingPageContent } from '~/composables/use-pricing-page-campaign'
-import { normalizeLikerId } from '~~/shared/utils/liker-id'
+import { formatLikerIdHandle, normalizeLikerId } from '~~/shared/utils/liker-id'
 
 import { DEFAULT_TRIAL_PERIOD_DAYS } from '~~/shared/constants/pricing'
 
@@ -173,6 +183,7 @@ import backdrop from '~/assets/images/paywall/bg-bookstore.jpg'
 
 definePageMeta({ layout: false })
 
+const route = useRoute()
 const localeRoute = useLocaleRoute()
 const getRouteQuery = useRouteQuery()
 const { yearlyPrice, monthlyPrice, currency } = useSubscription()
@@ -455,6 +466,15 @@ function handleOpen() {
 async function handleRegisterClick() {
   useLogEvent('pricing_page_register_click')
   await accountStore.login()
+}
+
+// Writing `from` into the route query is the whole integration: the affiliate
+// alert, gifts, voices, and both checkout paths already read the referrer from
+// there, so a typed code and a clicked affiliate link converge on one code path.
+async function handleReferrerApplied(likerId: string) {
+  await navigateTo({
+    query: { ...route.query, from: formatLikerIdHandle(likerId) },
+  }, { replace: true })
 }
 
 async function handleSubscribe(payload: {

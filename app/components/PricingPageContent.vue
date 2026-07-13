@@ -204,6 +204,8 @@
                 />
               </div>
 
+              <slot name="pricing-footer" />
+
               <UButton
                 class="mt-2 self-center"
                 :label="$t('pricing_page_learn_more')"
