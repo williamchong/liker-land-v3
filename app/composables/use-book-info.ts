@@ -1,3 +1,4 @@
+import type { LocationQueryRaw } from 'vue-router'
 import { getGenreI18nKey } from '~~/shared/constants/book-categories'
 
 export default function (
@@ -326,8 +327,9 @@ export default function (
     llSource?: string
     hash?: string
     isLibrary?: boolean
+    query?: LocationQueryRaw
   }) {
-    const query: Record<string, string> = {}
+    const query: LocationQueryRaw = { ...options?.query }
 
     if (options?.llMedium) {
       query.ll_medium = options.llMedium

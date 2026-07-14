@@ -59,10 +59,17 @@ else {
 
   // Bouncing a rejected preview visitor to the shelf is a dead end — they own
   // no copy of the book — so send them back to the product page they came from.
-  function getReaderRejectRoute() {
-    if (isPreviewRequested) return bookInfo.getProductPageRoute()
-    return localeRoute({ name: 'shelf', query: route.query })
-  }
+  // Carry the query over: /middleware/query.global.ts doesn't run on the server,
+  // so an SSR bounce would otherwise drop the utm/gclid params of an ad click.
+  const rejectRoute = computed(() => {
+    if (!isPreviewRequested) return localeRoute({ name: 'shelf', query: route.query })
+    const { preview: _preview, ...query } = route.query
+    return bookInfo.getProductPageRoute({
+      llMedium: 'preview-reject',
+      llSource: 'reader',
+      query,
+    })
+  })
 
   if (nftClassId.value !== nftClassId.value.toLowerCase()) {
     await navigateTo(localeRoute({
@@ -77,7 +84,7 @@ else {
   // Owning, borrowing with Plus and previewing all require a session — the
   // preview file variant included — so a guest can never open the reader.
   if (!hasLoggedIn.value) {
-    await navigateTo(getReaderRejectRoute())
+    await navigateTo(rejectRoute.value)
   }
   else {
     // Resolve ownership and the Plus-reading flag together: a non-owner may still
@@ -105,7 +112,7 @@ else {
     }
     const canPreview = isPreviewRequested && bookInfo.isPreviewEnabled.value
     if (!isOwner && !canBorrowWithPlus && !canPreview) {
-      await navigateTo(getReaderRejectRoute())
+      await navigateTo(rejectRoute.value)
     }
 
     if (!isPreviewRequested && !nftId.value && bookInfo.firstUserOwnedNFTId.value) {
