@@ -12,7 +12,7 @@ export function usePlusReadingTracker(params: {
 }) {
   const { loggedIn: hasLoggedIn } = useUserSession()
   const { isLikerPlus } = useSubscription()
-  const nftStore = useNFTStore()
+  const queryCache = useQueryCache()
   const bookshelfStore = useBookshelfStore()
 
   const nftClassIdRef = computed(() => toValue(params.nftClassId))
@@ -32,7 +32,7 @@ export function usePlusReadingTracker(params: {
     // Resolve ownership and the plus-reading flag before deciding.
     const [isOwner] = await Promise.all([
       checkOwnership(),
-      nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassIdRef.value).catch(() => {}),
+      ensureNFTClassAggregatedMetadataThroughCache(queryCache, nftClassIdRef.value).catch(() => {}),
     ])
     if (isOwner) return
     if (!params.isPlusReadingEnabled.value) return

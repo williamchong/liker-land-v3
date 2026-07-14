@@ -247,7 +247,7 @@ const paymentId = computed(() => getRouteQuery('payment_id'))
 const nftClassId = computed(() => getRouteQuery('class_id'))
 const isRedirected = computed(() => !!getRouteQuery('redirect'))
 
-const nftStore = useNFTStore()
+const queryCache = useQueryCache()
 
 let isCancelled = false
 onUnmounted(() => {
@@ -281,7 +281,7 @@ async function fetchGiftInfo() {
         // Fetch book metadata for display
         if (cartData.classIds?.[0]) {
           try {
-            const { classData } = await nftStore.fetchNFTClassAggregatedMetadataById(cartData.classIds[0])
+            const { classData } = await fetchNFTClassAggregatedMetadataThroughCache(queryCache, cartData.classIds[0])
             if (isCancelled) return
             bookName.value = classData?.name || ''
           }

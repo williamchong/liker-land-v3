@@ -53,7 +53,7 @@ else {
   const bookInfo = useBookInfo({ nftClassId })
   const { checkOwnership } = useUserBookOwnership(nftClassId)
   const { isLikerPlus } = useSubscription()
-  const nftStore = useNFTStore()
+  const queryCache = useQueryCache()
 
   const isPreviewRequested = getRouteQuery('preview') === '1'
 
@@ -91,7 +91,7 @@ else {
     // borrow when they're an active Plus member and the book allows Plus reading.
     const [isOwner] = await Promise.all([
       checkOwnership(),
-      nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value)
+      ensureNFTClassAggregatedMetadataThroughCache(queryCache, nftClassId.value)
         .catch(error => console.warn('Failed to fetch NFT metadata:', error)),
     ])
     // Only a non-owner Plus member on a Plus-reading book can borrow.

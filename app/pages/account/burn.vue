@@ -151,7 +151,7 @@
 const { t: $t } = useI18n()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const bookshelfStore = useBookshelfStore()
-const nftStore = useNFTStore()
+const queryCache = useQueryCache()
 const { burnNFT } = useLikeNFTClassContract()
 const waitForTransaction = useWaitForTransaction()
 const { handleError } = useErrorHandler()
@@ -177,7 +177,7 @@ const items = computed<BookItem[]>(() => {
   for (const item of bookshelfStore.items) {
     const { nftClassId } = item
     const nftIds = bookshelfStore.getTokenIdsByNFTClassId(nftClassId)
-    const metadata = nftStore.getNFTClassMetadataById(nftClassId)
+    const metadata = getNFTClassMetadataByIdFromCache(queryCache, nftClassId)
 
     if (!metadata || metadata['@type'] !== 'Book') continue
 

@@ -109,7 +109,7 @@ const getRouteQuery = useRouteQuery()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const { isApp } = useAppDetection()
 const accountStore = useAccountStore()
-const nftStore = useNFTStore()
+const queryCache = useQueryCache()
 const bookshelfStore = useBookshelfStore()
 const bookListStore = useBookListStore()
 const { errorModal, handleError } = useErrorHandler()
@@ -279,7 +279,7 @@ onMounted(async () => {
   }
 
   try {
-    await nftStore.fetchNFTClassAggregatedMetadataById(cartData.value.classIds[0])
+    await fetchNFTClassAggregatedMetadataThroughCache(queryCache, cartData.value.classIds[0])
   }
   catch (error) {
     console.error('Error fetching NFT class metadata:', error)

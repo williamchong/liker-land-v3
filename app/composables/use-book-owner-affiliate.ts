@@ -6,13 +6,12 @@ export function useBookOwnerAffiliate(
 ) {
   const { user } = useUserSession()
   const queryCache = useQueryCache()
-  const bookstoreStore = useBookstoreStore()
 
   const nftClassIdRef = computed(() => toValue(nftClassId) || '')
   // Use the bookstore-listing owner wallet (the lister) so the displayed voices
   // match exactly what the server grants — it gates on the same `ownerWallet`.
   const ownerWallet = computed(() =>
-    bookstoreStore.getBookstoreInfoByNFTClassId(nftClassIdRef.value)?.ownerWallet || '')
+    getBookstoreInfoByNFTClassIdFromCache(queryCache, nftClassIdRef.value)?.ownerWallet || '')
 
   const loadedConfig = useState<AffiliatePublicConfig | null>('book-owner-affiliate-config', () => null)
   const loadedLikerId = useState<string | null>('book-owner-affiliate-loaded-liker-id', () => null)

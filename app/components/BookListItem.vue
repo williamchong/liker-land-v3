@@ -100,7 +100,7 @@ const props = defineProps({
 
 const emit = defineEmits(['click-cover', 'remove', 'select', 'unselect'])
 
-const nftStore = useNFTStore()
+const queryCache = useQueryCache()
 const bookInfo = useBookInfo({ nftClassId: props.nftClassId })
 const { isLikerPlus, PLUS_BOOK_PURCHASE_DISCOUNT } = useSubscription()
 const { getResizedImageURL } = useImageResize()
@@ -112,7 +112,7 @@ const { t: $t } = useI18n()
 
 useVisibility('lazyLoadTrigger', (isVisible) => {
   if (isVisible) {
-    nftStore.lazyFetchNFTClassAggregatedMetadataById(props.nftClassId).catch(() => {
+    ensureNFTClassAggregatedMetadataThroughCache(queryCache, props.nftClassId).catch(() => {
       console.warn(`Failed to fetch aggregated metadata for the NFT class [${props.nftClassId}]`)
     })
   }

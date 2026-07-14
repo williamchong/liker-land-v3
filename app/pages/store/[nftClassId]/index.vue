@@ -679,8 +679,7 @@ const { formatPrice, formatDiscountedPrice } = useCurrency()
 const { getCheckoutCurrency } = usePaymentCurrency()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
-const nftStore = useNFTStore()
-const bookstoreStore = useBookstoreStore()
+const queryCache = useQueryCache()
 const bookshelfStore = useBookshelfStore()
 const { open: openTippingModal } = useTipping()
 const {
@@ -813,10 +812,10 @@ const isCacheDisabled = useNoCache()
 
 await callOnce(async () => {
   try {
-    const data = await nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value, {
+    const data = await ensureNFTClassAggregatedMetadataThroughCache(queryCache, nftClassId.value, {
       nocache: isCacheDisabled.value,
     })
-    if (!data.classData && !nftStore.getNFTClassMetadataById(nftClassId.value)) {
+    if (!data.classData && !getNFTClassMetadataByIdFromCache(queryCache, nftClassId.value)) {
       throw createError({ statusCode: 404 })
     }
   }
@@ -982,7 +981,7 @@ const publisherDescriptionHTML = computed(() => {
 })
 
 const buyerMessages = computed(() => {
-  const messages = nftStore.getMessagesByNFTClassId(nftClassId.value)
+  const messages = getNFTClassMessagesFromCache(queryCache, nftClassId.value)
   if (!messages) return []
 
   return messages
@@ -1230,8 +1229,8 @@ const recommendedClassIds = computed(() => {
     .concat(bookstoreRecommendedClassIds)
     .filter(id => id !== nftClassId.value)
     .sort((a, b) => {
-      const metadataA = nftStore.getNFTClassMetadataById(a)
-      const metadataB = nftStore.getNFTClassMetadataById(b)
+      const metadataA = getNFTClassMetadataByIdFromCache(queryCache, a)
+      const metadataB = getNFTClassMetadataByIdFromCache(queryCache, b)
       const authorA = typeof metadataA?.author === 'object' ? metadataA?.author?.name : metadataA?.author || ''
       const authorB = typeof metadataB?.author === 'object' ? metadataB?.author?.name : metadataB?.author || ''
       if (authorA === currentAuthorName && authorB !== currentAuthorName) return -1
@@ -1244,7 +1243,7 @@ const recommendedClassIds = computed(() => {
 const filteredRecommendedClassIds = computed(() => {
   return recommendedClassIds.value
     .filter((classId) => {
-      const bookstoreInfo = bookstoreStore.getBookstoreInfoByNFTClassId(classId)
+      const bookstoreInfo = getBookstoreInfoByNFTClassIdFromCache(queryCache, classId)
       if (bookstoreInfo === null || bookstoreInfo?.isHidden) return false
       if (!isAdultContentEnabled.value && bookstoreInfo?.isAdultOnly) return false
       // Only shows Plus reading enabled titles in the library
@@ -1272,10 +1271,10 @@ onMounted(async () => {
   // The metadata fetch runs in callOnce, so it never reruns on the client and
   // never trips lazyFetch's SWR path — nudge it here so a stale flag (試閱, Plus
   // reading) heals and its CTA self-corrects.
-  nftStore.revalidateNFTClassAggregatedMetadata([nftClassId.value])
+  revalidateNFTClassAggregatedMetadata(queryCache, [nftClassId.value])
 
   useLogEvent('view_item', formattedLogPayload.value)
-  nftStore.lazyFetchMessagesByClassId(nftClassId.value).catch((error) => {
+  fetchNFTClassMessagesThroughCache(queryCache, nftClassId.value).catch((error) => {
     console.error(`Failed to fetch messages for NFT class ${nftClassId.value}:`, error)
   })
   const ownerWalletAddress = bookInfo.nftClassOwnerWalletAddress.value

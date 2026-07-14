@@ -173,8 +173,7 @@ interface CheckoutItem {
 const bookPurchaseSessionAPI = useBookPurchaseSessionAPI()
 const getRouteQuery = useRouteQuery()
 const { user } = useUserSession()
-const nftStore = useNFTStore()
-const bookstoreStore = useBookstoreStore()
+const queryCache = useQueryCache()
 const { convertPrice, formatConvertedPrice } = useCurrency()
 const { getCheckoutCurrency } = usePaymentCurrency()
 const { handleError } = useErrorHandler()
@@ -192,8 +191,8 @@ const products = computed(() => parseProducts(productsQuery))
 
 const cartItems = computed<CheckoutItem[]>(() => {
   return products.value.map((product) => {
-    const nftClass = nftStore.getNFTClassMetadataById(product.classId)
-    const bookstoreInfo = bookstoreStore.getBookstoreInfoByNFTClassId(product.classId)
+    const nftClass = getNFTClassMetadataByIdFromCache(queryCache, product.classId)
+    const bookstoreInfo = getBookstoreInfoByNFTClassIdFromCache(queryCache, product.classId)
 
     if (!nftClass || !bookstoreInfo) {
       return null
@@ -239,7 +238,7 @@ onMounted(async () => {
       products.value.map(async (product) => {
         if (!product) return
         try {
-          await nftStore.lazyFetchNFTClassAggregatedMetadataById(product.classId)
+          await ensureNFTClassAggregatedMetadataThroughCache(queryCache, product.classId)
           loadingProgress.value += (90 / products.value.length)
         }
         catch (error) {

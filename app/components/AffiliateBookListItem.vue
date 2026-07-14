@@ -23,7 +23,7 @@ const props = defineProps<{ nftClassId: string }>()
 
 const emit = defineEmits<{ navigate: [] }>()
 
-const nftStore = useNFTStore()
+const queryCache = useQueryCache()
 const { getResizedNormalizedImageURL } = useImageResize()
 const { bookstoreInfo, productPageRoute } = useBookInfo({ nftClassId: toRef(props, 'nftClassId') })
 
@@ -33,6 +33,6 @@ const cover = computed(() => {
 })
 
 onMounted(() => {
-  nftStore.lazyFetchNFTClassAggregatedMetadataById(props.nftClassId).catch(() => { /* ignore */ })
+  ensureNFTClassAggregatedMetadataThroughCache(queryCache, props.nftClassId).catch(() => { /* ignore */ })
 })
 </script>

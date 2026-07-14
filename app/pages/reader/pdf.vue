@@ -56,7 +56,7 @@ if (!hasLoggedIn.value) {
 
 const { t: $t } = useI18n()
 const toast = useToast()
-const nftStore = useNFTStore()
+const queryCache = useQueryCache()
 const {
   nftClassId,
   nftId,
@@ -178,7 +178,7 @@ onMounted(() => {
     }
   }
   else {
-    nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value)
+    ensureNFTClassAggregatedMetadataThroughCache(queryCache, nftClassId.value)
       .catch(error => console.warn('Failed to fetch NFT metadata:', error))
   }
 

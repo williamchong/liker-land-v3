@@ -370,7 +370,7 @@ if (!hasLoggedIn.value) {
 const toast = useToast()
 const { value: colorModeValue } = useColorModeSync()
 const { t: $t } = useI18n()
-const nftStore = useNFTStore()
+const queryCache = useQueryCache()
 const bookSettingsStore = useBookSettingsStore()
 const {
   nftClassId,
@@ -505,7 +505,7 @@ onMounted(() => {
     }
   }
   else {
-    nftStore.lazyFetchNFTClassAggregatedMetadataById(nftClassId.value)
+    ensureNFTClassAggregatedMetadataThroughCache(queryCache, nftClassId.value)
       .catch(error => console.warn('Failed to fetch NFT metadata:', error))
   }
 

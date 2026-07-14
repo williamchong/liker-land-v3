@@ -46,27 +46,13 @@ function getLikerInfoByWalletAddressQueryKey(walletAddress: string): EntryKey {
   return [LIKER_INFO_QUERY_KEY, 'wallet', walletAddress.toLowerCase()]
 }
 
-// Profiles are treated as immutable within a session: never stale, and
-// gcTime: false disables eviction. Pinia Colada has no query-level retries,
-// which is what we want — the fetcher already retries via createRetryingFetch.
-const sharedQueryOptions = {
-  staleTime: Infinity,
-  gcTime: false,
-  refetchOnWindowFocus: false,
-} as const
-
 function createLikerInfoQueryFn(
   queryCache: QueryCache,
   fetchData: () => Promise<LikerInfoResponseData>,
   getSeedKeys: (info: LikerInfo) => EntryKey[],
 ) {
-  // Capture the Nuxt app now: the query fn runs outside Nuxt's ambient context
-  // on the server. tryUseNuxtApp because disabled queries re-evaluate options
-  // in watcher callbacks, where the instance may be unavailable on the server
-  // (the query fn never runs while disabled, so the context is not needed there).
-  const nuxtApp = tryUseNuxtApp()
-  return async () => {
-    const data = await (nuxtApp ? nuxtApp.runWithContext(fetchData) : fetchData())
+  return wrapQueryFnWithNuxtContext(async () => {
+    const data = await fetchData()
     const info = normalizeLikerInfoFromResponseData(data)
     // One profile answers lookups by both id and wallet; seed the sibling keys.
     // The query fn receives no cache handle, so the factory passes one in.
@@ -74,7 +60,7 @@ function createLikerInfoQueryFn(
       queryCache.setQueryData(key, info)
     }
     return info
-  }
+  })
 }
 
 export function getLikerInfoByIdQueryOptions({ queryCache, likerId, nocache = false }: {
@@ -84,7 +70,7 @@ export function getLikerInfoByIdQueryOptions({ queryCache, likerId, nocache = fa
 }): DefineQueryOptions<LikerInfo> {
   const canonicalKey = getLikerInfoByIdQueryKey(likerId)
   return {
-    ...sharedQueryOptions,
+    ...cacheForeverQueryOptions,
     // `?nocache=1` bypasses the upstream CDN, so it gets its own cache entry:
     // the query fn is per-entry (last caller wins), and sharing the canonical
     // key would let the CDN-busting fetcher serve plain reads or vice versa. It
@@ -107,7 +93,7 @@ function getLikerInfoByWalletAddressQueryOptions({ queryCache, walletAddress }: 
   walletAddress: string
 }): DefineQueryOptions<LikerInfo> {
   return {
-    ...sharedQueryOptions,
+    ...cacheForeverQueryOptions,
     key: getLikerInfoByWalletAddressQueryKey(walletAddress),
     query: createLikerInfoQueryFn(
       queryCache,
@@ -115,17 +101,6 @@ function getLikerInfoByWalletAddressQueryOptions({ queryCache, walletAddress }: 
       info => (info.likerId ? [getLikerInfoByIdQueryKey(info.likerId)] : []),
     ),
   }
-}
-
-// refresh() fetches only when stale and dedupes against any in-flight fetch;
-// a failed fetch rejects with the original fetcher error (e.g. the FetchError
-// 404 callers branch on).
-async function refreshThroughCache(
-  queryCache: QueryCache,
-  options: DefineQueryOptions<LikerInfo>,
-): Promise<LikerInfo | undefined> {
-  const state = await queryCache.refresh(queryCache.ensure(options))
-  return state.data
 }
 
 // queryCache is a parameter because call sites run in event handlers and async
@@ -136,7 +111,7 @@ export async function fetchLikerInfoByIdThroughCache(
   likerId: string,
   { nocache = false }: { nocache?: boolean } = {},
 ): Promise<LikerInfo | undefined> {
-  return refreshThroughCache(
+  return refreshQueryData(
     queryCache, getLikerInfoByIdQueryOptions({ queryCache, likerId, nocache }))
 }
 
@@ -144,7 +119,7 @@ export async function fetchLikerInfoByWalletAddressThroughCache(
   queryCache: QueryCache,
   walletAddress: string,
 ): Promise<LikerInfo | undefined> {
-  return refreshThroughCache(
+  return refreshQueryData(
     queryCache, getLikerInfoByWalletAddressQueryOptions({ queryCache, walletAddress }))
 }
 
@@ -208,7 +183,7 @@ function useLikerInfoBatchQuery(
       if (import.meta.server || !isEnabled) return
       for (const value of currentValues) {
         if (!value) continue
-        refreshThroughCache(queryCache, getOptions(queryCache, value)).catch(() => {
+        refreshQueryData(queryCache, getOptions(queryCache, value)).catch(() => {
           // Failures live on the entry state; consumers render fallbacks.
         })
       }
