@@ -21,7 +21,7 @@
         variant="ghost"
         size="xl"
         icon="i-material-symbols-arrow-back-rounded"
-        :to="localeRoute({ name: 'shelf' })"
+        :to="backRoute"
       />
 
       <div class="flex flex-col overflow-hidden min-w-0">
@@ -59,6 +59,8 @@
 </template>
 
 <script setup lang="ts">
+import type { RouteLocationRaw } from 'vue-router'
+
 const props = defineProps({
   bookName: {
     type: String,
@@ -72,8 +74,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Where the back arrow leads; defaults to the shelf, which only holds books
+  // the reader owns or borrows. A preview reader passes the product page.
+  backTo: {
+    type: [String, Object] as PropType<RouteLocationRaw>,
+    default: undefined,
+  },
 })
 
 const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
+
+const backRoute = computed(() => props.backTo || localeRoute({ name: 'shelf' }))
 </script>

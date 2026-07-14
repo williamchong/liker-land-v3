@@ -6,6 +6,7 @@
         class="absolute inset-0"
         cover-class="mt-[8vh]"
         is-back-to-shelf-button-visible
+        :back-to="readerBackRoute"
         :book-name="bookInfo.name.value"
         :book-cover-src="bookCoverSrc"
         :loading-label="loadingLabel"
@@ -21,6 +22,7 @@
         :book-name="bookInfo.name.value"
         :chapter-title="activeNavItemLabel"
         :is-preview="isPreviewMode"
+        :back-to="readerBackRoute"
       >
         <template #trailing>
           <div class="relative flex justify-end items-center gap-2">
@@ -392,6 +394,17 @@ const { isLibraryBook } = usePlusReadingTracker({
 const { openPreviewEndModal, handlePreviewEndBoundary } = usePreviewEndModal({
   nftClassId,
   isEnabled: isPreviewMode.value,
+})
+
+// A preview reader neither owns nor borrows the book, so the shelf they'd
+// normally exit to can't show it. Return them to the store page instead, where
+// the browse-to-purchase flow continues.
+const readerBackRoute = computed(() => {
+  if (!isPreviewMode.value || !('getProductPageRoute' in bookInfo)) return undefined
+  return bookInfo.getProductPageRoute({
+    llMedium: 'preview-back',
+    llSource: 'reader',
+  })
 })
 
 const { fetchCustomVoice } = useCustomVoice()

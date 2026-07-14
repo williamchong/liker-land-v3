@@ -55,6 +55,15 @@ else {
   const { isLikerPlus } = useSubscription()
   const nftStore = useNFTStore()
 
+  const isPreviewRequested = getRouteQuery('preview') === '1'
+
+  // Bouncing a rejected preview visitor to the shelf is a dead end — they own
+  // no copy of the book — so send them back to the product page they came from.
+  function getReaderRejectRoute() {
+    if (isPreviewRequested) return bookInfo.getProductPageRoute()
+    return localeRoute({ name: 'shelf', query: route.query })
+  }
+
   if (nftClassId.value !== nftClassId.value.toLowerCase()) {
     await navigateTo(localeRoute({
       name: getRouteBaseName(route),
@@ -68,7 +77,7 @@ else {
   // Owning, borrowing with Plus and previewing all require a session — the
   // preview file variant included — so a guest can never open the reader.
   if (!hasLoggedIn.value) {
-    await navigateTo(localeRoute({ name: 'shelf', query: route.query }))
+    await navigateTo(getReaderRejectRoute())
   }
   else {
     // Resolve ownership and the Plus-reading flag together: a non-owner may still
@@ -80,7 +89,6 @@ else {
     ])
     // Only a non-owner Plus member on a Plus-reading book can borrow.
     const canBorrowWithPlus = !isOwner && isLikerPlus.value && bookInfo.isPlusReadingEnabled.value
-    const isPreviewRequested = getRouteQuery('preview') === '1'
     if (isPreviewRequested && (isOwner || canBorrowWithPlus)) {
       // Real access wins over preview: strip the param (and canonicalize nft_id
       // for owners, as the block below would) so the full file is fetched and a
@@ -97,7 +105,7 @@ else {
     }
     const canPreview = isPreviewRequested && bookInfo.isPreviewEnabled.value
     if (!isOwner && !canBorrowWithPlus && !canPreview) {
-      await navigateTo(localeRoute({ name: 'shelf', query: route.query }))
+      await navigateTo(getReaderRejectRoute())
     }
 
     if (!isPreviewRequested && !nftId.value && bookInfo.firstUserOwnedNFTId.value) {
