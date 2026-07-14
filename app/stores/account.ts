@@ -122,20 +122,33 @@ export const useAccountStore = defineStore('account', () => {
     return $t('account_register_error_email_already_used', { email })
   }
 
+  // A v1 account holds neither wallet, so the API's isMigratable flag is the only
+  // signal it can be auto-linked; fall back to the wallet shape for API versions
+  // that predate the flag.
+  function resolveIsMigratable(data?: {
+    isMigratable?: boolean
+    evmWallet?: string
+    likeWallet?: string
+  } | null): boolean {
+    return data?.isMigratable ?? (!data?.evmWallet && !!data?.likeWallet)
+  }
+
   function getEmailAlreadyUsedErrorData({
     email,
     walletAddress,
     boundEVMWallet,
     boundLikeWallet,
+    isMigratable,
     loginMethod,
   }: {
     email: string
     walletAddress: string
     boundEVMWallet?: string
     boundLikeWallet?: string
+    isMigratable: boolean
     loginMethod: string
   }) {
-    const shouldMigrate = !boundEVMWallet && !!boundLikeWallet
+    const shouldMigrate = isMigratable
     return {
       statusCode: 401,
       data: {
@@ -200,8 +213,9 @@ export const useAccountStore = defineStore('account', () => {
     catch (error) {
       if (error instanceof FetchError) {
         switch (error.data?.error) {
-          case 'EMAIL_ALREADY_USED':
-            if (!error.data?.evmWallet && error.data?.likeWallet) {
+          case 'EMAIL_ALREADY_USED': {
+            const isMigratable = resolveIsMigratable(error.data)
+            if (isMigratable) {
               try {
                 const message = JSON.stringify({
                   action: 'migrate',
@@ -229,8 +243,10 @@ export const useAccountStore = defineStore('account', () => {
               walletAddress,
               boundEVMWallet: error.data?.evmWallet,
               boundLikeWallet: error.data?.likeWallet,
+              isMigratable,
               loginMethod,
             }))
+          }
 
           case 'EVM_WALLET_ALREADY_EXIST':
             // Already registered
@@ -349,6 +365,7 @@ export const useAccountStore = defineStore('account', () => {
                 walletAddress,
                 boundEVMWallet: error.data?.evmWallet,
                 boundLikeWallet: error.data?.likeWallet,
+                isMigratable: resolveIsMigratable(error.data),
                 loginMethod,
               }).data).result
               continue
