@@ -1,4 +1,3 @@
-import type { AffiliatePublicConfig } from '~~/shared/types/affiliate'
 import { getBookstoreScopedKey } from '~~/shared/utils/bookstore'
 
 interface BookstoreSearchOptions {
@@ -42,15 +41,7 @@ interface StakingBooks {
 }
 
 export const useBookstoreStore = defineStore('bookstore', () => {
-  const bookstoreInfoByNFTClassIdMap = ref<Record<string, BookstoreInfo | null>>({})
-
-  const getBookstoreInfoByNFTClassId = computed(() => (nftClassId: string) => {
-    return bookstoreInfoByNFTClassIdMap.value[normalizeNFTClassId(nftClassId)]
-  })
-
-  function addBookstoreInfoByNFTClassId(nftClassId: string, data: BookstoreInfo | null) {
-    bookstoreInfoByNFTClassIdMap.value[normalizeNFTClassId(nftClassId)] = data
-  }
+  const queryCache = useQueryCache()
 
   /* Bookstore CMS Products */
 
@@ -116,48 +107,6 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     }
   }
 
-  /* Bookstore CMS Tags */
-
-  const bookstoreCMSTagsMapById = ref<Record<string, BookstoreCMSTag>>({})
-  const bookstoreCMSTagIds = ref<string[]>([])
-  // Drop ids missing from the map: persisted ids and the persisted map can desync
-  // (older build, partial write, edited storage), and an undefined entry here
-  // crashes consumers that read tag.isPublic / tag.isForLibrary.
-  const bookstoreCMSTags = computed(() => bookstoreCMSTagIds.value
-    .map(tagId => bookstoreCMSTagsMapById.value[tagId])
-    .filter((tag): tag is BookstoreCMSTag => !!tag))
-  const isFetchingBookstoreCMSTags = ref(false)
-  const hasFetchedBookstoreCMSTags = ref(false)
-
-  const getBookstoreCMSTagById = computed(() => (tagId: string) => bookstoreCMSTagsMapById.value[tagId])
-
-  function insertBookstoreCMSTag(tag: BookstoreCMSTag) {
-    bookstoreCMSTagsMapById.value[tag.id] = tag
-    if (!bookstoreCMSTagIds.value.includes(tag.id)) {
-      bookstoreCMSTagIds.value.push(tag.id)
-    }
-    return tag.id
-  }
-
-  async function fetchBookstoreCMSTags() {
-    if (isFetchingBookstoreCMSTags.value) return
-    try {
-      isFetchingBookstoreCMSTags.value = true
-      const result = await fetchBookstoreCMSTagsForAll()
-      bookstoreCMSTagIds.value = result.records.map(insertBookstoreCMSTag)
-      hasFetchedBookstoreCMSTags.value = true
-    }
-    finally {
-      isFetchingBookstoreCMSTags.value = false
-    }
-  }
-
-  async function fetchBookstoreCMSTag(tagId: string) {
-    const tag = await fetchBookstoreCMSTagById(tagId)
-    if (tag) insertBookstoreCMSTag(tag)
-    return tag
-  }
-
   /* Bookstore Search Results */
 
   const bookstoreSearchResultsByQueryMap = ref<Record<string, BookstoreSearchResults>>({})
@@ -167,7 +116,8 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     const items
       = (bookstoreSearchResultsByQueryMap.value[queryKey]?.items || [])
         .filter((item) => {
-          const bookstoreInfo = getBookstoreInfoByNFTClassId.value(item.classId)
+          // Reactive cache read: the filter re-runs as book infos land.
+          const bookstoreInfo = getBookstoreInfoByNFTClassIdFromCache(queryCache, item.classId)
           return bookstoreInfo !== null && !bookstoreInfo?.isHidden
         })
     return {
@@ -348,13 +298,6 @@ export const useBookstoreStore = defineStore('bookstore', () => {
 
   /* Affiliate Books */
 
-  // Null-prototype: keyed by a raw likerId from the route, so guard against keys
-  // like `__proto__`/`constructor` polluting the prototype or returning inherited members.
-  const affiliateConfigByLikerIdMap = ref<Record<string, AffiliatePublicConfig | null>>(Object.create(null))
-  const getAffiliateConfigByLikerId = computed(() => (likerId: string) => {
-    return affiliateConfigByLikerIdMap.value[likerId] ?? null
-  })
-
   // The affiliate store view unions the affiliate's hand-picked classIds with the
   // first page of books from each affiliate publisher wallet, deduped into one
   // flat list reusing the search-results pipeline. No pagination: publisher
@@ -367,15 +310,13 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     }
 
     try {
-      const config = await apiFetch<AffiliatePublicConfig>(`/affiliate/${encodeURIComponent(likerId)}`)
-      affiliateConfigByLikerIdMap.value[likerId] = config
+      const config = await fetchAffiliateStoreConfigThroughCache(queryCache, likerId)
 
       if (!config?.active) {
         updateSearchResults(queryKey, [], undefined, true)
         return
       }
 
-      const nftStore = useNFTStore()
       const seen = new Set<string>()
       const items: BookstoreSearchResults['items'] = []
 
@@ -384,7 +325,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
       // publisher's first page concurrently — the two batches are independent.
       const [, walletResults] = await Promise.all([
         Promise.all(config.affiliateClassIds.map(classId =>
-          nftStore.fetchNFTClassAggregatedMetadataById(classId).catch(() => { /* ignore */ }),
+          fetchNFTClassAggregatedMetadataThroughCache(queryCache, classId).catch(() => { /* ignore */ }),
         )),
         Promise.all(config.affiliatePublisherWallets.map(wallet =>
           fetchNFTClassesByOwnerWalletAddress(wallet, { limit: 100, isBooksOnly: true }).catch(() => null),
@@ -393,9 +334,10 @@ export const useBookstoreStore = defineStore('bookstore', () => {
 
       // Library gates on isPlusReadingEnabled, absent on indexer-sourced publisher
       // books; revalidate their bookstore info (queued, fire-and-forget) so the
-      // Plus-reading filter keeps them — isRevalidatingMetadata holds the skeleton.
+      // Plus-reading filter keeps them — the revalidating signal holds the skeleton.
       if (isLibrary) {
-        nftStore.revalidateNFTClassAggregatedMetadata(
+        revalidateNFTClassAggregatedMetadata(
+          queryCache,
           walletResults.flatMap(result => result?.data?.map(nftClass => nftClass.address) ?? []),
         )
       }
@@ -403,7 +345,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
       config.affiliateClassIds.forEach((rawClassId) => {
         const classId = normalizeNFTClassId(rawClassId)
         if (seen.has(classId)) return
-        const info = getBookstoreInfoByNFTClassId.value(classId)
+        const info = getBookstoreInfoByNFTClassIdFromCache(queryCache, classId)
         if (!info || info.isHidden) return
         seen.add(classId)
         items.push({
@@ -503,12 +445,6 @@ export const useBookstoreStore = defineStore('bookstore', () => {
   }
 
   return {
-    bookstoreInfoByNFTClassIdMap,
-
-    getBookstoreInfoByNFTClassId,
-
-    addBookstoreInfoByNFTClassId,
-
     /* Bookstore CMS Products */
 
     bookstoreCMSProductsByTagKeyMap,
@@ -516,19 +452,6 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     getBookstoreCMSProductsByTagId,
 
     fetchCMSProductsByTagId,
-
-    /* Bookstore CMS Tags */
-
-    bookstoreCMSTagsMapById,
-    bookstoreCMSTagIds,
-    bookstoreCMSTags,
-    isFetchingBookstoreCMSTags,
-    hasFetchedBookstoreCMSTags,
-
-    getBookstoreCMSTagById,
-
-    fetchBookstoreCMSTags,
-    fetchBookstoreCMSTag,
 
     /* Bookstore Search Results */
 
@@ -539,8 +462,6 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     fetchSearchResults,
 
     /* Affiliate Books */
-
-    getAffiliateConfigByLikerId,
 
     fetchAffiliateBooks,
 
@@ -554,13 +475,11 @@ export const useBookstoreStore = defineStore('bookstore', () => {
   }
 }, {
   persist: {
-    // Best-effort offline support for the store landing: persist the tag chips,
-    // the staking ranked lists, and the book info (titles/covers) they render.
+    // Best-effort offline support for the store landing: persist the staking
+    // ranked lists. The tag chips and book infos they render live in the Pinia
+    // Colada query cache, persisted by its cache-persister plugin.
     pick: [
-      'bookstoreCMSTagIds',
-      'bookstoreCMSTagsMapById',
       'stakingBooksMap',
-      'bookstoreInfoByNFTClassIdMap',
     ],
     // totalStaked is a BigInt; the default JSON serializer throws on it and the
     // write is silently dropped, so round-trip BigInt through a tagged string.

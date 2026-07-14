@@ -14,7 +14,7 @@ export function useStoreTags({ routeName, isLibraryTab }: StoreTagsOptions) {
   const localeRoute = useLocaleRoute()
   const route = useRoute()
   const getRouteQuery = useRouteQuery()
-  const bookstoreStore = useBookstoreStore()
+  const queryCache = useQueryCache()
   const { loggedIn: hasLoggedIn } = useUserSession()
   const isMobile = useMediaQuery('(max-width: 425px)')
 
@@ -57,7 +57,7 @@ export function useStoreTags({ routeName, isLibraryTab }: StoreTagsOptions) {
     if (getIsStakingTagId(id) || getIsLocalHistoriesTagId(id)) return !isLibraryTab.value
     // CMS tags must carry the flag matching the current tab.
     // Unknown tags (not yet loaded) are treated as valid until their data arrives to avoid a false redirect.
-    const tag = bookstoreStore.getBookstoreCMSTagById(id)
+    const tag = getBookstoreCMSTagByIdFromCache(queryCache, id)
     if (!tag) return true
     return isLibraryTab.value ? tag.isForLibrary : tag.isForStore
   }
@@ -103,7 +103,7 @@ export function useStoreTags({ routeName, isLibraryTab }: StoreTagsOptions) {
   }
 
   const activeCMSTag = computed(() => {
-    return bookstoreStore.getBookstoreCMSTagById(tagId.value)
+    return getBookstoreCMSTagByIdFromCache(queryCache, tagId.value)
   })
 
   function getTagTo(value: string) {
@@ -132,7 +132,7 @@ export function useStoreTags({ routeName, isLibraryTab }: StoreTagsOptions) {
 
     // Built-in list types (latest/free/drm-free) are mirrored as CMS tags so editors
     // control their ordering here, hence they surface through cmsTags like any other tag.
-    const cmsTags = bookstoreStore.bookstoreCMSTags
+    const cmsTags = getBookstoreCMSTagsFromCache(queryCache)
       .filter((tag) => {
         // Always surface the active tag, even if it isn't flagged for this tab.
         if (tag.id === tagId.value) return true

@@ -1,10 +1,10 @@
 export function useEVMBookInfo(
   { nftClassId }: { nftClassId: string | Ref<string> | ComputedRef<string> },
 ) {
-  const nftStore = useNFTStore()
+  const queryCache = useQueryCache()
   const { normalizeURIToHTTP } = useURIParser()
 
-  const nftClass = computed(() => nftStore.getNFTClassById(toValue(nftClassId)))
+  const nftClass = computed(() => getNFTClassByIdFromCache(queryCache, toValue(nftClassId)))
 
   const nftClassOwnerWalletAddress = computed(() => nftClass.value?.owner_address || '')
 

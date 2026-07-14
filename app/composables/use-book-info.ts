@@ -13,13 +13,13 @@ export default function (
   const { t: $t } = useI18n()
   const localeRoute = useLocaleRoute()
   const localeString = useLocaleString()
-  const bookstoreStore = useBookstoreStore()
+  const queryCache = useQueryCache()
   const bookInfo = useEVMBookInfo({ nftClassId })
   const bookshelfStore = useBookshelfStore()
   const { normalizeURIToHTTP } = useURIParser()
 
   const bookstoreInfo = computed(() => {
-    return bookstoreStore.getBookstoreInfoByNFTClassId(toValue(nftClassId))
+    return getBookstoreInfoByNFTClassIdFromCache(queryCache, toValue(nftClassId))
   })
 
   const nftClassOwnerWalletAddress = computed(() => bookstoreInfo.value?.ownerWallet || '')

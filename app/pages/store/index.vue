@@ -121,7 +121,7 @@
           :model-value="tagId"
           :items="allTagItems"
           :aria-label="$t('store_tag_more_categories_label')"
-          :is-loading="!bookstoreStore.hasFetchedBookstoreCMSTags && isDefaultTagId"
+          :is-loading="!hasFetchedCMSTags && isDefaultTagId"
           class="grow min-w-0"
           @click="(item) => handleTagClick(item.value)"
         />
@@ -291,7 +291,7 @@ const getRouteQuery = useRouteQuery()
 const runtimeConfig = useRuntimeConfig()
 const bookstoreStore = useBookstoreStore()
 const queryCache = useQueryCache()
-const nftStore = useNFTStore()
+const isRevalidatingNFTClassMetadata = useIsRevalidatingNFTClassMetadata()
 const infiniteScrollDetectorElement = useTemplateRef<HTMLLIElement>('infiniteScrollDetector')
 const shouldLoadMore = useElementVisibility(infiniteScrollDetectorElement)
 const { handleError } = useErrorHandler()
@@ -331,7 +331,7 @@ const affiliateDisplayName = computed(() => affiliateInfo.value?.displayName || 
 const affiliateAvatarSrc = computed(() => affiliateInfo.value?.avatarSrc || '')
 const affiliateConfig = computed(() => {
   if (!queryAffiliate.value) return null
-  return bookstoreStore.getAffiliateConfigByLikerId(queryAffiliate.value)
+  return getAffiliateStoreConfigByLikerIdFromCache(queryCache, queryAffiliate.value)
 })
 // Publisher drill-down links rendered as header chrome — the affiliate view only
 // loads each publisher's first page, so these point at the full owner_wallet list.
@@ -453,6 +453,8 @@ const {
   tagName,
 } = useStoreTags({ routeName, isLibraryTab })
 
+const hasFetchedCMSTags = computed(() => getHasFetchedBookstoreCMSTagsFromCache(queryCache))
+
 await callOnce(async () => {
   if (getIsLocalHistoriesTagId(tagId.value)) {
     await navigateTo(localeRoute({ name: 'local-histories' }), { replace: true })
@@ -468,7 +470,7 @@ await callOnce(async () => {
 
   let tag: BookstoreCMSTag | undefined
   try {
-    tag = await bookstoreStore.fetchBookstoreCMSTag(tagId.value)
+    tag = await fetchBookstoreCMSTagThroughCache(queryCache, tagId.value)
   }
   catch (error) {
     // Ignore 404 error
@@ -665,14 +667,14 @@ function shouldFilterAdultOnly(bookstoreInfo: BookstoreInfo | null | undefined):
 // the proactive revalidate in fetchTagItems self-heals if stale.
 function getIsPlusReading(item: BookstoreItem): boolean {
   if (typeof item.isPlusReadingEnabled === 'boolean') return item.isPlusReadingEnabled
-  const info = bookstoreStore.getBookstoreInfoByNFTClassId(item.classId || item.id || '')
+  const info = getBookstoreInfoByNFTClassIdFromCache(queryCache, item.classId || item.id || '')
   return !!info?.isPlusReadingEnabled
 }
 
 const baseProducts = computed<BookstoreItemList>(() => {
   if (searchResults.value && !isSearchResultEmpty.value) {
     const filtered = searchResults.value.items.filter((item) => {
-      const bookstoreInfo = bookstoreStore.getBookstoreInfoByNFTClassId(item.classId || '')
+      const bookstoreInfo = getBookstoreInfoByNFTClassIdFromCache(queryCache, item.classId || '')
       return !shouldFilterAdultOnly(bookstoreInfo)
     })
     return {
@@ -687,7 +689,7 @@ const baseProducts = computed<BookstoreItemList>(() => {
     const staking = bookstoreStore.getStakingBooks(apiSortValue)
     const items: BookstoreItem[] = []
     staking.items.forEach((item) => {
-      const bookInfo = bookstoreStore.getBookstoreInfoByNFTClassId(item.nftClassId)
+      const bookInfo = getBookstoreInfoByNFTClassIdFromCache(queryCache, item.nftClassId)
       if (bookInfo?.isHidden) return
       if (shouldFilterAdultOnly(bookInfo)) return
       items.push({
@@ -746,7 +748,7 @@ const isLoadingInitialItems = computed(() => (
   && (
     products.value.isFetchingItems
     || (isSearchMode.value && !products.value.hasFetchedItems)
-    || (isLibraryTab.value && nftStore.isRevalidatingMetadata)
+    || (isLibraryTab.value && isRevalidatingNFTClassMetadata.value)
   )
 ))
 const hasMoreItems = computed(() => !!products.value.nextItemsKey || !!products.value.mayHaveMore || !products.value.hasFetchedItems)
@@ -777,7 +779,7 @@ const entity = computed(() => {
 function extractEntityDescription(metadataKey: 'author' | 'publisher'): string {
   for (const item of products.value.items) {
     if (!item.classId) continue
-    const metadataValue = nftStore.getNFTClassById(item.classId)?.metadata?.[metadataKey]
+    const metadataValue = getNFTClassMetadataByIdFromCache(queryCache, item.classId)?.[metadataKey]
     if (metadataValue && typeof metadataValue === 'object') {
       const description = metadataValue.description?.trim()
       if (description) return description
@@ -950,7 +952,7 @@ const { gridClasses, getGridItemClassesByIndex, columnMax } = usePaginatedGrid({
 
 async function fetchTags() {
   try {
-    await bookstoreStore.fetchBookstoreCMSTags()
+    await fetchBookstoreCMSTagsThroughCache(queryCache)
   }
   catch (error) {
     // Offline cold launch fails these network fetches expectedly; the cached
@@ -975,7 +977,8 @@ async function fetchTagItems({ isRefresh = false } = {}) {
       // Staking candidates are gated by getIsPlusReading before they render, so
       // they never trigger their own SWR refresh; nudge them so stale/missing
       // Plus flags self-correct and the gate reactively re-filters.
-      nftStore.revalidateNFTClassAggregatedMetadata(
+      revalidateNFTClassAggregatedMetadata(
+        queryCache,
         bookstoreStore.getStakingBooks(apiSortValue).items.map(item => item.nftClassId),
       )
     }

@@ -233,7 +233,6 @@ const emit = defineEmits([
 ])
 
 const { t: $t, locale } = useI18n()
-const nftStore = useNFTStore()
 const queryCache = useQueryCache()
 const bookInfo = useBookInfo({ nftClassId: props.nftClassId })
 const { downloadBookFile } = useBookDownload()
@@ -446,7 +445,7 @@ else {
 }
 
 function fetchBookInfo() {
-  nftStore.lazyFetchNFTClassAggregatedMetadataById(props.nftClassId).catch(() => {
+  ensureNFTClassAggregatedMetadataThroughCache(queryCache, props.nftClassId).catch(() => {
     console.warn(`Failed to fetch aggregated metadata for the NFT class [${props.nftClassId}]`)
   })
   if (bookInfo.nftClassOwnerWalletAddress.value) {

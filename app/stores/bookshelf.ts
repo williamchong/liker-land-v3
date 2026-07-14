@@ -12,7 +12,7 @@ export interface BookshelfItem {
 
 export const useBookshelfStore = defineStore('bookshelf', () => {
   const { loggedIn: hasLoggedIn } = useUserSession()
-  const nftStore = useNFTStore()
+  const queryCache = useQueryCache()
   const likeNFTClassContract = useLikeNFTClassContract()
   const bookSettingsStore = useBookSettingsStore()
 
@@ -42,7 +42,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
   })
 
   function getIsBookNFTClass(nftClassId: string) {
-    return nftStore.getNFTClassMetadataById(nftClassId)?.['@type'] === 'Book'
+    return getNFTClassMetadataByIdFromCache(queryCache, nftClassId)?.['@type'] === 'Book'
   }
 
   function buildBookshelfItem(nftClassId: string, nftIds: string[]): BookshelfItem {
@@ -89,7 +89,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
       // (progress) for display. One failure shouldn't drop the rest.
       await Promise.allSettled([
         ...plusReadingBookIds.value.map(id =>
-          nftStore.lazyFetchNFTClassAggregatedMetadataById(id),
+          ensureNFTClassAggregatedMetadataThroughCache(queryCache, id),
         ),
         // Force-refresh: server-accumulated reading/TTS totals change outside
         // the client, so skip-if-initialized would surface a stale cached 0.
@@ -211,8 +211,8 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
           tokenIdsByNFTClassId.value[nftClassId] ??= []
         }
 
-        if (nftClass.metadata && (shouldForceRefreshCache || !nftStore.getNFTClassMetadataById(nftClassId))) {
-          nftStore.addNFTClassMetadata(nftClassId, nftClass.metadata)
+        if (nftClass.metadata && (shouldForceRefreshCache || !getNFTClassMetadataByIdFromCache(queryCache, nftClassId))) {
+          setNFTClassData(queryCache, nftClassId, { metadata: nftClass.metadata })
         }
 
         progressFetchNFTClassIds.add(nftClassId)
@@ -275,7 +275,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
 
     const hasNFTClass = nftClassIds.value.includes(normalizedNFTClassId)
     const existingTokenIds = tokenIdsByNFTClassId.value[normalizedNFTClassId]
-    const existingMetadata = nftStore.getNFTClassMetadataById(normalizedNFTClassId)
+    const existingMetadata = getNFTClassMetadataByIdFromCache(queryCache, normalizedNFTClassId)
 
     if (!isRefresh && hasNFTClass && existingTokenIds?.length && existingMetadata) {
       return
@@ -290,7 +290,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     if (!nftClassMetadata || isRefresh) {
       nftClassMetadata = await likeNFTClassContract.fetchNFTClassMetadataById(nftClassId)
       if (nftClassMetadata) {
-        nftStore.addNFTClassMetadata(normalizedNFTClassId, nftClassMetadata)
+        setNFTClassData(queryCache, normalizedNFTClassId, { metadata: nftClassMetadata })
       }
     }
 

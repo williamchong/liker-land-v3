@@ -187,7 +187,7 @@ export function useStorePageStructuredData({
 }) {
   const config = useRuntimeConfig()
   const baseURL = config.public.baseURL
-  const bookstoreStore = useBookstoreStore()
+  const queryCache = useQueryCache()
 
   return computed(() => {
     const itemsValue = toValue(items)
@@ -198,7 +198,7 @@ export function useStorePageStructuredData({
     const listItems = itemsValue
       .filter(item => item.classId && item.title)
       .map((item, index) => {
-        const bookInfo = bookstoreStore.getBookstoreInfoByNFTClassId(item.classId!)
+        const bookInfo = getBookstoreInfoByNFTClassIdFromCache(queryCache, item.classId!)
         const authorName = bookInfo?.author?.name || ''
 
         return {
