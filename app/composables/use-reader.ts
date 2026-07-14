@@ -42,6 +42,14 @@ export default function (params: {
   const fileIndex = computed(() => getRouteQuery('index', '0'))
   const shouldCustomMessageDisabled = computed(() => getRouteQuery('custom_message') === '0')
 
+  // Single source of truth for both the file URL and its cache key, so the two
+  // can't disagree. A preview file never carries a custom message.
+  const isCustomMessageEnabled = computed(() =>
+    !isPreviewMode.value
+    && !shouldCustomMessageDisabled.value
+    && bookInfo.isCustomMessageEnabled.value,
+  )
+
   const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 300 }))
 
   const bookFileCacheKey = computed(() => {
@@ -54,7 +62,7 @@ export default function (params: {
       nftClassId.value,
       nftId.value,
       fileIndex.value,
-      bookInfo.isCustomMessageEnabled.value ? '1' : '0',
+      isCustomMessageEnabled.value ? '1' : '0',
       // Explicit marker: a Plus borrow also carries no nftId, so without it
       // the truncated preview and the full borrowed file would share a cache.
       isPreviewMode.value ? 'preview' : undefined,
@@ -77,7 +85,7 @@ export default function (params: {
       nftClassId: nftClassId.value,
       nftId: nftId.value,
       fileIndex: fileIndex.value,
-      isCustomMessageEnabled: !shouldCustomMessageDisabled.value && bookInfo.isCustomMessageEnabled.value,
+      isCustomMessageEnabled: isCustomMessageEnabled.value,
       isPreview: isPreviewMode.value,
     })
   })
