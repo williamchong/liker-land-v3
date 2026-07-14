@@ -22,6 +22,16 @@ export default function (params: {
     !isUploadedBook.value && getRouteQuery('preview') === '1',
   )
 
+  // A preview reader owns no copy, so the shelf can't show the book they were
+  // reading: exit to the product page instead, where they can still buy it.
+  const backRoute = computed(() => {
+    if (!isPreviewMode.value || !('getProductPageRoute' in bookInfo)) return undefined
+    return bookInfo.getProductPageRoute({
+      llMedium: 'preview-back',
+      llSource: 'reader',
+    })
+  })
+
   const nftId = computed(() => {
     if (isUploadedBook.value) return undefined
     // The preview file variant conflicts with nft_id server-side.
@@ -78,6 +88,7 @@ export default function (params: {
     fileIndex,
     isUploadedBook,
     isPreviewMode,
+    backRoute,
 
     bookInfo,
     bookCoverSrc,

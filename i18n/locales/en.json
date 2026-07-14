@@ -810,6 +810,7 @@
   "reader_annotations_title": "Highlights & Notes",
   "reader_annotations_update_failed": "Failed to update annotation",
   "reader_back_to_shelf_button": "Bookshelf",
+  "reader_back_to_store_button": "Book page",
   "reader_bookmark_button": "Bookmark",
   "reader_bookmark_create_failed": "Failed to create bookmark",
   "reader_bookmark_delete_button": "Delete bookmark",

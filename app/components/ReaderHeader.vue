@@ -21,6 +21,7 @@
         variant="ghost"
         size="xl"
         icon="i-material-symbols-arrow-back-rounded"
+        :aria-label="props.backTo ? $t('reader_back_to_store_button') : $t('reader_back_to_shelf_button')"
         :to="backRoute"
       />
 
@@ -74,10 +75,9 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  // Where the back arrow leads; defaults to the shelf, which only holds books
-  // the reader owns or borrows. A preview reader passes the product page.
+  // Defaults to the shelf; preview readers pass the product page.
   backTo: {
-    type: [String, Object] as PropType<RouteLocationRaw>,
+    type: Object as PropType<RouteLocationRaw>,
     default: undefined,
   },
 })
@@ -85,5 +85,5 @@ const props = defineProps({
 const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 
-const backRoute = computed(() => props.backTo || localeRoute({ name: 'shelf' }))
+const backRoute = computed(() => props.backTo ?? localeRoute({ name: 'shelf' }))
 </script>

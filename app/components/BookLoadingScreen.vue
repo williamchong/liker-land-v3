@@ -4,7 +4,7 @@
       v-if="props.isBackToShelfButtonVisible"
       class="absolute top-[max(16px,env(safe-area-inset-top))] left-4 z-10"
       icon="i-material-symbols-arrow-back-rounded"
-      :aria-label="$t('reader_back_to_shelf_button')"
+      :aria-label="props.backTo ? $t('reader_back_to_store_button') : $t('reader_back_to_shelf_button')"
       :to="backRoute"
     />
     <div
@@ -130,17 +130,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  // Overrides the back button's shelf destination, e.g. a preview reader
-  // sending the user back to the product page.
+  // Defaults to the shelf; preview readers pass the product page.
   backTo: {
-    type: [String, Object] as PropType<RouteLocationRaw>,
+    type: Object as PropType<RouteLocationRaw>,
     default: undefined,
   },
 })
 
 const localeRoute = useLocaleRoute()
 
-const backRoute = computed(() => props.backTo || localeRoute({ name: 'shelf' }))
+const backRoute = computed(() => props.backTo ?? localeRoute({ name: 'shelf' }))
 
 const scanLineStyle = {
   background: 'linear-gradient(to bottom, transparent 40%, rgba(255, 255, 255, 0.5) 50%, transparent 60%)',
