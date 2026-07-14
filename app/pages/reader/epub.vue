@@ -6,6 +6,7 @@
         class="absolute inset-0"
         cover-class="mt-[8vh]"
         is-back-to-shelf-button-visible
+        :back-to="backRoute"
         :book-name="bookInfo.name.value"
         :book-cover-src="bookCoverSrc"
         :loading-label="loadingLabel"
@@ -20,6 +21,8 @@
       <ReaderHeader
         :book-name="bookInfo.name.value"
         :chapter-title="activeNavItemLabel"
+        :is-preview="isPreviewMode"
+        :back-to="backRoute"
       >
         <template #trailing>
           <div class="relative flex justify-end items-center gap-2">
@@ -373,6 +376,8 @@ const {
   nftClassId,
   nftId,
   isUploadedBook,
+  isPreviewMode,
+  backRoute,
   bookInfo,
   bookCoverSrc,
   bookFileURLWithCORS,
@@ -385,6 +390,11 @@ const { isLibraryBook } = usePlusReadingTracker({
   isUploadedBook,
   isPlusReadingEnabled: bookInfo.isPlusReadingEnabled,
   nftId,
+})
+
+const { openPreviewEndModal, handlePreviewEndBoundary } = usePreviewEndModal({
+  nftClassId,
+  isEnabled: isPreviewMode.value,
 })
 
 const { fetchCustomVoice } = useCustomVoice()
@@ -608,6 +618,7 @@ if (!isUploadedBook.value) {
     isTextToSpeechPlaying: isTTSPlaying,
     chapterIndex: currentSectionIndex,
     isLibraryBook,
+    isPreview: isPreviewMode,
   })
 }
 
@@ -623,6 +634,9 @@ const isAtFirstPage = computed(() => {
 const currentPageStartCfi = ref<string>('')
 const currentPageEndCfi = ref<string>('')
 const currentPageHref = ref<string>('')
+// The server appends this page to truncated preview EPUBs; landing on it is
+// the end-of-preview signal.
+const PREVIEW_END_PAGE_HREF_SUFFIX = 'preview-end.xhtml'
 // Origin page to return to after a footnote jump; '' hides the return button.
 const footnoteReturnCfi = ref<string>('')
 // Captured at link-click, confirmed once `relocated` lands on a different page.
@@ -1194,6 +1208,9 @@ async function loadEPub() {
     const href = location.start.href
     currentPageHref.value = href
     activeNavItemHref.value = resolveActiveNavItemHref(href)
+    if (isPreviewMode.value) {
+      handlePreviewEndBoundary(href.endsWith(PREVIEW_END_PAGE_HREF_SUFFIX))
+    }
     // Footnote return: a just-clicked in-book link drove this relocation; offer
     // a way back only if we actually landed on a different page. Otherwise drop
     // the button once the user is back on the origin page by any other means.
@@ -1477,11 +1494,21 @@ async function setActiveNavItem(item: NavItem, { isSilentError = false } = {}) {
       if (anchor) {
         spineHref = `${spineHref}#${anchor}`
       }
-      hasDisplayed = await displayRendition(spineHref, { isSilentError })
+      // Preview mode handles the failure below with its own CTA, so stay silent
+      // here to avoid stacking an error modal in front of it.
+      hasDisplayed = await displayRendition(spineHref, { isSilentError: isSilentError || isPreviewMode.value })
       if (hasDisplayed) {
         return
       }
     }
+  }
+  // In preview mode the ToC still lists chapters beyond the truncation point
+  // (the server keeps the nav doc intact), so a failed jump means the chapter
+  // was cut — offer the purchase/subscribe CTA instead of an error.
+  if (isPreviewMode.value && !isSilentError) {
+    isPageLoading.value = false
+    await openPreviewEndModal('toc')
+    return
   }
   if (!isSilentError) {
     await errorModal.open({ description: $t('reader_epub_rendition_display_failed') }).result

@@ -19,6 +19,7 @@ export default defineEventHandler(async (event) => {
     readerType,
     chapterIndex,
     pageIndex,
+    isPreview = false,
   } = body
 
   const hasActivity = activeReadingTimeMs > 0 || ttsActiveTimeMs > 0
@@ -51,6 +52,7 @@ export default defineEventHandler(async (event) => {
         isLikerPlus,
         isPaidPlus,
         isBorrowed,
+        isPreview,
         paced,
         rawDelta: { activeReadingTimeMsDelta, ttsActiveTimeMsDelta },
         session: {
@@ -69,7 +71,9 @@ export default defineEventHandler(async (event) => {
   }
 
   let isNewCompletion = false
-  if (hasActivity && endProgress >= COMPLETION_THRESHOLD) {
+  // Preview progress is relative to the truncated file, so reaching its end
+  // must never count as completing the full book.
+  if (!isPreview && hasActivity && endProgress >= COMPLETION_THRESHOLD) {
     tasks.push(
       markBookCompleted(wallet, nftClassId).then((result) => { isNewCompletion = result }),
     )

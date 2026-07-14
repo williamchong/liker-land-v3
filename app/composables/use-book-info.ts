@@ -1,3 +1,4 @@
+import type { LocationQueryRaw } from 'vue-router'
 import { getGenreI18nKey } from '~~/shared/constants/book-categories'
 
 export default function (
@@ -124,10 +125,12 @@ export default function (
     nftId,
     contentURL: inputContentURL,
     shouldCustomMessageDisabled = false,
+    isPreview = false,
   }: {
     nftId?: string
     contentURL?: ContentURL
     shouldCustomMessageDisabled?: boolean
+    isPreview?: boolean
   }) => {
     const contentURL = inputContentURL || defaultContentURL.value
     if (!contentURL) return undefined
@@ -137,7 +140,12 @@ export default function (
       nft_class_id: toValue(nftClassId).toLowerCase(),
       index: index,
     }
-    if (nftId !== undefined) {
+    if (isPreview) {
+      // Preview is a distinct file variant server-side; it conflicts with
+      // nft_id, so never carry one alongside.
+      query.preview = '1'
+    }
+    else if (nftId !== undefined) {
       // NOTE: Reader will fetch nftId from the current user if not provided
       query.nft_id = nftId
     }
@@ -212,6 +220,10 @@ export default function (
 
   const isPlusReadingEnabled = computed(() => {
     return bookstoreInfo.value?.isPlusReadingEnabled || false
+  })
+
+  const isPreviewEnabled = computed(() => {
+    return bookstoreInfo.value?.isPreviewEnabled || false
   })
 
   const formattedReadingMethods = computed(() => {
@@ -315,8 +327,9 @@ export default function (
     llSource?: string
     hash?: string
     isLibrary?: boolean
+    query?: LocationQueryRaw
   }) {
-    const query: Record<string, string> = {}
+    const query: LocationQueryRaw = { ...options?.query }
 
     if (options?.llMedium) {
       query.ll_medium = options.llMedium
@@ -373,6 +386,7 @@ export default function (
     isUpsellDisabled,
     isPlusPromoEnabled,
     isPlusReadingEnabled,
+    isPreviewEnabled,
     formattedTTSSupportLabel,
     formattedReadingMethods,
     tableOfContents,

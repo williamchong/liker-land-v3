@@ -6,6 +6,7 @@
         class="absolute inset-0 z-10 bg-background"
         cover-class="mt-[8vh]"
         is-back-to-shelf-button-visible
+        :back-to="backRoute"
         :book-name="bookInfo.name.value"
         :book-cover-src="bookCoverSrc"
         :loading-label="loadingLabel"
@@ -21,6 +22,8 @@
         :pdf-buffer="fileBuffer"
         :is-audio-hidden="bookInfo.isAudioHidden.value"
         :is-tts-extracting="isTTSExtracting"
+        :is-preview="isPreviewMode"
+        :back-to="backRoute"
         :book-file-cache-key="bookFileCacheKey"
         :book-progress-key-prefix="bookProgressKeyPrefix"
         @error="handlePDFError"
@@ -58,6 +61,8 @@ const {
   nftClassId,
   nftId,
   isUploadedBook,
+  isPreviewMode,
+  backRoute,
   bookInfo,
   bookCoverSrc,
   bookFileURLWithCORS,
@@ -70,6 +75,11 @@ const { isLibraryBook } = usePlusReadingTracker({
   isUploadedBook,
   isPlusReadingEnabled: bookInfo.isPlusReadingEnabled,
   nftId,
+})
+
+const { handlePreviewEndBoundary } = usePreviewEndModal({
+  nftClassId,
+  isEnabled: isPreviewMode.value,
 })
 
 const { fetchCustomVoice } = useCustomVoice()
@@ -99,6 +109,7 @@ if (!isUploadedBook.value) {
     isTextToSpeechPlaying: isTTSPlaying,
     pageIndex: currentPageIndex,
     isLibraryBook,
+    isPreview: isPreviewMode,
   })
 }
 
@@ -272,6 +283,12 @@ function handlePageChanged(pageNumber: number) {
   currentPageIndex.value = pageNumber
   activeTTSElementIndex.value = undefined
   updatePDFProgress(pageNumber)
+  if (isPreviewMode.value) {
+    // A truncated preview PDF has no appended end page, so its last page is
+    // the end-of-preview boundary.
+    const totalPages = loadedPDFDocument.value?.numPages || 0
+    handlePreviewEndBoundary(totalPages > 0 && pageNumber >= totalPages)
+  }
 }
 
 let ttsExtractionPromise: Promise<{ isUnreadable: boolean }> | undefined

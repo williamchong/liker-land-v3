@@ -120,6 +120,16 @@
           @click="emit('plusRead')"
         />
       </div>
+
+      <UButton
+        v-if="isPreviewCtaVisible"
+        class="cursor-pointer justify-center"
+        variant="outline"
+        color="primary"
+        :label="$t('product_page_preview_button_label')"
+        block
+        @click="emit('preview')"
+      />
     </template>
   </aside>
 </template>
@@ -132,6 +142,7 @@ defineProps<ProductStickyBarProps>()
 const emit = defineEmits<{
   read: []
   plusRead: []
+  preview: []
   gift: []
   bookList: []
   purchase: []

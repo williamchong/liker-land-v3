@@ -4,8 +4,8 @@
       v-if="props.isBackToShelfButtonVisible"
       class="absolute top-[max(16px,env(safe-area-inset-top))] left-4 z-10"
       icon="i-material-symbols-arrow-back-rounded"
-      :aria-label="$t('reader_back_to_shelf_button')"
-      :to="localeRoute({ name: 'shelf' })"
+      :aria-label="props.backTo ? $t('reader_back_to_store_button') : $t('reader_back_to_shelf_button')"
+      :to="backRoute"
     />
     <div
       class="relative max-w-[164px] w-full aspect-2/3 shrink-0 transition-opacity duration-1000"
@@ -91,6 +91,8 @@
 </template>
 
 <script setup lang="ts">
+import type { RouteLocationRaw } from 'vue-router'
+
 const props = defineProps({
   bookCoverSrc: {
     type: String,
@@ -128,9 +130,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Defaults to the shelf; preview readers pass the product page.
+  backTo: {
+    type: Object as PropType<RouteLocationRaw>,
+    default: undefined,
+  },
 })
 
 const localeRoute = useLocaleRoute()
+
+const backRoute = computed(() => props.backTo ?? localeRoute({ name: 'shelf' }))
 
 const scanLineStyle = {
   background: 'linear-gradient(to bottom, transparent 40%, rgba(255, 255, 255, 0.5) 50%, transparent 60%)',

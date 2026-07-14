@@ -3,6 +3,8 @@
     <ReaderHeader
       :book-name="props.bookName"
       :chapter-title="pageDisplayText"
+      :is-preview="props.isPreview"
+      :back-to="props.backTo"
     >
       <template #center>
         <div class="flex items-center gap-2">
@@ -283,6 +285,7 @@
 
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
+import type { RouteLocationRaw } from 'vue-router'
 import type { PDFDocumentProxy, PDFPageProxy, PageViewport } from 'pdfjs-dist'
 import type { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api'
 import type { ReaderLeftSidebarTab } from './ReaderLeftSidebar.props'
@@ -294,6 +297,8 @@ interface Props {
   pdfBuffer?: ArrayBuffer | null
   isAudioHidden?: boolean
   isTtsExtracting?: boolean
+  isPreview?: boolean
+  backTo?: RouteLocationRaw
   bookFileCacheKey: string
   bookProgressKeyPrefix: string
   nftClassId: string

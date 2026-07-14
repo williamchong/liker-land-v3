@@ -44,6 +44,7 @@ export default function (
   const isCustomMessageEnabled = computed(() => false)
   const isDownloadable = computed(() => false)
   const isPlusReadingEnabled = computed(() => false)
+  const isPreviewEnabled = computed(() => false)
   const isUpsellDisabled = computed(() => true)
   const authorName = computed(() => '')
   const inLanguage = computed(() => 'zh')
@@ -62,6 +63,7 @@ export default function (
     isCustomMessageEnabled,
     isDownloadable,
     isPlusReadingEnabled,
+    isPreviewEnabled,
     isUpsellDisabled,
     authorName,
     inLanguage,
