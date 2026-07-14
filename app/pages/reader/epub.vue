@@ -1494,7 +1494,9 @@ async function setActiveNavItem(item: NavItem, { isSilentError = false } = {}) {
       if (anchor) {
         spineHref = `${spineHref}#${anchor}`
       }
-      hasDisplayed = await displayRendition(spineHref, { isSilentError })
+      // Preview mode handles the failure below with its own CTA, so stay silent
+      // here to avoid stacking an error modal in front of it.
+      hasDisplayed = await displayRendition(spineHref, { isSilentError: isSilentError || isPreviewMode.value })
       if (hasDisplayed) {
         return
       }
