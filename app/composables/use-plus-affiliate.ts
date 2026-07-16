@@ -56,9 +56,10 @@ export function usePlusAffiliate() {
   const isLoading = useState<boolean>('plus-affiliate-loading', () => false)
 
   function identityKey() {
-    // Plus status is part of the key so an upgrade/downgrade invalidates the cache:
-    // sources are Plus-gated, so the resolved set differs across that boundary.
-    return `${user.value?.likerId ?? ''}|${user.value?.plusAffiliateFrom ?? ''}|${user.value?.isLikerPlus ? '1' : '0'}`
+    // Plus status and tier are part of the key so an upgrade/downgrade
+    // invalidates the cache: sources are Plus-gated and Civic widens the set,
+    // so the resolved sources differ across both boundaries.
+    return `${user.value?.likerId ?? ''}|${user.value?.plusAffiliateFrom ?? ''}|${user.value?.isLikerPlus ? '1' : '0'}|${user.value?.likerPlusTier ?? ''}`
   }
 
   function clearSources() {
