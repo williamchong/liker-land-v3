@@ -6,6 +6,8 @@ export interface IAPPurchaseResult {
   status: IAPPurchaseStatus
   period?: string
   isPlus?: boolean
+  isCivic?: boolean
+  tier?: LikerPlusTier
   productId?: string
   message?: string
 }
@@ -79,23 +81,32 @@ export const useNativeIAP = createSharedComposable(() => {
 
   const isIAPSupported = computed(() => isApp.value && isNativeFeatureSupported('iap'))
 
+  // App shells that predate Civic lack this flag and can only buy from the
+  // default (Plus) offering — the web hides Civic in-app on those versions.
+  const isCivicIAPSupported = computed(() => isIAPSupported.value && isNativeFeatureSupported('iapCivic'))
+
   // Inverse of the "no checkout in-app" anti-steering gate: true when the user
   // can complete a purchase from the current surface (web Stripe or in-app IAP).
   const canStartSubscribeFlow = computed(() => !isApp.value || isIAPSupported.value)
 
   let pendingPurchase: ((r: IAPPurchaseResult) => void) | null = null
   let pendingRestore: ((r: IAPRestoreResult) => void) | null = null
-  let pendingOfferings: ((p: IAPOfferingPackage[]) => void) | null = null
+  // Keyed by tier so a Plus and a Civic offerings request in flight at the same
+  // time can't resolve each other with the wrong tier's packages.
+  const pendingOfferings = new Map<LikerPlusTier, (p: IAPOfferingPackage[]) => void>()
   let pendingManage: ((r: IAPManageResult) => void) | null = null
   // Dedupe concurrent getOfferings() calls by sharing the in-flight promise — a
   // second caller getting [] would read as "no offerings" and hide the pricing UI.
-  let offeringsRequest: Promise<IAPOfferingPackage[]> | null = null
+  const offeringsRequests = new Map<LikerPlusTier, Promise<IAPOfferingPackage[]>>()
 
-  // Reactive cache driving trial/price display; empty until ensureOfferings()
-  // resolves, which renders as "no trial". `offeringsLoaded` distinguishes
-  // "not fetched yet" from a fetched empty result (no intro offer configured).
-  const offerings = ref<IAPOfferingPackage[]>([])
-  let offeringsLoaded = false
+  // Reactive per-tier cache driving trial/price display; empty until
+  // ensureOfferings() resolves, which renders as "no trial". The loaded set
+  // distinguishes "not fetched yet" from a fetched empty result.
+  const offeringsByTier: Record<LikerPlusTier, Ref<IAPOfferingPackage[]>> = {
+    plus: ref([]),
+    civic: ref([]),
+  }
+  const offeringsLoadedTiers = new Set<LikerPlusTier>()
 
   // Consumers (checkout, pricing page, account) render during SSR where
   // `window` is undefined; only attach the reply listener on the client.
@@ -107,11 +118,14 @@ export const useNativeIAP = createSharedComposable(() => {
         case 'iapPurchaseResult':
           // The device store confirms entitlement instantly; record it so the
           // paywall/TTS gates unblock without waiting out the backend webhook.
+          // Civic products also grant the plus entitlement, so isPlus covers both.
           if (isIAPSupported.value && detail.status === 'success' && detail.isPlus) markDevicePlusEntitled()
           pendingPurchase?.({
             status: detail.status,
             period: detail.period,
             isPlus: detail.isPlus,
+            isCivic: detail.isCivic,
+            tier: detail.tier === 'civic' ? 'civic' : 'plus',
             productId: detail.productId,
             message: detail.message,
           })
@@ -122,10 +136,13 @@ export const useNativeIAP = createSharedComposable(() => {
           pendingRestore?.({ status: detail.status, isPlus: detail.isPlus, message: detail.message })
           pendingRestore = null
           break
-        case 'iapOfferings':
-          pendingOfferings?.(Array.isArray(detail.packages) ? detail.packages : [])
-          pendingOfferings = null
+        case 'iapOfferings': {
+          // Old shells don't echo tier; they only serve the default (Plus) offering.
+          const offeringsTier: LikerPlusTier = detail.tier === 'civic' ? 'civic' : 'plus'
+          pendingOfferings.get(offeringsTier)?.(Array.isArray(detail.packages) ? detail.packages : [])
+          pendingOfferings.delete(offeringsTier)
           break
+        }
         case 'iapManageResult':
           pendingManage?.({ status: detail.status, message: detail.message })
           pendingManage = null
@@ -141,13 +158,24 @@ export const useNativeIAP = createSharedComposable(() => {
   // channel, ad-attribution ids) the native side sets before purchase so they reach
   // the webhook's subscriber_attributes — the IAP equivalent of Stripe checkout
   // metadata. The native handler ignores reserved ($-prefixed) keys.
-  function purchase(
-    period: SubscriptionPlan,
-    likerId?: string,
-    attributes?: Record<string, string>,
-  ): Promise<IAPPurchaseResult> {
+  function purchase({
+    period,
+    likerId,
+    attributes,
+    tier = 'plus',
+  }: {
+    period: SubscriptionPlan
+    likerId?: string
+    attributes?: Record<string, string>
+    tier?: LikerPlusTier
+  }): Promise<IAPPurchaseResult> {
     if (!isIAPSupported.value) {
       return Promise.resolve({ status: 'error', message: 'IAP not supported' })
+    }
+    // Old shells would silently buy Plus from the default offering instead —
+    // refuse rather than charge the wrong product. Callers gate this upstream.
+    if (tier === 'civic' && !isCivicIAPSupported.value) {
+      return Promise.resolve({ status: 'error', message: 'Civic IAP not supported by this app version' })
     }
     // Without likerId the native side can't log RevenueCat in as the right
     // app_user_id; refuse rather than make an un-attributable purchase. Callers
@@ -167,7 +195,9 @@ export const useNativeIAP = createSharedComposable(() => {
         clearTimeout(timer)
         resolve(r)
       }
-      postToNative({ type: 'iapPurchase', period, likerId, attributes })
+      postToNative({
+        type: 'iapPurchase', period, tier, likerId, attributes,
+      })
     })
   }
 
@@ -198,44 +228,49 @@ export const useNativeIAP = createSharedComposable(() => {
     })
   }
 
-  function getOfferings(): Promise<IAPOfferingPackage[]> {
+  function getOfferings(tier: LikerPlusTier = 'plus'): Promise<IAPOfferingPackage[]> {
     if (!isIAPSupported.value) return Promise.resolve([])
-    if (offeringsRequest) return offeringsRequest
-    offeringsRequest = new Promise<IAPOfferingPackage[]>((resolve) => {
+    if (tier === 'civic' && !isCivicIAPSupported.value) return Promise.resolve([])
+    const inflight = offeringsRequests.get(tier)
+    if (inflight) return inflight
+    const request = new Promise<IAPOfferingPackage[]>((resolve) => {
       const timer = setTimeout(() => {
-        pendingOfferings = null
+        pendingOfferings.delete(tier)
         resolve([])
       }, REQUEST_TIMEOUT_MS)
-      pendingOfferings = (p) => {
+      pendingOfferings.set(tier, (p) => {
         clearTimeout(timer)
         resolve(p)
-      }
-      postToNative({ type: 'iapGetOfferings' })
-    }).finally(() => { offeringsRequest = null })
-    return offeringsRequest
+      })
+      postToNative({ type: 'iapGetOfferings', tier })
+    }).finally(() => { offeringsRequests.delete(tier) })
+    offeringsRequests.set(tier, request)
+    return request
   }
 
-  // Fetches the offerings at most once per session and caches them reactively.
+  // Fetches a tier's offerings at most once per session and caches reactively.
   // Safe to call from multiple consumers (paywall/upsell modals) on mount;
-  // concurrent calls share one round-trip via getOfferings()'s offeringsRequest.
+  // concurrent calls share one round-trip via getOfferings()'s in-flight map.
   // Offers are static store config, so a fetched empty result latches too — a
   // transient failure just means no trial copy until the next launch (display only).
-  async function ensureOfferings(): Promise<IAPOfferingPackage[]> {
+  async function ensureOfferings(tier: LikerPlusTier = 'plus'): Promise<IAPOfferingPackage[]> {
     if (!isIAPSupported.value) return []
-    if (offeringsLoaded) return offerings.value
-    offerings.value = await getOfferings()
-    offeringsLoaded = true
-    return offerings.value
+    if (tier === 'civic' && !isCivicIAPSupported.value) return []
+    const cached = offeringsByTier[tier]
+    if (offeringsLoadedTiers.has(tier)) return cached.value
+    cached.value = await getOfferings(tier)
+    offeringsLoadedTiers.add(tier)
+    return cached.value
   }
 
-  function findOffering(period: SubscriptionPlan): IAPOfferingPackage | undefined {
-    return offerings.value.find(p => p.period === period)
+  function findOffering(period: SubscriptionPlan, tier: LikerPlusTier = 'plus'): IAPOfferingPackage | undefined {
+    return offeringsByTier[tier].value.find(p => p.period === period)
   }
 
   // Returns undefined until offerings load (or when the store has no package for
   // the period) so callers fall back to the Stripe-configured display.
-  function getIAPPlanPrice(period: SubscriptionPlan): IAPPlanPrice | undefined {
-    const pkg = findOffering(period)
+  function getIAPPlanPrice(period: SubscriptionPlan, tier: LikerPlusTier = 'plus'): IAPPlanPrice | undefined {
+    const pkg = findOffering(period, tier)
     if (!pkg?.priceString) return undefined
     return { priceString: pkg.priceString, price: pkg.price, currency: pkg.currency }
   }
@@ -281,5 +316,5 @@ export const useNativeIAP = createSharedComposable(() => {
     })
   }
 
-  return { isIAPSupported, canStartSubscribeFlow, purchase, restore, getOfferings, ensureOfferings, getIAPTrial, getIAPPlanPrice, manageSubscription }
+  return { isIAPSupported, isCivicIAPSupported, canStartSubscribeFlow, purchase, restore, getOfferings, ensureOfferings, getIAPTrial, getIAPPlanPrice, manageSubscription }
 })

@@ -19,6 +19,7 @@ export function usePlusSessionAPI() {
 
   function fetchLikerPlusCheckoutLink({
     period = 'monthly',
+    tier = 'plus',
     trialPeriodDays,
     mustCollectPaymentMethod,
     giftNFTClassId,
@@ -42,6 +43,7 @@ export function usePlusSessionAPI() {
     uiMode,
   }: {
     period?: SubscriptionPlan
+    tier?: LikerPlusTier
     trialPeriodDays?: number
     mustCollectPaymentMethod?: boolean
     giftNFTClassId?: string
@@ -66,7 +68,7 @@ export function usePlusSessionAPI() {
   }) {
     return fetch.value<FetchLikerPlusCheckoutLinkResponseData>(`/plus/new`, {
       method: 'POST',
-      query: { period, from, currency },
+      query: { period, tier, from, currency },
       body: {
         trialPeriodDays,
         mustCollectPaymentMethod,
@@ -95,10 +97,13 @@ export function usePlusSessionAPI() {
 
   function updateLikerPlusSubscription({
     period,
+    tier,
     giftNFTClassId,
     giftPriceIndex,
   }: {
     period: SubscriptionPlan
+    // Target tier for Plus<->Civic switches; omitted keeps the current tier.
+    tier?: LikerPlusTier
     giftNFTClassId?: string
     giftPriceIndex?: number
   }) {
@@ -106,6 +111,7 @@ export function usePlusSessionAPI() {
       method: 'POST',
       body: {
         period,
+        tier,
         giftClassId: giftNFTClassId,
         giftPriceIndex,
       },

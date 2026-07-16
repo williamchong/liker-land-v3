@@ -11,13 +11,20 @@ export function calcYearlyDiscountPercent(monthly: number, yearly: number): numb
 
 export default function useSubscriptionPricing() {
   const config = useRuntimeConfig()
-  const { yearly, monthly } = config.public.subscription.pricing
+  const {
+    yearly,
+    monthly,
+    civicYearly,
+    civicMonthly,
+  } = config.public.subscription.pricing
   const { displayCurrency } = usePaymentCurrency()
 
   const originalYearlyPrice = computed(() => convertUSDPriceToCurrency(Number(yearly.original), displayCurrency.value))
   const actualYearlyPrice = computed(() => convertUSDPriceToCurrency(Number(yearly.actual), displayCurrency.value))
   const originalMonthlyPrice = computed(() => convertUSDPriceToCurrency(Number(monthly.original), displayCurrency.value))
   const actualMonthlyPrice = computed(() => convertUSDPriceToCurrency(Number(monthly.actual), displayCurrency.value))
+  const civicYearlyPrice = computed(() => convertUSDPriceToCurrency(Number(civicYearly.actual), displayCurrency.value))
+  const civicMonthlyPrice = computed(() => convertUSDPriceToCurrency(Number(civicMonthly.actual), displayCurrency.value))
 
   const currency = computed(() => {
     switch (displayCurrency.value) {
@@ -41,6 +48,8 @@ export default function useSubscriptionPricing() {
     monthlyPrice: readonly(actualMonthlyPrice),
     originalYearlyPrice: readonly(originalYearlyPrice),
     originalMonthlyPrice: readonly(originalMonthlyPrice),
+    civicYearlyPrice: readonly(civicYearlyPrice),
+    civicMonthlyPrice: readonly(civicMonthlyPrice),
     currency,
     convertToDisplayCurrency,
     yearlyDiscountPercent,

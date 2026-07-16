@@ -19,13 +19,22 @@ beforeEach(() => {
 })
 
 describe('fetchLikerPlusCheckoutLink', () => {
-  it('posts to /plus/new with period, source and currency in query', () => {
+  it('posts to /plus/new with period, tier, source and currency in query', () => {
     const { fetchLikerPlusCheckoutLink } = usePlusSessionAPI()
     fetchLikerPlusCheckoutLink({ period: 'yearly', from: 'pricing_page', currency: 'usd' })
     const [url, options] = mockFetch.mock.calls[0]!
     expect(url).toBe('/plus/new')
     expect(options.method).toBe('POST')
-    expect(options.query).toEqual({ period: 'yearly', from: 'pricing_page', currency: 'usd' })
+    expect(options.query).toEqual({
+      period: 'yearly', tier: 'plus', from: 'pricing_page', currency: 'usd',
+    })
+  })
+
+  it('passes tier civic through to /plus/new', () => {
+    const { fetchLikerPlusCheckoutLink } = usePlusSessionAPI()
+    fetchLikerPlusCheckoutLink({ period: 'yearly', tier: 'civic' })
+    const [, options] = mockFetch.mock.calls[0]!
+    expect(options.query.tier).toBe('civic')
   })
 
   it('maps giftNFTClassId to giftClassId and stamps geo/app metadata', () => {
@@ -61,7 +70,16 @@ describe('updateLikerPlusSubscription', () => {
     const [url, options] = mockFetch.mock.calls[0]!
     expect(url).toBe('/plus/price')
     expect(options.method).toBe('POST')
-    expect(options.body).toEqual({ period: 'yearly', giftClassId: '0xgift', giftPriceIndex: 1 })
+    expect(options.body).toEqual({
+      period: 'yearly', tier: undefined, giftClassId: '0xgift', giftPriceIndex: 1,
+    })
+  })
+
+  it('posts a tier switch to /plus/price', () => {
+    const { updateLikerPlusSubscription } = usePlusSessionAPI()
+    updateLikerPlusSubscription({ period: 'yearly', tier: 'civic' })
+    const [, options] = mockFetch.mock.calls[0]!
+    expect(options.body.tier).toBe('civic')
   })
 })
 

@@ -14,6 +14,7 @@ declare module '#auth-utils' {
     isLikerPlusTrial?: boolean
     isExpiredLikerPlus?: boolean
     likerPlusPeriod?: LikerPlusStatus
+    likerPlusTier?: LikerPlusTier
     likerPlusProvider?: LikerPlusProvider
     plusAffiliateFrom?: string
     ttsKey?: string
