@@ -2,6 +2,7 @@ import type { RouteLocationAsRelativeGeneric } from 'vue-router'
 
 export interface UpsellPlusModalSubscribeEventPayload {
   plan?: SubscriptionPlan
+  tier?: LikerPlusTier
   trialPeriodDays?: number
   mustCollectPaymentMethod?: boolean
   nftClassId?: string

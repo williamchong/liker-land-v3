@@ -142,6 +142,14 @@ export default defineNuxtConfig({
             original: 99.99,
             actual: 99.99,
           },
+          civicMonthly: {
+            original: 99.99,
+            actual: 99.99,
+          },
+          civicYearly: {
+            original: 999.99,
+            actual: 999.99,
+          },
         },
       },
       baseURL: process.env.BASE_URL,

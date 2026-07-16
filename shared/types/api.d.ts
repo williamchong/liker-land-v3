@@ -15,6 +15,7 @@ export interface LikerInfoResponseData {
 export interface LikerProfileResponseData extends LikerInfoResponseData {
   email?: string
   likerPlusPeriod?: LikerPlusStatus
+  likerPlusTier?: LikerPlusTier
   // Owning billing system; drives manage-subscription routing on the client.
   likerPlusProvider?: LikerPlusProvider
   plusAffiliateFrom?: string

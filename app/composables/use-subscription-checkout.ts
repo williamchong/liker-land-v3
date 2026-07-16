@@ -6,8 +6,11 @@ export function useSubscriptionCheckout() {
   const {
     yearlyPrice,
     monthlyPrice,
+    civicYearlyPrice,
+    civicMonthlyPrice,
     currency,
     isLikerPlus,
+    isCivicMember,
     likerPlusPeriod,
     hasLoggedIn,
     getCheckoutCurrency,
@@ -24,7 +27,7 @@ export function useSubscriptionCheckout() {
   const blockingModal = useBlockingModal()
   const { getAnalyticsParameters } = useAnalytics()
   const { isApp } = useAppDetection()
-  const { isIAPSupported, purchase: purchaseViaIAP } = useNativeIAP()
+  const { isIAPSupported, isCivicIAPSupported, purchase: purchaseViaIAP } = useNativeIAP()
   const runtimeConfig = useRuntimeConfig()
   // Defer exposure to the checkout decision point (post-login) instead of mount,
   // so only treatment-eligible users are counted and we avoid re-bucketing across
@@ -41,8 +44,14 @@ export function useSubscriptionCheckout() {
   // Backend-webhook model: after a native purchase, RevenueCat notifies our
   // backend which flips `isLikerPlus`. Re-fetch the session a few times to
   // absorb webhook latency rather than trusting the device for entitlement.
-  async function pollSessionUntilPlus(maxAttempts = 6, delayMs = 2000): Promise<boolean> {
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+  const SESSION_POLL_MAX_ATTEMPTS = 6
+  const SESSION_POLL_DELAY_MS = 2000
+
+  async function pollSessionUntilPlus(requiredTier: LikerPlusTier = 'plus'): Promise<boolean> {
+    // A Civic purchase must not read a webhook that only landed as Plus (or a
+    // pre-existing Plus flag) as success — poll until the tier itself flips.
+    const hasEntitlement = () => (requiredTier === 'civic' ? isCivicMember.value : isLikerPlus.value)
+    for (let attempt = 0; attempt < SESSION_POLL_MAX_ATTEMPTS; attempt++) {
       // Best-effort: a transient refresh failure must not throw out of here. The
       // store purchase already succeeded, so the user should still reach the
       // success page (which re-polls) instead of being stranded on checkout.
@@ -52,20 +61,28 @@ export function useSubscriptionCheckout() {
       catch {
         // ignore and retry on the next attempt
       }
-      if (isLikerPlus.value) return true
-      if (attempt < maxAttempts - 1) {
-        await sleep(delayMs)
+      if (hasEntitlement()) return true
+      if (attempt < SESSION_POLL_MAX_ATTEMPTS - 1) {
+        await sleep(SESSION_POLL_DELAY_MS)
       }
     }
-    return isLikerPlus.value
+    return hasEntitlement()
   }
 
-  async function redirectIfSubscribed(plan?: string) {
-    if (isLikerPlus.value && (!plan || likerPlusPeriod.value !== 'month' || plan !== 'yearly')) {
-      await navigateTo(localeRoute({ name: 'account' }))
-      return true
-    }
-    return false
+  async function redirectIfSubscribed({
+    plan,
+    tier = 'plus',
+  }: {
+    plan?: string
+    tier?: LikerPlusTier
+  } = {}) {
+    if (!isLikerPlus.value) return false
+    // Proceed (no redirect) for in-place upgrades: Plus→Civic, or monthly→yearly.
+    const isTierUpgrade = tier === 'civic' && !isCivicMember.value
+    const isPeriodUpgrade = !!plan && likerPlusPeriod.value === 'month' && plan === 'yearly'
+    if (isTierUpgrade || isPeriodUpgrade) return false
+    await navigateTo(localeRoute({ name: 'account' }))
+    return true
   }
 
   async function startSubscription({
@@ -76,18 +93,24 @@ export function useSubscriptionCheckout() {
     utmSource,
     coupon = getRouteQuery('coupon'),
     plan = 'yearly',
+    tier = 'plus',
     nftClassId,
     redirectRoute,
   }: UpsellPlusModalSubscribeEventPayload = {}) {
     const isYearly = plan === 'yearly'
-    const price = isYearly ? yearlyPrice.value : monthlyPrice.value
+    const isCivicTier = tier === 'civic'
+    // Civic has no trial (product decision) — the backend 400s on it too.
+    if (isCivicTier) trialPeriodDays = 0
+    let price = isYearly ? yearlyPrice.value : monthlyPrice.value
+    if (isCivicTier) price = isYearly ? civicYearlyPrice.value : civicMonthlyPrice.value
+    const tierName = isCivicTier ? 'Civic' : 'Plus'
     const eventPayload = {
       currency: currency.value,
       value: price,
-      product_type: 'plus',
+      product_type: tier,
       items: [{
-        id: `plus-${plan}`,
-        name: `Plus (${plan})`,
+        id: `${tier}-${plan}`,
+        name: `${tierName} (${plan})`,
         price,
         currency: currency.value,
         quantity: 1,
@@ -102,7 +125,7 @@ export function useSubscriptionCheckout() {
     useLogEvent('subscription_button_click')
     useLogEvent(`subscription_button_click_${plan}`)
 
-    const isSubscribed = await redirectIfSubscribed(plan)
+    const isSubscribed = await redirectIfSubscribed({ plan, tier })
     if (isSubscribed) return
     if (!hasLoggedIn.value) {
       useLogEvent('subscription_login_required')
@@ -116,6 +139,16 @@ export function useSubscriptionCheckout() {
     // comes from the backend session, so poll it after a successful purchase.
     if (isIAPSupported.value) {
       if (isProcessingSubscription.value) return
+      // Old app shells can't buy Civic (they'd silently buy Plus); callers hide
+      // the option via isCivicIAPSupported, this is the flow-level backstop.
+      if (isCivicTier && !isCivicIAPSupported.value) {
+        useLogEvent('subscription_iap_civic_unsupported')
+        toast.add({
+          title: $t('plus_checkout_error_description'),
+          color: 'warning',
+        })
+        return
+      }
       // RevenueCat is keyed by likerId (the backend internal user id), so a
       // missing likerId can't attribute the purchase — gate it like Stripe does.
       if (!user.value?.likerId) {
@@ -182,7 +215,12 @@ export function useSubscriptionCheckout() {
         // as with plusGiftClassId. See useAnalytics.
         attributes.attributionSource = analyticsParams.attributionSource || ''
 
-        const result = await purchaseViaIAP(plan, user.value.likerId, attributes)
+        const result = await purchaseViaIAP({
+          period: plan,
+          likerId: user.value.likerId,
+          attributes,
+          tier,
+        })
         if (result.status === 'cancelled') return
         if (result.status !== 'success') {
           throw createError({
@@ -194,7 +232,7 @@ export function useSubscriptionCheckout() {
           })
         }
         blockingModal.open({ title: $t('common_processing') })
-        const isPlusConfirmed = await pollSessionUntilPlus()
+        const isPlusConfirmed = await pollSessionUntilPlus(tier)
         // Only once the backend has actually granted Plus: asking on the store's
         // purchase result would catch the user while the app still shows them as a
         // non-subscriber, since the webhook can lag. A slow webhook means no prompt.
@@ -240,6 +278,7 @@ export function useSubscriptionCheckout() {
         useLogEvent('begin_checkout', eventPayloadWithCoupon)
         await plusSessionAPI.updateLikerPlusSubscription({
           period: plan,
+          tier,
           giftNFTClassId: isYearly ? nftClassId : undefined,
         })
         await navigateTo(localeRoute({ name: 'plus-success', query: { period: plan } }))
@@ -258,6 +297,7 @@ export function useSubscriptionCheckout() {
         const uiMode: CheckoutUIMode = embeddedVariant === 'test' ? 'embedded' : 'hosted'
         const { url, clientSecret, paymentId } = await plusSessionAPI.fetchLikerPlusCheckoutLink({
           period: plan,
+          tier,
           from: getRouteQuery('from'),
           currency: getCheckoutCurrency(),
           trialPeriodDays,
