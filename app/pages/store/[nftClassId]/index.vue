@@ -527,6 +527,13 @@
               rel="noopener noreferrer"
             >{{ $t('product_page_delivery_refund_note_link') }}</ULink>
           </p>
+
+          <p class="px-4 text-xs text-muted text-center leading-4">
+            <ULink
+              class="underline cursor-pointer"
+              @click="handleReportContentClick"
+            >{{ $t('product_page_report_content_button') }}</ULink>
+          </p>
         </div>
       </div>
     </section>
@@ -682,6 +689,7 @@ const accountStore = useAccountStore()
 const queryCache = useQueryCache()
 const bookshelfStore = useBookshelfStore()
 const { open: openTippingModal } = useTipping()
+const intercom = useIntercom()
 const {
   isLikerPlus,
   PLUS_BOOK_PURCHASE_DISCOUNT,
@@ -1577,5 +1585,20 @@ function handleBookReviewClick() {
 
 function handlePreviewContentLoginClick() {
   useLogEvent('product_page_preview_content_login_click', { nft_class_id: nftClassId.value })
+}
+
+function handleReportContentClick() {
+  const { method } = intercom.showNewMessage(
+    $t('product_page_report_content_prefill', {
+      bookName: bookName.value || '-',
+      bookId: nftClassId.value,
+      url: canonicalURL.value,
+    }),
+    $t('product_page_report_content_email_subject', { bookName: bookName.value || '-' }),
+  )
+  useLogEvent('product_page_report_content_click', {
+    nft_class_id: nftClassId.value,
+    method,
+  })
 }
 </script>
