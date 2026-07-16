@@ -1,4 +1,5 @@
 import type { AffiliateConfig, AffiliateCustomVoice } from '~~/server/types/affiliate'
+import type { AffiliateVoiceSource } from '~~/shared/types/affiliate'
 import type { AffiliateVoiceData } from '~~/shared/types/custom-voice'
 import { fetchCachedNFTClassAggregatedMetadata } from '~~/server/utils/likecoin-nft'
 import { checkIsEVMAddress, checksumEVMAddress, normalizeNFTClassId } from '~~/shared/utils'
@@ -30,6 +31,23 @@ function isValidCustomVoice(voice: Partial<AffiliateCustomVoice>): voice is Affi
     && typeof voice.providerVoiceId === 'string' && !!voice.providerVoiceId
 }
 
+// Shared normalization of upstream affiliate fields (lowercased class ids,
+// checksummed wallets, validated voices) so the per-likerId and pool paths
+// can never drift apart.
+function normalizeUpstreamAffiliateFields(entry: {
+  affiliateClassIds?: string[]
+  affiliatePublisherWallets?: string[]
+  customVoices?: Partial<AffiliateCustomVoice>[]
+}) {
+  return {
+    affiliateClassIds: (entry.affiliateClassIds ?? []).map(id => id.toLowerCase()),
+    affiliatePublisherWallets: (entry.affiliatePublisherWallets ?? [])
+      .map(w => checksumEVMAddress(w))
+      .filter(Boolean),
+    customVoices: (entry.customVoices ?? []).filter(isValidCustomVoice),
+  }
+}
+
 async function getAffiliateEntry(likerId: string): Promise<AffiliateEntry | null> {
   const key = normalizeLikerId(likerId)
   const cached = cache.get(key)
@@ -44,10 +62,7 @@ async function getAffiliateEntry(likerId: string): Promise<AffiliateEntry | null
         config: upstream.active
           ? {
               active: true,
-              affiliateClassIds: (upstream.affiliateClassIds ?? []).map(id => id.toLowerCase()),
-              affiliatePublisherWallets: (upstream.affiliatePublisherWallets ?? [])
-                .map(w => checksumEVMAddress(w))
-                .filter(Boolean),
+              ...normalizeUpstreamAffiliateFields(upstream),
               giftBooks: (upstream.giftBooks ?? [])
                 .filter(b => typeof b?.classId === 'string' && !!b.classId)
                 .map((b) => {
@@ -58,7 +73,6 @@ async function getAffiliateEntry(likerId: string): Promise<AffiliateEntry | null
                   }
                 }),
               giftOnTrial: upstream.giftOnTrial,
-              customVoices: (upstream.customVoices ?? []).filter(isValidCustomVoice),
             }
           : null,
         isPlusDiscountAllowed: !!upstream.isPlusDiscountAllowed,
@@ -105,6 +119,25 @@ export function toPublicAffiliateVoices(voices: AffiliateCustomVoice[]): Affilia
   }))
 }
 
+// The browser-safe public shape both /plus endpoints return. `bookLimit` caps the
+// book whitelist for preview callers (the anonymous pool endpoint) so it doesn't
+// ship every affiliate's full catalog; omit it when the client needs the full
+// scope for book matching.
+export function toPublicAffiliateSource(
+  source: AffiliateVoiceSourceInternal,
+  { bookLimit }: { bookLimit?: number } = {},
+): AffiliateVoiceSource {
+  return {
+    likerId: source.likerId,
+    isSelf: source.isSelf,
+    affiliateClassIds: bookLimit === undefined
+      ? source.config.affiliateClassIds
+      : source.config.affiliateClassIds.slice(0, bookLimit),
+    affiliatePublisherWallets: source.config.affiliatePublisherWallets,
+    customVoices: toPublicAffiliateVoices(source.config.customVoices),
+  }
+}
+
 // The affiliate configs a Plus user may draw voices from: their own publisher
 // config plus the affiliate they were referred by. Both resolve through the
 // existing per-likerId cache, so this adds no new upstream surface.
@@ -127,6 +160,61 @@ export async function getUserAffiliateSources(
 
 export async function getAffiliatePlusDiscountAllowed(likerId: string): Promise<boolean> {
   return (await getAffiliateEntry(likerId))?.isPlusDiscountAllowed ?? false
+}
+
+type UpstreamAllVoicesResponse = {
+  affiliates?: {
+    likerId?: string
+    affiliateClassIds?: string[]
+    affiliatePublisherWallets?: string[]
+    customVoices?: Partial<AffiliateCustomVoice>[]
+  }[]
+}
+
+const ALL_VOICES_CACHE_TTL_MS = 5 * 60 * 1000
+let allVoicesCache: { sources: AffiliateVoiceSourceInternal[], expiresAt: number } | null = null
+
+// Every active affiliate's voice config — the Civic premium-voice pool. Voices
+// stay usable only on whitelisted books: callers must still gate each book via
+// isBookInAffiliateVoiceScope. Returns [] until the upstream endpoint exists.
+export async function getAllAffiliateVoiceSources(): Promise<AffiliateVoiceSourceInternal[]> {
+  if (allVoicesCache && allVoicesCache.expiresAt > Date.now()) return allVoicesCache.sources
+  const upstream = await getLikeCoinAPIFetch()<UpstreamAllVoicesResponse>('/plus/voices')
+    .catch(() => null)
+  const sources: AffiliateVoiceSourceInternal[] = (upstream?.affiliates ?? [])
+    .filter((entry): entry is typeof entry & { likerId: string } =>
+      typeof entry.likerId === 'string' && !!entry.likerId)
+    .map(entry => ({
+      likerId: normalizeLikerId(entry.likerId),
+      isSelf: false,
+      config: {
+        active: true,
+        ...normalizeUpstreamAffiliateFields(entry),
+        giftBooks: [],
+        giftOnTrial: false,
+      },
+    }))
+    .filter(source => source.config.customVoices.length > 0)
+  // Cache failures briefly so an upstream blip doesn't blank the pool for long.
+  const ttl = upstream ? ALL_VOICES_CACHE_TTL_MS : NEGATIVE_CACHE_TTL_MS
+  allVoicesCache = { sources, expiresAt: Date.now() + ttl }
+  return sources
+}
+
+// The affiliate voice sources a subscriber may draw from. Plus: self +
+// referrer. Civic: additionally every active affiliate's voices (own sources
+// first for correct isSelf flags, pool deduped by likerId). The per-book
+// whitelist is enforced by callers via isBookInAffiliateVoiceScope regardless.
+export async function getAffiliateVoiceSourcesForUser(
+  user: { likerId?: string, plusAffiliateFrom?: string, likerPlusTier?: LikerPlusTier },
+): Promise<AffiliateVoiceSourceInternal[]> {
+  if (user.likerPlusTier !== 'civic') return getUserAffiliateSources(user)
+  const [own, all] = await Promise.all([
+    getUserAffiliateSources(user),
+    getAllAffiliateVoiceSources(),
+  ])
+  const seen = new Set(own.map(source => source.likerId))
+  return [...own, ...all.filter(source => !seen.has(source.likerId))]
 }
 
 // A book is in scope when it is explicitly listed in `affiliateClassIds`, or

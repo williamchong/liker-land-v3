@@ -162,11 +162,11 @@ export default defineEventHandler(async (event) => {
     if (!affiliateVoiceSlot) {
       throw createError({ status: 400, message: 'INVALID_AFFILIATE_VOICE' })
     }
-    // Resolve across every source the user may use — their own publisher voices
-    // and the affiliate they were referred by. Ownership is gated at the
-    // reader-page level; the scope check is a sanity boundary to stop an
-    // arbitrary book from riding an affiliate voice URL.
-    const sources = await getUserAffiliateSources(session.user)
+    // Resolve across every source the user's tier may use (Civic adds the full
+    // affiliate pool). Ownership is gated at the reader-page level; the
+    // per-book scope check below stays unconditional so no tier can ride a
+    // voice onto a book outside its whitelist.
+    const sources = await getAffiliateVoiceSourcesForUser(session.user)
     // Resolve the requested slot in each source, then keep only those whose config
     // scopes this book. Voice ids are globally unique across affiliates, so at most
     // one source should own a slot for a given book.
