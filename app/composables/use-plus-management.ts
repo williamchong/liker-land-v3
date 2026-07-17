@@ -17,6 +17,7 @@ export function usePlusManagement() {
   const localeRoute = useLocaleRoute()
   const { handleError } = useErrorHandler()
   const plusSessionAPI = usePlusSessionAPI()
+  const { isCivicMember } = useSubscription()
 
   const isPaymentPastDue = computed(() =>
     !!user.value?.isExpiredLikerPlus && user.value?.likerPlusSubscriptionStatus === 'past_due',
@@ -26,6 +27,13 @@ export function usePlusManagement() {
     if (!user.value) return undefined
     if (user.value.isLikerPlus) {
       // TODO: Support Trial
+      if (isCivicMember.value) {
+        return $t('account_page_subscription_civic')
+      }
+      // Plus granted via a Civic subscriber's shared member seat, not self-paid.
+      if (user.value.likerPlusProvider === 'shared') {
+        return $t('account_page_subscription_plus_shared')
+      }
       return $t('account_page_subscription_plus')
     }
     if (user.value.isExpiredLikerPlus) {
@@ -45,6 +53,9 @@ export function usePlusManagement() {
 
   const likerPlusManageMode = computed<LikerPlusManageMode>(() => {
     if (!user.value?.isLikerPlus && !user.value?.isExpiredLikerPlus) return 'none'
+    // Seat-granted members have no billing of their own: the membership
+    // follows the giver's Civic subscription, so there is nothing to manage.
+    if (user.value?.likerPlusProvider === 'shared') return 'none'
     if (user.value?.likerPlusProvider === 'revenuecat') {
       return isIAPSupported.value ? 'native-store' : 'store-info'
     }

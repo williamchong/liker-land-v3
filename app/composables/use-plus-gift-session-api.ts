@@ -8,6 +8,27 @@ export interface FetchLikerPlusGiftStatusResponseData {
   giftClaimToken?: string
 }
 
+export interface InviteSharedMemberResponseData {
+  inviteId: string
+  remainingSeats: number
+}
+
+export interface SharedMemberEntry {
+  inviteId: string
+  email: string
+  name?: string
+  status: 'pending' | 'claimed'
+  timestamp?: number
+  claimTimestamp?: number
+}
+
+export interface FetchSharedMembersResponseData {
+  used: number
+  total: number
+  remaining: number
+  members: SharedMemberEntry[]
+}
+
 export function usePlusGiftSessionAPI() {
   const { isApp } = useAppDetection()
   const { detectedCountry } = useDetectedGeolocation()
@@ -84,6 +105,42 @@ export function usePlusGiftSessionAPI() {
     return fetch.value<FetchLikerPlusGiftStatusResponseData>(`/plus/gift`)
   }
 
+  // Civic-tier benefit: invite a friend to one of the giver's revocable shared
+  // member seats. The member's Plus access follows the giver's Civic lifecycle.
+  function inviteSharedMember({ email, name, message }: {
+    email: string
+    name?: string
+    message?: string
+  }) {
+    return fetch.value<InviteSharedMemberResponseData>(`/plus/shared/members`, {
+      method: 'POST',
+      body: { email, name, message },
+    })
+  }
+
+  function fetchSharedMembers() {
+    return fetch.value<FetchSharedMembersResponseData>(`/plus/shared/members`)
+  }
+
+  // All three are required: the API addresses the invite doc under the giver's
+  // user record, so a link without `giver` is rejected as invalid input.
+  function claimSharedMemberInvite({ giverLikerId, inviteId, token }: {
+    giverLikerId: string
+    inviteId: string
+    token: string
+  }) {
+    return fetch.value(`/plus/shared/members/claim`, {
+      method: 'POST',
+      body: { giverLikerId, inviteId, token },
+    })
+  }
+
+  function revokeSharedMember(inviteId: string) {
+    return fetch.value(`/plus/shared/members/${inviteId}`, {
+      method: 'DELETE',
+    })
+  }
+
   function fetchPlusGiftCartStatusById({ cartId, token }: { cartId: string, token: string }) {
     return fetch.value<{
       giftInfo?: BookGiftInfo
@@ -103,6 +160,10 @@ export function usePlusGiftSessionAPI() {
   return {
     fetchLikerPlusGiftCheckoutLink,
     fetchLikerPlusGiftStatus,
+    inviteSharedMember,
+    fetchSharedMembers,
+    claimSharedMemberInvite,
+    revokeSharedMember,
     fetchPlusGiftCartStatusById,
     claimPlusGiftCart,
   }
