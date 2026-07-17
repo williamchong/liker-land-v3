@@ -219,10 +219,13 @@
 
 <script lang="ts" setup>
 import type { PricingPagePromoPricing } from './PricingPageContent.props'
+import { calcYearlyDiscountPercent } from '~/composables/use-subscription-pricing'
 import { DEFAULT_TRIAL_PERIOD_DAYS, PAID_TRIAL_PRICE } from '~~/shared/constants/pricing'
 import { resolveIsPaidTrial } from '~~/shared/utils/pricing'
 
 const props = withDefaults(defineProps<{
+  // Civic reuses this selector with its own prices and no trial (product decision).
+  tier?: LikerPlusTier
   isYearlyHidden?: boolean
   isMonthlyHidden?: boolean
   isAllowYearlyTrial?: boolean
@@ -242,6 +245,7 @@ const props = withDefaults(defineProps<{
   monthlyBadgeText?: string
   promoPricing?: PricingPagePromoPricing
 }>(), {
+  tier: 'plus',
   isYearlyHidden: false,
   isMonthlyHidden: false,
   isAllowYearlyTrial: true,
@@ -263,6 +267,8 @@ const { t: $t } = useI18n()
 const {
   monthlyPrice,
   yearlyPrice,
+  civicMonthlyPrice,
+  civicYearlyPrice,
   originalMonthlyPrice,
   originalYearlyPrice,
   yearlyDiscountPercent,
@@ -271,17 +277,33 @@ const {
   currency,
   convertToDisplayCurrency,
 } = useSubscriptionPricing()
+const { getIAPPlanPrice } = useNativeIAP()
 
 const selectedPlan = defineModel({
   type: String,
   default: 'yearly',
 })
 
-const isPaidTrial = computed(() => resolveIsPaidTrial(props.trialPeriodDays, props.isPaidTrialOverride))
+const isCivic = computed(() => props.tier === 'civic')
+// Civic has no trial, so its selector never shows trial pricing or hints.
+const effectiveTrialPeriodDays = computed(() => (isCivic.value ? 0 : props.trialPeriodDays))
+const civicYearlyDiscountPercent = computed(() =>
+  calcYearlyDiscountPercent(civicMonthlyPrice.value, civicYearlyPrice.value))
+
+const isPaidTrial = computed(() => resolveIsPaidTrial(
+  effectiveTrialPeriodDays.value,
+  isCivic.value ? false : props.isPaidTrialOverride,
+))
 const convertedTrialPrice = computed(() => convertToDisplayCurrency(props.trialPrice))
 // An explicit store free trial (isPaidTrialOverride === false) must not show the
 // "$X for N days" price hint — it's genuinely free.
 const isFreeTrialOffer = computed(() => props.isPaidTrialOverride === false)
+
+// The yearly "save X%" badge, hidden when there's no real saving (avoids "save 0%").
+const yearlyDiscountBadge = computed(() => {
+  const percent = isCivic.value ? civicYearlyDiscountPercent.value : yearlyDiscountPercent.value
+  return percent > 0 ? $t('pricing_page_yearly_discount', { discount: percent }) : undefined
+})
 
 const plans = computed(() => {
   const values: SubscriptionPlan[] = []
@@ -294,11 +316,11 @@ const plans = computed(() => {
   return values.map((value) => {
     const isMonthly = value === 'monthly'
     let hint: string | undefined
-    if (!isPaidTrial.value && props.trialPeriodDays && (isMonthly || props.isAllowYearlyTrial)) {
+    if (!isPaidTrial.value && effectiveTrialPeriodDays.value && (isMonthly || props.isAllowYearlyTrial)) {
       hint = isFreeTrialOffer.value
-        ? $t('plan_select_free_trial_hint', { days: props.trialPeriodDays })
+        ? $t('plan_select_free_trial_hint', { days: effectiveTrialPeriodDays.value })
         : $t('plan_select_trial_for_price_hint', {
-            days: props.trialPeriodDays,
+            days: effectiveTrialPeriodDays.value,
             currency: currency.value,
             price: convertToDisplayCurrency(props.trialPrice),
           })
@@ -306,14 +328,25 @@ const plans = computed(() => {
 
     const badgeText = isMonthly
       ? props.monthlyBadgeText
-      : (props.yearlyBadgeText
-        ?? $t('pricing_page_yearly_discount', { discount: yearlyDiscountPercent.value }))
+      : (props.yearlyBadgeText ?? yearlyDiscountBadge.value)
 
-    const showTrialPrice = isMonthly || props.isAllowYearlyTrial
-
-    const promoPrice = isMonthly
-      ? props.promoPricing?.monthly?.price
-      : props.promoPricing?.yearly?.price
+    // Civic is base-price only — no promo, discount, or trial pricing. priceString
+    // (store IAP), when present, suppresses originalPrice/hasDiscount downstream.
+    const tierPricing = isCivic.value
+      ? {
+          price: isMonthly ? civicMonthlyPrice.value : civicYearlyPrice.value,
+          priceString: getIAPPlanPrice(value, 'civic')?.priceString,
+          originalPrice: 0,
+          hasDiscount: false,
+          promoPrice: undefined as number | undefined,
+        }
+      : {
+          price: isMonthly ? monthlyPrice.value : yearlyPrice.value,
+          priceString: isMonthly ? props.monthlyPriceString : props.yearlyPriceString,
+          originalPrice: isMonthly ? originalMonthlyPrice.value : originalYearlyPrice.value,
+          hasDiscount: isMonthly ? hasMonthlyDiscount.value : hasYearlyDiscount.value,
+          promoPrice: isMonthly ? props.promoPricing?.monthly?.price : props.promoPricing?.yearly?.price,
+        }
 
     return {
       isSelected: selectedPlan.value === value,
@@ -324,13 +357,8 @@ const plans = computed(() => {
       hint,
       badgeText,
       perUnit: isMonthly ? $t('pricing_page_price_per_month') : $t('pricing_page_price_per_year'),
-      price: isMonthly ? monthlyPrice.value : yearlyPrice.value,
-      // When present, suppresses originalPrice/hasDiscount — Stripe-only concepts.
-      priceString: isMonthly ? props.monthlyPriceString : props.yearlyPriceString,
-      originalPrice: isMonthly ? originalMonthlyPrice.value : originalYearlyPrice.value,
-      hasDiscount: isMonthly ? hasMonthlyDiscount.value : hasYearlyDiscount.value,
-      showTrialPrice,
-      promoPrice,
+      ...tierPricing,
+      showTrialPrice: !isCivic.value && (isMonthly || props.isAllowYearlyTrial),
       promoFreeKey: isMonthly
         ? 'pricing_page_promo_first_monthly_free'
         : 'pricing_page_promo_first_yearly_free',

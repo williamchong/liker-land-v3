@@ -24,9 +24,12 @@
       v-text="description"
     />
     <PricingPlanBenefits
+      v-model:tier="selectedTier"
       :is-dark-background="props.isDarkBackground"
       :is-compact="props.isCompact || (!!title && !!description)"
       :prepended-features="props.prependedFeatures"
+      :is-civic-toggle-visible="props.isCivicToggleVisible"
+      @show-voices="emit('showVoices')"
     />
   </div>
 </template>
@@ -53,5 +56,13 @@ const props = defineProps({
     type: Array as PropType<string[]>,
     default: () => [],
   },
+  isCivicToggleVisible: {
+    type: Boolean,
+    default: false,
+  },
 })
+
+const emit = defineEmits<{ showVoices: [] }>()
+
+const selectedTier = defineModel<LikerPlusTier>('tier', { default: 'plus' })
 </script>

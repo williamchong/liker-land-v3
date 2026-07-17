@@ -12,7 +12,9 @@
     />
     <p
       class="mb-6 text-muted"
-      v-text="$t('subscription_success_description')"
+      v-text="$t(isCivic
+        ? 'subscription_success_description_civic'
+        : 'subscription_success_description')"
     />
 
     <UButton
@@ -36,7 +38,7 @@ const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 const accountStore = useAccountStore()
 const { handleError } = useErrorHandler()
-const { currency, yearlyPrice, monthlyPrice } = useSubscription()
+const { currency, yearlyPrice, monthlyPrice, isCivicMember } = useSubscription()
 const { initializePaymentCurrency } = usePaymentCurrency()
 const { convertPrice } = useCurrency()
 const { user } = useUserSession()
@@ -55,6 +57,11 @@ const coupon = computed(() => getRouteQuery('coupon'))
 const isRefreshing = ref(true)
 const isRedirecting = ref(false)
 const isLikerPlus = computed(() => user.value?.isLikerPlus)
+// The IAP/upgrade flows pass `tier=civic`; the hosted-Stripe redirect doesn't,
+// so also read the refreshed session's tier once it lands.
+const isCivic = computed(() =>
+  getRouteQuery('tier') === 'civic' || isCivicMember.value,
+)
 const affiliateFrom = computed(() => user.value?.plusAffiliateFrom)
 // The route `period` query is in SubscriptionPlan form ('yearly'/'monthly')
 // while the session stores LikerPlusStatus ('year'/'month'). Map between them,

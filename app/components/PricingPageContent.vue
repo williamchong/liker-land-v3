@@ -114,11 +114,14 @@
       >
         <PricingPageIntroSection
           v-if="!(isShowTTSSamples && isDesktopScreen)"
+          v-model:tier="selectedTier"
           class="mb-4 laptop:mb-6"
           :title="campaignContent?.title"
           :description="campaignContent?.description"
           :is-compact="isShowTTSSamples || !!$slots['affiliate-alert'] || !!$slots['affiliate-promo']"
           :prepended-features="prependedFeatures"
+          :is-civic-toggle-visible="isCivicToggleVisible"
+          @show-voices="isVoicesModalOpen = true"
         />
         <slot name="affiliate-alert" />
 
@@ -149,10 +152,10 @@
             <slot name="pricing">
               <div
                 v-if="canStartSubscribeFlow"
-                :class="{ 'bg-theme-cyan p-3 rounded-xl': isPaidTrial }"
+                :class="{ 'bg-theme-cyan p-3 rounded-xl': isPaidTrialChrome }"
               >
                 <header
-                  v-if="isPaidTrial"
+                  v-if="isPaidTrialChrome"
                   class="hidden laptop:flex items-center gap-2 mb-3 text-theme-black"
                 >
                   <UIcon
@@ -167,6 +170,7 @@
 
                 <PricingPlanSelect
                   v-model="selectedPlan"
+                  :tier="selectedTier"
                   :trial-period-days="trialPeriodDays"
                   :is-paid-trial-override="isPaidTrialOverride"
                   :trial-price-string="trialPriceString"
@@ -178,7 +182,7 @@
                 >
                   <template #header-left>
                     <div
-                      v-if="isPaidTrial"
+                      v-if="isPaidTrialChrome"
                       class="flex items-center gap-1.5 text-theme-black"
                     >
                       <UIcon
@@ -217,7 +221,7 @@
               />
 
               <UAlert
-                v-if="!isApp && coupon && !promoPricing"
+                v-if="!isApp && coupon && !promoPricing && !isCivicTierSelected"
                 class="mt-4"
                 color="secondary"
                 variant="soft"
@@ -274,6 +278,8 @@
           v-model:open="isAffiliateBooksModalOpen"
           :affiliate-liker-id="affiliateLikerId"
         />
+
+        <PlusVoicesModal v-model:open="isVoicesModalOpen" />
       </div>
     </div>
   </div>
@@ -289,7 +295,8 @@ const isDesktopScreen = useDesktopScreen()
 const { t: $t } = useI18n()
 const getRouteQuery = useRouteQuery()
 const { isApp } = useAppDetection()
-const { canStartSubscribeFlow } = useNativeIAP()
+const { canStartSubscribeFlow, isCivicIAPSupported, ensureOfferings } = useNativeIAP()
+const { isLikerPlus, isCivicMember } = useSubscription()
 
 const emit = defineEmits<{
   'open': []
@@ -297,6 +304,7 @@ const emit = defineEmits<{
     trialPeriodDays?: number
     mustCollectPaymentMethod?: boolean
     plan: SubscriptionPlan
+    tier?: LikerPlusTier
     utmCampaign?: string
     utmMedium?: string
     utmSource?: string
@@ -310,6 +318,20 @@ const props = withDefaults(
     isProcessingSubscription: false,
   },
 )
+
+// The Plus/Civic tier the pricing box and feature list reflect. Only 'civic'
+// when the toggle is offered and picked; otherwise the page stays Plus-only.
+const selectedTier = ref<LikerPlusTier>('plus')
+const isCivicTierSelected = computed(() => selectedTier.value === 'civic')
+const isVoicesModalOpen = ref(false)
+
+// Old app shells can't buy Civic, and Civic members have nothing to buy here
+// (the page redirects them anyway) — mirrors the old PricingCivicSection gate.
+const isCivicOfferable = computed(() => {
+  if (!props.isCivicVisible || isCivicMember.value) return false
+  return isApp.value ? isCivicIAPSupported.value : true
+})
+const isCivicToggleVisible = computed(() => isCivicOfferable.value && canStartSubscribeFlow.value)
 
 const isCustomVoiceCampaign = computed(() => {
   return getRouteQuery('utm_campaign').includes('custom-voice')
@@ -360,6 +382,8 @@ const selectedPlan = useVModel(props, 'modelValue', emit, {
 })
 
 const isPaidTrial = computed(() => resolveIsPaidTrial(props.trialPeriodDays, props.isPaidTrialOverride))
+// Civic has no trial, so the paid-trial celebration chrome never applies to it.
+const isPaidTrialChrome = computed(() => isPaidTrial.value && !isCivicTierSelected.value)
 
 const route = useRoute()
 const getRouteBaseName = useRouteBaseName()
@@ -371,6 +395,11 @@ const learnMoreRoute = computed(() => {
 })
 
 const subscribeButtonLabel = computed(() => {
+  if (isCivicTierSelected.value) {
+    return isLikerPlus.value
+      ? $t('pricing_page_civic_upgrade_button')
+      : $t('pricing_page_civic_subscribe_button')
+  }
   if (isCustomVoiceCampaign.value) {
     return $t('plus_subscribe_cta_custom_voice_free')
   }
@@ -386,19 +415,40 @@ const subscribeButtonLabel = computed(() => {
 onMounted(() => {
   emit('open')
 
+  // No-op outside the app or on shells without Civic IAP; loads store prices
+  // so the Civic toggle can show the store-formatted price in-app.
+  ensureOfferings('civic')
+
   if (campaignContent.value) {
     useLogEvent(`pricing_page_campaign_${campaignContent.value.id}`)
   }
 })
 
-function handleSubscribeButtonClick() {
+function handleSubscribe(overrides: {
+  plan: SubscriptionPlan
+  tier?: LikerPlusTier
+  trialPeriodDays?: number
+  mustCollectPaymentMethod?: boolean
+}) {
   emit('subscribe', {
-    plan: selectedPlan.value ?? 'yearly',
-    mustCollectPaymentMethod: props.mustCollectPaymentMethod,
-    trialPeriodDays: props.trialPeriodDays,
     utmCampaign: utmCampaign.value,
     utmMedium: props.utmMedium,
     utmSource: props.utmSource,
+    ...overrides,
+  })
+}
+
+function handleSubscribeButtonClick() {
+  const plan = selectedPlan.value ?? 'yearly'
+  // Civic never has a trial (product decision), so no trial fields here.
+  if (isCivicTierSelected.value) {
+    handleSubscribe({ plan, tier: 'civic' })
+    return
+  }
+  handleSubscribe({
+    plan,
+    mustCollectPaymentMethod: props.mustCollectPaymentMethod,
+    trialPeriodDays: props.trialPeriodDays,
   })
 }
 </script>
