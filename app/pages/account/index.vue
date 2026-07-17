@@ -6,6 +6,8 @@
 
     <AccountPlusCard />
 
+    <AccountSharedMembersCard />
+
     <AccountRestorePurchasesCard />
 
     <AccountWalletCard />

@@ -2,6 +2,7 @@ import { setUser as setSentryUser } from '@sentry/nuxt'
 import { v5 as uuidv5 } from 'uuid'
 import { sha256 } from 'viem'
 import type { User } from '#auth-utils'
+import { getEffectiveLikerPlusTier } from '~~/shared/utils/subscription'
 
 interface EventParams {
   [key: string]: unknown
@@ -400,6 +401,7 @@ export function useSetLogUser(user: User | null, locale: string) {
         email: user.email || undefined,
         displayName: user.displayName || user.evmWallet || user.likeWallet,
         isLikerPlus: !!user.isLikerPlus,
+        likerPlusTier: getEffectiveLikerPlusTier(user),
         loginMethod: user.loginMethod,
         locale,
         // Intercom Identity Verification token + correlation IDs.

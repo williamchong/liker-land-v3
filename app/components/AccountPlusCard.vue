@@ -34,21 +34,24 @@
         </template>
       </AccountSettingsItem>
 
+      <!-- Replaces the paid Plus gift row: pitch Civic sharing to any non-Civic
+           member wherever Civic is sellable (web, or a shell with Civic IAP). -->
       <AccountSettingsItem
-        v-if="hasLoggedIn && !isApp"
-        icon="i-material-symbols-featured-seasonal-and-gifts-rounded"
-        :label="$t('account_page_gift_plus')"
+        v-if="hasLoggedIn && !isCivicMember && (!isApp || isCivicIAPSupported)"
+        icon="i-material-symbols-group-outline-rounded"
+        :label="$t('account_page_civic_upgrade')"
       >
         <div
           class="text-sm/5"
-          v-text="$t('account_page_gift_plus_description')"
+          v-text="$t('account_page_civic_upgrade_description')"
         />
 
         <template #right>
           <UButton
-            :label="$t('account_page_gift_plus_button')"
+            :label="$t('account_page_civic_upgrade_button')"
             color="primary"
-            :to="localeRoute({ name: 'gift-plus' })"
+            :loading="isProcessingSubscription"
+            @click="handleUpgradeToCivicButtonClick"
           />
         </template>
       </AccountSettingsItem>
@@ -93,6 +96,7 @@ const { t: $t } = useI18n()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const localeRoute = useLocaleRoute()
 const { isApp } = useAppDetection()
+const { isCivicIAPSupported } = useNativeIAP()
 
 const isPlusFeatureVisible = usePlusFeatureVisibility()
 
@@ -104,6 +108,27 @@ const {
   isManagingSubscription,
   handleLikerPlusButtonClick,
 } = usePlusManagement()
+
+const { isCivicMember, likerPlusPeriod } = useSubscription()
+const { isProcessingSubscription, startSubscription } = useSubscriptionCheckout()
+
+// Only web Stripe subscribers can upgrade in place ('stripe-portal' mode);
+// store-owned (RevenueCat) subs must change plans in-app, and trials have no
+// paid plan to upgrade from.
+const canUpgradeToCivic = computed(() =>
+  !!user.value?.isLikerPlus
+  && !isCivicMember.value
+  && !user.value.isLikerPlusTrial
+  && likerPlusManageMode.value === 'stripe-portal',
+)
+
+async function handleUpgradeToCivicButtonClick() {
+  useLogEvent('account_civic_upgrade_button_click')
+  await startSubscription({
+    tier: 'civic',
+    plan: likerPlusPeriod.value === 'year' ? 'yearly' : 'monthly',
+  })
+}
 
 const { customVoice, hasCustomVoice } = useCustomVoice()
 const overlay = useOverlay()
