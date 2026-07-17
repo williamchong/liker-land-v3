@@ -8,6 +8,9 @@ export interface PricingPagePromoPricing {
 export interface PricingPageContentProps {
   modelValue?: SubscriptionPlan
   isProcessingSubscription?: boolean
+  // Offers the Civic tier below the Plus plans (member page only — upsell
+  // paywalls keep the Plus-only funnel).
+  isCivicVisible?: boolean
   trialPeriodDays?: number
   // Store-driven (IAP) trial overrides — see IAPTrialInfo in use-native-iap.ts.
   isPaidTrialOverride?: boolean

@@ -242,7 +242,11 @@ export function useSubscriptionCheckout() {
         const hasGift = isYearly && Boolean(nftClassId)
         await navigateTo(localeRoute({
           name: 'plus-success',
-          query: { period: plan, ...(hasGift ? { gift: '1' } : {}) },
+          query: {
+            period: plan,
+            ...(isCivicTier ? { tier } : {}),
+            ...(hasGift ? { gift: '1' } : {}),
+          },
         }))
       }
       catch (error) {
@@ -281,7 +285,10 @@ export function useSubscriptionCheckout() {
           tier,
           giftNFTClassId: isYearly ? nftClassId : undefined,
         })
-        await navigateTo(localeRoute({ name: 'plus-success', query: { period: plan } }))
+        await navigateTo(localeRoute({
+          name: 'plus-success',
+          query: { period: plan, ...(isCivicTier ? { tier } : {}) },
+        }))
       }
       else {
         // Only web Stripe users can receive the treatment — app users always get

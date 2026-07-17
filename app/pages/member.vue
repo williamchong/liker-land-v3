@@ -3,6 +3,7 @@
     v-model="selectedPlan"
     v-bind="iapOverrides"
     class="min-h-screen"
+    :is-civic-visible="true"
     :is-processing-subscription="checkout.isProcessingSubscription.value"
     :trial-period-days="trialPeriodDays"
     :must-collect-payment-method="mustCollectPaymentMethod"
@@ -481,16 +482,19 @@ async function handleSubscribe(payload: {
   trialPeriodDays?: number
   mustCollectPaymentMethod?: boolean
   plan: SubscriptionPlan
+  tier?: LikerPlusTier
   utmCampaign?: string
   utmMedium?: string
   utmSource?: string
 }) {
+  // The affiliate gift book is a Plus promo — don't attach it to Civic.
+  const isCivicTier = payload.tier === 'civic'
   await checkout.startSubscription({
     ...payload,
     coupon: coupon.value,
     // Carry the subscriber's chosen gift book; the API validates it against
     // the affiliate's gift list and resolves the (free) price index itself.
-    nftClassId: isAffiliateGiftRedeemable.value
+    nftClassId: !isCivicTier && isAffiliateGiftRedeemable.value
       ? selectedGiftClassId.value
       : undefined,
   })
@@ -501,6 +505,8 @@ onMounted(async () => {
     await navigateTo(localeRoute({ name: 'store' }))
     return
   }
-  await checkout.redirectIfSubscribed()
+  // Passing 'civic' keeps Plus (non-Civic) members on the page so they can
+  // see the Civic upgrade; only Civic members are redirected to the account.
+  await checkout.redirectIfSubscribed({ tier: 'civic' })
 })
 </script>
