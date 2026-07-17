@@ -1,5 +1,6 @@
-// e.g. "3ook-com-app/1.0.0", "3ook-com-app/1.1.0 (iOS 18.0) Build/42"
-const APP_USER_AGENT_REGEX = /^3ook-com-app\/[\d.]+ ?(?:\((iOS|Android) [\d.]+\))? ?(?:Build\/(\d+))?/
+// Matches the app token anywhere in the UA — it may be the whole UA (older builds)
+// or appended after the system WebView UA, so the real Chromium version survives.
+const APP_USER_AGENT_REGEX = /3ook-com-app\/[\d.]+ ?(?:\((iOS|Android) [\d.]+\))? ?(?:Build\/(\d+))?/
 
 export function useAppDetection() {
   const getRouteQuery = useRouteQuery()
