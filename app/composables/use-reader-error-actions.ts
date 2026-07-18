@@ -62,7 +62,7 @@ export default function useReaderErrorActions({
       {
         label: $t('reader_error_back_to_shelf_button'),
         icon: 'i-material-symbols-arrow-back-rounded',
-        color: 'primary',
+        color: 'neutral',
         onClick: () => { navigateTo(localeRoute({ name: 'shelf' })) },
       },
     ]
