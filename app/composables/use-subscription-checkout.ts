@@ -4,14 +4,11 @@ import { usePlusCheckoutStore } from '~/stores/plus-checkout'
 
 export function useSubscriptionCheckout() {
   const {
-    yearlyPrice,
-    monthlyPrice,
-    civicYearlyPrice,
-    civicMonthlyPrice,
     currency,
+    getTierPrice,
     isLikerPlus,
     isCivicMember,
-    likerPlusPeriod,
+    isPlanPeriodUpgrade,
     hasLoggedIn,
     getCheckoutCurrency,
   } = useSubscription()
@@ -79,7 +76,7 @@ export function useSubscriptionCheckout() {
     if (!isLikerPlus.value) return false
     // Proceed (no redirect) for in-place upgrades: Plus→Civic, or monthly→yearly.
     const isTierUpgrade = tier === 'civic' && !isCivicMember.value
-    const isPeriodUpgrade = !!plan && likerPlusPeriod.value === 'month' && plan === 'yearly'
+    const isPeriodUpgrade = isPlanPeriodUpgrade(plan as SubscriptionPlan)
     if (isTierUpgrade || isPeriodUpgrade) return false
     await navigateTo(localeRoute({ name: 'account' }))
     return true
@@ -99,10 +96,13 @@ export function useSubscriptionCheckout() {
   }: UpsellPlusModalSubscribeEventPayload = {}) {
     const isYearly = plan === 'yearly'
     const isCivicTier = tier === 'civic'
-    // Civic has no trial (product decision) — the backend 400s on it too.
-    if (isCivicTier) trialPeriodDays = 0
-    let price = isYearly ? yearlyPrice.value : monthlyPrice.value
-    if (isCivicTier) price = isYearly ? civicYearlyPrice.value : civicMonthlyPrice.value
+    if (isCivicTier) {
+      // Civic has no trial (product decision) — the backend 400s on it too — and
+      // the gift book is a Plus-only promo, so never attach one to a Civic purchase.
+      trialPeriodDays = 0
+      nftClassId = undefined
+    }
+    const price = getTierPrice(tier, plan)
     const tierName = isCivicTier ? 'Civic' : 'Plus'
     const eventPayload = {
       currency: currency.value,
@@ -285,6 +285,14 @@ export function useSubscriptionCheckout() {
           tier,
           giftNFTClassId: isYearly ? nftClassId : undefined,
         })
+        // The in-place upgrade skips the success-page redirect that fires
+        // conversions for new subscribers. A Plus→Civic tier upgrade is a real
+        // paid conversion worth signalling; a monthly→yearly period change is not
+        // an acquisition, so keep it out of the Meta-optimized acquisition event.
+        if (isCivicTier) {
+          useLogEvent('subscribe', eventPayloadWithCoupon)
+          useLogEvent('plus_acquisition', { ...eventPayloadWithCoupon, is_trial: false })
+        }
         await navigateTo(localeRoute({
           name: 'plus-success',
           query: { period: plan, ...(isCivicTier ? { tier } : {}) },
@@ -330,6 +338,7 @@ export function useSubscriptionCheckout() {
             clientSecret,
             paymentId,
             period: plan,
+            tier,
             coupon,
             isTrial: trialPeriodDays > 0,
           })

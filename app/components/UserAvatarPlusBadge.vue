@@ -2,6 +2,7 @@
   <UBadge
     size="xs"
     variant="outline"
+    :label="tier.toUpperCase()"
     :ui="{
       base: [
         // Use absolute font size to prevent it from being affected by system font size changes
@@ -11,16 +12,16 @@
         'font-bold',
       ],
     }"
-  >
-    PLUS
-  </UBadge>
+  />
 </template>
 
 <script setup lang="ts">
 const props = withDefaults(defineProps<{
   color?: 'primary' | 'secondary' | 'neutral'
+  tier?: LikerPlusTier
 }>(), {
   color: 'primary',
+  tier: 'plus',
 })
 
 const colorClass = computed(() => {

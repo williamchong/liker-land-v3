@@ -15,6 +15,7 @@
         v-if="user?.isLikerPlus"
         class="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/4"
         color="primary"
+        :tier="likerPlusTier"
       />
       <div class="absolute -bottom-1 -right-1 rounded-full bg-(--app-bg)">
         <UButton
@@ -41,6 +42,7 @@
 <script setup lang="ts">
 const { t: $t } = useI18n()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
+const { likerPlusTier } = useSubscription()
 const accountStore = useAccountStore()
 const userAccountSessionAPI = useUserAccountSessionAPI()
 const { handleError } = useErrorHandler()

@@ -29,6 +29,7 @@
       :is-compact="props.isCompact || (!!title && !!description)"
       :prepended-features="props.prependedFeatures"
       :is-civic-toggle-visible="props.isCivicToggleVisible"
+      :current-tier="props.currentTier"
       @show-voices="emit('showVoices')"
     />
   </div>
@@ -59,6 +60,11 @@ const props = defineProps({
   isCivicToggleVisible: {
     type: Boolean,
     default: false,
+  },
+  // The viewer's active tier, so the toggle can mark their current plan.
+  currentTier: {
+    type: String as PropType<LikerPlusTier>,
+    default: undefined,
   },
 })
 

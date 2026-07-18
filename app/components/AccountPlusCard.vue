@@ -34,10 +34,10 @@
         </template>
       </AccountSettingsItem>
 
-      <!-- Replaces the paid Plus gift row: pitch Civic sharing to any non-Civic
-           member wherever Civic is sellable (web, or a shell with Civic IAP). -->
+      <!-- Pitch Civic sharing to any non-Civic member wherever Civic is
+           sellable (web, or an app shell with Civic IAP). -->
       <AccountSettingsItem
-        v-if="hasLoggedIn && !isCivicMember && (!isApp || isCivicIAPSupported)"
+        v-if="hasLoggedIn && !isCivicMember && canStartCivicSubscribeFlow"
         icon="i-material-symbols-group-outline-rounded"
         :label="$t('account_page_civic_upgrade')"
       >
@@ -50,7 +50,7 @@
           <UButton
             :label="$t('account_page_civic_upgrade_button')"
             color="primary"
-            :loading="isProcessingSubscription"
+            :to="civicUpgradeRoute"
             @click="handleUpgradeToCivicButtonClick"
           />
         </template>
@@ -95,8 +95,7 @@ import { CustomVoiceUploadModal } from '#components'
 const { t: $t } = useI18n()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const localeRoute = useLocaleRoute()
-const { isApp } = useAppDetection()
-const { isCivicIAPSupported } = useNativeIAP()
+const { canStartCivicSubscribeFlow } = useNativeIAP()
 
 const isPlusFeatureVisible = usePlusFeatureVisibility()
 
@@ -110,24 +109,17 @@ const {
 } = usePlusManagement()
 
 const { isCivicMember, likerPlusPeriod } = useSubscription()
-const { isProcessingSubscription, startSubscription } = useSubscriptionCheckout()
 
-// Only web Stripe subscribers can upgrade in place ('stripe-portal' mode);
-// store-owned (RevenueCat) subs must change plans in-app, and trials have no
-// paid plan to upgrade from.
-const canUpgradeToCivic = computed(() =>
-  !!user.value?.isLikerPlus
-  && !isCivicMember.value
-  && !user.value.isLikerPlusTrial
-  && likerPlusManageMode.value === 'stripe-portal',
-)
+// Send the upgrade to the pricing page — the surface that shows Civic's
+// benefits and price with an explicit CTA — rather than charging straight
+// from this row. Preselect the member's billing period (yearly for non-members).
+const civicUpgradeRoute = computed(() => localeRoute({
+  name: 'member',
+  query: { plan: likerPlusPeriod.value === 'month' ? 'monthly' : 'yearly' },
+}))
 
-async function handleUpgradeToCivicButtonClick() {
+function handleUpgradeToCivicButtonClick() {
   useLogEvent('account_civic_upgrade_button_click')
-  await startSubscription({
-    tier: 'civic',
-    plan: likerPlusPeriod.value === 'year' ? 'yearly' : 'monthly',
-  })
 }
 
 const { customVoice, hasCustomVoice } = useCustomVoice()

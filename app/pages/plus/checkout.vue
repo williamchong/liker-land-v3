@@ -151,12 +151,15 @@ async function mountCheckout() {
 }
 
 function handleComplete() {
-  const { paymentId, period, coupon, isTrial } = plusCheckoutStore
+  const { paymentId, period, tier, coupon, isTrial } = plusCheckoutStore
   plusCheckoutStore.clear()
   navigateTo(localeRoute({
     name: 'plus-success',
     query: {
       period: period || undefined,
+      // Signal Civic so the success page polls for the tier and lands on /account
+      // with Civic copy, rather than treating it as a plain Plus subscription.
+      ...(tier === 'civic' ? { tier } : {}),
       payment_id: paymentId || undefined,
       coupon: coupon || undefined,
       redirect: '1',
