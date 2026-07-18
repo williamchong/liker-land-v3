@@ -89,6 +89,10 @@ export const useNativeIAP = createSharedComposable(() => {
   // can complete a purchase from the current surface (web Stripe or in-app IAP).
   const canStartSubscribeFlow = computed(() => !isApp.value || isIAPSupported.value)
 
+  // Civic analog of canStartSubscribeFlow: sellable on web, or in-app only on
+  // shells whose store offers the Civic IAP.
+  const canStartCivicSubscribeFlow = computed(() => !isApp.value || isCivicIAPSupported.value)
+
   let pendingPurchase: ((r: IAPPurchaseResult) => void) | null = null
   let pendingRestore: ((r: IAPRestoreResult) => void) | null = null
   // Keyed by tier so a Plus and a Civic offerings request in flight at the same
@@ -316,5 +320,5 @@ export const useNativeIAP = createSharedComposable(() => {
     })
   }
 
-  return { isIAPSupported, isCivicIAPSupported, canStartSubscribeFlow, purchase, restore, getOfferings, ensureOfferings, getIAPTrial, getIAPPlanPrice, manageSubscription }
+  return { isIAPSupported, isCivicIAPSupported, canStartSubscribeFlow, canStartCivicSubscribeFlow, purchase, restore, getOfferings, ensureOfferings, getIAPTrial, getIAPPlanPrice, manageSubscription }
 })

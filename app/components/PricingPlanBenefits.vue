@@ -26,8 +26,16 @@
             : 'text-theme-black/40 dark:text-theme-white/40',
         ]"
         @click="selectedTier = option.value"
-        v-text="option.label"
-      />
+      >
+        <span class="inline-flex items-center justify-center gap-1">
+          <UIcon
+            v-if="option.isCurrent"
+            name="i-material-symbols-check-circle-rounded"
+            class="shrink-0 size-3.5"
+          />
+          <span v-text="option.label" />
+        </span>
+      </button>
     </div>
     <div
       v-else-if="!isTitleHidden"
@@ -166,6 +174,8 @@ const props = withDefaults(defineProps<{
   // Shows a Plus/Civic toggle in place of the title and, on Civic, appends the
   // Civic-only benefits below the shared Plus list.
   isCivicToggleVisible?: boolean
+  // The viewer's active tier, marked as "current plan" in the toggle.
+  currentTier?: LikerPlusTier
 }>(), {
   isTitleCenter: false,
   isTitleHidden: false,
@@ -174,6 +184,7 @@ const props = withDefaults(defineProps<{
   isAudioHidden: false,
   prependedFeatures: () => [],
   isCivicToggleVisible: false,
+  currentTier: undefined,
 })
 
 const emit = defineEmits<{ showVoices: [] }>()
@@ -184,9 +195,9 @@ const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 const intercom = useIntercom()
 
-const tierOptions = computed<{ value: LikerPlusTier, label: string }[]>(() => [
-  { value: 'plus', label: $t('pricing_page_tier_plus') },
-  { value: 'civic', label: $t('pricing_page_tier_civic') },
+const tierOptions = computed<{ value: LikerPlusTier, label: string, isCurrent: boolean }[]>(() => [
+  { value: 'plus', label: $t('pricing_page_tier_plus'), isCurrent: props.currentTier === 'plus' },
+  { value: 'civic', label: $t('pricing_page_tier_civic'), isCurrent: props.currentTier === 'civic' },
 ])
 
 const featureListClass = computed(() => [

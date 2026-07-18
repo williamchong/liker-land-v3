@@ -19,10 +19,12 @@
 
     <UButton
       v-if="!isRefreshing"
-      :label="$t('subscription_success_continue_button')"
+      :label="$t(isCivic
+        ? 'subscription_success_continue_button_civic'
+        : 'subscription_success_continue_button')"
       color="primary"
       :loading="isRedirecting"
-      @click="redirectToLibrary"
+      @click="isCivic ? redirectToAccount() : redirectToLibrary()"
     />
     <UButton
       v-else
@@ -34,11 +36,17 @@
 </template>
 
 <script setup lang="ts">
+import type { RouteLocationRaw } from 'vue-router'
+
 const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 const accountStore = useAccountStore()
 const { handleError } = useErrorHandler()
-const { currency, yearlyPrice, monthlyPrice, isCivicMember } = useSubscription()
+const {
+  currency,
+  getTierPrice,
+  isCivicMember,
+} = useSubscription()
 const { initializePaymentCurrency } = usePaymentCurrency()
 const { convertPrice } = useCurrency()
 const { user } = useUserSession()
@@ -59,9 +67,8 @@ const isRedirecting = ref(false)
 const isLikerPlus = computed(() => user.value?.isLikerPlus)
 // The IAP/upgrade flows pass `tier=civic`; the hosted-Stripe redirect doesn't,
 // so also read the refreshed session's tier once it lands.
-const isCivic = computed(() =>
-  getRouteQuery('tier') === 'civic' || isCivicMember.value,
-)
+const isCivicExpected = computed(() => getRouteQuery('tier') === 'civic')
+const isCivic = computed(() => isCivicExpected.value || isCivicMember.value)
 const affiliateFrom = computed(() => user.value?.plusAffiliateFrom)
 // The route `period` query is in SubscriptionPlan form ('yearly'/'monthly')
 // while the session stores LikerPlusStatus ('year'/'month'). Map between them,
@@ -75,6 +82,10 @@ const isPeriodMatch = computed(() => {
   if (!targetPeriod.value) return true
   return user.value?.likerPlusPeriod === PLAN_TO_STATUS[targetPeriod.value as SubscriptionPlan]
 })
+// A Plus→Civic upgrade leaves `isLikerPlus` already true, so the refresh loop
+// would exit before the tier flips. When the checkout signalled Civic, hold the
+// loop until the session actually reports Civic so /account reflects it.
+const isTierMatch = computed(() => !isCivicExpected.value || isCivicMember.value)
 
 useHead({
   title: $t('subscription_success_page_title'),
@@ -112,7 +123,7 @@ onMounted(async () => {
     isRefreshing.value = true
     await accountStore.refreshSessionInfo()
     let retry = 0
-    while (!(isLikerPlus.value && isPeriodMatch.value) && retry < 4) {
+    while (!(isLikerPlus.value && isPeriodMatch.value && isTierMatch.value) && retry < 4) {
       await sleep(5000)
       await accountStore.refreshSessionInfo()
       retry++
@@ -124,6 +135,11 @@ onMounted(async () => {
     // The Stripe redirect carries no flag and reads once.
     const isGiftExpected = getRouteQuery('gift') === '1'
     const MAX_GIFT_RETRIES = 4
+    // Only a fresh checkout (redirect) or an explicitly gift-flagged purchase can
+    // bring a gift to claim. An in-place upgrade (Plus→Civic, monthly→yearly) carries
+    // neither, so it must NOT read the subscription's pre-existing gift cart and
+    // wrongly re-open the claim UI post-upgrade.
+    const shouldCheckGift = isRedirected.value || isGiftExpected
     // Suppress the error dialog while polling through expected webhook lag;
     // only surface one on the final attempt. The Stripe path reads once.
     let gift: {
@@ -131,7 +147,9 @@ onMounted(async () => {
       giftCartId?: string
       giftPaymentId?: string
       giftClaimToken?: string
-    } = await fetchPlusGiftStatus({ shouldHandleError: !isGiftExpected })
+    } = shouldCheckGift
+      ? await fetchPlusGiftStatus({ shouldHandleError: !isGiftExpected })
+      : {}
     let giftRetry = 0
     while (
       isGiftExpected
@@ -153,14 +171,21 @@ onMounted(async () => {
       // payment-currency state is fresh 'auto' and resolves to USD until
       // geolocation lands, which would mislabel the analytics value/currency.
       await initializePaymentCurrency()
-      const isTrial = getRouteQuery('trial') !== '0'
+      // Civic has no trial, so never log one for it regardless of the query flag.
+      const isTrial = !isCivic.value && getRouteQuery('trial') !== '0'
 
       const PREDICTED_LTV_USD = 100
       const TRIAL_TO_PAID_CONVERSION = 0.5
 
+      // Civic's 10× sticker is a real paid conversion — value it at the Civic
+      // price, not the Plus price, so ad optimization isn't fed a low number.
+      const paidPrice = getTierPrice(
+        isCivic.value ? 'civic' : 'plus',
+        isYearly.value ? 'yearly' : 'monthly',
+      )
       const conversionValue = isTrial
         ? convertPrice(PREDICTED_LTV_USD * TRIAL_TO_PAID_CONVERSION)
-        : (isYearly.value ? yearlyPrice.value : monthlyPrice.value)
+        : paidPrice
       const conversionPredictedLTV = convertPrice(
         isTrial ? PREDICTED_LTV_USD * TRIAL_TO_PAID_CONVERSION : PREDICTED_LTV_USD,
       )
@@ -198,6 +223,13 @@ onMounted(async () => {
         },
       }), { replace: true })
     }
+    else if (isCivic.value) {
+      // Civic has no library "welcome" to show — the payoff is on the account
+      // page (Civic status, member seat-sharing, concierge), so land there.
+      accountStore.savePlusRedirectRoute(null)
+      isRefreshing.value = false
+      setTimeout(redirectToAccount, 1000)
+    }
     else {
       const redirectRoute = accountStore.plusRedirectRoute
 
@@ -230,19 +262,22 @@ onMounted(async () => {
   }
 })
 
-async function redirectToLibrary() {
+async function redirectTo(to: RouteLocationRaw) {
   // Guard against a double fire — the auto setTimeout and a user button click can
   // both call this, overlapping navigations or stranding the redirecting state.
   if (isRedirecting.value) return
   isRedirecting.value = true
   try {
-    // Library (not store) surfaces the books they can now read with Plus;
-    // `welcome` triggers the greeting banner there.
-    await navigateTo(localeRoute({ name: 'library', query: { welcome: '1' } }))
+    await navigateTo(localeRoute(to))
   }
   catch (error) {
     await handleError(error)
     isRedirecting.value = false
   }
 }
+
+// Library (not store) surfaces the books they can now read with Plus;
+// `welcome` triggers the greeting banner there.
+const redirectToLibrary = () => redirectTo({ name: 'library', query: { welcome: '1' } })
+const redirectToAccount = () => redirectTo({ name: 'account' })
 </script>

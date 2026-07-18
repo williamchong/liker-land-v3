@@ -54,6 +54,7 @@
                 v-if="user?.isLikerPlus"
                 class="-mt-1.5"
                 :color="item.isActive ? 'secondary' : 'primary'"
+                :tier="likerPlusTier"
               />
             </div>
           </template>
@@ -92,6 +93,7 @@ const getRouteBaseNameString = useRouteBaseNameString()
 const { getLabelGraphic } = useGraphicLabel()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const { isApp } = useAppDetection()
+const { likerPlusTier } = useSubscription()
 
 const menuItems = computed(() => {
   const routeName = getRouteBaseNameString()

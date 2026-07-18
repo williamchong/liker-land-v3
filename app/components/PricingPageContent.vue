@@ -121,6 +121,7 @@
           :is-compact="isShowTTSSamples || !!$slots['affiliate-alert'] || !!$slots['affiliate-promo']"
           :prepended-features="prependedFeatures"
           :is-civic-toggle-visible="isCivicToggleVisible"
+          :current-tier="likerPlusTier"
           @show-voices="isVoicesModalOpen = true"
         />
         <slot name="affiliate-alert" />
@@ -202,6 +203,7 @@
                   :label="subscribeButtonLabel"
                   block
                   size="xl"
+                  :disabled="isPlusCurrentPlan"
                   :loading="props.isProcessingSubscription"
                   :ui="{ base: 'py-2 laptop:py-3 cursor-pointer', label: 'font-bold' }"
                   @click="handleSubscribeButtonClick"
@@ -295,8 +297,9 @@ const isDesktopScreen = useDesktopScreen()
 const { t: $t } = useI18n()
 const getRouteQuery = useRouteQuery()
 const { isApp } = useAppDetection()
-const { canStartSubscribeFlow, isCivicIAPSupported, ensureOfferings } = useNativeIAP()
-const { isLikerPlus, isCivicMember } = useSubscription()
+const { canStartSubscribeFlow, canStartCivicSubscribeFlow, ensureOfferings } = useNativeIAP()
+const { isLikerPlus, isCivicMember, likerPlusTier, isPlanPeriodUpgrade } = useSubscription()
+const { canUpgradeToCivic } = usePlusManagement()
 
 const emit = defineEmits<{
   'open': []
@@ -329,9 +332,28 @@ const isVoicesModalOpen = ref(false)
 // (the page redirects them anyway) — mirrors the old PricingCivicSection gate.
 const isCivicOfferable = computed(() => {
   if (!props.isCivicVisible || isCivicMember.value) return false
-  return isApp.value ? isCivicIAPSupported.value : true
+  // An existing Plus member can only be offered Civic where the in-place upgrade
+  // is actually chargeable; otherwise the CTA would 400. New subscribers can buy.
+  if (isLikerPlus.value && !canUpgradeToCivic.value) return false
+  return canStartCivicSubscribeFlow.value
 })
 const isCivicToggleVisible = computed(() => isCivicOfferable.value && canStartSubscribeFlow.value)
+
+// Plus members are kept on /member for the Civic upsell (see member.vue), so open
+// on the Civic view rather than the Plus box with its new-subscriber CTA. Seed
+// once, the first time the member is known; a later manual toggle then stands.
+// Gate on SSR-stable inputs (session + isCivicVisible), NOT the native-bridge-
+// dependent isCivicToggleVisible, so server and client seed the same tier and the
+// pricing box doesn't hydrate-mismatch in-app. Ineligible members are redirected
+// off /member by member.vue, so seeding Civic for them is moot.
+let hasSeededCivicDefault = false
+watchImmediate([isLikerPlus, isCivicMember], ([isPlus, isCivic]) => {
+  if (hasSeededCivicDefault) return
+  if (props.isCivicVisible && isPlus && !isCivic) {
+    selectedTier.value = 'civic'
+    hasSeededCivicDefault = true
+  }
+})
 
 const isCustomVoiceCampaign = computed(() => {
   return getRouteQuery('utm_campaign').includes('custom-voice')
@@ -381,9 +403,23 @@ const selectedPlan = useVModel(props, 'modelValue', emit, {
   defaultValue: 'yearly',
 })
 
+// A logged-in Plus member owns Plus already, so the Plus tab is informational —
+// their current plan — with one real action: switching monthly → yearly.
+const isPlusMemberOnPlusTab = computed(() =>
+  isLikerPlus.value && !isCivicMember.value && !isCivicTierSelected.value,
+)
+const isPlusPeriodUpgrade = computed(() =>
+  isPlusMemberOnPlusTab.value && isPlanPeriodUpgrade(selectedPlan.value),
+)
+const isPlusCurrentPlan = computed(() =>
+  isPlusMemberOnPlusTab.value && !isPlusPeriodUpgrade.value,
+)
+
 const isPaidTrial = computed(() => resolveIsPaidTrial(props.trialPeriodDays, props.isPaidTrialOverride))
-// Civic has no trial, so the paid-trial celebration chrome never applies to it.
-const isPaidTrialChrome = computed(() => isPaidTrial.value && !isCivicTierSelected.value)
+// Civic has no trial, and an existing member is never in a trial-acquisition flow,
+// so the paid-trial celebration chrome never applies to either.
+const isPaidTrialChrome = computed(() =>
+  isPaidTrial.value && !isCivicTierSelected.value && !isPlusMemberOnPlusTab.value)
 
 const route = useRoute()
 const getRouteBaseName = useRouteBaseName()
@@ -399,6 +435,12 @@ const subscribeButtonLabel = computed(() => {
     return isLikerPlus.value
       ? $t('pricing_page_civic_upgrade_button')
       : $t('pricing_page_civic_subscribe_button')
+  }
+  if (isPlusPeriodUpgrade.value) {
+    return $t('pricing_page_switch_to_yearly')
+  }
+  if (isPlusCurrentPlan.value) {
+    return $t('pricing_page_current_plan')
   }
   if (isCustomVoiceCampaign.value) {
     return $t('plus_subscribe_cta_custom_voice_free')
@@ -442,7 +484,7 @@ function handleSubscribeButtonClick() {
   const plan = selectedPlan.value ?? 'yearly'
   // Civic never has a trial (product decision), so no trial fields here.
   if (isCivicTierSelected.value) {
-    handleSubscribe({ plan, tier: 'civic' })
+    handleSubscribe({ plan, tier: 'civic', mustCollectPaymentMethod: props.mustCollectPaymentMethod })
     return
   }
   handleSubscribe({

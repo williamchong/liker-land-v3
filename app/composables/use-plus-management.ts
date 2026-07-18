@@ -12,7 +12,7 @@ export function usePlusManagement() {
   const { t: $t } = useI18n()
   const { user } = useUserSession()
   const { isApp } = useAppDetection()
-  const { isIAPSupported, manageSubscription: manageViaIAP } = useNativeIAP()
+  const { isIAPSupported, isCivicIAPSupported, manageSubscription: manageViaIAP } = useNativeIAP()
   const accountStore = useAccountStore()
   const localeRoute = useLocaleRoute()
   const { handleError } = useErrorHandler()
@@ -60,6 +60,18 @@ export function usePlusManagement() {
       return isIAPSupported.value ? 'native-store' : 'store-info'
     }
     return isApp.value ? 'none' : 'stripe-portal'
+  })
+
+  // Whether this Plus member can actually upgrade to Civic in place. Web: only
+  // self-billed Stripe subscribers (the portal path). In-app: only shells whose
+  // store offers Civic IAP. Trials and seat-granted members can't upgrade —
+  // /member routes them to /account instead of offering an upgrade that would 400.
+  const canUpgradeToCivic = computed(() => {
+    if (!user.value?.isLikerPlus || isCivicMember.value || user.value.isLikerPlusTrial) {
+      return false
+    }
+    if (isApp.value) return isIAPSupported.value && isCivicIAPSupported.value
+    return likerPlusManageMode.value === 'stripe-portal'
   })
 
   const isOpeningBillingPortal = ref(false)
@@ -133,6 +145,7 @@ export function usePlusManagement() {
     subscriptionStateLabel,
     likerPlusButtonLabel,
     likerPlusManageMode,
+    canUpgradeToCivic,
     isOpeningBillingPortal,
     isManagingSubscription,
     handleLikerPlusButtonClick,

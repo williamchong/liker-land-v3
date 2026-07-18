@@ -10,6 +10,7 @@ export function useSubscription() {
     yearlyPrice,
     civicMonthlyPrice,
     civicYearlyPrice,
+    getTierPrice,
   } = useSubscriptionPricing()
 
   const currency = computed(() => displayCurrency.value.toUpperCase())
@@ -36,6 +37,13 @@ export function useSubscription() {
 
   const isCivicMember = computed(() => likerPlusTier.value === 'civic')
 
+  // A monthly subscriber moving to yearly — the one in-place period change. Bridges
+  // likerPlusPeriod (LikerPlusStatus) and the target SubscriptionPlan so callers
+  // don't compare the two vocabularies by raw string.
+  function isPlanPeriodUpgrade(targetPlan?: SubscriptionPlan): boolean {
+    return likerPlusPeriod.value === 'month' && targetPlan === 'yearly'
+  }
+
   function getPlusDiscountPrice(price: number): number | null {
     if (isLikerPlus.value && price > 0) {
       return Math.round(price * (1 - PLUS_BOOK_PURCHASE_DISCOUNT) * 100) / 100
@@ -55,6 +63,7 @@ export function useSubscription() {
     monthlyPrice,
     civicYearlyPrice,
     civicMonthlyPrice,
+    getTierPrice,
     currency,
 
     isLikerPlus,
@@ -62,6 +71,7 @@ export function useSubscription() {
     likerPlusPeriod,
     likerPlusTier,
     isCivicMember,
+    isPlanPeriodUpgrade,
     hasLoggedIn,
     getPlusDiscountPrice,
     getPlusDiscountRate,

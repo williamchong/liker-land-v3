@@ -187,7 +187,8 @@ definePageMeta({ layout: false })
 const route = useRoute()
 const localeRoute = useLocaleRoute()
 const getRouteQuery = useRouteQuery()
-const { yearlyPrice, monthlyPrice, currency } = useSubscription()
+const { yearlyPrice, monthlyPrice, currency, isLikerPlus, isCivicMember, isExpiredLikerPlus } = useSubscription()
+const { canUpgradeToCivic } = usePlusManagement()
 const checkout = useSubscriptionCheckout()
 const { t: $t } = useI18n()
 const config = useRuntimeConfig()
@@ -392,6 +393,9 @@ useHead({
 const iapOverrides = computed(() => getIAPOverrides(selectedPlan.value))
 const trialPeriodDays = computed(() => {
   if (isIAPSupported.value) return iapOverrides.value.trialPeriodDays
+  // A returning member (previously subscribed) isn't eligible for a fresh free
+  // trial, so never promise one in the CTA — they'd be charged immediately.
+  if (isExpiredLikerPlus.value) return 0
   switch (getRouteQuery('trial')) {
     case '0':
     case '0d': return 0
@@ -508,5 +512,11 @@ onMounted(async () => {
   // Passing 'civic' keeps Plus (non-Civic) members on the page so they can
   // see the Civic upgrade; only Civic members are redirected to the account.
   await checkout.redirectIfSubscribed({ tier: 'civic' })
+  // A Plus member who can't upgrade to Civic here (store-billed, shared-seat,
+  // trial, or a shell without Civic IAP) has no purchasable action on this page —
+  // send them to the account page rather than strand them on a disabled Plus box.
+  if (isLikerPlus.value && !isCivicMember.value && !canUpgradeToCivic.value) {
+    await navigateTo(localeRoute({ name: 'account' }))
+  }
 })
 </script>

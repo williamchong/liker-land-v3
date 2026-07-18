@@ -1,5 +1,5 @@
-// Sessions predating Civic carry no tier field; an active Plus subscriber
-// reads as 'plus'. Non-subscribers have no tier at all.
+// Sessions predating Civic carry no likerPlusTier field; an active Plus
+// subscriber reads as 'plus'. Non-subscribers have no likerPlusTier at all.
 export function getEffectiveLikerPlusTier(
   user?: { isLikerPlus?: boolean, likerPlusTier?: LikerPlusTier } | null,
 ): LikerPlusTier | undefined {
