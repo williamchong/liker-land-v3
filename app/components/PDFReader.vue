@@ -213,9 +213,36 @@
 
     <div class="relative grow">
       <div
+        :class="[
+          'hidden laptop:flex absolute inset-y-0 left-0 z-10',
+          'w-12 laptop:w-16 items-center justify-center cursor-pointer',
+          { 'opacity-0 pointer-events-none': isAtFirstPage },
+        ]"
+        @click="handleLeftArrowButtonClick"
+      >
+        <UIcon
+          size="24"
+          name="i-material-symbols-arrow-back-ios-new-rounded"
+        />
+      </div>
+      <div
+        :class="[
+          'hidden laptop:flex absolute inset-y-0 right-0 z-10',
+          'w-12 laptop:w-16 items-center justify-center cursor-pointer',
+          { 'opacity-0 pointer-events-none': isAtLastPage },
+        ]"
+        @click="handleRightArrowButtonClick"
+      >
+        <UIcon
+          size="24"
+          name="i-material-symbols-arrow-forward-ios-rounded"
+        />
+      </div>
+      <div
         ref="scrollableContainer"
         class="absolute inset-0 overflow-auto"
         @wheel="handleWheel"
+        @click="handleContainerTap"
       >
         <div
           v-if="isDualPageMode"
@@ -556,6 +583,10 @@ const emit = defineEmits<{
 const { pixelRatio } = useDevicePixelRatio()
 
 const isMobile = useMediaQuery('(max-width: 768px)')
+const isDesktopScreen = useDesktopScreen()
+
+// Fraction of the reader width on each edge that acts as a tap-to-turn zone.
+const TAP_ZONE_WIDTH_RATIO = 0.45
 
 const isCoverPage = computed(() =>
   isDualPageMode.value && totalPages.value > 1 && currentPage.value === 1,
@@ -992,6 +1023,38 @@ function previousPage() {
     ? (currentPage.value <= 2 ? 1 : 2)
     : 1
   currentPage.value = Math.max(currentPage.value - step, 1)
+}
+
+function handleLeftArrowButtonClick() {
+  previousPage()
+  useLogEvent('reader_navigate_button_arrow', { nft_class_id: props.nftClassId })
+}
+
+function handleRightArrowButtonClick() {
+  nextPage()
+  useLogEvent('reader_navigate_button_arrow', { nft_class_id: props.nftClassId })
+}
+
+function handleContainerTap(event: MouseEvent) {
+  // Desktop uses the side arrows; only tap-to-turn on small/touch screens.
+  if (isDesktopScreen.value) return
+  // Don't turn the page when the tap was actually a text selection.
+  if (window.getSelection()?.toString()) return
+  const container = scrollableContainer.value
+  if (!container) return
+  const rect = container.getBoundingClientRect()
+  const range = rect.width * TAP_ZONE_WIDTH_RATIO
+  const x = event.clientX - rect.left
+  if (x < range) {
+    previousPage()
+  }
+  else if (rect.width - x < range) {
+    nextPage()
+  }
+  else {
+    return
+  }
+  useLogEvent('reader_navigate_button_arrow_mobile', { nft_class_id: props.nftClassId })
 }
 
 function togglePageMode(value?: 'single' | 'dual') {
