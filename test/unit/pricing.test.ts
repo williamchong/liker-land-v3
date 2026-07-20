@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { convertUSDPriceToCurrency, convertCurrencyToUSDPrice } from '~/utils/pricing'
-import { USD_PRICE_TIER_LIST, HKD_PRICE_TIER_LIST, TWD_PRICE_TIER_LIST } from '~~/shared/constants/pricing'
+import { USD_PRICE_TIER_LIST, HKD_PRICE_TIER_LIST, TWD_PRICE_TIER_LIST, ABOVE_TIER_USD_PRICE_MAP } from '~~/shared/constants/pricing'
 
 describe('price tier lists', () => {
   it('are index-aligned so ladder conversion is well-defined', () => {
@@ -13,6 +13,14 @@ describe('price tier lists', () => {
       for (let i = 1; i < list.length; i += 1) {
         expect(list[i]!).toBeGreaterThan(list[i - 1]!)
       }
+    }
+  })
+
+  it('only map above-tier prices, which are unreachable via tier lookup', () => {
+    for (const [usdPrice, tier] of Object.entries(ABOVE_TIER_USD_PRICE_MAP)) {
+      expect(Number(usdPrice)).toBeGreaterThan(USD_PRICE_TIER_LIST[USD_PRICE_TIER_LIST.length - 1]!)
+      expect(tier.hkd).toBeGreaterThan(HKD_PRICE_TIER_LIST[HKD_PRICE_TIER_LIST.length - 1]!)
+      expect(tier.twd).toBeGreaterThan(TWD_PRICE_TIER_LIST[TWD_PRICE_TIER_LIST.length - 1]!)
     }
   })
 })
@@ -47,6 +55,11 @@ describe('convertUSDPriceToCurrency', () => {
     expect(convertUSDPriceToCurrency(1000, 'hkd')).toBe(Math.floor(1000 * 780 / 99.99))
     expect(convertUSDPriceToCurrency(1000, 'twd')).toBe(Math.floor(1000 * 3000 / 99.99))
   })
+
+  it('uses explicit tiers for USD prices above the top tier', () => {
+    expect(convertUSDPriceToCurrency(999.99, 'hkd')).toBe(7800)
+    expect(convertUSDPriceToCurrency(999.99, 'twd')).toBe(30000)
+  })
 })
 
 describe('convertCurrencyToUSDPrice', () => {
@@ -69,8 +82,13 @@ describe('convertCurrencyToUSDPrice', () => {
   })
 
   it('scales linearly (floored) above the top local tier', () => {
-    expect(convertCurrencyToUSDPrice(7800, 'hkd')).toBe(Math.floor(7800 * 99.99 / 780))
-    expect(convertCurrencyToUSDPrice(30000, 'twd')).toBe(Math.floor(30000 * 99.99 / 3000))
+    expect(convertCurrencyToUSDPrice(8000, 'hkd')).toBe(Math.floor(8000 * 99.99 / 780))
+    expect(convertCurrencyToUSDPrice(31000, 'twd')).toBe(Math.floor(31000 * 99.99 / 3000))
+  })
+
+  it('uses explicit tiers for local prices above the top tier', () => {
+    expect(convertCurrencyToUSDPrice(7800, 'hkd')).toBe(999.99)
+    expect(convertCurrencyToUSDPrice(30000, 'twd')).toBe(999.99)
   })
 
   it('round-trips every USD tier price through HKD and TWD', () => {

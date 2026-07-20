@@ -208,6 +208,14 @@ export const TWD_PRICE_TIER_LIST = [
   3000,
 ]
 
+export type PriceTierCurrency = 'hkd' | 'twd'
+
+// Prices above the top tier have no tier index, and the linear fallback drifts
+// off clean price points. Map them explicitly, keyed by exact USD price.
+export const ABOVE_TIER_USD_PRICE_MAP: Record<number, Record<PriceTierCurrency, number>> = {
+  999.99: { hkd: 7800, twd: 30000 }, // Civic yearly
+}
+
 export const PLUS_BOOK_PURCHASE_DISCOUNT = 0.2 // 20% discount
 export const DEFAULT_TRIAL_PERIOD_DAYS = 7
 export const PAID_TRIAL_PERIOD_DAYS_THRESHOLD = 7
