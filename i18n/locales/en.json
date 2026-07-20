@@ -840,6 +840,8 @@
   "reader_page_input_label": "Page number",
   "reader_page_mode_dual": "Two-page view",
   "reader_page_mode_single": "One-page view",
+  "reader_page_next_button": "Next page",
+  "reader_page_previous_button": "Previous page",
   "reader_preview_badge": "Preview",
   "reader_preview_end_close_button": "Back to Preview",
   "reader_preview_end_description": "You've reached the end of the free preview. Get the full book to keep reading.",

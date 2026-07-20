@@ -212,7 +212,11 @@
     </ReaderHeader>
 
     <div class="relative grow">
-      <div
+      <button
+        type="button"
+        data-reader-nav
+        :aria-label="$t('reader_page_previous_button')"
+        :disabled="isAtFirstPage"
         :class="[
           'hidden laptop:flex absolute inset-y-0 left-0 z-10',
           'w-12 laptop:w-16 items-center justify-center cursor-pointer',
@@ -224,8 +228,12 @@
           size="24"
           name="i-material-symbols-arrow-back-ios-new-rounded"
         />
-      </div>
-      <div
+      </button>
+      <button
+        type="button"
+        data-reader-nav
+        :aria-label="$t('reader_page_next_button')"
+        :disabled="isAtLastPage"
         :class="[
           'hidden laptop:flex absolute inset-y-0 right-0 z-10',
           'w-12 laptop:w-16 items-center justify-center cursor-pointer',
@@ -237,7 +245,7 @@
           size="24"
           name="i-material-symbols-arrow-forward-ios-rounded"
         />
-      </div>
+      </button>
       <div
         ref="scrollableContainer"
         class="absolute inset-0 overflow-auto"
@@ -1104,8 +1112,19 @@ function isInteractiveElement(el: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON' || tag === 'A' || el.isContentEditable
 }
 
+function isPageNavButton(el: EventTarget | null): boolean {
+  return el instanceof HTMLElement && el.hasAttribute('data-reader-nav')
+}
+
 function handleKeydown(event: KeyboardEvent) {
-  if (isInteractiveElement(event.target)) return
+  // The side arrows keep focus after a click, so shortcuts must keep working
+  // while one is focused — except the keys that natively activate it.
+  if (isPageNavButton(event.target)) {
+    if (event.key === ' ' || event.key === 'Enter') return
+  }
+  else if (isInteractiveElement(event.target)) {
+    return
+  }
 
   const ctrl = event.ctrlKey || event.metaKey
 
