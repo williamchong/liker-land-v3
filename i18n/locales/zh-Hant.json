@@ -841,6 +841,8 @@
   "reader_page_input_label": "頁碼",
   "reader_page_mode_dual": "雙頁顯示",
   "reader_page_mode_single": "單頁顯示",
+  "reader_page_next_button": "下一頁",
+  "reader_page_previous_button": "上一頁",
   "reader_preview_badge": "試閱",
   "reader_preview_end_close_button": "返回試閱內容",
   "reader_preview_end_description": "你已讀完本書的免費試閱內容，取得完整版即可繼續閱讀。",
