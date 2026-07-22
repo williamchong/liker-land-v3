@@ -1,6 +1,7 @@
 export interface BookshelfItem {
   nftClassId: string
   nftIds: string[]
+  acquiredAt: number
   lastOpenedTime: number
   progress: number
   completedAt?: number | null
@@ -19,6 +20,12 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
 
   const nftClassIds = ref<string[]>([])
   const tokenIdsByNFTClassId = ref<Record<string, string[]>>({})
+  // When each owned book was acquired, in ms. Sourced from token rows, not the
+  // shelf listing: the latter is ordered by publication date, so it can't tell a
+  // just-bought backlist book from an old one.
+  const acquiredAtByNFTClassId = ref<Record<string, number>>({})
+  const isFetchingAcquiredAt = ref(false)
+  const hasFetchedAcquiredAt = ref(false)
   // Borrowed (non-owned) Plus-reading books, most-recent first. LRU-capped at 20
   // server-side; the only terminal action is "return" (drop). See api-user.ts.
   const plusReadingBookIds = ref<string[]>([])
@@ -53,6 +60,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     return {
       nftClassId,
       nftIds,
+      acquiredAt: acquiredAtByNFTClassId.value[nftClassId] || 0,
       lastOpenedTime: settings?.lastOpenedTime || 0,
       progress: settings?.progress || 0,
       completedAt: settings?.completedAt,
@@ -326,6 +334,59 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     }
   }
 
+  // Prefers `updated_at` (moves on transfer) over `minted_at` so a gifted or
+  // resold copy dates from when this wallet got it. Merged in per page so a
+  // mid-sweep failure still improves the ordering.
+  async function fetchAcquiredAt(walletAddress: string, {
+    isRefresh = false,
+    limit = 100,
+  }: { isRefresh?: boolean, limit?: number } = {}) {
+    if (!walletAddress || isFetchingAcquiredAt.value) return
+    if (hasFetchedAcquiredAt.value && !isRefresh) return
+
+    const generation = resetGeneration
+    const isStale = () => generation !== resetGeneration
+
+    try {
+      isFetchingAcquiredAt.value = true
+      let key: string | undefined
+      // Mirrors fetchAllItems: a cursor that cycles must not loop forever.
+      const visitedKeys = new Set<string>()
+      do {
+        const res = await fetchNFTsByOwnerWalletAddress(walletAddress, { key, limit, nocache: isRefresh })
+        if (isStale()) return
+
+        res.data.forEach((nft) => {
+          const nftClassId = nft.contract_address?.toLowerCase()
+          if (!nftClassId) return
+          const acquiredAt = new Date(nft.updated_at || nft.minted_at).getTime()
+          if (!Number.isFinite(acquiredAt)) return
+          // Owning several copies: the latest one is what "just bought" means.
+          const existing = acquiredAtByNFTClassId.value[nftClassId] || 0
+          if (acquiredAt > existing) {
+            acquiredAtByNFTClassId.value[nftClassId] = acquiredAt
+          }
+        })
+
+        key = getIndexerNextKey(res, limit)?.toString()
+        if (key) {
+          if (visitedKeys.has(key)) break
+          visitedKeys.add(key)
+        }
+      } while (key)
+      hasFetchedAcquiredAt.value = true
+    }
+    catch (error) {
+      // Non-fatal: the shelf still renders, just without acquisition ordering.
+      console.warn('Failed to fetch book acquisition times:', error)
+    }
+    finally {
+      if (!isStale()) {
+        isFetchingAcquiredAt.value = false
+      }
+    }
+  }
+
   async function fetchNFTByNFTClassIdAndOwnerWalletAddressThroughContract(
     nftClassId: string,
     ownerWalletAddress: string,
@@ -405,6 +466,9 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     hasFetched.value = false
     nftClassIds.value = []
     tokenIdsByNFTClassId.value = {}
+    acquiredAtByNFTClassId.value = {}
+    isFetchingAcquiredAt.value = false
+    hasFetchedAcquiredAt.value = false
     plusReadingBookIds.value = []
     hasFetchedPlusReadingBooks.value = false
     plusReadingBooksPromise = null
@@ -426,6 +490,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
     // Must be returned so Pinia exposes them on $state for persist.pick.
     nftClassIds,
     tokenIdsByNFTClassId,
+    acquiredAtByNFTClassId,
     plusReadingBookIds,
     persistedWalletAddress,
 
@@ -444,6 +509,7 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
 
     fetchItems,
     fetchAllItems,
+    fetchAcquiredAt,
     fetchPlusReadingBooks,
     lazyFetchPlusReadingBooks,
     fetchPreLentBooks,
@@ -463,6 +529,6 @@ export const useBookshelfStore = defineStore('bookshelf', () => {
   }
 }, {
   persist: {
-    pick: ['nftClassIds', 'tokenIdsByNFTClassId', 'plusReadingBookIds', 'preLentNFTClassIds', 'persistedWalletAddress'],
+    pick: ['nftClassIds', 'tokenIdsByNFTClassId', 'acquiredAtByNFTClassId', 'plusReadingBookIds', 'preLentNFTClassIds', 'persistedWalletAddress'],
   },
 })

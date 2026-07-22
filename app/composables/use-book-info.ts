@@ -1,6 +1,6 @@
 import type { LocationQueryRaw } from 'vue-router'
 import { getGenreI18nKey } from '~~/shared/constants/book-categories'
-import { getHasFreeEdition } from '~~/shared/utils/bookstore'
+import { getBookEntityName, getHasFreeEdition } from '~~/shared/utils/bookstore'
 
 export default function (
   { nftClassId, isOwnerInfoEnabled = false }: {
@@ -30,12 +30,7 @@ export default function (
   const nftClassOwnerName = computed(() => nftClassOwnerInfoQuery.data.value?.displayName || '')
   const nftClassOwnerAvatar = computed(() => nftClassOwnerInfoQuery.data.value?.avatarSrc || '')
 
-  const authorName = computed(() => {
-    const author = bookInfo.author.value
-    if (typeof author === 'string') return author
-    if (typeof author === 'object' && 'name' in author) return author.name
-    return ''
-  })
+  const authorName = computed(() => getBookEntityName(bookInfo.author.value))
 
   const description = computed(() => {
     return bookstoreInfo.value?.descriptionFull || bookstoreInfo.value?.description || ''
@@ -61,12 +56,7 @@ export default function (
     return ''
   })
 
-  const publisherName = computed(() => {
-    const publisher = bookInfo.publisher.value
-    if (typeof publisher === 'string') return publisher
-    if (typeof publisher === 'object' && 'name' in publisher) return publisher.name
-    return ''
-  })
+  const publisherName = computed(() => getBookEntityName(bookInfo.publisher.value))
 
   const publisherDescription = computed(() => {
     const publisher = bookInfo.publisher.value
