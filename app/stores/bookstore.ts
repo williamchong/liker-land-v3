@@ -229,7 +229,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
           minPrice: undefined,
         }))
 
-      const nextKey = result.data.length === options.limit ? result.pagination?.next_key?.toString() : undefined
+      const nextKey = getIndexerNextKey(result, options.limit)?.toString()
       updateSearchResults(queryKey, mappedItems, nextKey, isRefresh)
     }
   }
@@ -256,7 +256,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
           minPrice: undefined,
         }))
 
-      const nextKey = result.data.length === options.limit ? result.pagination?.next_key?.toString() : undefined
+      const nextKey = getIndexerNextKey(result, options.limit)?.toString()
       updateSearchResults(queryKey, mappedItems, nextKey, isRefresh)
     }
   }
@@ -419,6 +419,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
       })
 
       const currentOffset = Number(stakingBooksMap.value[sortBy].offset ?? 0)
+      const isStartingFromFirstPage = currentOffset === 0
       const bookNFTs = result.data
         .filter(bookNFT => BigInt(bookNFT.staked_amount || 0) > 0)
         .map((bookNFT, index) => ({
@@ -429,14 +430,20 @@ export const useBookstoreStore = defineStore('bookstore', () => {
           likeRank: currentOffset + index + 1,
         }))
 
-      if (isRefresh) {
+      // A failed refresh keeps items but clears the cursor, so page 1 must replace, not append.
+      if (isStartingFromFirstPage) {
         stakingBooksMap.value[sortBy].items = bookNFTs
       }
       else {
-        stakingBooksMap.value[sortBy].items.push(...bookNFTs)
+        // The indexer paginates by numeric offset over a live staking ranking, so a book
+        // whose rank shifts across the page boundary can come back on both pages.
+        const seenNFTClassIds = new Set(stakingBooksMap.value[sortBy].items.map(item => item.nftClassId))
+        stakingBooksMap.value[sortBy].items.push(
+          ...bookNFTs.filter(bookNFT => !seenNFTClassIds.has(bookNFT.nftClassId)),
+        )
       }
 
-      stakingBooksMap.value[sortBy].offset = result.data.length < limit ? undefined : result.pagination?.next_key?.toString()
+      stakingBooksMap.value[sortBy].offset = getIndexerNextKey(result, limit)?.toString()
       stakingBooksMap.value[sortBy].hasFetched = true
     }
     finally {
