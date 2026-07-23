@@ -88,27 +88,71 @@
         </template>
       </UCard>
       <template v-else>
-        <!-- Tab selector -->
+        <!-- Search + tab selector -->
         <header
           v-if="isMyBookshelf"
-          class="flex items-center gap-2 w-full mt-4"
+          class="flex flex-col w-full mt-4"
         >
-          <PillButtonGroup
-            v-model="activeTab"
-            :items="shelfTabs"
-            :is-loading="isTabsLoading"
-            class="grow min-w-0"
-          />
-          <UploadBookModal
-            v-if="canUploadBook"
-            @uploaded="loadBookshelfData(walletAddress!, { isRefresh: true })"
+          <UCollapsible
+            :open="isSearchOpen"
           >
-            <PillButton
-              class="max-laptop:hidden ml-auto"
-              :label="$t('uploaded_book_upload_button')"
-              icon="i-material-symbols-upload-rounded"
+            <template #content>
+              <UInput
+                v-model="searchInputValue"
+                class="w-full mb-2"
+                icon="i-material-symbols-search-rounded"
+                size="lg"
+                type="search"
+                :autofocus="true"
+                :placeholder="$t('bookshelf_search_input_placeholder')"
+                :ui="{
+                  base: [
+                    '[&::-webkit-search-cancel-button]:appearance-none',
+                    'rounded-full',
+                  ],
+                }"
+                @keydown.esc="handleToggleSearch"
+              >
+                <template
+                  v-if="searchInputValue.length"
+                  #trailing
+                >
+                  <UButton
+                    color="neutral"
+                    variant="link"
+                    icon="i-material-symbols-close-rounded"
+                    :aria-label="$t('bookshelf_search_clear_label')"
+                    @click="handleClearSearch"
+                  />
+                </template>
+              </UInput>
+            </template>
+          </UCollapsible>
+
+          <div class="flex items-center gap-2">
+            <PillButtonGroup
+              v-model="activeTab"
+              :items="shelfTabs"
+              :is-loading="isTabsLoading"
+              class="grow min-w-0"
             />
-          </UploadBookModal>
+            <PillButton
+              :icon="isSearchOpen ? 'i-material-symbols-close-rounded' : 'i-material-symbols-search-rounded'"
+              :aria-label="isSearchOpen ? $t('bookshelf_search_close_label') : $t('bookshelf_search_label')"
+              :is-active="isSearchOpen"
+              @click="handleToggleSearch"
+            />
+            <UploadBookModal
+              v-if="canUploadBook"
+              @uploaded="loadBookshelfData(walletAddress!, { isRefresh: true })"
+            >
+              <PillButton
+                class="max-laptop:hidden"
+                :label="$t('uploaded_book_upload_button')"
+                icon="i-material-symbols-upload-rounded"
+              />
+            </UploadBookModal>
+          </div>
         </header>
 
         <!-- Empty state -->
@@ -145,7 +189,7 @@
             ]"
           >
             <BookshelfItem
-              v-for="(item, index) in readingItems"
+              v-for="(item, index) in visibleReadingItems"
               :id="item.nftClassId"
               :key="item.nftClassId"
               :class="getGridItemClassesByIndex(index)"
@@ -183,7 +227,7 @@
             ]"
           >
             <BookshelfItem
-              v-for="(item, index) in finishedItems"
+              v-for="(item, index) in visibleFinishedItems"
               :id="item.nftClassId"
               :key="item.nftClassId"
               :class="getGridItemClassesByIndex(index)"
@@ -216,7 +260,7 @@
             ]"
           >
             <BookshelfItem
-              v-for="(item, index) in dnfItems"
+              v-for="(item, index) in visibleDnfItems"
               :id="item.nftClassId"
               :key="item.nftClassId"
               :class="getGridItemClassesByIndex(index)"
@@ -249,7 +293,7 @@
             ]"
           >
             <UploadedBookshelfItem
-              v-for="(item, index) in uploadedBookItems"
+              v-for="(item, index) in visibleUploadedBookItems"
               :key="item.id"
               :class="getGridItemClassesByIndex(index)"
               :book-id="item.id"
@@ -271,7 +315,7 @@
             ]"
           >
             <BookshelfItem
-              v-for="(item, index) in stakingItems"
+              v-for="(item, index) in visibleStakingItems"
               :id="item.nftClassId"
               :key="item.nftClassId"
               :class="getGridItemClassesByIndex(index)"
@@ -303,7 +347,7 @@
             ]"
           >
             <BookshelfItem
-              v-for="(item, index) in archivedItems"
+              v-for="(item, index) in visibleArchivedItems"
               :id="item.nftClassId"
               :key="item.nftClassId"
               :class="getGridItemClassesByIndex(index)"
@@ -329,6 +373,30 @@
             />
           </ul>
 
+          <!-- No search results -->
+          <div
+            v-if="isSearchResultEmpty"
+            class="flex flex-col items-center m-auto py-12"
+          >
+            <UIcon
+              class="opacity-20"
+              name="i-material-symbols-search-off-rounded"
+              size="128"
+            />
+            <span
+              class="font-bold opacity-20 text-center"
+              v-text="$t('bookshelf_no_search_results', { term: searchInputValue.trim() })"
+            />
+
+            <UButton
+              class="mt-4"
+              variant="subtle"
+              color="neutral"
+              :label="$t('bookshelf_search_clear_label')"
+              @click="handleClearSearch"
+            />
+          </div>
+
           <div
             v-if="isCurrentTabFetching"
             class="flex justify-center py-48"
@@ -350,7 +418,7 @@
 <script setup lang="ts">
 import { formatUnits } from 'viem'
 import { DeleteUploadedBookModal } from '#components'
-import { getHasFreeEdition } from '~~/shared/utils/bookstore'
+import { getBookEntityName, getHasFreeEdition } from '~~/shared/utils/bookstore'
 
 import type { BookshelfItem } from '~/stores/bookshelf'
 import type { StakingItem } from '~/stores/staking'
@@ -524,6 +592,9 @@ const readingItems = computed(() => {
       const aStarted = a.progress > 0
       const bStarted = b.progress > 0
       if (aStarted !== bStarted) return aStarted ? -1 : 1
+      // Never-opened books all tie at lastOpenedTime 0, so a just-bought book
+      // used to land wherever its id happened to sort. Newest purchase first.
+      if (b.acquiredAt !== a.acquiredAt) return b.acquiredAt - a.acquiredAt
       // nftClassId is a lowercase 0x-hex string, so plain ordering matches
       // collation without the locale-aware cost of localeCompare.
       return a.nftClassId < b.nftClassId ? -1 : a.nftClassId > b.nftClassId ? 1 : 0
@@ -551,6 +622,7 @@ const stakingItems = computed<BookshelfItemWithStaking[]>(() => {
       stakedAmount: Number(formatUnits(stakedItem.stakedAmount, likeCoinTokenDecimals)),
       pendingRewards: Number(formatUnits(stakedItem.pendingRewards, likeCoinTokenDecimals)),
       isOwned: !!ownedItem,
+      acquiredAt: ownedItem?.acquiredAt || 0,
       lastOpenedTime: ownedItem?.lastOpenedTime || 0,
       progress: ownedItem?.progress || 0,
       archivedAt: ownedItem?.archivedAt ?? null,
@@ -561,6 +633,57 @@ const stakingItems = computed<BookshelfItemWithStaking[]>(() => {
 
   return items.sort((a, b) => b.stakedAmount - a.stakedAmount)
 })
+
+// Search narrows the active tab only. The tabs stay visible and the query
+// survives a tab switch, so a book can be chased across reading states.
+const isSearchOpen = ref(false)
+const searchInputValue = ref('')
+// Gated on my own shelf: the input only renders there, so a leftover query
+// would otherwise keep filtering invisibly after navigating to another shelf.
+const searchTerm = computed(() => {
+  if (!isMyBookshelf.value) return ''
+  return searchInputValue.value.trim().toLowerCase()
+})
+const hasSearchTerm = computed(() => !!searchTerm.value)
+
+// Reads the metadata the shelf fetch already seeded into the query cache, so
+// filtering stays synchronous and costs no extra requests.
+function getBookSearchText(nftClassId: string) {
+  const metadata = getNFTClassMetadataByIdFromCache(queryCache, nftClassId)
+  if (!metadata) return ''
+  return [
+    metadata.name,
+    getBookEntityName(metadata.author),
+    getBookEntityName(metadata.publisher),
+  ].filter(Boolean).join(' ').toLowerCase()
+}
+
+// Substring match, not token match: it has to work for CJK titles, which have
+// no word boundaries to split on.
+function filterBooksBySearchTerm<T extends { nftClassId: string }>(items: T[]) {
+  if (!hasSearchTerm.value) return items
+  return items.filter(item => getBookSearchText(item.nftClassId).includes(searchTerm.value))
+}
+
+const visibleReadingItems = computed(() => filterBooksBySearchTerm(readingItems.value))
+const visibleFinishedItems = computed(() => filterBooksBySearchTerm(finishedItems.value))
+const visibleDnfItems = computed(() => filterBooksBySearchTerm(dnfItems.value))
+const visibleArchivedItems = computed(() => filterBooksBySearchTerm(archivedItems.value))
+const visibleStakingItems = computed(() => filterBooksBySearchTerm(stakingItems.value))
+
+function handleToggleSearch() {
+  isSearchOpen.value = !isSearchOpen.value
+  if (isSearchOpen.value) {
+    useLogEvent('shelf_search_open', { tab: activeTab.value })
+  }
+  else {
+    searchInputValue.value = ''
+  }
+}
+
+function handleClearSearch() {
+  searchInputValue.value = ''
+}
 
 const shelfTabs = computed(() => {
   const tabs: { value: ShelfTab, label: string }[] = []
@@ -664,23 +787,33 @@ const currentTabEmptyMessage = computed(() => {
   }
 })
 
+// Counts the rendered (post-search) items so the ragged-last-row trimming in
+// usePaginatedGrid measures the grid it is actually laying out.
 const itemsCount = computed(() => {
   switch (activeTab.value) {
     case 'reading':
-      return readingItems.value.length
+      return visibleReadingItems.value.length
     case 'finished':
-      return finishedItems.value.length
+      return visibleFinishedItems.value.length
     case 'dnf':
-      return dnfItems.value.length
+      return visibleDnfItems.value.length
     case 'uploads':
-      return uploadedBookItems.value.length
+      return visibleUploadedBookItems.value.length
     case 'staking':
-      return stakingItems.value.length
+      return visibleStakingItems.value.length
     case 'archived':
-      return archivedItems.value.length
+      return visibleArchivedItems.value.length
     default:
       return bookshelfStore.items.length
   }
+})
+
+// Distinct from isCurrentTabEmpty: the tab has books, the query just matched none.
+const isSearchResultEmpty = computed(() => {
+  return hasSearchTerm.value
+    && !isCurrentTabFetching.value
+    && itemsCount.value === 0
+    && !isCurrentTabEmpty.value
 })
 
 const paramWalletAddress = computed(() => getRouteParam('walletAddress'))
@@ -779,6 +912,9 @@ const { gridClasses, getGridItemClassesByIndex, columnMax } = usePaginatedGrid({
 async function loadBookshelfData(addr: string, { isRefresh = false } = {}) {
   const promises: Promise<unknown>[] = [
     bookshelfStore.fetchAllItems({ walletAddress: addr, isRefresh }),
+    // Separate sweep: the shelf listing is ordered by publication date, so
+    // acquisition dates only come from the wallet's token rows.
+    bookshelfStore.fetchAcquiredAt(addr, { isRefresh }),
   ]
   if (isMyBookshelf.value) {
     promises.push(
@@ -797,6 +933,12 @@ async function loadBookshelfData(addr: string, { isRefresh = false } = {}) {
 
 const uploadedBookItems = computed(() => uploadedBooksStore.items)
 const hasUploadedBooks = computed(() => uploadedBookItems.value.length > 0)
+
+// Uploads carry their own name and have no on-chain author/publisher to match.
+const visibleUploadedBookItems = computed(() => {
+  if (!hasSearchTerm.value) return uploadedBookItems.value
+  return uploadedBookItems.value.filter(item => item.name?.toLowerCase().includes(searchTerm.value))
+})
 
 function handleDeleteUploadedBook(bookId: string) {
   deleteModal.open({ bookId })

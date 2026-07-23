@@ -17,6 +17,12 @@ export function getBookstoreScopedKey(key: string, isLibrary: boolean) {
   return isLibrary ? `library:${key}` : key
 }
 
+// Book metadata carries author/publisher as either a bare name or an entity object.
+export function getBookEntityName(entity?: string | { name?: string }): string {
+  if (typeof entity === 'string') return entity
+  return entity?.name || ''
+}
+
 // A free edition is a listed (non-unlisted) price-0 edition. Kept in lockstep
 // with ebook-cors, which independently gates free library access the same way.
 export function getHasFreeEdition(prices?: BookstorePrice[]): boolean {
