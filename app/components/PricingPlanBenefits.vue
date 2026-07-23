@@ -5,38 +5,42 @@
       'flex-col',
       isTitleCenter ? 'items-center' : 'items-start',
       'gap-3 laptop:gap-4',
+      'w-full',
     ]"
   >
-    <div
-      v-if="isCivicToggleVisible"
-      class="flex w-full p-0.5 bg-theme-black/8 dark:bg-theme-white/8 rounded-full"
-    >
-      <button
-        v-for="option in tierOptions"
-        :key="option.value"
-        type="button"
-        :class="[
-          'flex-1 px-5 py-1.5',
-          'text-sm font-bold text-center',
-          'rounded-full',
-          'transition-all duration-200',
+    <URadioGroup
+      v-if="isTierSelectorVisible"
+      v-model="selectedTier"
+      :items="tierOptions"
+      orientation="horizontal"
+      variant="table"
+      indicator="hidden"
+      :ui="{
+        root: 'w-full mb-2',
+        fieldset: 'w-full',
+        item: [
+          'flex-1',
+          'py-2',
+          'text-theme-black',
+          'has-data-[state=checked]:text-theme-cyan',
           'cursor-pointer',
-          selectedTier === option.value
-            ? 'bg-theme-white dark:bg-theme-black text-theme-black dark:text-theme-cyan shadow-sm'
-            : 'text-theme-black/40 dark:text-theme-white/40',
-        ]"
-        @click="selectedTier = option.value"
-      >
-        <span class="inline-flex items-center justify-center gap-1">
-          <UIcon
-            v-if="option.isCurrent"
-            name="i-material-symbols-check-circle-rounded"
-            class="shrink-0 size-3.5"
-          />
-          <span v-text="option.label" />
-        </span>
-      </button>
-    </div>
+          'transition-colors',
+          'duration-200',
+          'border-0',
+          'ring-2',
+          'ring-inset',
+          'ring-theme-black/20 dark:ring-theme-cyan/20',
+          'has-data-[state=checked]:ring-theme-black',
+          'dark:has-data-[state=checked]:ring-theme-cyan',
+        ],
+        label: [
+          'text-xl',
+          'text-inherit dark:text-theme-cyan',
+          'font-bold',
+          'cursor-pointer',
+        ],
+      }"
+    />
     <div
       v-else-if="!isTitleHidden"
       :class="[
@@ -105,60 +109,68 @@
       </template>
     </ul>
 
-    <button
-      v-if="isCivicToggleVisible && selectedTier === 'plus'"
-      type="button"
-      :class="[dividerClass, 'group cursor-pointer']"
-      @click="handleUpgradeToCivic"
+    <div
+      v-if="isTierSelectorVisible && selectedTier !== 'civic'"
+      :class="dividerClass"
     >
       <span class="h-px flex-1 bg-current" />
-      <span class="flex items-center gap-1 font-semibold transition-colors group-hover:text-theme-black dark:group-hover:text-theme-cyan">
-        <span v-text="$t('pricing_page_civic_upgrade_cta')" />
-        <UIcon
-          name="i-material-symbols-arrow-forward-rounded"
-          class="shrink-0"
-        />
-      </span>
+      <UButton
+        color="neutral"
+        variant="link"
+        size="xs"
+        trailing-icon="i-material-symbols-expand-circle-down-outline-rounded"
+        :label="$t('pricing_page_civic_upgrade_cta')"
+        class="font-semibold dark:hover:text-theme-cyan"
+        @click="handleUpgradeToCivic"
+      />
       <span class="h-px flex-1 bg-current" />
-    </button>
+    </div>
 
-    <template v-if="selectedTier === 'civic'">
-      <div :class="dividerClass">
-        <span class="h-px flex-1 bg-current" />
-        <span
-          class="font-semibold"
-          v-text="$t('pricing_page_civic_extra_divider')"
-        />
-        <span class="h-px flex-1 bg-current" />
-      </div>
+    <div
+      v-if="selectedTier === 'civic'"
+      :class="dividerClass"
+    >
+      <span class="h-px flex-1 bg-current" />
+      <span
+        class="px-2 text-highlighted dark:text-theme-cyan font-semibold"
+        v-text="$t('pricing_page_civic_extra_divider')"
+      />
+      <span class="h-px flex-1 bg-current" />
+    </div>
 
-      <ul :class="featureListClass">
-        <li>
-          <UIcon name="i-material-symbols-check" />
-          <span v-text="$t('pricing_page_civic_benefit_gift')" />
-        </li>
-        <li>
-          <UIcon name="i-material-symbols-check" />
-          <i18n-t
-            keypath="pricing_page_civic_benefit_voices"
-            tag="span"
-          >
-            <template #voiceArtist>
-              <button
-                type="button"
-                class="underline cursor-pointer"
-                @click="handleShowVoices"
-                v-text="$t('pricing_page_civic_benefit_voices_artist')"
-              />
-            </template>
-          </i18n-t>
-        </li>
-        <li>
-          <UIcon name="i-material-symbols-check" />
-          <span v-text="$t('pricing_page_civic_benefit_request')" />
-        </li>
-      </ul>
-    </template>
+    <UCollapsible
+      :open="selectedTier === 'civic'"
+      :class="{ '-mb-3 laptop:-mb-4': selectedTier !== 'civic' }"
+    >
+      <template #content>
+        <ul :class="featureListClass">
+          <li>
+            <UIcon name="i-material-symbols-check" />
+            <span v-text="$t('pricing_page_civic_benefit_gift')" />
+          </li>
+          <li>
+            <UIcon name="i-material-symbols-check" />
+            <i18n-t
+              keypath="pricing_page_civic_benefit_voices"
+              tag="span"
+            >
+              <template #voiceArtist>
+                <button
+                  type="button"
+                  class="underline cursor-pointer"
+                  @click="handleShowVoices"
+                  v-text="$t('pricing_page_civic_benefit_voices_artist')"
+                />
+              </template>
+            </i18n-t>
+          </li>
+          <li>
+            <UIcon name="i-material-symbols-check" />
+            <span v-text="$t('pricing_page_civic_benefit_request')" />
+          </li>
+        </ul>
+      </template>
+    </UCollapsible>
   </div>
 </template>
 
@@ -171,9 +183,9 @@ const props = withDefaults(defineProps<{
   isCompact?: boolean
   isAudioHidden?: boolean
   prependedFeatures?: string[]
-  // Shows a Plus/Civic toggle in place of the title and, on Civic, appends the
+  // Shows a tier selector in place of the title and, on Civic, appends the
   // Civic-only benefits below the shared Plus list.
-  isCivicToggleVisible?: boolean
+  isTierSelectorVisible?: boolean
   // The viewer's active tier, marked as "current plan" in the toggle.
   currentTier?: LikerPlusTier
 }>(), {
@@ -183,7 +195,7 @@ const props = withDefaults(defineProps<{
   isCompact: false,
   isAudioHidden: false,
   prependedFeatures: () => [],
-  isCivicToggleVisible: false,
+  isTierSelectorVisible: false,
   currentTier: undefined,
 })
 
@@ -195,9 +207,32 @@ const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 const intercom = useIntercom()
 
-const tierOptions = computed<{ value: LikerPlusTier, label: string, isCurrent: boolean }[]>(() => [
-  { value: 'plus', label: $t('pricing_page_tier_plus'), isCurrent: props.currentTier === 'plus' },
-  { value: 'civic', label: $t('pricing_page_tier_civic'), isCurrent: props.currentTier === 'civic' },
+const tierOptions = computed<{
+  value: LikerPlusTier
+  label: string
+  isCurrent: boolean
+  class: string[]
+}[]>(() => [
+  {
+    value: 'plus',
+    label: $t('pricing_page_tier_plus'),
+    isCurrent: props.currentTier === 'plus',
+    class: [
+      'bg-theme-cyan/10 dark:bg-theme-cyan/5',
+      'has-data-[state=checked]:bg-theme-black/90',
+      'dark:has-data-[state=checked]:bg-theme-cyan/10',
+    ],
+  },
+  {
+    value: 'civic',
+    label: $t('pricing_page_tier_civic'),
+    isCurrent: props.currentTier === 'civic',
+    class: [
+      'bg-theme-cyan/30 dark:bg-theme-cyan/20',
+      'has-data-[state=checked]:bg-theme-black/90',
+      'dark:has-data-[state=checked]:bg-theme-cyan/30',
+    ],
+  },
 ])
 
 const featureListClass = computed(() => [
@@ -214,7 +249,7 @@ const featureListClass = computed(() => [
 
 // Shared chrome for the two mutually-exclusive tier dividers (Plus upgrade CTA
 // and Civic section header).
-const dividerClass = 'flex items-center gap-3 w-full text-xs text-theme-black/40 dark:text-theme-white/40'
+const dividerClass = 'flex items-center gap-3 w-full text-xs text-muted min-h-6'
 
 function handleClickLibrary() {
   useLogEvent('pricing_benefit_click_library')

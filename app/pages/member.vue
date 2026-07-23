@@ -23,7 +23,7 @@
   >
     <template #header-action>
       <UButton
-        class="absolute z-10 top-2 phone:top-4 left-2 phone:left-4 text-white cursor-pointer"
+        class="absolute laptop:fixed z-10 top-2 phone:top-4 left-2 phone:left-4 text-white cursor-pointer"
         icon="i-material-symbols-arrow-back"
         :to="localeRoute({ name: 'store' })"
         variant="ghost"

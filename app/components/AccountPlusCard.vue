@@ -49,6 +49,7 @@
         <template #right>
           <UButton
             :label="$t('account_page_civic_upgrade_button')"
+            icon="i-material-symbols-lock-outline"
             color="primary"
             :to="civicUpgradeRoute"
             @click="handleUpgradeToCivicButtonClick"
