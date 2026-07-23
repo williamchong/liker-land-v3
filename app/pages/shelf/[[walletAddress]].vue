@@ -89,37 +89,47 @@
       </UCard>
       <template v-else>
         <!-- Search + tab selector -->
-        <div
+        <header
           v-if="isMyBookshelf"
-          class="flex flex-col gap-2 w-full mt-4"
+          class="flex flex-col w-full mt-4"
         >
-          <UInput
-            v-if="isSearchOpen"
-            v-model="searchInputValue"
-            class="w-full"
-            icon="i-material-symbols-search-rounded"
-            size="lg"
-            type="search"
-            :autofocus="true"
-            :placeholder="$t('bookshelf_search_input_placeholder')"
-            :ui="{ base: '[&::-webkit-search-cancel-button]:appearance-none' }"
-            @keydown.esc="handleToggleSearch"
+          <UCollapsible
+            :open="isSearchOpen"
           >
-            <template
-              v-if="searchInputValue.length"
-              #trailing
-            >
-              <UButton
-                color="neutral"
-                variant="link"
-                icon="i-material-symbols-close-rounded"
-                :aria-label="$t('bookshelf_search_clear_label')"
-                @click="handleClearSearch"
-              />
+            <template #content>
+              <UInput
+                v-model="searchInputValue"
+                class="w-full mb-2"
+                icon="i-material-symbols-search-rounded"
+                size="lg"
+                type="search"
+                :autofocus="true"
+                :placeholder="$t('bookshelf_search_input_placeholder')"
+                :ui="{
+                  base: [
+                    '[&::-webkit-search-cancel-button]:appearance-none',
+                    'rounded-full',
+                  ],
+                }"
+                @keydown.esc="handleToggleSearch"
+              >
+                <template
+                  v-if="searchInputValue.length"
+                  #trailing
+                >
+                  <UButton
+                    color="neutral"
+                    variant="link"
+                    icon="i-material-symbols-close-rounded"
+                    :aria-label="$t('bookshelf_search_clear_label')"
+                    @click="handleClearSearch"
+                  />
+                </template>
+              </UInput>
             </template>
-          </UInput>
+          </UCollapsible>
 
-          <header class="flex items-center gap-2">
+          <div class="flex items-center gap-2">
             <PillButtonGroup
               v-model="activeTab"
               :items="shelfTabs"
@@ -142,8 +152,8 @@
                 icon="i-material-symbols-upload-rounded"
               />
             </UploadBookModal>
-          </header>
-        </div>
+          </div>
+        </header>
 
         <!-- Empty state -->
         <div
