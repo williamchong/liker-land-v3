@@ -8,8 +8,12 @@ const CHUNK_ERROR_PATTERNS = [
 
 const RELOAD_FLUSH_DELAY_MS = 200
 const SW_UPDATE_TIMEOUT_MS = 1500
+// Backstop reload delay when the native shell was asked to clear + reload:
+// long enough for the native wipe to finish and tear this page down first,
+// so the backstop normally only fires if the bridge message was lost.
+const NATIVE_CLEAR_FALLBACK_MS = 3000
 // Treat chunk errors within this window as one incident. The ladder (soft reload
-// → cache purge → give up) advances one step per error inside the window, and
+// → cache purge + native clear → give up) advances one step per error inside the window, and
 // resets once a fresh error lands after it — so an unrelated failure days later
 // starts over from a soft reload rather than going straight to the cache purge.
 const INCIDENT_WINDOW_MS = 5 * 60_000
@@ -66,18 +70,8 @@ export default defineNuxtPlugin((nuxtApp) => {
         ...extra,
       })
 
-    // Web purge failed too. On native, escalate to a native clear that can evict
-    // the SW registration WebKit won't drop — once (attempt 2); a further error
-    // falls through to surface below so a dead network can't loop forever.
-    if (effectiveAttempt === 2 && requestNativeClearWebViewCache()) {
-      reloadCount.value = effectiveAttempt + 1
-      logChunkError(true, true, { native_cleared: true })
-      console.warn('[chunk-error] requested native cache clear')
-      return
-    }
-
-    // Both the soft reload (if any) and the cache purge failed, and no native
-    // clear applied. Stop reloading and surface the error instead of looping.
+    // The purge rung (web purge + native clear where available) already ran and
+    // didn't fix it. Stop reloading and surface the error instead of looping.
     if (effectiveAttempt >= 2) {
       logChunkError(false, true)
       console.error('[chunk-error] already escalated, surfacing error', error)
@@ -94,7 +88,13 @@ export default defineNuxtPlugin((nuxtApp) => {
       // stale shell — so purge SW + caches and force a clean fetch.
       // Targets iOS WebKit where the cached "/" shell (NetworkFirst document
       // cache) keeps re-serving references to deleted chunk hashes after deploy.
-      logChunkError(true, true)
+      // On app builds with the capability, also clear natively in this same rung —
+      // the web purge below can't evict WKWebView's own SW registration + HTTP
+      // caches. Requested first so the native wipe overlaps the web purge; the
+      // native shell reloads once wiped, and the delayed replace is its backstop.
+      const nativeClearRequested = requestNativeClearWebViewCache()
+      if (nativeClearRequested) console.warn('[chunk-error] requested native cache clear')
+      logChunkError(true, true, nativeClearRequested ? { native_cleared: true } : undefined)
       try {
         const regs = (await navigator.serviceWorker?.getRegistrations()) ?? []
         await Promise.all(regs.map(r => r.unregister()))
@@ -108,7 +108,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         const url = new URL(window.location.href)
         url.searchParams.set('_swrefresh', String(now))
         window.location.replace(url.toString())
-      }, RELOAD_FLUSH_DELAY_MS)
+      }, nativeClearRequested ? NATIVE_CLEAR_FALLBACK_MS : RELOAD_FLUSH_DELAY_MS)
       return
     }
 
