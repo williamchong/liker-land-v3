@@ -55,6 +55,14 @@ export function requestNativeClearWebViewCache(): boolean {
   return true
 }
 
+// Asks the native shell to drop its app-managed content caches (currently the
+// on-disk TTS segment cache). Distinct from requestNativeClearWebViewCache,
+// which reloads. No-op on web or an app build without the capability.
+export function requestNativeClearCaches(): void {
+  if (!isNativeWebView() || !isNativeFeatureSupported('clearNativeCaches')) return
+  postToNative({ type: 'clearNativeCaches' })
+}
+
 export function isNativeIntercomAvailable(): boolean {
   return isNativeWebView() && isNativeFeatureSupported('intercom')
 }

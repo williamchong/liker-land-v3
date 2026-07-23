@@ -614,7 +614,11 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   async function clearCaches() {
-    if (!import.meta.client || !window.caches) return
+    if (!import.meta.client) return
+    // Native content caches (TTS audio) live on the app's disk, invisible to
+    // the web-layer purge below; ask the shell to drop them too.
+    requestNativeClearCaches()
+    if (!window.caches) return
     try {
       isClearingCaches.value = true
       const keys = await window.caches.keys()
