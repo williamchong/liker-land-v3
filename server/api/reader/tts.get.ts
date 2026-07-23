@@ -17,7 +17,7 @@ function setTTSSourceHeader(event: H3Event, source: TTSServerSource) {
 }
 
 function getTTSProvider(voiceId: string): MinimaxTTSProvider {
-  if (!KNOWN_VOICE_IDS.has(voiceId)) {
+  if (!isKnownVoiceId(voiceId)) {
     throw createError({
       status: 400,
       message: 'INVALID_VOICE_ID',

@@ -1,4 +1,5 @@
 import { normalizeLikerId } from '~~/shared/utils/liker-id'
+import { PHOEBE_VOICE_ID } from '~~/shared/utils/tts-voice-version'
 
 // Static example text for the public TTS sample endpoint. Hardcoding the text
 // per language closes the abuse vector: without auth + sig, an arbitrary
@@ -72,7 +73,7 @@ export interface SystemVoice {
 // Keyed by owner Liker ID. Unlike AFFILIATE_SAMPLE_SCRIPTS these have no
 // testnet counterpart to duplicate — the owners hold no sepolia account.
 const SYSTEM_VOICES_BY_OWNER: Record<string, SystemVoice> = {
-  withthepoons: { voiceId: 'phoebe', name: 'Phoebe', language: 'zh-HK' },
+  withthepoons: { voiceId: PHOEBE_VOICE_ID, name: 'Phoebe', language: 'zh-HK' },
   astrohsu99: { voiceId: 'astro', name: '許明恩', language: 'zh-TW' },
 }
 
