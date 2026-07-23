@@ -810,7 +810,10 @@ const itemsCount = computed(() => {
 
 // Distinct from isCurrentTabEmpty: the tab has books, the query just matched none.
 const isSearchResultEmpty = computed(() => {
-  return hasSearchTerm.value && itemsCount.value === 0 && !isCurrentTabEmpty.value
+  return hasSearchTerm.value
+    && !isCurrentTabFetching.value
+    && itemsCount.value === 0
+    && !isCurrentTabEmpty.value
 })
 
 const paramWalletAddress = computed(() => getRouteParam('walletAddress'))
