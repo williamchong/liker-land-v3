@@ -48,7 +48,7 @@ export function requestNativeStoreReview(reason: string): void {
 
 // Asks the native shell to wipe the WKWebView SW registration + caches the web
 // layer can't clear, then reload. Returns false on web / an app build without the
-// capability, so the caller falls back to surfacing the error.
+// capability, so the caller falls back to a web-only purge and reload.
 export function requestNativeClearWebViewCache(): boolean {
   if (!isNativeWebView() || !isNativeFeatureSupported('clearWebViewCache')) return false
   postToNative({ type: 'clearWebViewCache' })
