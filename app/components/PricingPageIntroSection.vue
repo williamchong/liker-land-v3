@@ -28,7 +28,7 @@
       :is-dark-background="props.isDarkBackground"
       :is-compact="props.isCompact || (!!title && !!description)"
       :prepended-features="props.prependedFeatures"
-      :is-civic-toggle-visible="props.isCivicToggleVisible"
+      :is-tier-selector-visible="props.isTierSelectorVisible"
       :current-tier="props.currentTier"
       @show-voices="emit('showVoices')"
     />
@@ -57,7 +57,7 @@ const props = defineProps({
     type: Array as PropType<string[]>,
     default: () => [],
   },
-  isCivicToggleVisible: {
+  isTierSelectorVisible: {
     type: Boolean,
     default: false,
   },
