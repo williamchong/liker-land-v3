@@ -1,10 +1,12 @@
 import { useLocalStorage } from '@vueuse/core'
 
-const CHUNK_ERROR_PATTERNS = [
-  'Failed to fetch dynamically imported module',
-  'error loading dynamically imported module',
-  'Importing a module script failed',
-]
+import {
+  CHUNK_ERROR_FIRST_AT_KEY,
+  CHUNK_ERROR_PATTERNS,
+  CHUNK_ERROR_RELOADS_KEY,
+  clearPrebootChunkError,
+  readPrebootChunkError,
+} from '~~/shared/utils/chunk-guard'
 
 const RELOAD_FLUSH_DELAY_MS = 200
 const SW_UPDATE_TIMEOUT_MS = 1500
@@ -19,13 +21,42 @@ const NATIVE_CLEAR_FALLBACK_MS = 3000
 const INCIDENT_WINDOW_MS = 5 * 60_000
 
 export default defineNuxtPlugin((nuxtApp) => {
+  // Tell the inline pre-boot guard (shared/utils/chunk-guard, injected into the
+  // SSR <head>) that the in-app ladder owns recovery from here on.
+  window.__chunkLadderActive = true
+
+  // A breadcrumb from the pre-boot guard means an earlier document died before
+  // Nuxt booted and this boot is its recovery — report the incident PostHog
+  // never saw. Clear only after the event is queued (inside onLoaded), so a
+  // session where PostHog never loads keeps the marker for the next launch.
+  const preboot = readPrebootChunkError()
+  if (preboot) {
+    const { onLoaded } = useScriptPostHog()
+    onLoaded(() => {
+      useLogEvent('chunk_error', {
+        preboot: true,
+        recovered: true,
+        action: preboot.action,
+        attempt: preboot.attempt,
+        had_sw: preboot.had_sw,
+        native_cleared: preboot.native_cleared,
+        error_message: preboot.error_message,
+        // A breadcrumb can outlive its session (PostHog never loaded); age
+        // separates a just-now recovery from a days-old incident.
+        age_ms: Date.now() - preboot.at,
+        url: window.location.pathname,
+      })
+      clearPrebootChunkError()
+    })
+  }
+
   // localStorage, not sessionStorage: the native WebView keeps its service worker
   // and storage when the user force-quits, so a relaunch re-serves the same stale
   // "/" shell referencing deleted chunk hashes. Persisting the ladder lets a
   // relaunch advance to the cache purge instead of restarting from a soft reload
   // that can't fix it — otherwise "kill the app" never recovers, only a reinstall.
-  const firstErrorAt = useLocalStorage<number>('chunk_error_first_at', 0)
-  const reloadCount = useLocalStorage<number>('chunk_error_reloads', 0)
+  const firstErrorAt = useLocalStorage<number>(CHUNK_ERROR_FIRST_AT_KEY, 0)
+  const reloadCount = useLocalStorage<number>(CHUNK_ERROR_RELOADS_KEY, 0)
   const pwa = usePWA()
   let hasHandled = false
 
@@ -136,4 +167,9 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   nuxtApp.hook('app:chunkError', ({ error }) => handle(error))
   nuxtApp.hook('vue:error', error => handle(error))
+  // Vite emits this for failed dynamic-import preloads that don't always
+  // surface through the Nuxt hooks above. Payload carries the original error.
+  window.addEventListener('vite:preloadError', (event) => {
+    handle((event as Event & { payload?: unknown }).payload)
+  })
 })
