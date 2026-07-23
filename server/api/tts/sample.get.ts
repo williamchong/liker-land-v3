@@ -107,7 +107,7 @@ export default defineEventHandler(async (event) => {
     }
   }
   else {
-    if (!KNOWN_VOICE_IDS.has(voiceId)) {
+    if (!isKnownVoiceId(voiceId)) {
       throw createError({ status: 400, message: 'INVALID_VOICE_ID' })
     }
     if (seg !== undefined) {

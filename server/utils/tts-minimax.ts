@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import type { BaseTTSProvider, TTSProviderResult, TTSProviderStreamResult, TTSRequestParams } from './api-tts'
 import zhHKPronunciation from './tts-pronunciation/zh-HK.json'
 import zhTWPronunciation from './tts-pronunciation/zh-TW.json'
+import { parseTTSVoiceVersion, PHOEBE_V26_VOICE_ID, PHOEBE_VOICE_ID } from '~~/shared/utils/tts-voice-version'
 
 export const LANG_MAPPING = {
   'en-US': 'English',
@@ -22,20 +23,49 @@ const VOICE_CONFIG: Record<string, VoiceConfig> = {
   aurora: { minimaxVoiceId: 'three_book_aurora_v1', displayName: 'Aurora' },
   karenly: { minimaxVoiceId: 'three_book_karenly_v0', displayName: 'Karenly' },
   pazu: { minimaxVoiceId: 'three_book_pazu_v3', displayName: 'Pazu' },
-  phoebe: { minimaxVoiceId: 'three_book_phoebe_v3', displayName: 'Phoebe' },
-  // Debug clone of Phoebe pinned to the older model so QA can compare it against
-  // the default Phoebe. Exposed only in the testnet voice list (client-gated).
-  phoebe26: { minimaxVoiceId: 'three_book_phoebe_v3', model: 'speech-2.6-hd', displayName: 'Phoebe 2.6' },
+  // Version encodes the Minimax model (v26 = speech-2.6-hd, v28 = speech-2.8-hd).
+  // Bumped from unversioned `phoebe` so request URLs change and CDN/browser
+  // caches keyed on `voice_id` stop serving 2.6 audio.
+  [PHOEBE_VOICE_ID]: { minimaxVoiceId: 'three_book_phoebe_v3', displayName: 'Phoebe' },
+  // Pinned to the older model so QA can compare it against the default Phoebe.
+  // Exposed only in the testnet voice list (client-gated).
+  [PHOEBE_V26_VOICE_ID]: { minimaxVoiceId: 'three_book_phoebe_v3', model: 'speech-2.6-hd', displayName: 'Phoebe 2.6' },
 }
 
-export const KNOWN_VOICE_IDS = new Set(Object.keys(VOICE_CONFIG))
+// base -> configured key with the highest `_v<digits>` version (an unversioned
+// key counts as v0), computed once at module load for the fallback resolver.
+const LATEST_VOICE_KEY_BY_BASE = new Map<string, string>()
+for (const key of Object.keys(VOICE_CONFIG)) {
+  const { base, version } = parseTTSVoiceVersion(key)
+  const currentKey = LATEST_VOICE_KEY_BY_BASE.get(base)
+  if (!currentKey || version > parseTTSVoiceVersion(currentKey).version) {
+    LATEST_VOICE_KEY_BY_BASE.set(base, key)
+  }
+}
+
+// A version that no longer exists (stale client JS or a pre-bump preference)
+// falls back to the latest configured version of the same base, so old ids drop
+// from VOICE_CONFIG cleanly. Object.hasOwn blocks prototype keys (`constructor`).
+export function resolveVoiceId(voiceId: string): string | undefined {
+  if (Object.hasOwn(VOICE_CONFIG, voiceId)) return voiceId
+  return LATEST_VOICE_KEY_BY_BASE.get(parseTTSVoiceVersion(voiceId).base)
+}
+
+export function isKnownVoiceId(voiceId: string): boolean {
+  return resolveVoiceId(voiceId) !== undefined
+}
+
+function getVoiceConfig(voiceId: string): VoiceConfig | undefined {
+  const key = resolveVoiceId(voiceId)
+  return key ? VOICE_CONFIG[key] : undefined
+}
 
 export function getVoiceDisplayName(voiceId: string): string | undefined {
-  return VOICE_CONFIG[voiceId]?.displayName
+  return getVoiceConfig(voiceId)?.displayName
 }
 
 export function getMinimaxVoiceId(voiceId: string): string | undefined {
-  return VOICE_CONFIG[voiceId]?.minimaxVoiceId
+  return getVoiceConfig(voiceId)?.minimaxVoiceId
 }
 
 // Pronunciation overrides keyed by Minimax synthesis language. Each maps a
@@ -179,7 +209,7 @@ export function getMinimaxModel(options: {
   language?: string
 } = {}): string {
   const { voiceId, customVoiceId, language } = options
-  const voiceModel = voiceId && VOICE_CONFIG[voiceId]?.model
+  const voiceModel = voiceId && getVoiceConfig(voiceId)?.model
   if (voiceModel) {
     return voiceModel
   }
@@ -213,63 +243,44 @@ export class MinimaxTTSProvider implements BaseTTSProvider {
   provider = 'minimax'
   format = 'audio/mpeg'
 
-  async processRequest(params: TTSRequestParams): Promise<TTSProviderResult> {
+  private buildSynthesisRequest(params: TTSRequestParams) {
     const { text, language, voiceId, customMiniMaxVoiceId } = params
 
-    if (!customMiniMaxVoiceId && !VOICE_CONFIG[voiceId]) {
+    const resolvedVoiceId = customMiniMaxVoiceId || getMinimaxVoiceId(voiceId)
+    if (!resolvedVoiceId) {
       throw createError({
         status: 400,
         message: 'INVALID_VOICE_ID',
       })
     }
 
-    const client = getMiniMaxSpeechClient()
-    const resolvedVoiceId = (customMiniMaxVoiceId || VOICE_CONFIG[voiceId]!.minimaxVoiceId) as string
-    const model = getMinimaxModel({ voiceId, customVoiceId: customMiniMaxVoiceId, language })
     const synthesizedText = injectTTSPauseMarkers(text)
-
-    const result = await client.synthesize({
+    return {
       text: synthesizedText,
-      model,
+      model: getMinimaxModel({ voiceId, customVoiceId: customMiniMaxVoiceId, language }),
       voiceSetting: {
         voiceId: resolvedVoiceId,
         speed: 1,
-        emotion: 'calm',
+        emotion: 'calm' as const,
         textNormalization: true,
       },
       pronunciationDict: getTTSPronunciationDictionary(language, synthesizedText),
       languageBoost: LANG_MAPPING[language as keyof typeof LANG_MAPPING],
-    })
+    }
+  }
 
+  async processRequest(params: TTSRequestParams): Promise<TTSProviderResult> {
+    const request = this.buildSynthesisRequest(params)
+    const client = getMiniMaxSpeechClient()
+    const result = await client.synthesize(request)
     return { audio: result.audio, extraInfo: result.extraInfo, traceId: result.traceId }
   }
 
   async processRequestStream(params: TTSRequestParams): Promise<TTSProviderStreamResult> {
-    const { text, language, voiceId, customMiniMaxVoiceId } = params
-
-    if (!customMiniMaxVoiceId && !VOICE_CONFIG[voiceId]) {
-      throw createError({
-        status: 400,
-        message: 'INVALID_VOICE_ID',
-      })
-    }
-
+    const request = this.buildSynthesisRequest(params)
     const client = getMiniMaxSpeechClient()
-    const resolvedVoiceId = (customMiniMaxVoiceId || VOICE_CONFIG[voiceId]!.minimaxVoiceId) as string
-    const model = getMinimaxModel({ voiceId, customVoiceId: customMiniMaxVoiceId, language })
-    const synthesizedText = injectTTSPauseMarkers(text)
-
     const { audio, extraInfo, traceId } = await client.synthesizeStream({
-      text: synthesizedText,
-      model,
-      voiceSetting: {
-        voiceId: resolvedVoiceId,
-        speed: 1,
-        emotion: 'calm',
-        textNormalization: true,
-      },
-      pronunciationDict: getTTSPronunciationDictionary(language, synthesizedText),
-      languageBoost: LANG_MAPPING[language as keyof typeof LANG_MAPPING],
+      ...request,
       streamOptions: { excludeAggregatedAudio: true },
     })
     return { audio, extraInfo, traceId }

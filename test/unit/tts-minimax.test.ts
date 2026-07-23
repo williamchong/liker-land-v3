@@ -3,7 +3,8 @@
 // environment stubs out node:crypto, which tts-minimax.ts touches at import
 // time (TTS_PRONUNCIATION_VERSION), so import fails there. Run under real Node.
 import { describe, expect, it } from 'vitest'
-import { applyInlinePronunciation, getTTSPronunciationDictionary, injectTTSPauseMarkers } from '~~/server/utils/tts-minimax'
+import { applyInlinePronunciation, getMinimaxModel, getMinimaxVoiceId, getTTSPronunciationDictionary, injectTTSPauseMarkers, isKnownVoiceId, resolveVoiceId } from '~~/server/utils/tts-minimax'
+import { parseTTSVoiceVersion } from '~~/shared/utils/tts-voice-version'
 
 const MARKER = '<#0.01#>'
 
@@ -70,6 +71,48 @@ describe('getTTSPronunciationDictionary', () => {
 
   it('still serves the hand-curated zh-HK dictionary', () => {
     expect(getTTSPronunciationDictionary('zh-HK', '茅塞頓開')?.tone).toContain('茅塞頓開/茅(sak1)頓開')
+  })
+})
+
+describe('parseTTSVoiceVersion', () => {
+  it('splits only a literal _v<digits> suffix off the base', () => {
+    expect(parseTTSVoiceVersion('phoebe_v28')).toEqual({ base: 'phoebe', version: 28 })
+    expect(parseTTSVoiceVersion('phoebe')).toEqual({ base: 'phoebe', version: 0 })
+  })
+
+  it('keeps underscored team_member ids as whole bases', () => {
+    // corrupt_alex and corrupt_hung are different voices in the same team —
+    // a shared prefix must never make them the same base.
+    expect(parseTTSVoiceVersion('corrupt_alex')).toEqual({ base: 'corrupt_alex', version: 0 })
+    expect(parseTTSVoiceVersion('corrupt_hung_v2')).toEqual({ base: 'corrupt_hung', version: 2 })
+  })
+})
+
+describe('resolveVoiceId', () => {
+  it('returns an exactly configured id as-is', () => {
+    expect(resolveVoiceId('phoebe_v26')).toBe('phoebe_v26')
+    expect(resolveVoiceId('0')).toBe('0')
+  })
+
+  it('falls back from a missing version to the latest of the same base', () => {
+    expect(resolveVoiceId('phoebe')).toBe('phoebe_v28')
+    expect(resolveVoiceId('phoebe_v27')).toBe('phoebe_v28')
+  })
+
+  it('never falls back across different bases', () => {
+    expect(resolveVoiceId('phoebe26')).toBeUndefined()
+    expect(isKnownVoiceId('unknown_voice')).toBe(false)
+  })
+
+  it('rejects Object.prototype keys as voice ids', () => {
+    expect(resolveVoiceId('constructor')).toBeUndefined()
+    expect(isKnownVoiceId('toString')).toBe(false)
+  })
+
+  it('resolves config lookups through the fallback', () => {
+    expect(getMinimaxVoiceId('phoebe')).toBe('three_book_phoebe_v3')
+    expect(getMinimaxModel({ voiceId: 'phoebe', language: 'zh-HK' })).toBe('speech-2.8-hd')
+    expect(getMinimaxModel({ voiceId: 'phoebe_v26', language: 'zh-HK' })).toBe('speech-2.6-hd')
   })
 })
 

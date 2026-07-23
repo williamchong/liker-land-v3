@@ -1,5 +1,6 @@
 import { useStorage } from '@vueuse/core'
 import { decodeAffiliateVoiceId, encodeAffiliateVoiceId, isAffiliateVoiceId } from '~~/shared/utils/tts-sig'
+import { parseTTSVoiceVersion, PHOEBE_V26_VOICE_ID, PHOEBE_VOICE_ID, stripTTSVoiceVersion } from '~~/shared/utils/tts-voice-version'
 import type { CustomVoiceData, AffiliateVoiceData } from '~~/shared/types/custom-voice'
 import phoebeAvatar from '@/assets/images/voice-avatars/phoebe.jpg'
 import auroraAvatar from '@/assets/images/voice-avatars/aurora.jpg'
@@ -26,7 +27,7 @@ export function useTTSVoice(options: TTSVoiceOptions = {}) {
   // hardcoded voice options for now
   const ttsLanguageVoiceOptions = [
     { label: 'Pazu 薯伯伯 - 粵語', value: 'zh-HK_pazu' },
-    { label: 'Phoebe - 粵語', value: 'zh-HK_phoebe' },
+    { label: 'Phoebe - 粵語', value: `zh-HK_${PHOEBE_VOICE_ID}` },
     { label: '許明恩 - 國語', value: 'zh-TW_astro' },
     { label: 'Aurora - 國語', value: 'zh-TW_aurora' },
     { label: 'English female', value: 'en-US_0' },
@@ -35,7 +36,7 @@ export function useTTSVoice(options: TTSVoiceOptions = {}) {
 
   if (config.public.isTestnet) {
     ttsLanguageVoiceOptions.push(
-      { label: 'Phoebe 2.6 - 粵語口語', value: 'zh-HK_phoebe26' },
+      { label: 'Phoebe 2.6 - 粵語口語', value: `zh-HK_${PHOEBE_V26_VOICE_ID}` },
       { label: 'Karenly - 粵語', value: 'zh-HK_karenly' },
       { label: '粵語男聲', value: 'zh-HK_1' },
       { label: '粵語女聲', value: 'zh-HK_0' },
@@ -105,11 +106,18 @@ export function useTTSVoice(options: TTSVoiceOptions = {}) {
   // The persisted voice is global, not per-book: a book opened while mislabeled
   // (e.g. English) pins an incompatible voice that then sticks across all books.
   // Reset to the locale default when invalid here; skip async-gated affiliate/custom.
+  // A preference persisted before a voice's `_v<n>` bump (e.g. `zh-HK_phoebe`)
+  // migrates to the current version of the same base instead of resetting.
   watch(availableTTSLanguageVoiceOptions, (voiceOptions) => {
     const current = ttsLanguageVoice.value
     if (!current || isAffiliateVoiceId(current) || current === 'custom') return
     if (!voiceOptions.some(option => option.value === current)) {
-      ttsLanguageVoice.value = getDefaultTTSVoiceByLocale()
+      const base = stripTTSVoiceVersion(current)
+      // Highest version wins, not list order — testnet lists v26 alongside v28.
+      const rebasedOption = voiceOptions
+        .filter(option => stripTTSVoiceVersion(option.value) === base)
+        .sort((a, b) => parseTTSVoiceVersion(b.value).version - parseTTSVoiceVersion(a.value).version)[0]
+      ttsLanguageVoice.value = rebasedOption?.value ?? getDefaultTTSVoiceByLocale()
     }
   }, { immediate: true })
 
@@ -167,9 +175,9 @@ export function useTTSVoice(options: TTSVoiceOptions = {}) {
       return raw ? getResizedImageURL(raw, { size: 128 }) : customDefaultAvatar
     }
 
-    switch (languageVoice) {
+    // Match on the version-stripped id so avatars survive `_v<n>` bumps.
+    switch (stripTTSVoiceVersion(languageVoice)) {
       case 'zh-HK_phoebe':
-      case 'zh-HK_phoebe26':
         return phoebeAvatar
 
       case 'zh-HK_pazu':
