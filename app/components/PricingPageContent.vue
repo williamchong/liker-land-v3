@@ -60,7 +60,17 @@
       />
       <aside
         v-else-if="campaignContent"
-        class="relative max-laptop:shrink-0 w-full min-h-max bg-theme-black"
+        :class="[
+          'relative',
+          'max-laptop:shrink-0',
+          'w-full',
+          'min-h-max',
+          'bg-theme-black',
+          'laptop:sticky',
+          'laptop:top-0',
+          'laptop:self-start',
+          'laptop:h-screen',
+        ]"
       >
         <ClientOnly>
           <div
@@ -83,7 +93,21 @@
       </aside>
       <aside
         v-else
-        class="relative flex justify-center items-center max-laptop:shrink-0 w-full p-12 bg-theme-black overflow-hidden"
+        :class="[
+          'relative',
+          'flex',
+          'justify-center',
+          'items-center',
+          'max-laptop:shrink-0',
+          'w-full',
+          'p-12',
+          'bg-theme-black',
+          'overflow-clip',
+          'laptop:sticky',
+          'laptop:top-0',
+          'laptop:self-start',
+          'laptop:h-screen',
+        ]"
       >
         <PaywallBookstoreBackdrop />
         <NuxtLink
@@ -100,9 +124,11 @@
       </aside>
     </template>
 
-    <div class="flex w-full items-center min-h-max">
+    <div class="flex w-full min-h-max">
       <div
         :class="[
+          'flex',
+          'flex-col',
           'w-full',
           'max-w-[512px]',
           'max-laptop:mx-auto',
@@ -112,28 +138,28 @@
           { 'laptop:pt-16': !campaignContent },
         ]"
       >
-        <PricingPageIntroSection
-          v-if="!(isShowTTSSamples && isDesktopScreen)"
-          v-model:tier="selectedTier"
-          class="mb-4 laptop:mb-6"
-          :title="campaignContent?.title"
-          :description="campaignContent?.description"
-          :is-compact="isShowTTSSamples || !!$slots['affiliate-alert'] || !!$slots['affiliate-promo']"
-          :prepended-features="prependedFeatures"
-          :is-civic-toggle-visible="isCivicToggleVisible"
-          :current-tier="likerPlusTier"
-          @show-voices="isVoicesModalOpen = true"
-        />
-        <slot name="affiliate-alert" />
-
-        <TTSSamplesSection
-          v-if="isShowTTSSamples"
-          :affiliate-voices="affiliateVoices"
-          :affiliate-liker-id="affiliateLikerId"
-          :affiliate-exclusive-badge-text="ttsExclusiveBadgeText"
-        />
-
-        <slot name="affiliate-promo" />
+        <div class="grow">
+          <PricingPageIntroSection
+            v-if="!(isShowTTSSamples && isDesktopScreen)"
+            v-model:tier="selectedTier"
+            class="mb-4 laptop:mb-6"
+            :title="campaignContent?.title"
+            :description="campaignContent?.description"
+            :is-compact="isShowTTSSamples || !!$slots['affiliate-alert'] || !!$slots['affiliate-promo']"
+            :prepended-features="prependedFeatures"
+            :is-tier-selector-visible="isTierSelectorVisible"
+            :current-tier="likerPlusTier"
+            @show-voices="isVoicesModalOpen = true"
+          />
+          <slot name="affiliate-alert" />
+          <TTSSamplesSection
+            v-if="isShowTTSSamples"
+            :affiliate-voices="affiliateVoices"
+            :affiliate-liker-id="affiliateLikerId"
+            :affiliate-exclusive-badge-text="ttsExclusiveBadgeText"
+          />
+          <slot name="affiliate-promo" />
+        </div>
 
         <div class="flex flex-col w-full mt-6 laptop:mt-8">
           <div
@@ -142,7 +168,6 @@
           >
             <slot name="pricing-mobile" />
           </div>
-
           <div
             :class="[
               'flex',
@@ -151,64 +176,70 @@
             ]"
           >
             <slot name="pricing">
-              <div
-                v-if="canStartSubscribeFlow"
-                :class="{ 'bg-theme-cyan p-3 rounded-xl': isPaidTrialChrome }"
+              <Transition
+                mode="out-in"
+                :css="false"
+                @enter="handlePricingPanelEnter"
+                @leave="handlePricingPanelLeave"
               >
-                <header
-                  v-if="isPaidTrialChrome"
-                  class="hidden laptop:flex items-center gap-2 mb-3 text-theme-black"
+                <div
+                  v-if="canStartSubscribeFlow"
+                  :key="selectedTier"
+                  :class="{ 'bg-theme-cyan p-3 rounded-xl': isPaidTrialChrome }"
                 >
-                  <UIcon
-                    name="i-material-symbols-celebration-outline-rounded"
-                    :size="24"
+                  <header
+                    v-if="isPaidTrialChrome"
+                    class="hidden laptop:flex items-center gap-2 mb-3 text-theme-black"
+                  >
+                    <UIcon
+                      name="i-material-symbols-celebration-outline-rounded"
+                      :size="24"
+                    />
+                    <span
+                      class="font-bold"
+                      v-text="$t('subscribe_plus_alert_limited_offer')"
+                    />
+                  </header>
+                  <PricingPlanSelect
+                    v-model="selectedPlan"
+                    :tier="selectedTier"
+                    :trial-period-days="trialPeriodDays"
+                    :is-paid-trial-override="isPaidTrialOverride"
+                    :trial-price-string="trialPriceString"
+                    :monthly-price-string="monthlyPriceString"
+                    :yearly-price-string="yearlyPriceString"
+                    :yearly-badge-text="yearlyBadgeText"
+                    :monthly-badge-text="monthlyBadgeText"
+                    :promo-pricing="promoPricing"
+                  >
+                    <template #header-left>
+                      <div
+                        v-if="isPaidTrialChrome"
+                        class="flex items-center gap-1.5 text-theme-black"
+                      >
+                        <UIcon
+                          name="i-material-symbols-celebration-outline-rounded"
+                          :size="20"
+                        />
+                        <span
+                          class="text-sm font-bold"
+                          v-text="$t('subscribe_plus_alert_limited_offer')"
+                        />
+                      </div>
+                    </template>
+                  </PricingPlanSelect>
+                  <UButton
+                    class="mt-4"
+                    :label="subscribeButtonLabel"
+                    block
+                    size="xl"
+                    :disabled="isPlusCurrentPlan"
+                    :loading="props.isProcessingSubscription"
+                    :ui="{ base: 'py-2 laptop:py-3 cursor-pointer', label: 'font-bold' }"
+                    @click="handleSubscribeButtonClick"
                   />
-                  <span
-                    class="font-bold"
-                    v-text="$t('subscribe_plus_alert_limited_offer')"
-                  />
-                </header>
-
-                <PricingPlanSelect
-                  v-model="selectedPlan"
-                  :tier="selectedTier"
-                  :trial-period-days="trialPeriodDays"
-                  :is-paid-trial-override="isPaidTrialOverride"
-                  :trial-price-string="trialPriceString"
-                  :monthly-price-string="monthlyPriceString"
-                  :yearly-price-string="yearlyPriceString"
-                  :yearly-badge-text="yearlyBadgeText"
-                  :monthly-badge-text="monthlyBadgeText"
-                  :promo-pricing="promoPricing"
-                >
-                  <template #header-left>
-                    <div
-                      v-if="isPaidTrialChrome"
-                      class="flex items-center gap-1.5 text-theme-black"
-                    >
-                      <UIcon
-                        name="i-material-symbols-celebration-outline-rounded"
-                        :size="20"
-                      />
-                      <span
-                        class="text-sm font-bold"
-                        v-text="$t('subscribe_plus_alert_limited_offer')"
-                      />
-                    </div>
-                  </template>
-                </PricingPlanSelect>
-
-                <UButton
-                  class="mt-4"
-                  :label="subscribeButtonLabel"
-                  block
-                  size="xl"
-                  :disabled="isPlusCurrentPlan"
-                  :loading="props.isProcessingSubscription"
-                  :ui="{ base: 'py-2 laptop:py-3 cursor-pointer', label: 'font-bold' }"
-                  @click="handleSubscribeButtonClick"
-                />
-              </div>
+                </div>
+              </Transition>
 
               <slot name="pricing-footer" />
 
@@ -221,7 +252,6 @@
                 size="sm"
                 :ui="{ label: 'border-b border-current leading-5' }"
               />
-
               <UAlert
                 v-if="!isApp && coupon && !promoPricing && !isCivicTierSelected"
                 class="mt-4"
@@ -326,6 +356,28 @@ const props = withDefaults(
 // when the toggle is offered and picked; otherwise the page stays Plus-only.
 const selectedTier = ref<LikerPlusTier>('plus')
 const isCivicTierSelected = computed(() => selectedTier.value === 'civic')
+
+const gsap = useGSAP()
+const PRICING_PANEL_SCALE = 0.95
+
+function handlePricingPanelEnter(el: Element, done: () => void) {
+  gsap.fromTo(
+    el,
+    { scale: PRICING_PANEL_SCALE, opacity: 0 },
+    { scale: 1, opacity: 1, duration: 0.3, delay: 0.2, ease: 'power2.out', onComplete: done },
+  )
+}
+
+function handlePricingPanelLeave(el: Element, done: () => void) {
+  gsap.to(el, {
+    scale: PRICING_PANEL_SCALE,
+    opacity: 0,
+    // Matches the 200ms ease-out of UCollapsible's expand/collapse animation.
+    duration: 0.2,
+    ease: 'power1.out',
+    onComplete: done,
+  })
+}
 const isVoicesModalOpen = ref(false)
 
 // Old app shells can't buy Civic, and Civic members have nothing to buy here
@@ -337,13 +389,13 @@ const isCivicOfferable = computed(() => {
   if (isLikerPlus.value && !canUpgradeToCivic.value) return false
   return canStartCivicSubscribeFlow.value
 })
-const isCivicToggleVisible = computed(() => isCivicOfferable.value && canStartSubscribeFlow.value)
+const isTierSelectorVisible = computed(() => isCivicOfferable.value && canStartSubscribeFlow.value)
 
 // Plus members are kept on /member for the Civic upsell (see member.vue), so open
 // on the Civic view rather than the Plus box with its new-subscriber CTA. Seed
 // once, the first time the member is known; a later manual toggle then stands.
 // Gate on SSR-stable inputs (session + isCivicVisible), NOT the native-bridge-
-// dependent isCivicToggleVisible, so server and client seed the same tier and the
+// dependent isTierSelectorVisible, so server and client seed the same tier and the
 // pricing box doesn't hydrate-mismatch in-app. Ineligible members are redirected
 // off /member by member.vue, so seeding Civic for them is moot.
 let hasSeededCivicDefault = false
