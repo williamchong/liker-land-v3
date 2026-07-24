@@ -5,6 +5,7 @@ const IDLE_TIMEOUT_MS = 2 * 60 * 1000
 
 interface ReadingSessionOptions {
   nftClassId: string | Ref<string>
+  bookName?: Ref<string>
   readerType: 'epub' | 'pdf'
   progress: Ref<number>
   isTextToSpeechPlaying?: Ref<boolean>
@@ -19,7 +20,7 @@ interface ReadingSessionOptions {
 }
 
 export function useReadingSession(options: ReadingSessionOptions) {
-  const { readerType, progress, isTextToSpeechPlaying, chapterIndex, pageIndex, isLibraryBook, isPreview } = options
+  const { bookName, readerType, progress, isTextToSpeechPlaying, chapterIndex, pageIndex, isLibraryBook, isPreview } = options
   const nftClassId = toRef(options.nftClassId)
 
   const { loggedIn, user: sessionUser } = useUserSession()
@@ -176,6 +177,7 @@ export function useReadingSession(options: ReadingSessionOptions) {
 
     useLogEvent('reading_session_end', {
       nft_class_id: toValue(nftClassId),
+      book_name: bookName?.value,
       active_reading_time_ms: payload.activeReadingTimeMs,
       tts_active_time_ms: payload.ttsActiveTimeMs,
       pages_viewed: payload.pagesViewed,

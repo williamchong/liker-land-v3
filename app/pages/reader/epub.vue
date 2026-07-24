@@ -614,6 +614,7 @@ const { isTTSPlaying } = useTTSPlayingState()
 if (!isUploadedBook.value) {
   useReadingSession({
     nftClassId,
+    bookName: bookInfo.name,
     readerType: 'epub',
     progress: computed(() => Math.min(readingProgress.value * 100, 100)),
     isTextToSpeechPlaying: isTTSPlaying,
