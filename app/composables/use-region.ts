@@ -30,6 +30,11 @@ export function useRegion() {
 
   // User action: persist the concrete country. IP is no longer consulted once set.
   function setRegion(value: RegionCode) {
+    useLogEvent('region_change', {
+      region: value,
+      previous_region: region.value,
+    })
+    useSetLogPersonProperties({ region: value })
     if (hasLoggedIn.value) {
       syncedRegion.value = value
     }

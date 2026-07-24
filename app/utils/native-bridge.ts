@@ -43,6 +43,9 @@ export function getInstallAttribution(): InstallAttribution | null {
 // forbids tying it to a button press or preceding it with a question.
 export function requestNativeStoreReview(reason: string): void {
   if (!isNativeWebView() || !isNativeFeatureSupported('storeReview')) return
+  // The prompt itself is unobservable, so this request event is the only
+  // measurable signal to correlate with review volume.
+  useLogEvent('app_store_review_requested', { reason })
   postToNative({ type: 'requestStoreReview', reason })
 }
 

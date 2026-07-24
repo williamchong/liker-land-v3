@@ -1466,7 +1466,12 @@ async function openContentURL(contentURL: ContentURL, nftId?: string, { isPrevie
 }
 
 async function handlePlusReadButtonClick() {
-  useLogEvent('product_page_plus_reading_button_click', { nft_class_id: nftClassId.value })
+  useLogEvent('product_page_plus_reading_button_click', {
+    nft_class_id: nftClassId.value,
+    is_liker_plus: isLikerPlus.value,
+    is_free_borrow_enabled: bookInfo.isFreeBorrowEnabled.value,
+    is_borrowed: isBookBorrowed.value,
+  })
 
   // Guests are prompted to log in or register before reaching the membership page.
   if (!hasLoggedIn.value) {
