@@ -22,6 +22,8 @@ const INTERCOM_EVENT_ALLOWLIST = new Set<string>([
   'register_invalid_account_id',
   'login_panel_open',
   'login_register_cancelled',
+  'login_v1_auto_migrate_success',
+  'login_v1_auto_migrate_error',
 
   // Commerce funnel
   'view_item',
@@ -252,6 +254,17 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
   }
   catch (error) {
     console.error(`Failed to log event to PostHog: ${eventName}`, error)
+  }
+}
+
+// Person-property writes outside the identify flow (e.g. settings changes).
+export function useSetLogPersonProperties(properties: Record<string, unknown>) {
+  try {
+    const { proxy } = useScriptPostHog()
+    proxy.posthog.setPersonProperties(properties)
+  }
+  catch (error) {
+    console.error('Failed to set person properties in PostHog', error)
   }
 }
 

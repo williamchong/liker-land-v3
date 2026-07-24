@@ -42,6 +42,12 @@ export function usePlusReadingTracker(params: {
     if (!isLikerPlus.value && !params.hasFreeEdition.value) return
 
     isLibraryBook.value = true
+    // Read borrow state before registration mutates it to tell first borrows from re-opens.
+    useLogEvent('plus_reading_borrow', {
+      nft_class_id: nftClassIdRef.value,
+      is_free_borrow: !isLikerPlus.value,
+      is_first_borrow: !bookshelfStore.plusReadingBookIds.includes(normalizeNFTClassId(nftClassIdRef.value)),
+    })
     await bookshelfStore.registerPlusReadingOpen(nftClassIdRef.value)
   }
 

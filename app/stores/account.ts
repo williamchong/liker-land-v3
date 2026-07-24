@@ -238,10 +238,15 @@ export const useAccountStore = defineStore('account', () => {
                   message,
                 })
                 if (res.isMigratedLikerId) {
+                  useLogEvent('login_v1_auto_migrate_success')
                   return true
                 }
               }
               catch (e) {
+                useLogEvent('login_v1_auto_migrate_error', {
+                  error_code: getErrorCode(e),
+                  error_message: getErrorEventMessage(e),
+                })
                 console.warn('Failed to migrate Magic email user', e)
               }
             }
