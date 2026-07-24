@@ -180,6 +180,8 @@ export function useReadingSession(options: ReadingSessionOptions) {
       tts_active_time_ms: payload.ttsActiveTimeMs,
       pages_viewed: payload.pagesViewed,
       is_liker_plus_at_event_time: !!sessionUser.value?.isLikerPlus,
+      // Mirrors isPaidPlus in server/utils/api-user.ts — the rev-share eligible population.
+      is_paid_plus_at_event_time: !!sessionUser.value?.isLikerPlus && !sessionUser.value?.isLikerPlusTrial,
       is_library_book: !!isLibraryBook?.value,
       is_preview: !!isPreview?.value,
     })
