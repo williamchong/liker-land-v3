@@ -105,6 +105,7 @@ const { isTTSPlaying } = useTTSPlayingState()
 if (!isUploadedBook.value) {
   useReadingSession({
     nftClassId,
+    bookName: bookInfo.name,
     readerType: 'pdf',
     progress: pdfProgress,
     isTextToSpeechPlaying: isTTSPlaying,
