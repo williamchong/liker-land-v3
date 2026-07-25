@@ -263,6 +263,9 @@ export function useTextToSpeech(options: TTSOptions) {
     }
     isLastTrackChangeResync = isResync
     currentTTSSegmentIndex.value = index
+    // Resyncs count too: events sent while the WebView was suspended are
+    // dropped, so a foreground resync is the only record of background playback.
+    recordSegmentPlaybackUsage(index)
     startSegmentLoadTimer(index)
   })
 
@@ -470,10 +473,15 @@ export function useTextToSpeech(options: TTSOptions) {
     }))
   })
 
-  function recordOptimisticSegmentUsage(sanitizedText: string) {
+  // Bill on playback, not on URL construction: `getAudioSrc` also runs on web
+  // preload and on native queue build, both ahead of what the user hears.
+  function recordSegmentPlaybackUsage(index: number) {
+    const segment = ttsSegments.value[index]
+    if (!segment || segment.audioSrc) return
     // Custom voice is gated to Plus; the server rejects non-Plus requests,
     // so counting here would drift the local trial counter.
     if (ttsLanguageVoice.value === 'custom') return
+    const sanitizedText = sanitizeTTSText(segment.text)
     const dedupKey = `${ttsLanguageVoice.value}:${sanitizedText}`
     ttsTrialUsage.recordOptimisticSegmentUsage(dedupKey, sanitizedText.length)
   }
@@ -482,7 +490,6 @@ export function useTextToSpeech(options: TTSOptions) {
     if (element.audioSrc) return element.audioSrc
 
     const sanitizedText = sanitizeTTSText(element.text)
-    recordOptimisticSegmentUsage(sanitizedText)
 
     return buildTTSAudioURL(sanitizedText, {
       nftClassId,
