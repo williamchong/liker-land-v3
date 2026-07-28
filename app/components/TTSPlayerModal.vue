@@ -104,126 +104,147 @@
             />
           </div>
 
-          <div class="flex items-center justify-center gap-3 p-3 rounded-full bg-(--ui-bg)/80 backdrop-blur-sm ring-1 ring-(--ui-border)">
-            <BottomSlideover
-              v-model:open="isVoiceOptionsSlideoverOpen"
-              :title="$t('reader_voice_options_button')"
-              :is-disabled="!!props.specificLanguageVoice"
-              :show-close-button="false"
-              body-class="max-h-[40vh] select-none"
+          <div class="flex flex-col gap-1 px-3 pt-2 pb-3 rounded-4xl bg-(--ui-bg)/80 backdrop-blur-sm ring-1 ring-(--ui-border)">
+            <div
+              v-if="ttsProgress"
+              class="flex items-center justify-between px-2 text-xs text-muted tabular-nums"
             >
-              <UTooltip :text="activeTTSLanguageVoiceLabel">
-                <div class="shrink-0 flex justify-center w-16">
-                  <UButton
-                    :class="[
-                      'rounded-full select-none p-0',
-                      { 'pointer-events-none': !!props.specificLanguageVoice },
-                    ]"
-                    :ui="{ leadingAvatar: 'size-10 ring-2 ring-theme-cyan' }"
-                    :avatar="{ src: activeTTSLanguageVoiceAvatar }"
-                    variant="outline"
-                    color="neutral"
-                  />
-                </div>
-              </UTooltip>
-
-              <template #body>
-                <div
-                  v-if="!isBookEnglish && (user?.isLikerPlus || canStartSubscribeFlow) && !hasCustomVoice"
-                  class="px-4 py-3 space-y-3 border-b border-b-muted"
-                >
-                  <UButton
-                    v-if="user?.isLikerPlus"
-                    block
-                    variant="soft"
-                    :label="$t('tts_custom_voice_upload_button')"
-                    icon="i-material-symbols-upload-rounded"
-                    @click="handleCustomVoiceUploadClick"
-                  />
-                  <UButton
-                    v-else
-                    block
-                    variant="soft"
-                    :label="$t('tts_custom_voice_upgrade_button')"
-                    icon="i-material-symbols-lock-outline"
-                    @click="subscription.openPaywallModal({ utmSource: 'tts_custom_voice', redirectRoute: buildSubscribeRedirectRoute() })"
-                  />
-                </div>
-
-                <div class="flex gap-2 items-center w-full">
-                  <URadioGroup
-                    v-model="selectedTTSLanguageVoice"
-                    :ui="{
-                      item: '!rounded-none !items-center !border-none',
-                    }"
-                    class="w-full"
-                    color="primary"
-                    variant="table"
-                    :default-value="ttsLanguageVoice"
-                    :items="ttsLanguageVoiceOptionsWithAvatars"
-                    indicator="end"
-                  >
-                    <template #label="{ item }">
-                      <UAvatar
-                        size="lg"
-                        :src="item.avatar"
-                      />
-                      <span
-                        class="ml-2"
-                        v-text="item.label"
-                      />
-                    </template>
-                  </URadioGroup>
-                </div>
-              </template>
-            </BottomSlideover>
-
-            <UButton
-              class="rounded-full"
-              :ui="{ leadingIcon: 'size-10' }"
-              icon="i-material-symbols-skip-previous-rounded"
-              variant="ghost"
-              color="neutral"
-              :disabled="!isTextToSpeechOn"
-              @click="skipBackward"
-            />
-            <UButton
-              v-if="isTextToSpeechPlaying || isTextToSpeechLoading"
-              class="rounded-full"
-              :ui="{ leadingIcon: 'size-10' }"
-              icon="i-material-symbols-pause-rounded"
-              :loading="isTextToSpeechLoading"
-              variant="solid"
-              @click="pauseTextToSpeech"
-            />
-            <UButton
-              v-else
-              class="rounded-full"
-              :ui="{ leadingIcon: 'size-10' }"
-              icon="i-material-symbols-play-arrow-rounded"
-              variant="solid"
-              @click="startTextToSpeech(currentTTSSegmentIndex)"
-            />
-            <UButton
-              class="rounded-full"
-              :ui="{ leadingIcon: 'size-10' }"
-              icon="i-material-symbols-skip-next-rounded"
-              variant="ghost"
-              color="neutral"
-              :disabled="!isTextToSpeechOn"
-              @click="skipForward"
-            />
-
-            <UTooltip :text="$t('reader_rate_options_button')">
-              <UButton
-                class="rounded-full w-16 h-10 select-none shrink-0 justify-center"
-                :label="getTTSPlaybackRateLabel"
-                size="md"
-                variant="soft"
-                :ui="{ label: 'font-mono font-bold whitespace-nowrap' }"
-                @click="handleTTSPlaybackRateButton"
+              <span
+                role="progressbar"
+                :aria-label="$t('reader_tts_progress_label', { percentage: ttsProgress.percentage })"
+                :aria-valuenow="ttsProgress.percentage"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                v-text="`${ttsProgress.percentage}%`"
               />
-            </UTooltip>
+              <span
+                role="timer"
+                :aria-label="$t('reader_tts_time_remaining_label', { time: ttsProgress.timeRemaining })"
+                v-text="`-${ttsProgress.timeRemaining}`"
+              />
+            </div>
+
+            <div class="flex items-center justify-center gap-3">
+              <BottomSlideover
+                v-model:open="isVoiceOptionsSlideoverOpen"
+                :title="$t('reader_voice_options_button')"
+                :is-disabled="!!props.specificLanguageVoice"
+                :show-close-button="false"
+                body-class="max-h-[40vh] select-none"
+              >
+                <UTooltip :text="activeTTSLanguageVoiceLabel">
+                  <div class="shrink-0 flex justify-center w-16">
+                    <UButton
+                      :class="[
+                        'rounded-full select-none p-0',
+                        { 'pointer-events-none': !!props.specificLanguageVoice },
+                      ]"
+                      :ui="{ leadingAvatar: 'size-10 ring-2 ring-theme-cyan' }"
+                      :avatar="{ src: activeTTSLanguageVoiceAvatar }"
+                      variant="outline"
+                      color="neutral"
+                    />
+                  </div>
+                </UTooltip>
+
+                <template #body>
+                  <div
+                    v-if="!isBookEnglish && (user?.isLikerPlus || canStartSubscribeFlow) && !hasCustomVoice"
+                    class="px-4 py-3 space-y-3 border-b border-b-muted"
+                  >
+                    <UButton
+                      v-if="user?.isLikerPlus"
+                      block
+                      variant="soft"
+                      :label="$t('tts_custom_voice_upload_button')"
+                      icon="i-material-symbols-upload-rounded"
+                      @click="handleCustomVoiceUploadClick"
+                    />
+                    <UButton
+                      v-else
+                      block
+                      variant="soft"
+                      :label="$t('tts_custom_voice_upgrade_button')"
+                      icon="i-material-symbols-lock-outline"
+                      @click="subscription.openPaywallModal({ utmSource: 'tts_custom_voice', redirectRoute: buildSubscribeRedirectRoute() })"
+                    />
+                  </div>
+
+                  <div class="flex gap-2 items-center w-full">
+                    <URadioGroup
+                      v-model="selectedTTSLanguageVoice"
+                      :ui="{
+                        item: '!rounded-none !items-center !border-none',
+                      }"
+                      class="w-full"
+                      color="primary"
+                      variant="table"
+                      :default-value="ttsLanguageVoice"
+                      :items="ttsLanguageVoiceOptionsWithAvatars"
+                      indicator="end"
+                    >
+                      <template #label="{ item }">
+                        <UAvatar
+                          size="lg"
+                          :src="item.avatar"
+                        />
+                        <span
+                          class="ml-2"
+                          v-text="item.label"
+                        />
+                      </template>
+                    </URadioGroup>
+                  </div>
+                </template>
+              </BottomSlideover>
+
+              <UButton
+                class="rounded-full"
+                :ui="{ leadingIcon: 'size-10' }"
+                icon="i-material-symbols-skip-previous-rounded"
+                variant="ghost"
+                color="neutral"
+                :disabled="!isTextToSpeechOn"
+                @click="skipBackward"
+              />
+              <UButton
+                v-if="isTextToSpeechPlaying || isTextToSpeechLoading"
+                class="rounded-full"
+                :ui="{ leadingIcon: 'size-10' }"
+                icon="i-material-symbols-pause-rounded"
+                :loading="isTextToSpeechLoading"
+                variant="solid"
+                @click="pauseTextToSpeech"
+              />
+              <UButton
+                v-else
+                class="rounded-full"
+                :ui="{ leadingIcon: 'size-10' }"
+                icon="i-material-symbols-play-arrow-rounded"
+                variant="solid"
+                @click="startTextToSpeech(currentTTSSegmentIndex)"
+              />
+              <UButton
+                class="rounded-full"
+                :ui="{ leadingIcon: 'size-10' }"
+                icon="i-material-symbols-skip-next-rounded"
+                variant="ghost"
+                color="neutral"
+                :disabled="!isTextToSpeechOn"
+                @click="skipForward"
+              />
+
+              <UTooltip :text="$t('reader_rate_options_button')">
+                <UButton
+                  class="rounded-full w-16 h-10 select-none shrink-0 justify-center"
+                  :label="getTTSPlaybackRateLabel"
+                  size="md"
+                  variant="soft"
+                  :ui="{ label: 'font-mono font-bold whitespace-nowrap' }"
+                  @click="handleTTSPlaybackRateButton"
+                />
+              </UTooltip>
+            </div>
           </div>
         </div>
       </div>
@@ -726,6 +747,28 @@ const trialMinutesRemaining = computed(() => Math.max(
   1,
   Math.round(estimateTTSMinutes(trialCharactersRemaining.value, currentVoiceLanguage.value)),
 ))
+
+// Memoised on the segment list so the whole-book walk doesn't re-run as
+// playback advances; the per-segment lookups below are then O(1).
+const ttsCharOffsets = computed(() => getTTSCharOffsets(props.segments))
+
+// Counted through the end of the current segment: the segment index stops at
+// the last segment, so counting only what precedes it would strand the display
+// short of 100% for the rest of the book.
+const ttsProgress = computed(() => {
+  const totalCharacters = ttsCharOffsets.value.at(-1) ?? 0
+  if (!totalCharacters) return null
+  const listenedCharacters = ttsCharOffsets.value[currentTTSSegmentIndex.value + 1] ?? totalCharacters
+  // Safari stall recovery may have forced the rate below the user's choice.
+  const secondsRemaining = estimateTTSMinutes(
+    totalCharacters - listenedCharacters,
+    currentVoiceLanguage.value,
+  ) * 60 / effectivePlaybackRate.value
+  return {
+    percentage: Math.round(listenedCharacters / totalCharacters * 100),
+    timeRemaining: formatTTSClock(secondsRemaining),
+  }
+})
 
 function buildChipEventPayload() {
   return {
