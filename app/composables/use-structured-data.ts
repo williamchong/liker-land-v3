@@ -198,8 +198,8 @@ export function useStorePageStructuredData({
     const listItems = itemsValue
       .filter(item => item.classId && item.title)
       .map((item, index) => {
-        const bookInfo = getBookstoreInfoByNFTClassIdFromCache(queryCache, item.classId!)
-        const authorName = bookInfo?.author?.name || ''
+        const bookstoreInfo = getBookstoreInfoByNFTClassIdFromCache(queryCache, item.classId!)
+        const authorName = getBookEntityName(bookstoreInfo?.author)
 
         return {
           '@type': 'ListItem',

@@ -136,10 +136,7 @@ declare global {
     descriptionSummary?: string
     reviewTitle?: string
     reviewURL?: string
-    author: {
-      name: string
-      description: string
-    }
+    author: BookEntity
     genre?: string
     keywords: string[]
     thumbnailUrl: string

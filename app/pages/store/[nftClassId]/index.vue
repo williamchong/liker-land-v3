@@ -1245,8 +1245,8 @@ const recommendedClassIds = computed(() => {
     .sort((a, b) => {
       const metadataA = getNFTClassMetadataByIdFromCache(queryCache, a)
       const metadataB = getNFTClassMetadataByIdFromCache(queryCache, b)
-      const authorA = typeof metadataA?.author === 'object' ? metadataA?.author?.name : metadataA?.author || ''
-      const authorB = typeof metadataB?.author === 'object' ? metadataB?.author?.name : metadataB?.author || ''
+      const authorA = getBookEntityName(metadataA?.author)
+      const authorB = getBookEntityName(metadataB?.author)
       if (authorA === currentAuthorName && authorB !== currentAuthorName) return -1
       if (authorA !== currentAuthorName && authorB === currentAuthorName) return 1
       return 0

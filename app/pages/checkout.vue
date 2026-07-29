@@ -198,16 +198,7 @@ const cartItems = computed<CheckoutItem[]>(() => {
       return null
     }
 
-    let authorName = ''
-    if (typeof bookstoreInfo.author === 'object' && bookstoreInfo.author.name) {
-      authorName = bookstoreInfo.author.name
-    }
-    else if (typeof nftClass.author === 'string') {
-      authorName = nftClass.author
-    }
-    else if (typeof nftClass.author === 'object' && nftClass.author.name) {
-      authorName = nftClass.author.name
-    }
+    const authorName = getBookEntityName(bookstoreInfo.author) || getBookEntityName(nftClass.author)
 
     const bookInfo = {
       name: localeString(bookstoreInfo.name || nftClass.name) || '',
