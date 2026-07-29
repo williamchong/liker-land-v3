@@ -408,6 +408,20 @@ export default defineNuxtConfig({
   security: {
     headers: {
       contentSecurityPolicy: {
+        // Vite injects its dev client and entry chunk without a CSP nonce, and
+        // 'strict-dynamic' voids the host allowlist, so both get blocked.
+        // Production keeps nuxt-security's nonce + strict-dynamic default.
+        ...(isDevelopment
+          ? {
+              'script-src': [
+                '\'self\'',
+                'https:',
+                '\'unsafe-inline\'',
+                '\'unsafe-eval\'',
+                'blob:',
+              ],
+            }
+          : {}),
         'style-src': [
           '\'self\'',
           'blob:',
