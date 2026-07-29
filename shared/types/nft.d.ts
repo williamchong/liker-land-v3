@@ -1,3 +1,6 @@
+// Book metadata carries author/publisher as either a bare name or an entity object.
+declare type BookEntity = string | { name: string, description?: string }
+
 declare interface NFTAccount {
   id: number
   cosmos_address?: string
@@ -14,11 +17,11 @@ declare interface NFTClassMetadata {
   featured_image: string
   external_link: string
   ['@type']: string
-  author: string | { name: string, description?: string }
+  author: BookEntity
   nft_meta_collection_description: string
   nft_meta_collection_id: string
   publicationDate: string
-  publisher: string | { name: string, description?: string }
+  publisher: BookEntity
   recordTimestamp: string
   thumbnailUrl: string
   usageInfo: string

@@ -17,8 +17,7 @@ export function getBookstoreScopedKey(key: string, isLibrary: boolean) {
   return isLibrary ? `library:${key}` : key
 }
 
-// Book metadata carries author/publisher as either a bare name or an entity object.
-export function getBookEntityName(entity?: string | { name?: string }): string {
+export function getBookEntityName(entity?: BookEntity): string {
   if (typeof entity === 'string') return entity
   return entity?.name || ''
 }
