@@ -298,7 +298,7 @@
   "bookshelf_no_items_uploads": "還沒有上傳的書",
   "bookshelf_no_search_results": "沒有符合「{term}」的書",
   "bookshelf_offline_notice": "目前離線中 — 顯示已儲存的書架",
-  "bookshelf_offline_notice_description": "曾經開啟過的書已標記，仍可繼續閱讀。",
+  "bookshelf_offline_notice_description": "仍可繼續閱讀曾經開啟過的書。",
   "bookshelf_open_in_epub": "閱讀 EPUB",
   "bookshelf_open_in_pdf": "閱讀 PDF",
   "bookshelf_open_in_type": "閱讀 {type}",
