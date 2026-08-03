@@ -425,6 +425,23 @@
     </main>
 
     <AppFooter v-if="isGuestShelf && !isApp" />
+
+    <!-- Read-next suggestions after marking a book finished -->
+    <UModal
+      v-model:open="isReadNextModalOpen"
+      :title="$t('bookshelf_read_next_modal_title')"
+      :description="$t('bookshelf_read_next_modal_description')"
+    >
+      <template #body>
+        <RecommendedBookGrid
+          :nft-class-ids="readNextBooks.nftClassIds"
+          :is-personalized="readNextBooks.isPersonalized"
+          is-compact
+          ll-medium="recommendation-read-next"
+          ll-source="bookshelf-finished"
+        />
+      </template>
+    </UModal>
   </div>
 </template>
 
@@ -969,6 +986,14 @@ onMounted(async () => {
   }
 })
 
+/* Personalized recommendations (own shelf only) */
+
+const { fetchBookRecommendations } = useBookRecommendations()
+const isReadNextModalOpen = ref(false)
+// Ids and `isPersonalized` stay in one ref: both are assigned after an await, and
+// splitting them lets one fetch's ids pair with another fetch's provenance flag.
+const readNextBooks = ref<BookRecommendations>(getEmptyBookRecommendations())
+
 // PostHog loads lazily via @nuxt/scripts, so the flag may resolve after onMounted.
 watch(
   [isUploadedBookFeatureEnabled, hasLoggedIn, walletAddress],
@@ -1067,10 +1092,28 @@ function handleMarkBookAsReading(nftClassId: string) {
   bookshelfStore.markBookAsReading(nftClassId)
 }
 
-function handleMarkBookAsFinished(nftClassId: string) {
+async function handleMarkBookAsFinished(nftClassId: string) {
   if (!isMyBookshelf.value) return
   useLogEvent('shelf_mark_book_finished', { nft_class_id: nftClassId })
   bookshelfStore.markBookAsFinished(nftClassId)
+
+  // Suggest what to read next, seeded by the finished book; an empty result
+  // (guest, error, no candidates) simply skips the modal. Finishing a borrowed
+  // book suggests library picks, so the next read stays included in Plus.
+  const shelfItemType = getShelfItemType(nftClassId)
+  const recommendations = await fetchBookRecommendations({
+    seed: nftClassId,
+    limit: 6,
+    isLibrary: shelfItemType === 'borrowed',
+  })
+  if (recommendations.nftClassIds.length === 0) return
+  readNextBooks.value = recommendations
+  isReadNextModalOpen.value = true
+  useLogEvent('shelf_read_next_modal_open', {
+    nft_class_id: nftClassId,
+    shelf_item_type: shelfItemType,
+    is_personalized: recommendations.isPersonalized,
+  })
 }
 
 // The store owns the whole return: borrow drop + pre-lent tombstone.
