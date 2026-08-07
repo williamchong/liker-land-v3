@@ -89,6 +89,10 @@ async function handlePublishBookButtonClick(event: MouseEvent) {
         'write:nftbook',
         'read:iscn',
         'write:iscn',
+        // publish.3ook.com edits the Liker profile (display name, avatar)
+        // from its own settings page, which needs profile scope.
+        'read:profile',
+        'write:profile',
       ],
       ts: Date.now(),
     })
