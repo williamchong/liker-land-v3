@@ -177,123 +177,115 @@
         </div>
 
         <div class="flex flex-col w-full mt-6 laptop:mt-8">
-          <div
-            v-if="$slots['pricing-mobile']"
-            class="laptop:hidden"
-          >
-            <slot name="pricing-mobile" />
-          </div>
-          <div
-            :class="[
-              'flex',
-              'flex-col',
-              { 'max-laptop:hidden': $slots['pricing-mobile'] },
-            ]"
-          >
-            <slot name="pricing">
-              <Transition
-                mode="out-in"
-                :css="false"
-                @enter="handlePricingPanelEnter"
-                @leave="handlePricingPanelLeave"
+          <slot name="pricing">
+            <Transition
+              mode="out-in"
+              :css="false"
+              @enter="handlePricingPanelEnter"
+              @leave="handlePricingPanelLeave"
+            >
+              <div
+                v-if="canStartSubscribeFlow"
+                :key="selectedTier"
+                :class="{ 'bg-theme-cyan p-3 rounded-xl text-theme-black': isPaidTrialChrome }"
               >
-                <div
-                  v-if="canStartSubscribeFlow"
-                  :key="selectedTier"
-                  :class="{ 'bg-theme-cyan p-3 rounded-xl': isPaidTrialChrome }"
+                <header
+                  v-if="isPaidTrialChrome"
+                  class="hidden laptop:flex items-center gap-2 mb-3 text-theme-black"
                 >
-                  <header
-                    v-if="isPaidTrialChrome"
-                    class="hidden laptop:flex items-center gap-2 mb-3 text-theme-black"
-                  >
-                    <UIcon
-                      name="i-material-symbols-celebration-outline-rounded"
-                      :size="24"
-                    />
-                    <span
-                      class="font-bold"
-                      v-text="$t('subscribe_plus_alert_limited_offer')"
-                    />
-                  </header>
-                  <PricingPlanSelect
-                    v-model="selectedPlan"
-                    :tier="selectedTier"
-                    :trial-period-days="trialPeriodDays"
-                    :is-paid-trial-override="isPaidTrialOverride"
-                    :trial-price-string="trialPriceString"
-                    :monthly-price-string="monthlyPriceString"
-                    :yearly-price-string="yearlyPriceString"
-                    :yearly-badge-text="yearlyBadgeText"
-                    :monthly-badge-text="monthlyBadgeText"
-                    :promo-pricing="promoPricing"
-                  >
-                    <template #header-left>
-                      <div
-                        v-if="isPaidTrialChrome"
-                        class="flex items-center gap-1.5 text-theme-black"
-                      >
-                        <UIcon
-                          name="i-material-symbols-celebration-outline-rounded"
-                          :size="20"
-                        />
-                        <span
-                          class="text-sm font-bold"
-                          v-text="$t('subscribe_plus_alert_limited_offer')"
-                        />
-                      </div>
-                    </template>
-                  </PricingPlanSelect>
-                  <UButton
-                    class="mt-4"
-                    :label="subscribeButtonLabel"
-                    block
-                    size="xl"
-                    :disabled="isPlusCurrentPlan"
-                    :loading="props.isProcessingSubscription"
-                    :ui="{ base: 'py-2 laptop:py-3 cursor-pointer', label: 'font-bold' }"
-                    @click="handleSubscribeButtonClick"
+                  <UIcon
+                    name="i-material-symbols-celebration-outline-rounded"
+                    :size="24"
                   />
-                </div>
-              </Transition>
-
-              <slot name="pricing-footer" />
-
-              <UButton
-                class="mt-2 self-center"
-                :label="$t('pricing_page_learn_more')"
-                :to="learnMoreRoute"
-                variant="link"
-                color="neutral"
-                size="sm"
-                :ui="{ label: 'border-b border-current leading-5' }"
-              />
-              <UAlert
-                v-if="!isApp && coupon && !promoPricing && !isCivicTierSelected"
-                class="mt-4"
-                color="secondary"
-                variant="soft"
-                icon="i-material-symbols-percent-discount-outline-rounded"
-                :description="$t('pricing_page_coupon_applied_description')"
-                :ui="{
-                  root: 'rounded-xl',
-                  title: 'font-bold',
-                }"
-              >
-                <template #title>
-                  <i18n-t keypath="pricing_page_coupon_applied_title">
-                    <template #code>
-                      <UBadge
-                        class="font-bold font-mono"
-                        :label="coupon"
-                        color="primary"
-                        variant="soft"
+                  <span
+                    class="font-bold"
+                    v-text="$t('subscribe_plus_alert_limited_offer')"
+                  />
+                </header>
+                <PricingPlanSelect
+                  v-model="selectedPlan"
+                  :tier="selectedTier"
+                  :trial-period-days="trialPeriodDays"
+                  :is-paid-trial-override="isPaidTrialOverride"
+                  :trial-price-string="trialPriceString"
+                  :monthly-price-string="monthlyPriceString"
+                  :yearly-price-string="yearlyPriceString"
+                  :yearly-badge-text="yearlyBadgeText"
+                  :monthly-badge-text="monthlyBadgeText"
+                  :promo-pricing="promoPricing"
+                >
+                  <template #header-left>
+                    <div
+                      v-if="isPaidTrialChrome"
+                      class="flex items-center gap-1.5 text-theme-black"
+                    >
+                      <UIcon
+                        name="i-material-symbols-celebration-outline-rounded"
+                        :size="20"
                       />
-                    </template>
-                  </i18n-t>
-                </template>
-              </UAlert>
-            </slot>
-          </div>
+                      <span
+                        class="text-sm font-bold"
+                        v-text="$t('subscribe_plus_alert_limited_offer')"
+                      />
+                    </div>
+                  </template>
+                </PricingPlanSelect>
+                <div
+                  v-if="$slots['cta-mobile']"
+                  class="laptop:hidden mt-4"
+                >
+                  <slot name="cta-mobile" />
+                </div>
+                <UButton
+                  :class="['mt-4', { 'max-laptop:hidden': $slots['cta-mobile'] }]"
+                  :label="subscribeButtonLabel"
+                  block
+                  size="xl"
+                  :disabled="isPlusCurrentPlan"
+                  :loading="props.isProcessingSubscription"
+                  :ui="{ base: 'py-2 laptop:py-3 cursor-pointer', label: 'font-bold' }"
+                  @click="handleSubscribeButtonClick"
+                />
+              </div>
+            </Transition>
+
+            <slot name="pricing-footer" />
+
+            <UButton
+              class="mt-2 self-center"
+              :label="$t('pricing_page_learn_more')"
+              :to="learnMoreRoute"
+              variant="link"
+              color="neutral"
+              size="sm"
+              :ui="{ label: 'border-b border-current leading-5' }"
+            />
+            <UAlert
+              v-if="!isApp && coupon && !promoPricing && !isCivicTierSelected"
+              class="mt-4"
+              color="secondary"
+              variant="soft"
+              icon="i-material-symbols-percent-discount-outline-rounded"
+              :description="$t('pricing_page_coupon_applied_description')"
+              :ui="{
+                root: 'rounded-xl',
+                title: 'font-bold',
+              }"
+            >
+              <template #title>
+                <i18n-t keypath="pricing_page_coupon_applied_title">
+                  <template #code>
+                    <UBadge
+                      class="font-bold font-mono"
+                      :label="coupon"
+                      color="primary"
+                      variant="soft"
+                    />
+                  </template>
+                </i18n-t>
+              </template>
+            </UAlert>
+          </slot>
         </div>
 
         <p

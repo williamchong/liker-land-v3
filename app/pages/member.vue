@@ -150,11 +150,11 @@
 
     <template
       v-if="!hasLoggedIn"
-      #pricing-mobile
+      #cta-mobile
     >
       <div class="flex flex-col items-center gap-3">
         <span
-          class="text-sm text-muted"
+          class="text-sm text-center opacity-70"
           v-text="$t('pricing_page_login_cta_description')"
         />
         <UButton
