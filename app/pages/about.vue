@@ -16,17 +16,11 @@
           :aria-label="$t('about_page_hero_cta_store')"
           @click="onClickHeroLogo"
         >
-          <div class="relative flex justify-center items-center">
-            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-              <div class="logo-glow rounded-full blur-3xl" />
-            </div>
-            <AppLogo
-              height="auto"
-              :is-icon="false"
-              :is-padded="false"
-              class="relative"
-            />
-          </div>
+          <AppLogo
+            height="auto"
+            :is-icon="false"
+            :is-padded="false"
+          />
         </NuxtLink>
 
         <div class="space-y-4 text-gray-100">
@@ -1179,15 +1173,3 @@ useHead({
   ],
 })
 </script>
-
-<style scoped>
-.logo-glow {
-  animation: rotate-glow 8s linear infinite, pulse-glow 3s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .logo-glow {
-    animation: none;
-  }
-}
-</style>
