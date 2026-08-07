@@ -5,6 +5,7 @@
     class="min-h-screen"
     :is-civic-visible="true"
     :initial-tier="initialTier"
+    :fallback-title="pageTitle"
     :is-processing-subscription="checkout.isProcessingSubscription.value"
     :trial-period-days="trialPeriodDays"
     :must-collect-payment-method="mustCollectPaymentMethod"

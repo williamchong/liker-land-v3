@@ -13,6 +13,9 @@ export interface PricingPageContentProps {
   isCivicVisible?: boolean
   // Tier the page opens on, for deep links that pitch a specific tier. Defaults to Plus.
   initialTier?: LikerPlusTier
+  // Heading shown when no campaign supplies one. Standalone pages pass it so the
+  // page has an h1; embedded paywalls omit it and stay heading-less.
+  fallbackTitle?: string
   trialPeriodDays?: number
   // Store-driven (IAP) trial overrides — see IAPTrialInfo in use-native-iap.ts.
   isPaidTrialOverride?: boolean

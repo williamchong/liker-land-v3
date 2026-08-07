@@ -58,7 +58,7 @@
               v-model:tier="selectedTier"
               class="relative w-full max-w-[420px]"
               :is-dark-background="true"
-              :title="campaignContent?.title"
+              :title="campaignContent?.title ?? fallbackTitle"
               :description="campaignContent?.description"
               :prepended-features="prependedFeatures"
               :is-tier-selector-visible="isTierSelectorVisible"
@@ -116,7 +116,7 @@
           'items-center',
           'max-laptop:shrink-0',
           'w-full',
-          'p-12',
+          'p-6 laptop:p-12',
           'bg-theme-black',
           'overflow-clip',
           'laptop:sticky',
@@ -131,7 +131,7 @@
           :to="localeRoute({ name: 'store', query: { ll_medium: 'plus-logo', ll_source: 'plus-modal' } })"
         >
           <AppLogo
-            class="max-w-2/3"
+            class="max-w-2/3 max-laptop:h-16"
             height="128"
             :is-icon="false"
             :is-padded="false"
@@ -160,7 +160,7 @@
             v-if="!(isShowTTSSamples && isDesktopScreen)"
             v-model:tier="selectedTier"
             class="mb-4 laptop:mb-6"
-            :title="campaignContent?.title"
+            :title="campaignContent?.title ?? fallbackTitle"
             :description="campaignContent?.description"
             :prepended-features="prependedFeatures"
             :is-tier-selector-visible="isTierSelectorVisible"
@@ -246,20 +246,19 @@
                   :ui="{ base: 'py-2 laptop:py-3 cursor-pointer', label: 'font-bold' }"
                   @click="handleSubscribeButtonClick"
                 />
+                <p
+                  v-if="!isPlusCurrentPlan"
+                  :class="[
+                    'mt-2 text-center text-xs opacity-70',
+                    { 'max-laptop:hidden': $slots['cta-mobile'] },
+                  ]"
+                  v-text="$t('pricing_page_cancel_anytime')"
+                />
               </div>
             </Transition>
 
             <slot name="pricing-footer" />
 
-            <UButton
-              class="mt-2 self-center"
-              :label="$t('pricing_page_learn_more')"
-              :to="learnMoreRoute"
-              variant="link"
-              color="neutral"
-              size="sm"
-              :ui="{ label: 'border-b border-current leading-5' }"
-            />
             <UAlert
               v-if="!isApp && coupon && !promoPricing && !isCivicTierSelected"
               class="mt-4"
@@ -285,6 +284,16 @@
                 </i18n-t>
               </template>
             </UAlert>
+
+            <UButton
+              class="mt-4 self-center"
+              :label="$t('pricing_page_learn_more')"
+              :to="learnMoreRoute"
+              variant="link"
+              color="neutral"
+              size="sm"
+              :ui="{ label: 'border-b border-current leading-5' }"
+            />
           </slot>
         </div>
 

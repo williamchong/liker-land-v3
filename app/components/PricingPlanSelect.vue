@@ -204,6 +204,12 @@
             <span>/{{ plan.perUnit }}</span>
           </span>
         </template>
+
+        <span
+          v-if="plan.monthlyEquivalent"
+          class="text-theme-black/40 dark:text-theme-white/40 whitespace-nowrap"
+          v-text="$t('plan_select_monthly_equivalent', { price: plan.monthlyEquivalent })"
+        />
       </div>
 
       <input
@@ -282,6 +288,7 @@ const {
   convertToDisplayCurrency,
   getMonthsPrice,
 } = useSubscriptionPricing()
+const { formatConvertedPrice } = useCurrency()
 const { getIAPPlanPrice } = useNativeIAP()
 
 const selectedPlan = defineModel({
@@ -326,6 +333,15 @@ const yearlyDiscountBadge = computed(() => {
   return percent > 0 ? $t('pricing_page_yearly_discount', { discount: percent }) : undefined
 })
 
+// A twelfth of the yearly price: a comparison figure, never a purchasable
+// amount. Dropped unless it undercuts the real monthly plan, so a future price
+// change can't leave the yearly option looking worse than it is.
+function getMonthlyEquivalent(yearlyPrice: number, comparableMonthlyPrice: number) {
+  const perMonth = yearlyPrice / 12
+  if (perMonth >= comparableMonthlyPrice) return undefined
+  return formatConvertedPrice(perMonth)
+}
+
 const plans = computed(() => {
   const values: { value: SubscriptionPlan, quantity: number }[] = []
   const yearQuantity = [...props.giftYearQuantity].filter(years => years > 1).sort((a, b) => b - a)
@@ -366,6 +382,7 @@ const plans = computed(() => {
         hasDiscount: false,
         promoPrice: undefined as number | undefined,
         showTrialPrice: false,
+        monthlyEquivalent: undefined as string | undefined,
         promoFreeKey: '',
         promoAmountKey: '',
       }
@@ -418,6 +435,11 @@ const plans = computed(() => {
       perUnit: isMonthly ? $t('pricing_page_price_per_month') : $t('pricing_page_price_per_year'),
       ...tierPricing,
       showTrialPrice: !isCivic.value && (isMonthly || props.isAllowYearlyTrial),
+      // Skipped for a store price string (can't divide a formatted string) and
+      // for a promo, whose headline price isn't the one being spread over months.
+      monthlyEquivalent: !isMonthly && !tierPricing.priceString && tierPricing.promoPrice === undefined
+        ? getMonthlyEquivalent(tierPricing.price, isCivic.value ? civicMonthlyPrice.value : monthlyPrice.value)
+        : undefined,
       promoFreeKey: isMonthly
         ? 'pricing_page_promo_first_monthly_free'
         : 'pricing_page_promo_first_yearly_free',
