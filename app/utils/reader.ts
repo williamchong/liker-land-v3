@@ -420,11 +420,9 @@ export function isValidPDFPageNumber(value: unknown): value is number {
 }
 
 /**
- * Bring a stored page into range of the document actually loaded — the two
- * disagree whenever a position outlives the file it was saved against, be it a
- * republished edition, another `index` variant or the truncated preview.
- * pdf.js rejects an out-of-range `getPage()` and that rejection fails the whole
- * book, so every render site reads the page through this.
+ * Bring a stored page into range of the loaded document: a position outlives
+ * the file it was saved against (republished edition, another `index` variant,
+ * the preview), and pdf.js fails the book on an out-of-range `getPage()`.
  */
 export function clampPDFPageNumber(page: unknown, totalPages: number): number {
   if (!isValidPDFPageNumber(page) || !isValidPDFPageNumber(totalPages)) return 1

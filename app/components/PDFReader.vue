@@ -383,8 +383,9 @@ const currentPage = useSyncedBookSettings({
 })
 const totalPages = ref(0)
 // Page turns must wait for this: resolving one against totalPages 0 yields
-// page 0, which is then persisted and fails every later load.
-const isDocumentReady = computed(() => totalPages.value > 0)
+// page 0, which is then persisted and fails every later load. A reload keeps
+// the old count until the replacement parses, so tie this to the live document.
+const isDocumentReady = computed(() => !!pdfDocument.value && totalPages.value > 0)
 // Read this, write `currentPage`. The raw ref holds the full edition's
 // position, which the preview and other `index` variants share on purpose, so
 // it can name a page this file doesn't have.
