@@ -568,11 +568,7 @@ const { setTTSSegments, setChapterTitles, openPlayer } = useTTSPlayerModal({
     // Firestore writes when TTS stays within the same paragraph.
     if (segment.cfi !== currentCfi.value) {
       currentCfi.value = segment.cfi
-      const locations = loadedBook.value?.locations
-      if (locations) {
-        percentage.value = locations.percentageFromCfi(segment.cfi) ?? 0
-        readingProgress.value = percentage.value
-      }
+      applyPercentageFromCfi(segment.cfi)
       if (segment.isResync) {
         useBookSettingsStore().flushBatch(nftClassId.value)
       }
@@ -629,6 +625,17 @@ if (!isUploadedBook.value) {
 
 const lastSectionIndex = ref(0)
 const percentage = ref(0)
+// percentageFromCfi is null until locations.generate() resolves, and that runs
+// un-awaited, so the first relocations of a cold-cache open land here. Neither
+// "not known yet" nor a preview's own scale may reach the stored progress.
+function applyPercentageFromCfi(cfi: string) {
+  const resolved = loadedBook.value?.locations?.percentageFromCfi(cfi)
+  if (resolved == null) return
+  percentage.value = resolved
+  if (!isPreviewMode.value) {
+    readingProgress.value = resolved
+  }
+}
 const percentageLabel = computed(() => `${Math.round(percentage.value * 100)}%`)
 const isAtLastPage = computed(() => {
   return currentSectionIndex.value >= lastSectionIndex.value && percentage.value >= 1
@@ -1236,9 +1243,8 @@ async function loadEPub() {
     // this page via the cfi lookup. relocated is the single choke point that
     // also covers swipe, reflow and native-shell turns.
     activeTTSElementIndex.value = undefined
-    percentage.value = book.locations!.percentageFromCfi(location.start.cfi) ?? 0
     currentCfi.value = location.start.cfi
-    readingProgress.value = percentage.value
+    applyPercentageFromCfi(location.start.cfi)
   })
 
   if (isTTSQueryParam.value) {

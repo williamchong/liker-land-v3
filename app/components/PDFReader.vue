@@ -29,11 +29,11 @@
                   '[&::-webkit-outer-spin-button]:appearance-none',
                   '[-moz-appearance:textfield]',
                 ]"
-                :value="currentPage"
+                :value="clampedCurrentPage"
                 type="number"
                 :min="1"
                 :max="Math.max(1, totalPages)"
-                :disabled="totalPages <= 0"
+                :disabled="!isDocumentReady"
                 :aria-label="$t('reader_page_input_label')"
                 :style="{ width: `${Math.max(3, String(totalPages).length)}ch` }"
                 @change="onPageInputChange"
@@ -176,7 +176,7 @@
             :icon="isCurrentPageBookmarked ? 'i-material-symbols-bookmark-rounded' : 'i-material-symbols-bookmark-outline-rounded'"
             variant="ghost"
             :color="isCurrentPageBookmarked ? 'primary' : 'neutral'"
-            :disabled="!pdfDocument || totalPages <= 0"
+            :disabled="!pdfDocument || !isDocumentReady"
             @click="handleBookmarkToggle"
           />
           <UButton
@@ -382,6 +382,15 @@ const currentPage = useSyncedBookSettings({
   namespace: 'pdf',
 })
 const totalPages = ref(0)
+// Page turns must wait for this: resolving one against totalPages 0 yields
+// page 0, which is then persisted and fails every later load.
+const isDocumentReady = computed(() => totalPages.value > 0)
+// Read this, write `currentPage`. The raw ref holds the full edition's
+// position, which the preview and other `index` variants share on purpose, so
+// it can name a page this file doesn't have.
+const clampedCurrentPage = computed(() =>
+  clampPDFPageNumber(currentPage.value, totalPages.value),
+)
 const scaleMin = 0.5
 const scaleMax = 3.0
 const SCALE_DELTA = 1.1
@@ -483,7 +492,7 @@ onMounted(() => {
   fetchAnnotations()
 })
 
-const currentBookmark = computed(() => getBookmarkByPage(currentPage.value))
+const currentBookmark = computed(() => getBookmarkByPage(clampedCurrentPage.value))
 const isCurrentPageBookmarked = computed(() => !!currentBookmark.value)
 
 function getNearestOutlineTitle(pageNumber: number): string {
@@ -538,11 +547,11 @@ async function handleBookmarkToggle() {
     return
   }
 
-  const excerpt = await getBookmarkExcerptForPage(currentPage.value)
+  const excerpt = await getBookmarkExcerptForPage(clampedCurrentPage.value)
   const createData: AnnotationCreateData = {
     type: 'bookmark',
-    page: currentPage.value,
-    chapterTitle: getNearestOutlineTitle(currentPage.value),
+    page: clampedCurrentPage.value,
+    chapterTitle: getNearestOutlineTitle(clampedCurrentPage.value),
     ...(excerpt ? { text: excerpt } : {}),
   }
   const optimistic = createAnnotation(createData)
@@ -594,28 +603,28 @@ const isDesktopScreen = useDesktopScreen()
 const TAP_ZONE_WIDTH_RATIO = 0.45
 
 const isCoverPage = computed(() =>
-  isDualPageMode.value && totalPages.value > 1 && currentPage.value === 1,
+  isDualPageMode.value && totalPages.value > 1 && clampedCurrentPage.value === 1,
 )
 
 const dualRightPage = computed(() => {
   if (!isDualPageMode.value || totalPages.value <= 1 || isCoverPage.value) return undefined
-  const right = currentPage.value + 1
+  const right = clampedCurrentPage.value + 1
   return right <= totalPages.value ? right : undefined
 })
 
 function isTocItemActive(pageNumber: number) {
-  return pageNumber === currentPage.value || pageNumber === dualRightPage.value
+  return pageNumber === clampedCurrentPage.value || pageNumber === dualRightPage.value
 }
 
 const pageDisplayText = computed(() => {
   const right = dualRightPage.value
-  if (right) return `${currentPage.value}-${right} / ${totalPages.value}`
-  return `${currentPage.value} / ${totalPages.value}`
+  if (right) return `${clampedCurrentPage.value}-${right} / ${totalPages.value}`
+  return `${clampedCurrentPage.value} / ${totalPages.value}`
 })
 
-const isAtFirstPage = computed(() => currentPage.value <= 1)
+const isAtFirstPage = computed(() => clampedCurrentPage.value <= 1)
 const isAtLastPage = computed(() =>
-  (dualRightPage.value ?? currentPage.value) >= totalPages.value,
+  (dualRightPage.value ?? clampedCurrentPage.value) >= totalPages.value,
 )
 
 async function loadPDFLib() {
@@ -656,9 +665,14 @@ watch(isMobile, async (value) => {
   }
 })
 
+// onMounted sets isDualPageMode from the screen size before the document
+// loads, so without the readiness guard this persists a parity nudge against a
+// page count of 0. Parity is about the rendered left page, hence the clamp.
 watch(isDualPageMode, (value) => {
-  if (value && currentPage.value > 1 && currentPage.value % 2 === 1) {
-    currentPage.value -= 1
+  if (!value || !isDocumentReady.value) return
+  const page = clampedCurrentPage.value
+  if (page > 1 && page % 2 === 1) {
+    currentPage.value = page - 1
   }
 })
 
@@ -679,9 +693,11 @@ watch([currentPage], async () => {
   if (pdfDocument.value) {
     await nextTick()
     renderPages()
-    emit('pageChanged', currentPage.value)
-    if (totalPages.value > 0) {
-      readingProgress.value = currentPage.value / totalPages.value
+    emit('pageChanged', clampedCurrentPage.value)
+    // A preview is a fraction of the book, so its page count is the wrong
+    // denominator: a one-page preview would report the whole book as finished.
+    if (isDocumentReady.value && !props.isPreview) {
+      readingProgress.value = clampedCurrentPage.value / totalPages.value
     }
   }
 })
@@ -726,6 +742,13 @@ async function loadPDF() {
 
     pdfDocument.value = await loadingTask.promise
     totalPages.value = pdfDocument.value.numPages
+
+    // Repair a stored page the document can't honour, so a reader stuck on one
+    // recovers on every device. Opening a preview must not silently move their
+    // place in the full edition, so only navigating there writes a page back.
+    if (!props.isPreview && clampedCurrentPage.value !== currentPage.value) {
+      currentPage.value = clampedCurrentPage.value
+    }
 
     outlineItems.value = []
     textContentCache.clear()
@@ -834,7 +857,7 @@ async function autoZoomToPageIfNeeded() {
   const isDual = isDualPageMode.value && totalPages.value > 1 && !isCoverPage.value
   if (isDual) {
     const rightPageNum = dualRightPage.value
-    const pagePromises = [pdfDocument.value.getPage(currentPage.value)]
+    const pagePromises = [pdfDocument.value.getPage(clampedCurrentPage.value)]
     if (rightPageNum) pagePromises.push(pdfDocument.value.getPage(rightPageNum))
     const pages = await Promise.all(pagePromises)
 
@@ -850,7 +873,7 @@ async function autoZoomToPageIfNeeded() {
     return
   }
 
-  const page = await pdfDocument.value.getPage(currentPage.value)
+  const page = await pdfDocument.value.getPage(clampedCurrentPage.value)
   const viewport = page.getViewport({ scale: 1 })
   const effectiveScale = Math.min(size.width / viewport.width, size.height / viewport.height)
   const fitScale = clampScale(roundScale(effectiveScale))
@@ -866,7 +889,7 @@ async function zoomToFit(mode: 'page' | 'width') {
   const size = getContainerInnerSize()
   if (!size) return
 
-  const page = await pdfDocument.value.getPage(currentPage.value)
+  const page = await pdfDocument.value.getPage(clampedCurrentPage.value)
   const viewport = page.getViewport({ scale: 1 })
 
   let pageWidthScaleFactor = 1
@@ -948,6 +971,10 @@ async function renderPageToCanvas(
   textLayerContainer?: HTMLDivElement | null,
 ) {
   if (!pdfDocument.value) return
+  // pdf.js rejects an out-of-range getPage(), and that rejection surfaces as a
+  // "book failed to open" modal. One unrenderable page must never cost the
+  // whole book, so stop here instead.
+  if (!isValidPDFPageNumber(pageNum) || pageNum > pdfDocument.value.numPages) return
   const page = await pdfDocument.value.getPage(pageNum)
   const viewport = page.getViewport({ scale: scale.value })
 
@@ -980,7 +1007,7 @@ async function renderPageToCanvas(
 
 async function renderSinglePage() {
   if (!singleCanvas.value) return
-  await renderPageToCanvas(currentPage.value, singleCanvas.value, singleTextLayer.value)
+  await renderPageToCanvas(clampedCurrentPage.value, singleCanvas.value, singleTextLayer.value)
 }
 
 async function renderDualPages() {
@@ -989,8 +1016,9 @@ async function renderDualPages() {
   const rightPageNum = dualRightPage.value
 
   // In RTL mode with a right page, swap left/right display positions
-  const actualLeftPageNum = (isRightToLeft.value && rightPageNum) ? rightPageNum : currentPage.value
-  const actualRightPageNum = (isRightToLeft.value && rightPageNum) ? currentPage.value : rightPageNum
+  const leftPageNum = clampedCurrentPage.value
+  const actualLeftPageNum = (isRightToLeft.value && rightPageNum) ? rightPageNum : leftPageNum
+  const actualRightPageNum = (isRightToLeft.value && rightPageNum) ? leftPageNum : rightPageNum
 
   const renderTasks: Promise<void>[] = [
     renderPageToCanvas(actualLeftPageNum, leftCanvas.value, leftTextLayer.value),
@@ -1017,17 +1045,21 @@ async function renderDualPages() {
 }
 
 function nextPage() {
+  if (!isDocumentReady.value) return
+  const page = clampedCurrentPage.value
   const step = isDualPageMode.value
-    ? (currentPage.value === 1 ? 1 : 2)
+    ? (page === 1 ? 1 : 2)
     : 1
-  currentPage.value = Math.min(currentPage.value + step, totalPages.value)
+  currentPage.value = Math.min(page + step, totalPages.value)
 }
 
 function previousPage() {
+  if (!isDocumentReady.value) return
+  const page = clampedCurrentPage.value
   const step = isDualPageMode.value
-    ? (currentPage.value <= 2 ? 1 : 2)
+    ? (page <= 2 ? 1 : 2)
     : 1
-  currentPage.value = Math.max(currentPage.value - step, 1)
+  currentPage.value = Math.max(page - step, 1)
 }
 
 function handleLeftArrowButtonClick() {
@@ -1069,9 +1101,6 @@ function togglePageMode(value?: 'single' | 'dual') {
   else {
     isDualPageMode.value = value === 'dual'
   }
-  if (isDualPageMode.value && currentPage.value > 1 && currentPage.value % 2 === 1) {
-    currentPage.value--
-  }
   renderPages()
 }
 
@@ -1100,7 +1129,7 @@ function onPageInputChange(event: Event) {
   if (value && value >= 1 && value <= totalPages.value) {
     goToPage(value)
   }
-  input.value = String(currentPage.value)
+  input.value = String(clampedCurrentPage.value)
 }
 
 function isInteractiveElement(el: EventTarget | null): boolean {
@@ -1366,7 +1395,7 @@ function handleSearchNavigate(result: ReaderSearchResult) {
 
 defineExpose({
   goToPage,
-  currentPage: readonly(currentPage),
+  currentPage: clampedCurrentPage,
   totalPages: readonly(totalPages),
 })
 </script>

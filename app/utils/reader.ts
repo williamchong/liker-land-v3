@@ -413,3 +413,20 @@ export function isPDFCorpusUnreadable({
 }): boolean {
   return pagesWithText > 0 && garbledPages / pagesWithText > PDF_UNREADABLE_PAGE_RATIO
 }
+
+/** Whether the value could name a page in some document. */
+export function isValidPDFPageNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1
+}
+
+/**
+ * Bring a stored page into range of the document actually loaded — the two
+ * disagree whenever a position outlives the file it was saved against, be it a
+ * republished edition, another `index` variant or the truncated preview.
+ * pdf.js rejects an out-of-range `getPage()` and that rejection fails the whole
+ * book, so every render site reads the page through this.
+ */
+export function clampPDFPageNumber(page: unknown, totalPages: number): number {
+  if (!isValidPDFPageNumber(page) || !isValidPDFPageNumber(totalPages)) return 1
+  return Math.min(page, totalPages)
+}
