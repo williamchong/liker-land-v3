@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findOfflineBookCopy, getBookFileCacheKey, isLikelyGarbledPDFText, isPDFCorpusUnreadable } from '~/utils/reader'
+import { clampPDFPageNumber, findOfflineBookCopy, getBookFileCacheKey, isLikelyGarbledPDFText, isPDFCorpusUnreadable, isValidPDFPageNumber } from '~/utils/reader'
 
 describe('isLikelyGarbledPDFText', () => {
   it('returns false for short strings', () => {
@@ -115,5 +115,50 @@ describe('isPDFCorpusUnreadable', () => {
     // Mid-iteration: pass numPages as the most generous denominator. If even
     // then we're above the threshold, no remaining clean page can save us.
     expect(isPDFCorpusUnreadable({ pagesWithText: 78, garbledPages: 30 })).toBe(true)
+  })
+})
+
+describe('isValidPDFPageNumber', () => {
+  it('accepts whole page numbers from one upwards', () => {
+    expect(isValidPDFPageNumber(1)).toBe(true)
+    expect(isValidPDFPageNumber(5)).toBe(true)
+  })
+
+  it('rejects zero, which is what a page turn against an unloaded document produces', () => {
+    expect(isValidPDFPageNumber(0)).toBe(false)
+    expect(isValidPDFPageNumber(-3)).toBe(false)
+  })
+
+  it('rejects values no page could have', () => {
+    expect(isValidPDFPageNumber(1.5)).toBe(false)
+    expect(isValidPDFPageNumber(Number.NaN)).toBe(false)
+    expect(isValidPDFPageNumber(Number.POSITIVE_INFINITY)).toBe(false)
+    expect(isValidPDFPageNumber(undefined)).toBe(false)
+    expect(isValidPDFPageNumber('2')).toBe(false)
+  })
+})
+
+describe('clampPDFPageNumber', () => {
+  it('leaves a page that exists in the document alone', () => {
+    expect(clampPDFPageNumber(3, 5)).toBe(3)
+    expect(clampPDFPageNumber(5, 5)).toBe(5)
+  })
+
+  it('falls back to the first page while the document is still loading', () => {
+    // totalPages is 0 until pdf.js finishes parsing; nothing is renderable yet.
+    expect(clampPDFPageNumber(4, 0)).toBe(1)
+  })
+
+  it('pulls a page past the end back to the last one', () => {
+    // A position saved against the full book, reopened on the 1-page preview.
+    expect(clampPDFPageNumber(4, 1)).toBe(1)
+    expect(clampPDFPageNumber(120, 20)).toBe(20)
+  })
+
+  it('repairs a stored page that names no page at all', () => {
+    expect(clampPDFPageNumber(0, 5)).toBe(1)
+    expect(clampPDFPageNumber(-2, 5)).toBe(1)
+    expect(clampPDFPageNumber(Number.NaN, 5)).toBe(1)
+    expect(clampPDFPageNumber(undefined, 5)).toBe(1)
   })
 })
