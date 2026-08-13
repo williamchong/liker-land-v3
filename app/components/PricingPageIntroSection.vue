@@ -11,7 +11,7 @@
     <h1
       v-if="title"
       :class="[
-        'text-3xl',
+        'text-2xl laptop:text-3xl',
         'font-bold',
         { 'text-theme-cyan': props.isDarkBackground },
         'whitespace-pre-wrap',

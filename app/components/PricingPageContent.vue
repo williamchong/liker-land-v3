@@ -58,7 +58,7 @@
               v-model:tier="selectedTier"
               class="relative w-full max-w-[420px]"
               :is-dark-background="true"
-              :title="campaignContent?.title"
+              :title="campaignContent?.title ?? fallbackTitle"
               :description="campaignContent?.description"
               :prepended-features="prependedFeatures"
               :is-tier-selector-visible="isTierSelectorVisible"
@@ -116,7 +116,7 @@
           'items-center',
           'max-laptop:shrink-0',
           'w-full',
-          'p-12',
+          'p-6 laptop:p-12',
           'bg-theme-black',
           'overflow-clip',
           'laptop:sticky',
@@ -126,17 +126,24 @@
         ]"
       >
         <PaywallBookstoreBackdrop />
-        <NuxtLink
-          class="relative flex justify-center items-center"
-          :to="localeRoute({ name: 'store', query: { ll_medium: 'plus-logo', ll_source: 'plus-modal' } })"
-        >
-          <AppLogo
-            class="max-w-2/3"
-            height="128"
-            :is-icon="false"
-            :is-padded="false"
+        <div class="relative flex flex-col items-center w-full">
+          <NuxtLink
+            class="flex justify-center items-center w-full"
+            :to="localeRoute({ name: 'store', query: { ll_medium: 'plus-logo', ll_source: 'plus-modal' } })"
+          >
+            <AppLogo
+              class="max-w-2/3 max-laptop:h-16 laptop:h-auto"
+              height="128"
+              :is-icon="false"
+              :is-padded="false"
+            />
+          </NuxtLink>
+          <!-- The tagline is laptop-only to keep the mobile banner above the fold slim -->
+          <p
+            class="hidden laptop:block max-w-[420px] mt-4 text-center text-white/70"
+            v-text="$t('about_page_hero_title')"
           />
-        </NuxtLink>
+        </div>
       </aside>
     </template>
 
@@ -149,7 +156,7 @@
           'max-w-[512px]',
           'max-laptop:mx-auto',
           'p-5 laptop:p-12',
-          'pt-12',
+          'pt-8 laptop:pt-12',
           // NOTE: Prevent content from being covered by the Intercom banner at the top
           { 'laptop:pt-16': !campaignContent },
         ]"
@@ -160,7 +167,7 @@
             v-if="!(isShowTTSSamples && isDesktopScreen)"
             v-model:tier="selectedTier"
             class="mb-4 laptop:mb-6"
-            :title="campaignContent?.title"
+            :title="campaignContent?.title ?? fallbackTitle"
             :description="campaignContent?.description"
             :prepended-features="prependedFeatures"
             :is-tier-selector-visible="isTierSelectorVisible"
@@ -177,123 +184,124 @@
         </div>
 
         <div class="flex flex-col w-full mt-6 laptop:mt-8">
-          <div
-            v-if="$slots['pricing-mobile']"
-            class="laptop:hidden"
-          >
-            <slot name="pricing-mobile" />
-          </div>
-          <div
-            :class="[
-              'flex',
-              'flex-col',
-              { 'max-laptop:hidden': $slots['pricing-mobile'] },
-            ]"
-          >
-            <slot name="pricing">
-              <Transition
-                mode="out-in"
-                :css="false"
-                @enter="handlePricingPanelEnter"
-                @leave="handlePricingPanelLeave"
+          <slot name="pricing">
+            <Transition
+              mode="out-in"
+              :css="false"
+              @enter="handlePricingPanelEnter"
+              @leave="handlePricingPanelLeave"
+            >
+              <div
+                v-if="canStartSubscribeFlow"
+                :key="selectedTier"
+                :class="{ 'bg-theme-cyan p-3 rounded-xl text-theme-black': isPaidTrialChrome }"
               >
-                <div
-                  v-if="canStartSubscribeFlow"
-                  :key="selectedTier"
-                  :class="{ 'bg-theme-cyan p-3 rounded-xl': isPaidTrialChrome }"
+                <header
+                  v-if="isPaidTrialChrome"
+                  class="hidden laptop:flex items-center gap-2 mb-3 text-theme-black"
                 >
-                  <header
-                    v-if="isPaidTrialChrome"
-                    class="hidden laptop:flex items-center gap-2 mb-3 text-theme-black"
-                  >
-                    <UIcon
-                      name="i-material-symbols-celebration-outline-rounded"
-                      :size="24"
-                    />
-                    <span
-                      class="font-bold"
-                      v-text="$t('subscribe_plus_alert_limited_offer')"
-                    />
-                  </header>
-                  <PricingPlanSelect
-                    v-model="selectedPlan"
-                    :tier="selectedTier"
-                    :trial-period-days="trialPeriodDays"
-                    :is-paid-trial-override="isPaidTrialOverride"
-                    :trial-price-string="trialPriceString"
-                    :monthly-price-string="monthlyPriceString"
-                    :yearly-price-string="yearlyPriceString"
-                    :yearly-badge-text="yearlyBadgeText"
-                    :monthly-badge-text="monthlyBadgeText"
-                    :promo-pricing="promoPricing"
-                  >
-                    <template #header-left>
-                      <div
-                        v-if="isPaidTrialChrome"
-                        class="flex items-center gap-1.5 text-theme-black"
-                      >
-                        <UIcon
-                          name="i-material-symbols-celebration-outline-rounded"
-                          :size="20"
-                        />
-                        <span
-                          class="text-sm font-bold"
-                          v-text="$t('subscribe_plus_alert_limited_offer')"
-                        />
-                      </div>
-                    </template>
-                  </PricingPlanSelect>
-                  <UButton
-                    class="mt-4"
-                    :label="subscribeButtonLabel"
-                    block
-                    size="xl"
-                    :disabled="isPlusCurrentPlan"
-                    :loading="props.isProcessingSubscription"
-                    :ui="{ base: 'py-2 laptop:py-3 cursor-pointer', label: 'font-bold' }"
-                    @click="handleSubscribeButtonClick"
+                  <UIcon
+                    name="i-material-symbols-celebration-outline-rounded"
+                    :size="24"
                   />
-                </div>
-              </Transition>
-
-              <slot name="pricing-footer" />
-
-              <UButton
-                class="mt-2 self-center"
-                :label="$t('pricing_page_learn_more')"
-                :to="learnMoreRoute"
-                variant="link"
-                color="neutral"
-                size="sm"
-                :ui="{ label: 'border-b border-current leading-5' }"
-              />
-              <UAlert
-                v-if="!isApp && coupon && !promoPricing && !isCivicTierSelected"
-                class="mt-4"
-                color="secondary"
-                variant="soft"
-                icon="i-material-symbols-percent-discount-outline-rounded"
-                :description="$t('pricing_page_coupon_applied_description')"
-                :ui="{
-                  root: 'rounded-xl',
-                  title: 'font-bold',
-                }"
-              >
-                <template #title>
-                  <i18n-t keypath="pricing_page_coupon_applied_title">
-                    <template #code>
-                      <UBadge
-                        class="font-bold font-mono"
-                        :label="coupon"
-                        color="primary"
-                        variant="soft"
+                  <span
+                    class="font-bold"
+                    v-text="$t('subscribe_plus_alert_limited_offer')"
+                  />
+                </header>
+                <PricingPlanSelect
+                  v-model="selectedPlan"
+                  :tier="selectedTier"
+                  :trial-period-days="trialPeriodDays"
+                  :is-paid-trial-override="isPaidTrialOverride"
+                  :trial-price-string="trialPriceString"
+                  :monthly-price-string="monthlyPriceString"
+                  :yearly-price-string="yearlyPriceString"
+                  :yearly-badge-text="yearlyBadgeText"
+                  :monthly-badge-text="monthlyBadgeText"
+                  :promo-pricing="promoPricing"
+                >
+                  <template #header-left>
+                    <div
+                      v-if="isPaidTrialChrome"
+                      class="flex items-center gap-1.5 text-theme-black"
+                    >
+                      <UIcon
+                        name="i-material-symbols-celebration-outline-rounded"
+                        :size="20"
                       />
-                    </template>
-                  </i18n-t>
-                </template>
-              </UAlert>
-            </slot>
-          </div>
+                      <span
+                        class="text-sm font-bold"
+                        v-text="$t('subscribe_plus_alert_limited_offer')"
+                      />
+                    </div>
+                  </template>
+                </PricingPlanSelect>
+                <div
+                  v-if="$slots['cta-mobile']"
+                  class="laptop:hidden mt-4"
+                >
+                  <slot name="cta-mobile" />
+                </div>
+                <UButton
+                  :class="['mt-4', { 'max-laptop:hidden': $slots['cta-mobile'] }]"
+                  :label="subscribeButtonLabel"
+                  block
+                  size="xl"
+                  :disabled="isPlusCurrentPlan"
+                  :loading="props.isProcessingSubscription"
+                  :ui="{ base: 'py-2 laptop:py-3 cursor-pointer', label: 'font-bold' }"
+                  @click="handleSubscribeButtonClick"
+                />
+                <p
+                  v-if="!isPlusCurrentPlan"
+                  :class="[
+                    'mt-2 text-center text-xs opacity-70',
+                    { 'max-laptop:hidden': $slots['cta-mobile'] },
+                  ]"
+                  v-text="$t('pricing_page_cancel_anytime')"
+                />
+              </div>
+            </Transition>
+
+            <slot name="pricing-footer" />
+
+            <UAlert
+              v-if="!isApp && coupon && !promoPricing && !isCivicTierSelected"
+              class="mt-4"
+              color="secondary"
+              variant="soft"
+              icon="i-material-symbols-percent-discount-outline-rounded"
+              :description="$t('pricing_page_coupon_applied_description')"
+              :ui="{
+                root: 'rounded-xl',
+                title: 'font-bold',
+              }"
+            >
+              <template #title>
+                <i18n-t keypath="pricing_page_coupon_applied_title">
+                  <template #code>
+                    <UBadge
+                      class="font-bold font-mono"
+                      :label="coupon"
+                      color="primary"
+                      variant="soft"
+                    />
+                  </template>
+                </i18n-t>
+              </template>
+            </UAlert>
+
+            <UButton
+              class="mt-4 self-center"
+              :label="$t('pricing_page_learn_more')"
+              :to="learnMoreRoute"
+              variant="link"
+              color="neutral"
+              size="sm"
+              :ui="{ label: 'border-b border-current leading-5' }"
+            />
+          </slot>
         </div>
 
         <p
