@@ -63,7 +63,7 @@
               :prepended-features="prependedFeatures"
               :is-tier-selector-visible="isTierSelectorVisible"
               :current-tier="likerPlusTier"
-              :is-voice-sample-enabled="isVoiceSampleLinkEnabled"
+              is-voice-sample-enabled
               @show-voices="isVoicesModalOpen = true"
               @show-voice-sample="handleShowVoiceSample"
             />
@@ -174,7 +174,7 @@
             :prepended-features="prependedFeatures"
             :is-tier-selector-visible="isTierSelectorVisible"
             :current-tier="likerPlusTier"
-            :is-voice-sample-enabled="isVoiceSampleLinkEnabled"
+            is-voice-sample-enabled
             @show-voices="isVoicesModalOpen = true"
             @show-voice-sample="handleShowVoiceSample"
           />
@@ -422,13 +422,11 @@ const isVoicesModalOpen = ref(false)
 
 // The benefit line is always on screen, so the sample is reachable without the
 // samples card displacing the pricing box — the shape the card test ruled out.
-const voiceSampleABTest = useABTest({ experimentKey: 'pricing-page-voice-link' })
-const isVoiceSampleLinkEnabled = computed(() =>
-  getRouteQuery('voice_link') === '1' || voiceSampleABTest.isVariant('voice-link'))
+const VOICE_SAMPLE_PLACEMENT = 'benefit-link'
 
-const isVoiceSampleModalOpen = ref(false)
 const {
   flagshipCloneSample,
+  activeSampleId: activeVoiceSampleId,
   currentSegmentIndex: voiceSampleSegmentIndex,
   longestSegmentText: voiceSampleLongestSegmentText,
   isPlaying: isPlayingVoiceSample,
@@ -437,28 +435,31 @@ const {
 } = useTTSSamplesPlayer({
   onError: (error: unknown) => handleError(error),
   onEnd: (sampleId) => {
-    useLogEvent('tts_sample_play_complete', { sample: sampleId, placement: 'benefit_link' })
-    isVoiceSampleModalOpen.value = false
+    useLogEvent('tts_sample_play_complete', { sample: sampleId, placement: VOICE_SAMPLE_PLACEMENT })
   },
   affiliateVoices: () => props.affiliateVoices,
   affiliateLikerId: () => props.affiliateLikerId,
   affiliateExclusiveBadgeText: () => props.ttsExclusiveBadgeText,
-  includeFlagshipCloneSample: true,
+})
+
+// Derived from the player rather than tracked alongside it: `play`/`stop` are
+// the only things that open or close this modal, and `isPlaying` lags behind
+// them until the audio element fires `onplay`.
+const isVoiceSampleModalOpen = computed({
+  get: () => !!activeVoiceSampleId.value,
+  set: (isOpen) => {
+    if (isOpen || !activeVoiceSampleId.value) return
+    useLogEvent('tts_sample_stop', { sample: activeVoiceSampleId.value, placement: VOICE_SAMPLE_PLACEMENT })
+    stopVoiceSample()
+  },
 })
 
 function handleShowVoiceSample() {
   const sample = flagshipCloneSample.value
   if (!sample) return
-  isVoiceSampleModalOpen.value = true
-  useLogEvent('tts_sample_play', { sample: sample.id, placement: 'benefit_link' })
+  useLogEvent('tts_sample_play', { sample: sample.id, placement: VOICE_SAMPLE_PLACEMENT })
   playVoiceSample(sample.id)
 }
-
-watch(isVoiceSampleModalOpen, (isOpen) => {
-  if (isOpen || !isPlayingVoiceSample.value) return
-  useLogEvent('tts_sample_stop', { sample: flagshipCloneSample.value?.id, placement: 'benefit_link' })
-  stopVoiceSample()
-})
 
 const isTierSelectorVisible = computed(() =>
   props.isCivicVisible && isCivicOfferable.value && canStartSubscribeFlow.value)

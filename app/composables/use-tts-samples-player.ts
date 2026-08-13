@@ -9,13 +9,10 @@ interface TTSSamplesPlayerOptions {
   affiliateVoices?: MaybeRefOrGetter<AffiliateVoiceData[] | undefined>
   affiliateLikerId?: MaybeRefOrGetter<string | undefined>
   affiliateExclusiveBadgeText?: MaybeRefOrGetter<string | undefined>
-  // Appends the flagship clone as a fallback so `flagshipCloneSample` is always
-  // playable. Off by default — the samples card shows its own curated list.
-  includeFlagshipCloneSample?: boolean
 }
 
 export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
-  const { onError, onEnd, affiliateVoices, affiliateLikerId, affiliateExclusiveBadgeText, includeFlagshipCloneSample } = options
+  const { onError, onEnd, affiliateVoices, affiliateLikerId, affiliateExclusiveBadgeText } = options
   const { t: $t } = useI18n()
   const affiliateVoicesComputed = computed(() => toValue(affiliateVoices) ?? [])
   const { getVoiceAvatar } = useTTSVoice({ affiliateVoices: affiliateVoicesComputed })
@@ -153,29 +150,20 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
     return voice ? [buildSystemVoiceSample(voice)] : []
   })
 
-  // Only a fallback: a referrer's own clone always tells the better story, and
-  // skipping it here keeps the flagship from appearing twice.
-  const flagshipCloneSamples = computed<TTSSample[]>(() => {
-    if (!includeFlagshipCloneSample) return []
-    if (affiliateSamples.value.length || referrerSystemVoiceSamples.value.length) return []
-    const voice = getFlagshipSystemVoice()
-    return voice ? [buildSystemVoiceSample(voice)] : []
-  })
-
   const samples = computed<TTSSample[]>(() => [
     ...defaultSamples.value,
     ...referrerSystemVoiceSamples.value,
     ...affiliateSamples.value,
-    ...flagshipCloneSamples.value,
   ])
 
-  // The one cloned voice to demo when there's only room for one.
-  const flagshipCloneSample = computed<TTSSample | null>(() =>
-    affiliateSamples.value[0]
-    ?? referrerSystemVoiceSamples.value[0]
-    ?? flagshipCloneSamples.value[0]
-    ?? null,
-  )
+  // A referrer's own clone tells the better story, so the flagship is only a
+  // fallback. Kept out of `samples` so it never doubles up in the grid.
+  const flagshipCloneSample = computed<TTSSample | null>(() => {
+    const referred = affiliateSamples.value[0] ?? referrerSystemVoiceSamples.value[0]
+    if (referred) return referred
+    const voice = getFlagshipSystemVoice()
+    return voice ? buildSystemVoiceSample(voice) : null
+  })
 
   const activeSampleId = ref<string | null>(null)
   const isPlaying = ref(false)
@@ -185,6 +173,7 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
 
   const activeSample = computed(() => {
     if (!activeSampleId.value) return null
+    if (flagshipCloneSample.value?.id === activeSampleId.value) return flagshipCloneSample.value
     return samples.value.find(sample => sample.id === activeSampleId.value) ?? null
   })
 

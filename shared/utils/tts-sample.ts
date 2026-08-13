@@ -89,5 +89,5 @@ export function getSystemVoiceByOwnerLikerId(
 const FLAGSHIP_SYSTEM_VOICE_OWNER = 'withthepoons'
 
 export function getFlagshipSystemVoice(): SystemVoice | undefined {
-  return SYSTEM_VOICES_BY_OWNER[FLAGSHIP_SYSTEM_VOICE_OWNER]
+  return getSystemVoiceByOwnerLikerId(FLAGSHIP_SYSTEM_VOICE_OWNER)
 }

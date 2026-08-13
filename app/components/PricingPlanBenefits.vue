@@ -82,23 +82,23 @@
       <li v-if="!isAudioHidden">
         <UIcon name="i-material-symbols-check" />
         <i18n-t
-          v-if="isVoiceSampleEnabled"
           keypath="pricing_page_feature_1"
           tag="span"
         >
           <template #voiceActor>
             <button
+              v-if="isVoiceSampleEnabled"
               type="button"
               class="underline cursor-pointer"
               @click="handleShowVoiceSample"
               v-text="$t('pricing_page_feature_1_voice_actor')"
             />
+            <span
+              v-else
+              v-text="$t('pricing_page_feature_1_voice_actor')"
+            />
           </template>
         </i18n-t>
-        <span
-          v-else
-          v-text="$t('pricing_page_feature_1', { voiceActor: $t('pricing_page_feature_1_voice_actor') })"
-        />
       </li>
       <li>
         <UIcon name="i-material-symbols-check" />
@@ -190,8 +190,8 @@ const props = withDefaults(defineProps<{
   isTierSelectorVisible?: boolean
   // The viewer's active tier, marked as "current plan" in the toggle.
   currentTier?: LikerPlusTier
-  // Turns 專屬聲優 into a button that plays a cloned-voice sample. Only the
-  // pricing page hosts the player, so it stays plain text everywhere else.
+  // Turns the voice-actor phrase into a sample-playing button. Only the pricing
+  // page hosts the player modal, so it stays plain text everywhere else.
   isVoiceSampleEnabled?: boolean
 }>(), {
   isTitleCenter: false,
