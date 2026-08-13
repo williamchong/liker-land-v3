@@ -12,7 +12,7 @@
       <slot name="header-action" />
     </div>
 
-    <template v-if="isDesktopScreen && isShowTTSSamples">
+    <template v-if="isDesktopScreen && shouldShowTTSSamples">
       <aside class="relative flex justify-end w-full bg-theme-black min-h-max overflow-hidden">
         <PaywallBookstoreBackdrop class="!opacity-20" />
         <div
@@ -164,7 +164,7 @@
         <div class="grow">
           <slot name="affiliate-alert" />
           <PricingPageIntroSection
-            v-if="!(isShowTTSSamples && isDesktopScreen)"
+            v-if="!(shouldShowTTSSamples && isDesktopScreen)"
             v-model:tier="selectedTier"
             class="mb-4 laptop:mb-6"
             :title="campaignContent?.title ?? fallbackTitle"
@@ -175,7 +175,7 @@
             @show-voices="isVoicesModalOpen = true"
           />
           <TTSSamplesSection
-            v-if="isShowTTSSamples"
+            v-if="shouldShowTTSSamples"
             :affiliate-voices="affiliateVoices"
             :affiliate-liker-id="affiliateLikerId"
             :affiliate-exclusive-badge-text="ttsExclusiveBadgeText"
@@ -453,16 +453,6 @@ const shouldShowTTSSamples = computed(() => {
   return getRouteQuery('samples') === '1' || isCustomVoiceCampaign.value
     || hasAffiliateVoices.value || hasReferrerSystemVoice.value
 })
-
-const ttsSamplesABTest = shouldShowTTSSamples.value || isTTSSamplesForceHidden.value
-  ? undefined
-  : useABTest({
-      experimentKey: computed(() => isDesktopScreen.value
-        ? 'pricing-page-tts-sample-desktop'
-        : 'pricing-page-tts-sample-mobile'),
-    })
-
-const isShowTTSSamples = computed(() => shouldShowTTSSamples.value || ttsSamplesABTest?.isVariant('tts-sample'))
 
 const utmCampaign = computed(() => {
   return getRouteQuery('utm_campaign') || props.utmCampaign
