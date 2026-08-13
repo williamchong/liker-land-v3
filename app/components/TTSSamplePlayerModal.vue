@@ -98,6 +98,12 @@
           v-text="sample.attribution.text"
         />
       </footer>
+
+      <footer
+        v-if="isPlusUpsellVisible"
+        class="text-xs text-muted text-center"
+        v-text="$t('tts_sample_player_modal_plus_upsell')"
+      />
     </template>
   </UModal>
 </template>
@@ -108,6 +114,9 @@ const props = defineProps<{
   isPlaying: boolean
   currentSegmentIndex: number
   longestSegmentText: string
+  // Ties the sample back to the Plus benefit that sent the viewer here. Only
+  // the pricing page's benefit link sets it; the samples card does not.
+  isPlusUpsellVisible?: boolean
 }>()
 
 const isOpen = defineModel<boolean>('open', { default: false })

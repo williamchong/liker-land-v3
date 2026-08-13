@@ -81,7 +81,24 @@
       </li>
       <li v-if="!isAudioHidden">
         <UIcon name="i-material-symbols-check" />
-        <span v-text="$t('pricing_page_feature_1')" />
+        <i18n-t
+          v-if="isVoiceSampleEnabled"
+          keypath="pricing_page_feature_1"
+          tag="span"
+        >
+          <template #voiceActor>
+            <button
+              type="button"
+              class="underline cursor-pointer"
+              @click="handleShowVoiceSample"
+              v-text="$t('pricing_page_feature_1_voice_actor')"
+            />
+          </template>
+        </i18n-t>
+        <span
+          v-else
+          v-text="$t('pricing_page_feature_1', { voiceActor: $t('pricing_page_feature_1_voice_actor') })"
+        />
       </li>
       <li>
         <UIcon name="i-material-symbols-check" />
@@ -173,6 +190,9 @@ const props = withDefaults(defineProps<{
   isTierSelectorVisible?: boolean
   // The viewer's active tier, marked as "current plan" in the toggle.
   currentTier?: LikerPlusTier
+  // Turns 專屬聲優 into a button that plays a cloned-voice sample. Only the
+  // pricing page hosts the player, so it stays plain text everywhere else.
+  isVoiceSampleEnabled?: boolean
 }>(), {
   isTitleCenter: false,
   isTitleHidden: false,
@@ -181,9 +201,10 @@ const props = withDefaults(defineProps<{
   prependedFeatures: () => [],
   isTierSelectorVisible: false,
   currentTier: undefined,
+  isVoiceSampleEnabled: false,
 })
 
-const emit = defineEmits<{ showVoices: [] }>()
+const emit = defineEmits<{ showVoices: [], showVoiceSample: [] }>()
 
 const selectedTier = defineModel<LikerPlusTier>('tier', { default: 'plus' })
 
@@ -252,6 +273,11 @@ function handleClickLibrary() {
 function handleShowVoices() {
   useLogEvent('pricing_benefit_click_civic_voices')
   emit('showVoices')
+}
+
+function handleShowVoiceSample() {
+  useLogEvent('pricing_benefit_click_voice_sample')
+  emit('showVoiceSample')
 }
 
 function handleSelectTier(tier: LikerPlusTier) {

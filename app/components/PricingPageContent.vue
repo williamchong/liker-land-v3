@@ -63,7 +63,9 @@
               :prepended-features="prependedFeatures"
               :is-tier-selector-visible="isTierSelectorVisible"
               :current-tier="likerPlusTier"
+              :is-voice-sample-enabled="isVoiceSampleLinkEnabled"
               @show-voices="isVoicesModalOpen = true"
+              @show-voice-sample="handleShowVoiceSample"
             />
           </div>
         </div>
@@ -172,7 +174,9 @@
             :prepended-features="prependedFeatures"
             :is-tier-selector-visible="isTierSelectorVisible"
             :current-tier="likerPlusTier"
+            :is-voice-sample-enabled="isVoiceSampleLinkEnabled"
             @show-voices="isVoicesModalOpen = true"
+            @show-voice-sample="handleShowVoiceSample"
           />
           <TTSSamplesSection
             v-if="shouldShowTTSSamples"
@@ -335,6 +339,15 @@
         />
 
         <PlusVoicesModal v-model:open="isVoicesModalOpen" />
+
+        <TTSSamplePlayerModal
+          v-model:open="isVoiceSampleModalOpen"
+          :sample="flagshipCloneSample"
+          :is-playing="isPlayingVoiceSample"
+          :current-segment-index="voiceSampleSegmentIndex"
+          :longest-segment-text="voiceSampleLongestSegmentText"
+          is-plus-upsell-visible
+        />
       </div>
     </div>
   </div>
@@ -347,6 +360,7 @@ import { getSystemVoiceByOwnerLikerId } from '~~/shared/utils/tts-sample'
 
 const localeRoute = useLocaleRoute()
 const isDesktopScreen = useDesktopScreen()
+const { handleError } = useErrorHandler()
 const { t: $t } = useI18n()
 const getRouteQuery = useRouteQuery()
 const { isApp } = useAppDetection()
@@ -405,6 +419,46 @@ function handlePricingPanelLeave(el: Element, done: () => void) {
   })
 }
 const isVoicesModalOpen = ref(false)
+
+// The benefit line is always on screen, so the sample is reachable without the
+// samples card displacing the pricing box — the shape the card test ruled out.
+const voiceSampleABTest = useABTest({ experimentKey: 'pricing-page-voice-link' })
+const isVoiceSampleLinkEnabled = computed(() =>
+  getRouteQuery('voice_link') === '1' || voiceSampleABTest.isVariant('voice-link'))
+
+const isVoiceSampleModalOpen = ref(false)
+const {
+  flagshipCloneSample,
+  currentSegmentIndex: voiceSampleSegmentIndex,
+  longestSegmentText: voiceSampleLongestSegmentText,
+  isPlaying: isPlayingVoiceSample,
+  play: playVoiceSample,
+  stop: stopVoiceSample,
+} = useTTSSamplesPlayer({
+  onError: (error: unknown) => handleError(error),
+  onEnd: (sampleId) => {
+    useLogEvent('tts_sample_play_complete', { sample: sampleId, placement: 'benefit_link' })
+    isVoiceSampleModalOpen.value = false
+  },
+  affiliateVoices: () => props.affiliateVoices,
+  affiliateLikerId: () => props.affiliateLikerId,
+  affiliateExclusiveBadgeText: () => props.ttsExclusiveBadgeText,
+  includeFlagshipCloneSample: true,
+})
+
+function handleShowVoiceSample() {
+  const sample = flagshipCloneSample.value
+  if (!sample) return
+  isVoiceSampleModalOpen.value = true
+  useLogEvent('tts_sample_play', { sample: sample.id, placement: 'benefit_link' })
+  playVoiceSample(sample.id)
+}
+
+watch(isVoiceSampleModalOpen, (isOpen) => {
+  if (isOpen || !isPlayingVoiceSample.value) return
+  useLogEvent('tts_sample_stop', { sample: flagshipCloneSample.value?.id, placement: 'benefit_link' })
+  stopVoiceSample()
+})
 
 const isTierSelectorVisible = computed(() =>
   props.isCivicVisible && isCivicOfferable.value && canStartSubscribeFlow.value)

@@ -83,3 +83,11 @@ export function getSystemVoiceByOwnerLikerId(
   if (!likerId) return undefined
   return SYSTEM_VOICES_BY_OWNER[normalizeLikerId(likerId)]
 }
+
+// Shown to visitors with no referrer so the pricing page's "record your own
+// voice" claim always demos a real person's cloned voice, never a stock one.
+const FLAGSHIP_SYSTEM_VOICE_OWNER = 'withthepoons'
+
+export function getFlagshipSystemVoice(): SystemVoice | undefined {
+  return SYSTEM_VOICES_BY_OWNER[FLAGSHIP_SYSTEM_VOICE_OWNER]
+}
