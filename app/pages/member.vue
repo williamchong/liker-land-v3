@@ -5,7 +5,7 @@
     class="min-h-screen"
     :is-civic-visible="true"
     :initial-tier="initialTier"
-    :fallback-title="pageTitle"
+    :fallback-title="heroTitle"
     :is-processing-subscription="checkout.isProcessingSubscription.value"
     :trial-period-days="trialPeriodDays"
     :must-collect-payment-method="mustCollectPaymentMethod"
@@ -349,6 +349,9 @@ const structuredData = computed(() => {
 })
 
 const pageTitle = computed(() => $t('pricing_page_title'))
+// The h1 is a value-prop headline, not the document title — a tab label and a
+// hero headline have different jobs, so they no longer share a key.
+const heroTitle = computed(() => $t('pricing_page_hero_title'))
 const pageDescription = computed(() => $t('pricing_page_description'))
 const canonicalURL = computed(() => `${baseURL}/member`)
 
