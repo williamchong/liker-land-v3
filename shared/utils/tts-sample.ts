@@ -86,8 +86,13 @@ export function getSystemVoiceByOwnerLikerId(
 
 // Shown to visitors with no referrer so the pricing page's "record your own
 // voice" claim always demos a real person's cloned voice, never a stock one.
-const FLAGSHIP_SYSTEM_VOICE_OWNER = 'withthepoons'
+// Non-TW falls back to Cantonese: there is no owner-lent English clone.
+const FLAGSHIP_SYSTEM_VOICE_OWNER_DEFAULT = 'withthepoons'
+const FLAGSHIP_SYSTEM_VOICE_OWNER_TW = 'astrohsu99'
 
-export function getFlagshipSystemVoice(): SystemVoice | undefined {
-  return getSystemVoiceByOwnerLikerId(FLAGSHIP_SYSTEM_VOICE_OWNER)
+export function getFlagshipSystemVoice(country?: string | null): SystemVoice | undefined {
+  const owner = country === 'TW'
+    ? FLAGSHIP_SYSTEM_VOICE_OWNER_TW
+    : FLAGSHIP_SYSTEM_VOICE_OWNER_DEFAULT
+  return getSystemVoiceByOwnerLikerId(owner)
 }

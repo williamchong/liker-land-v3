@@ -14,6 +14,7 @@ interface TTSSamplesPlayerOptions {
 export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
   const { onError, onEnd, affiliateVoices, affiliateLikerId, affiliateExclusiveBadgeText } = options
   const { t: $t } = useI18n()
+  const { detectedCountry } = useDetectedGeolocation()
   const affiliateVoicesComputed = computed(() => toValue(affiliateVoices) ?? [])
   const { getVoiceAvatar } = useTTSVoice({ affiliateVoices: affiliateVoicesComputed })
 
@@ -161,7 +162,7 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
   const flagshipCloneSample = computed<TTSSample | null>(() => {
     const referred = affiliateSamples.value[0] ?? referrerSystemVoiceSamples.value[0]
     if (referred) return referred
-    const voice = getFlagshipSystemVoice()
+    const voice = getFlagshipSystemVoice(detectedCountry.value)
     return voice ? buildSystemVoiceSample(voice) : null
   })
 
