@@ -1,7 +1,7 @@
 import type { AffiliateVoiceData } from '~~/shared/types/custom-voice'
-import type { TTSSampleLanguage } from '~~/shared/utils/tts-sample'
+import type { SystemVoice, TTSSampleLanguage } from '~~/shared/utils/tts-sample'
 import { encodeAffiliateVoiceId } from '~~/shared/utils/tts-sig'
-import { getAffiliateSampleScript, getSystemVoiceByOwnerLikerId, getTTSSampleText } from '~~/shared/utils/tts-sample'
+import { getAffiliateSampleScript, getFlagshipSystemVoice, getSystemVoiceByOwnerLikerId, getTTSSampleText } from '~~/shared/utils/tts-sample'
 
 interface TTSSamplesPlayerOptions {
   onError?: (error: unknown) => void
@@ -9,10 +9,13 @@ interface TTSSamplesPlayerOptions {
   affiliateVoices?: MaybeRefOrGetter<AffiliateVoiceData[] | undefined>
   affiliateLikerId?: MaybeRefOrGetter<string | undefined>
   affiliateExclusiveBadgeText?: MaybeRefOrGetter<string | undefined>
+  // Appends the flagship clone as a fallback so `flagshipCloneSample` is always
+  // playable. Off by default — the samples card shows its own curated list.
+  includeFlagshipCloneSample?: boolean
 }
 
 export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
-  const { onError, onEnd, affiliateVoices, affiliateLikerId, affiliateExclusiveBadgeText } = options
+  const { onError, onEnd, affiliateVoices, affiliateLikerId, affiliateExclusiveBadgeText, includeFlagshipCloneSample } = options
   const { t: $t } = useI18n()
   const affiliateVoicesComputed = computed(() => toValue(affiliateVoices) ?? [])
   const { getVoiceAvatar } = useTTSVoice({ affiliateVoices: affiliateVoicesComputed })
@@ -119,18 +122,14 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
     })
   })
 
-  // A referrer who owns a built-in voice gets it surfaced alongside the
-  // defaults, even without an affiliate config.
-  const referrerSystemVoiceSamples = computed<TTSSample[]>(() => {
-    const voice = getSystemVoiceByOwnerLikerId(toValue(affiliateLikerId))
-    if (!voice) return []
+  function buildSystemVoiceSample(voice: SystemVoice): TTSSample {
     const languageVoice = `${voice.language}_${voice.voiceId}`
     const sampleId = `system-${voice.voiceId}`
     const query = new URLSearchParams({
       voice_id: voice.voiceId,
       language: voice.language,
     }).toString()
-    return [{
+    return {
       id: sampleId,
       title: voice.name,
       description: getSampleDescription(voice.language),
@@ -144,14 +143,39 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
       language: voice.language,
       languageVoice,
       avatarSrc: getVoiceAvatar(languageVoice),
-    }]
+    }
+  }
+
+  // A referrer who owns a built-in voice gets it surfaced alongside the
+  // defaults, even without an affiliate config.
+  const referrerSystemVoiceSamples = computed<TTSSample[]>(() => {
+    const voice = getSystemVoiceByOwnerLikerId(toValue(affiliateLikerId))
+    return voice ? [buildSystemVoiceSample(voice)] : []
+  })
+
+  // Only a fallback: a referrer's own clone always tells the better story, and
+  // skipping it here keeps the flagship from appearing twice.
+  const flagshipCloneSamples = computed<TTSSample[]>(() => {
+    if (!includeFlagshipCloneSample) return []
+    if (affiliateSamples.value.length || referrerSystemVoiceSamples.value.length) return []
+    const voice = getFlagshipSystemVoice()
+    return voice ? [buildSystemVoiceSample(voice)] : []
   })
 
   const samples = computed<TTSSample[]>(() => [
     ...defaultSamples.value,
     ...referrerSystemVoiceSamples.value,
     ...affiliateSamples.value,
+    ...flagshipCloneSamples.value,
   ])
+
+  // The one cloned voice to demo when there's only room for one.
+  const flagshipCloneSample = computed<TTSSample | null>(() =>
+    affiliateSamples.value[0]
+    ?? referrerSystemVoiceSamples.value[0]
+    ?? flagshipCloneSamples.value[0]
+    ?? null,
+  )
 
   const activeSampleId = ref<string | null>(null)
   const isPlaying = ref(false)
@@ -267,6 +291,7 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
 
   return {
     samples,
+    flagshipCloneSample,
 
     activeSample,
     activeSampleId: readonly(activeSampleId),

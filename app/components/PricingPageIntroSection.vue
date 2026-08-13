@@ -29,7 +29,9 @@
       :prepended-features="props.prependedFeatures"
       :is-tier-selector-visible="props.isTierSelectorVisible"
       :current-tier="props.currentTier"
+      :is-voice-sample-enabled="props.isVoiceSampleEnabled"
       @show-voices="emit('showVoices')"
+      @show-voice-sample="emit('showVoiceSample')"
     />
   </div>
 </template>
@@ -61,9 +63,13 @@ const props = defineProps({
     type: String as PropType<LikerPlusTier>,
     default: undefined,
   },
+  isVoiceSampleEnabled: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits<{ showVoices: [] }>()
+const emit = defineEmits<{ showVoices: [], showVoiceSample: [] }>()
 
 const selectedTier = defineModel<LikerPlusTier>('tier', { default: 'plus' })
 </script>
