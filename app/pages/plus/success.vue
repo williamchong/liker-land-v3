@@ -1,5 +1,7 @@
 <template>
   <main class="items-center justify-center w-full max-w-xl mx-auto p-4 space-y-4 text-center">
+    <PlusMembershipStamp :has-stamped="hasMembershipLanded" />
+
     <UIcon
       name="i-material-symbols-check-circle-rounded"
       class="text-theme-cyan mb-4"
@@ -87,6 +89,34 @@ const isPeriodMatch = computed(() => {
 // loop until the session actually reports Civic so /account reflects it.
 const isTierMatch = computed(() => !isCivicExpected.value || isCivicMember.value)
 
+// The stamp marks the entitlement landing, not the page loading — it is part of
+// the refresh loop's exit condition below. Guarded on isLikerPlus because that
+// loop can exhaust its retries without the session ever reporting a member.
+const hasMembershipLanded = computed(() => isLikerPlus.value && isTierMatch.value)
+
+const preferredMotion = usePreferredReducedMotion()
+
+// Must outlast the whole sequence in main.css (--plus-stamp-duration plus
+// --plus-stamp-shimmer-duration), so the badge lands and the sweep finishes
+// before any branch below navigates away.
+const PLUS_STAMP_HOLD_MS = 1600
+// Re-armed on every rising edge, not just the first: a failed session fetch
+// mid-poll flaps this false and remounts the badge, replaying the animation
+// from zero against what would otherwise be a spent origin.
+const stampStartedAt = ref<number | null>(null)
+watch(hasMembershipLanded, (value) => {
+  if (value) stampStartedAt.value = performance.now()
+}, { immediate: true })
+
+// Measured from when the stamp started rather than from the call site: the gift
+// poll above can already have outlasted it. Monotonic on purpose — a device
+// clock correction across those polls would otherwise stretch the hold.
+async function holdForStamp() {
+  if (stampStartedAt.value === null || preferredMotion.value === 'reduce') return
+  const remaining = PLUS_STAMP_HOLD_MS - (performance.now() - stampStartedAt.value)
+  if (remaining > 0) await sleep(remaining)
+}
+
 useHead({
   title: $t('subscription_success_page_title'),
   meta: [{ name: 'robots', content: 'noindex, nofollow' }],
@@ -123,7 +153,7 @@ onMounted(async () => {
     isRefreshing.value = true
     await accountStore.refreshSessionInfo()
     let retry = 0
-    while (!(isLikerPlus.value && isPeriodMatch.value && isTierMatch.value) && retry < 4) {
+    while (!(hasMembershipLanded.value && isPeriodMatch.value) && retry < 4) {
       await sleep(5000)
       await accountStore.refreshSessionInfo()
       retry++
@@ -211,7 +241,19 @@ onMounted(async () => {
       }), { replace: true })
     }
 
-    if (giftNFTClassId && giftCartId && giftPaymentId && giftClaimToken) {
+    const hasGiftToClaim = !!(giftNFTClassId && giftCartId && giftPaymentId && giftClaimToken)
+    const redirectRoute = accountStore.plusRedirectRoute
+    // Only the branches that stay put swap the loading state for the CTA before
+    // the hold. The others hand off elsewhere, where that CTA would point at the
+    // library or the account rather than at where the user is about to be sent.
+    const shouldShowContinueButton = !hasGiftToClaim
+      && (isCivic.value || !(redirectRoute?.name || affiliateFrom.value))
+    if (shouldShowContinueButton) isRefreshing.value = false
+    // Every branch below leaves within a second or instantly, so the stamp only
+    // has somewhere to play if the page is held open first.
+    await holdForStamp()
+
+    if (hasGiftToClaim) {
       accountStore.savePlusRedirectRoute(null)
       await navigateTo(localeRoute({
         name: 'claim-page',
@@ -227,30 +269,24 @@ onMounted(async () => {
       // Civic has no library "welcome" to show — the payoff is on the account
       // page (Civic status, member seat-sharing, concierge), so land there.
       accountStore.savePlusRedirectRoute(null)
-      isRefreshing.value = false
       setTimeout(redirectToAccount, 1000)
     }
+    else if (redirectRoute && redirectRoute.name) {
+      // Book-purchase/upsell: return to the book the user came from.
+      accountStore.savePlusRedirectRoute(null)
+      await navigateTo(localeRoute(redirectRoute), { replace: true })
+    }
+    else if (affiliateFrom.value) {
+      // Pure member who subscribed through an affiliate: land on the affiliate's
+      // curated store view so the exclusive voice has somewhere to point, instead
+      // of the bare store where every book looks like it has the affiliate voice.
+      await navigateTo(localeRoute({
+        name: 'store',
+        query: { affiliate: affiliateFrom.value, welcome: '1' },
+      }), { replace: true })
+    }
     else {
-      const redirectRoute = accountStore.plusRedirectRoute
-
-      if (redirectRoute && redirectRoute.name) {
-        // Book-purchase/upsell: return to the book the user came from.
-        accountStore.savePlusRedirectRoute(null)
-        await navigateTo(localeRoute(redirectRoute), { replace: true })
-      }
-      else if (affiliateFrom.value) {
-        // Pure member who subscribed through an affiliate: land on the affiliate's
-        // curated store view so the exclusive voice has somewhere to point, instead
-        // of the bare store where every book looks like it has the affiliate voice.
-        await navigateTo(localeRoute({
-          name: 'store',
-          query: { affiliate: affiliateFrom.value, welcome: '1' },
-        }), { replace: true })
-      }
-      else {
-        isRefreshing.value = false
-        setTimeout(redirectToLibrary, 1000)
-      }
+      setTimeout(redirectToLibrary, 1000)
     }
   }
   catch (error) {
