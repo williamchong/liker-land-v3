@@ -166,17 +166,15 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
     return voice ? buildSystemVoiceSample(voice) : null
   })
 
-  const activeSampleId = ref<string | null>(null)
+  // Snapshotted on play rather than looked up by id: `flagshipCloneSample`
+  // recomputes once affiliate voices arrive and lives outside `samples`, so a
+  // live lookup could swap or lose the sample mid-playback.
+  const activeSample = ref<TTSSample | null>(null)
+  const activeSampleId = computed(() => activeSample.value?.id ?? null)
   const isPlaying = ref(false)
   const currentSegmentIndex = ref(0)
 
   const audio = ref<HTMLAudioElement | null>(null)
-
-  const activeSample = computed(() => {
-    if (!activeSampleId.value) return null
-    if (flagshipCloneSample.value?.id === activeSampleId.value) return flagshipCloneSample.value
-    return samples.value.find(sample => sample.id === activeSampleId.value) ?? null
-  })
 
   const segments = computed(() => activeSample.value?.segments ?? [])
 
@@ -249,7 +247,9 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
     stop()
 
     // Set active sample (this will automatically update segments via computed)
-    activeSampleId.value = sampleId
+    activeSample.value = flagshipCloneSample.value?.id === sampleId
+      ? flagshipCloneSample.value
+      : samples.value.find(sample => sample.id === sampleId) ?? null
     // Set up new playback
     currentSegmentIndex.value = 0
     playCurrentSegment()
@@ -271,7 +271,7 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
 
     // Reset all state
     isPlaying.value = false
-    activeSampleId.value = null
+    activeSample.value = null
     currentSegmentIndex.value = 0
   }
 
@@ -283,8 +283,10 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
     samples,
     flagshipCloneSample,
 
-    activeSample,
-    activeSampleId: readonly(activeSampleId),
+    // Not `readonly()`: that deep-freezes the sample and stops it satisfying
+    // the `TTSSample` props it gets bound to.
+    activeSample: computed(() => activeSample.value),
+    activeSampleId,
     isPlaying: readonly(isPlaying),
     currentSegmentIndex: readonly(currentSegmentIndex),
     currentSegmentText: readonly(currentSegmentText),

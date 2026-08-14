@@ -342,7 +342,7 @@
 
         <TTSSamplePlayerModal
           v-model:open="isVoiceSampleModalOpen"
-          :sample="flagshipCloneSample"
+          :sample="activeVoiceSample"
           :is-playing="isPlayingVoiceSample"
           :current-segment-index="voiceSampleSegmentIndex"
           :longest-segment-text="voiceSampleLongestSegmentText"
@@ -426,6 +426,7 @@ const VOICE_SAMPLE_PLACEMENT = 'benefit-link'
 
 const {
   flagshipCloneSample,
+  activeSample: activeVoiceSample,
   activeSampleId: activeVoiceSampleId,
   currentSegmentIndex: voiceSampleSegmentIndex,
   longestSegmentText: voiceSampleLongestSegmentText,
