@@ -1,9 +1,10 @@
 <template>
   <main class="items-center justify-center w-full max-w-xl mx-auto p-4 space-y-4 text-center">
-    <UIcon
-      name="i-material-symbols-check-circle-rounded"
-      class="text-theme-cyan mb-4"
-      size="64"
+    <!-- The check shows while the session refreshes, then flips on the Y axis
+         to reveal the stamped avatar once the entitlement lands. -->
+    <PlusMembershipTada
+      class="mx-auto mb-4"
+      :has-landed="hasMembershipLanded"
     />
 
     <h1
@@ -24,12 +25,14 @@
         : 'subscription_success_continue_button')"
       color="primary"
       :loading="isRedirecting"
+      size="xl"
       @click="isCivic ? redirectToAccount() : redirectToLibrary()"
     />
     <UButton
       v-else
       :label="$t('subscription_success_loading')"
       color="primary"
+      size="xl"
       :loading="true"
     />
   </main>
@@ -37,6 +40,8 @@
 
 <script setup lang="ts">
 import type { RouteLocationRaw } from 'vue-router'
+
+import { PLUS_TADA_TOTAL_MS } from '~/components/PlusMembershipTada.vue'
 
 const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
@@ -87,6 +92,33 @@ const isPeriodMatch = computed(() => {
 // loop until the session actually reports Civic so /account reflects it.
 const isTierMatch = computed(() => !isCivicExpected.value || isCivicMember.value)
 
+// The tada marks the entitlement landing, not the page loading — it is part
+// of the refresh loop's exit condition below. Guarded on isLikerPlus because
+// that loop can exhaust its retries without the session ever reporting a member.
+const hasMembershipLanded = computed(() => isLikerPlus.value && isTierMatch.value)
+
+const preferredMotion = usePreferredReducedMotion()
+
+// Slack over the component's summed sequence so the shimmer fully lands
+// before any branch below navigates away.
+const PLUS_TADA_HOLD_MS = PLUS_TADA_TOTAL_MS + 180
+// Re-armed on every rising edge, not just the first: a failed session fetch
+// mid-poll flaps this false and replays the tada from zero against what
+// would otherwise be a spent origin.
+const tadaStartedAt = ref<number | null>(null)
+watch(hasMembershipLanded, (value) => {
+  if (value) tadaStartedAt.value = performance.now()
+}, { immediate: true })
+
+// Measured from when the tada started rather than from the call site: the
+// gift poll above can already have outlasted it. Monotonic on purpose — a
+// device clock correction across those polls would otherwise stretch the hold.
+async function holdForTada() {
+  if (tadaStartedAt.value === null || preferredMotion.value === 'reduce') return
+  const remaining = PLUS_TADA_HOLD_MS - (performance.now() - tadaStartedAt.value)
+  if (remaining > 0) await sleep(remaining)
+}
+
 useHead({
   title: $t('subscription_success_page_title'),
   meta: [{ name: 'robots', content: 'noindex, nofollow' }],
@@ -123,7 +155,7 @@ onMounted(async () => {
     isRefreshing.value = true
     await accountStore.refreshSessionInfo()
     let retry = 0
-    while (!(isLikerPlus.value && isPeriodMatch.value && isTierMatch.value) && retry < 4) {
+    while (!(hasMembershipLanded.value && isPeriodMatch.value) && retry < 4) {
       await sleep(5000)
       await accountStore.refreshSessionInfo()
       retry++
@@ -211,7 +243,19 @@ onMounted(async () => {
       }), { replace: true })
     }
 
-    if (giftNFTClassId && giftCartId && giftPaymentId && giftClaimToken) {
+    const hasGiftToClaim = !!(giftNFTClassId && giftCartId && giftPaymentId && giftClaimToken)
+    const redirectRoute = accountStore.plusRedirectRoute
+    // Only the branches that stay put swap the loading state for the CTA before
+    // the hold. The others hand off elsewhere, where that CTA would point at the
+    // library or the account rather than at where the user is about to be sent.
+    const shouldShowContinueButton = !hasGiftToClaim
+      && (isCivic.value || !(redirectRoute?.name || affiliateFrom.value))
+    if (shouldShowContinueButton) isRefreshing.value = false
+    // Every branch below leaves within a second or instantly, so the tada
+    // only has somewhere to play if the page is held open first.
+    await holdForTada()
+
+    if (hasGiftToClaim) {
       accountStore.savePlusRedirectRoute(null)
       await navigateTo(localeRoute({
         name: 'claim-page',
@@ -227,30 +271,24 @@ onMounted(async () => {
       // Civic has no library "welcome" to show — the payoff is on the account
       // page (Civic status, member seat-sharing, concierge), so land there.
       accountStore.savePlusRedirectRoute(null)
-      isRefreshing.value = false
       setTimeout(redirectToAccount, 1000)
     }
+    else if (redirectRoute && redirectRoute.name) {
+      // Book-purchase/upsell: return to the book the user came from.
+      accountStore.savePlusRedirectRoute(null)
+      await navigateTo(localeRoute(redirectRoute), { replace: true })
+    }
+    else if (affiliateFrom.value) {
+      // Pure member who subscribed through an affiliate: land on the affiliate's
+      // curated store view so the exclusive voice has somewhere to point, instead
+      // of the bare store where every book looks like it has the affiliate voice.
+      await navigateTo(localeRoute({
+        name: 'store',
+        query: { affiliate: affiliateFrom.value, welcome: '1' },
+      }), { replace: true })
+    }
     else {
-      const redirectRoute = accountStore.plusRedirectRoute
-
-      if (redirectRoute && redirectRoute.name) {
-        // Book-purchase/upsell: return to the book the user came from.
-        accountStore.savePlusRedirectRoute(null)
-        await navigateTo(localeRoute(redirectRoute), { replace: true })
-      }
-      else if (affiliateFrom.value) {
-        // Pure member who subscribed through an affiliate: land on the affiliate's
-        // curated store view so the exclusive voice has somewhere to point, instead
-        // of the bare store where every book looks like it has the affiliate voice.
-        await navigateTo(localeRoute({
-          name: 'store',
-          query: { affiliate: affiliateFrom.value, welcome: '1' },
-        }), { replace: true })
-      }
-      else {
-        isRefreshing.value = false
-        setTimeout(redirectToLibrary, 1000)
-      }
+      setTimeout(redirectToLibrary, 1000)
     }
   }
   catch (error) {
