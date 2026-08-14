@@ -96,9 +96,9 @@ const hasMembershipLanded = computed(() => isLikerPlus.value && isTierMatch.valu
 
 const preferredMotion = usePreferredReducedMotion()
 
-// Must outlast the whole sequence in main.css (--plus-stamp-duration plus
-// --plus-stamp-shimmer-duration), so the badge lands and the sweep finishes
-// before any branch below navigates away.
+// Must outlast the whole sequence in PlusMembershipStamp.vue
+// (--plus-stamp-duration plus --plus-stamp-shimmer-duration), so the badge
+// lands and the sweep finishes before any branch below navigates away.
 const PLUS_STAMP_HOLD_MS = 1600
 // Re-armed on every rising edge, not just the first: a failed session fetch
 // mid-poll flaps this false and remounts the badge, replaying the animation

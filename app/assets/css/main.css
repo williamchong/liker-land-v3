@@ -197,64 +197,9 @@ body {
   animation: book-enter var(--book-enter-duration) cubic-bezier(0.5, 0, 0.9, 0.5) forwards;
 }
 
-/* The three animations below target PlusMembershipStamp.vue. The shimmer starts
-   as the badge settles, so the sequence ends at --plus-stamp-duration plus
-   --plus-stamp-shimmer-duration — PLUS_STAMP_HOLD_MS must stay above that. */
-body {
-  --plus-stamp-duration: 720ms;
-  --plus-stamp-ring-duration: 620ms;
-  --plus-stamp-shimmer-duration: 700ms;
-}
-
-/* A badge is pressed onto the avatar: it falls oversized and turned, compresses
-   past its resting size on impact, then settles. Deliberately less restrained
-   than the book animations — this one runs once per member, ever. */
-@keyframes plus-stamp {
-  from { opacity: 0; transform: translateY(-28px) rotate(-14deg) scale(2.4); }
-  62% { opacity: 1; transform: translateY(0) rotate(2deg) scale(0.92); }
-  to { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
-}
-
-/* Not gated on a state class: all three elements are mounted only once the
-   stamp fires, so their presence is the state. */
-[data-plus-stamp-badge] {
-  animation: plus-stamp var(--plus-stamp-duration) cubic-bezier(0.3, 0.1, 0.3, 1) forwards;
-}
-
-/* A single ring knocked loose by the impact. */
-@keyframes plus-stamp-ring {
-  from { opacity: 0.8; transform: scale(0.94); }
-  to { opacity: 0; transform: scale(1.22); }
-}
-
-[data-plus-stamp-ring] {
-  opacity: 0;
-  animation: plus-stamp-ring var(--plus-stamp-ring-duration) cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  /* Fires on the 62% frame above, where the badge actually lands. A keyframe
-     stop cannot read a custom property, so the two must be changed together. */
-  animation-delay: calc(var(--plus-stamp-duration) * 0.62);
-}
-
-/* One specular pass once the badge has settled, so it reads as a property of
-   the object rather than part of the landing. */
-@keyframes plus-stamp-shimmer {
-  from { opacity: 1; transform: translateX(-120%); }
-  to { opacity: 1; transform: translateX(120%); }
-}
-
-[data-plus-stamp-shimmer] {
-  opacity: 0;
-  animation: plus-stamp-shimmer var(--plus-stamp-shimmer-duration) ease-out forwards;
-  animation-delay: var(--plus-stamp-duration);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .has-book-arrived [data-book-cover],
-  .book-open-leave-active [data-book-cover],
-  /* The badge stays, at rest; the ring and sweep stay at their base opacity 0. */
-  [data-plus-stamp-badge],
-  [data-plus-stamp-ring],
-  [data-plus-stamp-shimmer] {
+  .book-open-leave-active [data-book-cover] {
     animation: none;
   }
 }
