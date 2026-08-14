@@ -63,6 +63,7 @@
               :prepended-features="prependedFeatures"
               :is-tier-selector-visible="isTierSelectorVisible"
               :current-tier="likerPlusTier"
+              :benefits-copy-variant="benefitsCopyVariant"
               is-voice-sample-enabled
               @show-voices="isVoicesModalOpen = true"
               @show-voice-sample="handleShowVoiceSample"
@@ -174,6 +175,7 @@
             :prepended-features="prependedFeatures"
             :is-tier-selector-visible="isTierSelectorVisible"
             :current-tier="likerPlusTier"
+            :benefits-copy-variant="benefitsCopyVariant"
             is-voice-sample-enabled
             @show-voices="isVoicesModalOpen = true"
             @show-voice-sample="handleShowVoiceSample"
@@ -361,7 +363,7 @@ import { getSystemVoiceByOwnerLikerId } from '~~/shared/utils/tts-sample'
 const localeRoute = useLocaleRoute()
 const isDesktopScreen = useDesktopScreen()
 const { handleError } = useErrorHandler()
-const { t: $t } = useI18n()
+const { t: $t, locale } = useI18n()
 const getRouteQuery = useRouteQuery()
 const { isApp } = useAppDetection()
 const { canStartSubscribeFlow, ensureOfferings } = useNativeIAP()
@@ -508,6 +510,19 @@ const shouldShowTTSSamples = computed(() => {
   if (isTTSSamplesForceHidden.value) return false
   return getRouteQuery('samples') === '1' || isCustomVoiceCampaign.value
     || hasAffiliateVoices.value || hasReferrerSystemVoice.value
+})
+
+// Chinese-only, matching usePricingPageCampaign — English is a small fraction
+// of pricing traffic and would only add noise. Resolved here so the upsell
+// modal and gift pages stay on the control copy.
+const benefitsCopyABTest = locale.value === 'zh-Hant'
+  ? useABTest({ experimentKey: 'pricing-benefits-copy' })
+  : undefined
+
+// An unrecognised flag value falls back to the control copy.
+const benefitsCopyVariant = computed<PricingBenefitsCopyVariant | undefined>(() => {
+  const variant = benefitsCopyABTest?.variant.value
+  return variant === 'variant-a' || variant === 'variant-b' ? variant : undefined
 })
 
 const utmCampaign = computed(() => {
