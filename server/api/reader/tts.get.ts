@@ -58,7 +58,9 @@ async function serveCachedTTS(
   setHeader(event, 'content-type', contentType)
   setHeader(event, 'cache-control', 'public, max-age=604800')
   setHeader(event, 'accept-ranges', 'bytes')
-  setHeader(event, 'vary', 'Range')
+  // No `vary: Range`: it put the Range header in the cache key, and <audio>
+  // requests varying offsets, so a plain GET matched nothing — 5% browser-hit
+  // rate despite the week-long max-age.
   setHeader(event, 'etag', etag)
   setTTSSourceHeader(event, TTS_SERVER_SOURCE.STORED)
 
@@ -69,6 +71,10 @@ async function serveCachedTTS(
     if (range) {
       const { start, end } = range
       setResponseStatus(event, 206)
+      // System-voice URLs converge across users for shared edge caching.
+      // A publicly cacheable partial could be served for a later full GET as truncated.
+      // `private` avoids shared caching while still allowing browser caching.
+      setHeader(event, 'cache-control', 'private, max-age=604800')
       setHeader(event, 'content-range', `bytes ${start}-${end}/${totalSize}`)
       setHeader(event, 'content-length', end - start + 1)
       return sendStream(event, file.createReadStream({ start, end }))
@@ -340,7 +346,6 @@ export default defineEventHandler(async (event) => {
       setHeader(event, 'content-type', provider.format)
       setHeader(event, 'cache-control', 'public, max-age=604800')
       setHeader(event, 'accept-ranges', 'bytes')
-      setHeader(event, 'vary', 'Range')
       setHeader(event, 'etag', etag)
       setTTSSourceHeader(event, TTS_SERVER_SOURCE.GENERATED)
 
@@ -365,6 +370,9 @@ export default defineEventHandler(async (event) => {
         if (range) {
           const { start, end } = range
           setResponseStatus(event, 206)
+          // See the cached path: a shared cache must not keep a partial under
+          // the bare URL now that `vary: Range` is gone.
+          setHeader(event, 'cache-control', 'private, max-age=604800')
           setHeader(event, 'content-range', `bytes ${start}-${end}/${buffer.length}`)
           setHeader(event, 'content-length', end - start + 1)
           return buffer.subarray(start, end + 1)
