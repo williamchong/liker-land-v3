@@ -1,14 +1,22 @@
 import type { AffiliateVoiceData } from '~~/shared/types/custom-voice'
+import type { TTSSampleAction } from '~~/shared/constants/analytics'
 import type { SystemVoice, TTSSampleLanguage } from '~~/shared/utils/tts-sample'
 import { encodeAffiliateVoiceId } from '~~/shared/utils/tts-sig'
 import { getAffiliateSampleScript, getFlagshipSystemVoice, getSystemVoiceByOwnerLikerId, getTTSSampleText } from '~~/shared/utils/tts-sample'
 
 interface TTSSamplesPlayerOptions {
   onError?: (error: unknown) => void
-  onEnd?: (sampleId: string | null) => void
+  onEnd?: () => void
   affiliateVoices?: MaybeRefOrGetter<AffiliateVoiceData[] | undefined>
   affiliateLikerId?: MaybeRefOrGetter<string | undefined>
   affiliateExclusiveBadgeText?: MaybeRefOrGetter<string | undefined>
+}
+
+// The spinner tracks readiness rather than the `waiting`/`playing` pairing:
+// a `waiting` is not guaranteed a matching `playing`, and an unmatched one
+// leaves the button spinning over audio that is already playing.
+function getCanPlayNow(audio: HTMLAudioElement) {
+  return audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA
 }
 
 export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
@@ -141,6 +149,9 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
       language: voice.language,
       languageVoice,
       avatarSrc: getVoiceAvatar(languageVoice),
+      // These are lent by a real person, and the modal sells them as proof that
+      // a member can clone their own voice — so name the source of the clone.
+      attribution: { text: $t('tts_sample_system_voice_credit', { name: voice.name }) },
     }
   }
 
@@ -172,11 +183,28 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
   const activeSample = ref<TTSSample | null>(null)
   const activeSampleId = computed(() => activeSample.value?.id ?? null)
   const isPlaying = ref(false)
+  const isLoading = ref(false)
   const currentSegmentIndex = ref(0)
+  const segmentProgress = ref(0)
 
   const audio = ref<HTMLAudioElement | null>(null)
+  let errorRetryTimer: ReturnType<typeof setTimeout> | undefined
 
   const segments = computed(() => activeSample.value?.segments ?? [])
+
+  const charOffsets = computed(() => getTTSCharOffsets(segments.value))
+
+  // Character-weighted and blended with the segment's playback time: segments
+  // differ in length, and a one-segment system voice sample would otherwise
+  // jump from 0 straight to 100. Rounded here: it crosses a prop on every tick.
+  const progressPercentage = computed(() => {
+    const offsets = charOffsets.value
+    const total = offsets.at(-1) ?? 0
+    if (!total) return 0
+    const start = offsets[currentSegmentIndex.value] ?? 0
+    const end = offsets[currentSegmentIndex.value + 1] ?? total
+    return Math.round(Math.min(1, (start + (end - start) * segmentProgress.value) / total) * 100)
+  })
 
   const currentSegment = computed(() => {
     return segments.value[currentSegmentIndex.value]
@@ -198,9 +226,39 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
     const newAudio = new Audio()
     newAudio.src = segment.audioSrc || ''
     audio.value = newAudio
+    isLoading.value = true
+    segmentProgress.value = 0
 
     newAudio.onplay = () => {
       isPlaying.value = true
+      // Resuming a stalled element re-buffers before it makes a sound, so keep
+      // the spinner up rather than animating the wave bars over silence.
+      isLoading.value = !getCanPlayNow(newAudio)
+    }
+
+    newAudio.onplaying = () => {
+      isLoading.value = false
+    }
+
+    // A system voice sample synthesizes on a cache miss, so the first play can
+    // stall for seconds with nothing else to show for it.
+    newAudio.onwaiting = () => {
+      isLoading.value = true
+    }
+
+    newAudio.onpause = () => {
+      isPlaying.value = false
+      // A `waiting` that never gets its matching `playing` would otherwise pin
+      // the spinner up for good once the user pauses mid-buffer.
+      isLoading.value = false
+    }
+
+    newAudio.ontimeupdate = () => {
+      const { currentTime, duration } = newAudio
+      if (getCanPlayNow(newAudio)) isLoading.value = false
+      segmentProgress.value = Number.isFinite(duration) && duration > 0
+        ? Math.min(1, currentTime / duration)
+        : 0
     }
 
     newAudio.onended = () => {
@@ -209,10 +267,11 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
 
     newAudio.onerror = (e) => {
       const error = newAudio.error || e
+      isLoading.value = false
       onError?.(error)
 
       // Try to continue with next segment after error
-      setTimeout(() => {
+      errorRetryTimer = setTimeout(() => {
         if (isPlaying.value) {
           playNextSegment()
         }
@@ -222,18 +281,36 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
     return newAudio
   }
 
+  async function startAudio(element: HTMLAudioElement) {
+    try {
+      await element.play()
+    }
+    catch (error) {
+      // A superseded segment rejects after the next one is already loading, so
+      // its state writes would land on the element that replaced it.
+      if (audio.value !== element) return
+      // `play()` rejects when the browser blocks playback (iOS low power mode,
+      // the native WebView). That is not worth an error modal: staying paused
+      // leaves the play button ready to retry.
+      isPlaying.value = false
+      isLoading.value = false
+      if (getIsAbortError(error)) return
+      if (error instanceof DOMException && error.name === 'NotAllowedError') return
+      onError?.(error)
+    }
+  }
+
   async function playCurrentSegment() {
     const segment = currentSegment.value
     if (!segment) return
 
-    const newAudio = createAudio(segment)
-    await newAudio.play()
+    await startAudio(createAudio(segment))
   }
 
   function playNextSegment() {
     if (currentSegmentIndex.value + 1 >= segments.value.length) {
       // All segments played, complete playback
-      onEnd?.(activeSampleId.value)
+      onEnd?.()
       stop()
       return
     }
@@ -253,17 +330,56 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
     // Set up new playback
     currentSegmentIndex.value = 0
     playCurrentSegment()
+
+    return activeSample.value
+  }
+
+  // Pausing keeps the sample loaded: one caller derives the modal's open state
+  // from `activeSample`, so pausing through `stop()` would close the modal.
+  function pause() {
+    audio.value?.pause()
+  }
+
+  function resume() {
+    if (!activeSample.value) return
+    const element = audio.value
+    // A failed element stays attached so the error handler can advance past it;
+    // replaying it only re-rejects, so rebuild the segment instead.
+    if (element && !element.error) {
+      startAudio(element)
+      return
+    }
+    playCurrentSegment()
+  }
+
+  // Returns the action taken so the caller can log it, as `play` does.
+  function togglePlayback(): TTSSampleAction {
+    if (isPlaying.value) {
+      pause()
+      return 'pause'
+    }
+    resume()
+    return 'resume'
   }
 
   function resetAudio() {
-    if (!audio.value) return
-    audio.value.pause()
-    audio.value.src = ''
-    audio.value.load()
-    audio.value.onplay = null
-    audio.value.onended = null
-    audio.value.onerror = null
+    clearTimeout(errorRetryTimer)
+    const element = audio.value
+    if (!element) return
     audio.value = null
+    // Detached before pausing: `pause()` and `load()` queue events that would
+    // otherwise land on the handlers of an element we have already discarded.
+    element.onplay = null
+    element.onplaying = null
+    element.onwaiting = null
+    element.onpause = null
+    element.ontimeupdate = null
+    element.onended = null
+    element.onerror = null
+    element.pause()
+    element.src = ''
+    element.load()
+    isLoading.value = false
   }
 
   function stop() {
@@ -273,6 +389,7 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
     isPlaying.value = false
     activeSample.value = null
     currentSegmentIndex.value = 0
+    segmentProgress.value = 0
   }
 
   onUnmounted(() => {
@@ -288,11 +405,14 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
     activeSample: computed(() => activeSample.value),
     activeSampleId,
     isPlaying: readonly(isPlaying),
+    isLoading: readonly(isLoading),
+    progressPercentage,
     currentSegmentIndex: readonly(currentSegmentIndex),
     currentSegmentText: readonly(currentSegmentText),
     longestSegmentText: readonly(longestSegmentText),
 
     play,
     stop,
+    togglePlayback,
   }
 }

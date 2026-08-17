@@ -30,16 +30,20 @@
 
     <TTSSamplePlayerModal
       v-model:open="isPlayerModalOpen"
-      :sample="selectedSample"
+      :sample="activeTTSSample"
       :is-playing="isPlayingSample"
+      :is-loading="isLoadingSample"
+      :progress-percentage="sampleProgress"
       :current-segment-index="currentSegmentIndex"
       :longest-segment-text="longestSegmentText"
+      @toggle-playback="handleToggleSamplePlayback"
     />
   </UCard>
 </template>
 
 <script setup lang="ts">
 import type { AffiliateVoiceData } from '~~/shared/types/custom-voice'
+import type { TTSSamplePlacement } from '~~/shared/constants/analytics'
 
 const props = defineProps<{
   affiliateVoices?: AffiliateVoiceData[]
@@ -50,20 +54,25 @@ const props = defineProps<{
 const { handleError } = useErrorHandler()
 
 const isPlayerModalOpen = ref(false)
-const selectedSampleId = ref<string | null>(null)
+
+const VOICE_SAMPLE_PLACEMENT: TTSSamplePlacement = 'samples-card'
 
 const {
   samples: ttsSamples,
+  activeSample: activeTTSSample,
   activeSampleId: activeTTSSampleId,
   currentSegmentIndex,
   longestSegmentText,
   isPlaying: isPlayingSample,
+  isLoading: isLoadingSample,
+  progressPercentage: sampleProgress,
   play: playSample,
   stop: stopSample,
+  togglePlayback: toggleSamplePlayback,
 } = useTTSSamplesPlayer({
   onError: (error: unknown) => handleError(error),
   onEnd: () => {
-    useLogEvent('tts_sample_play_complete', { sample: activeTTSSampleId.value })
+    useLogTTSSample('play_complete', { sample: activeTTSSample.value, placement: VOICE_SAMPLE_PLACEMENT })
     isPlayerModalOpen.value = false
   },
   affiliateVoices: () => props.affiliateVoices,
@@ -71,34 +80,29 @@ const {
   affiliateExclusiveBadgeText: () => props.affiliateExclusiveBadgeText,
 })
 
-const selectedSample = computed(() =>
-  selectedSampleId.value
-    ? ttsSamples.value.find(s => s.id === selectedSampleId.value) ?? null
-    : null,
-)
-
 watch(isPlayerModalOpen, (open) => {
   if (open) return
   if (activeTTSSampleId.value) {
-    useLogEvent('tts_sample_stop', { sample: activeTTSSampleId.value })
+    useLogTTSSample('stop', { sample: activeTTSSample.value, placement: VOICE_SAMPLE_PLACEMENT })
     stopSample()
   }
-  selectedSampleId.value = null
 })
+
+function handleToggleSamplePlayback() {
+  useLogTTSSample(toggleSamplePlayback(), { sample: activeTTSSample.value, placement: VOICE_SAMPLE_PLACEMENT })
+}
 
 function handleSampleClick(sample: { id: string, languageVoice: string }) {
   const sampleId = sample.id
-  useLogEvent('tts_sample_click', { sample: sampleId })
 
   if (isPlayingSample.value && activeTTSSampleId.value === sampleId) {
     isPlayerModalOpen.value = false
     return
   }
 
-  selectedSampleId.value = sampleId
+  const playingSample = playSample(sampleId)
   isPlayerModalOpen.value = true
 
-  useLogEvent('tts_sample_play', { sample: sampleId })
-  playSample(sampleId)
+  useLogTTSSample('play', { sample: playingSample, placement: VOICE_SAMPLE_PLACEMENT })
 }
 </script>
