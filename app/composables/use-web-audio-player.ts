@@ -273,6 +273,7 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
         const segment = index <= end ? segments[index] : undefined
         if (!segment) return // Window already warm.
 
+        const base = currentIndex
         try {
           // Timeout because a cold segment blocks on full synthesis server-side,
           // which would otherwise stall the whole runway behind it.
@@ -290,7 +291,11 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
           // Bad network; the next track change re-arms us.
           return
         }
-        warmedThrough = index
+        // load() and stop() clear warmBase, so a mark can't outlive the book it
+        // was fetched for. A backward seek leaves the playhead behind the mark;
+        // a forward one keeps it true, the index it counts being absolute.
+        if (warmBase !== base) return
+        if (currentIndex >= base) warmedThrough = index
       }
     }
     finally {
@@ -449,7 +454,9 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
 
   function resume(): boolean {
     const audio = getActiveAudio()
-    if (!audio) return false
+    // An errored element cannot resume — its source has to be reloaded — so
+    // report failure and let the caller fall back to a full load.
+    if (!audio || audio.error) return false
     active = true
     backgroundInterrupted = false
     audio.play()?.catch((e) => {
@@ -530,6 +537,12 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     return getActiveAudio()?.currentSrc || ''
   }
 
+  // The idle element's N+1 plus everything runWarm has drained into the service
+  // worker cache, which is what `warmedThrough` counts from the playhead.
+  function getWarmRunway(): number {
+    return Math.max(warmedThrough - currentIndex, 0)
+  }
+
   return {
     load,
     resume,
@@ -541,6 +554,7 @@ export function useWebAudioPlayer(): TTSAudioPlayer {
     getPosition,
     wasInterruptedByBackground,
     getCurrentURL,
+    getWarmRunway,
     on,
   }
 }
