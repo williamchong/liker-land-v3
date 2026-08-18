@@ -15,6 +15,7 @@ import {
   derivePortraitFromDocs,
   filterMeaningfulKeywords,
   getCandidateClassId,
+  getIsSignalBook,
   getTopAffinityKeys,
   scoreCandidates,
 } from '~~/shared/utils/recommendation'
@@ -150,10 +151,25 @@ async function buildUserPortrait(wallet: string): Promise<UserAffinityPortrait> 
   // appear more than once — dedupe or its affinity gets counted twice.
   const wishlistClassIds = [...new Set(bookListItems.map(item => item.nftClassId.toLowerCase()))]
 
-  const metadataClassIds = [...new Set([
-    ...bookEntries.map(entry => entry.nftClassId.toLowerCase()),
-    ...wishlistClassIds,
-  ])]
+  // The gate is settled by the docs alone — the metadata fan-out below feeds
+  // affinity, which a cold-start feed never reads. Fetching it first would buy
+  // ~50 upstream calls to answer a question already answered.
+  const engagedClassIds = bookEntries.map(entry => entry.nftClassId.toLowerCase())
+  const signalBookCount = bookEntries.filter(getIsSignalBook).length + wishlistClassIds.length
+  if (signalBookCount < FOR_YOU_MIN_SIGNAL_BOOKS) {
+    return {
+      genres: {},
+      authors: {},
+      keywords: {},
+      languages: {},
+      engagedClassIds,
+      wishlistClassIds,
+      recommendedClassIds: [],
+      signalBookCount,
+    }
+  }
+
+  const metadataClassIds = [...new Set([...engagedClassIds, ...wishlistClassIds])]
   const metadataByClassId = await fetchPortraitMetadataByClassIds(metadataClassIds)
 
   return derivePortraitFromDocs(bookEntries, wishlistClassIds, metadataByClassId, Date.now())
@@ -230,6 +246,19 @@ async function fetchEngagedBookClassIds(wallet: string): Promise<string[]> {
   return snapshot.docs.map(doc => doc.id.toLowerCase())
 }
 
+// Resolves undefined once the budget runs out. The indexer fetch re-arms its own
+// per-attempt abort signal, so an external one gets clobbered — racing the
+// deadline is what actually bounds it. The abandoned request settles on its own;
+// its rejection is swallowed so a dropped page can't surface as unhandled.
+function withDeadline<T>(promise: Promise<T>, ms: number): Promise<T | undefined> {
+  promise.catch(() => {})
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const expiry = new Promise<undefined>((resolve) => {
+    timer = setTimeout(() => resolve(undefined), ms)
+  })
+  return Promise.race([promise, expiry]).finally(() => clearTimeout(timer))
+}
+
 // Owning a book writes no Firestore doc until it is opened, so ownership has to
 // come from the indexer — this is the half of the shelf the portrait can't see.
 // Pages arrive newest-acquired first, so a capped drain drops the coldest tail.
@@ -239,10 +268,18 @@ async function fetchOwnedBookClassIds(wallet: string): Promise<string[]> {
   let key: string | undefined
   try {
     for (let page = 0; page < OWNED_BOOKS_MAX_PAGES; page += 1) {
-      const response = await fetchTokenBookNFTsByAccount(wallet, { limit: OWNED_BOOKS_PAGE_SIZE, key })
+      // Checked before each page, not after: one wedged page would otherwise run
+      // to the indexer's own 30s x 3 policy and blow this budget many times over.
+      const remaining = deadline - Date.now()
+      if (remaining <= 0) break
+      const response = await withDeadline(
+        fetchTokenBookNFTsByAccount(wallet, { limit: OWNED_BOOKS_PAGE_SIZE, key }),
+        remaining,
+      )
+      if (!response) break
       classIds.push(...response.data.map(nftClass => nftClass.address.toLowerCase()))
       const nextKey = getIndexerNextKey(response, OWNED_BOOKS_PAGE_SIZE)
-      if (!nextKey || Date.now() > deadline) break
+      if (!nextKey) break
       key = nextKey.toString()
     }
   }
@@ -418,11 +455,35 @@ async function computeForYouRecommendations(
 
   const isColdStart = portrait.signalBookCount < FOR_YOU_MIN_SIGNAL_BOOKS && !seed
   if (isColdStart) {
-    // The popular list is raw upstream data, so it needs the same gate as any
-    // other candidate — otherwise a new reader's fallback feed is the one place
-    // adult and already-read books slip through.
-    const products = (await fetchCachedPopularPool(isLibrary)).filter(getIsProductEligible)
-    return buildFeedResponse(products, false, limit)
+    // Latest is best-effort; losing popular still fails the compute, which is
+    // what lets the caller fall back to a stale feed cache.
+    const [popularProducts, latestProducts] = await Promise.all([
+      fetchCachedPopularPool(isLibrary),
+      fetchCachedLatestPool(isLibrary).catch((error) => {
+        console.warn('[for-you] Cold-start latest pool failed:', error)
+        return [] as BookstoreCMSProduct[]
+      }),
+    ])
+    // Run through the same ranking as the personalized path. An empty portrait
+    // scores on priors alone: a book that is both popular and recent outranks one
+    // that is merely popular, a wishlisted book rises, and the diversity guard
+    // breaks up author runs. Latest also extends the tail, so a reader who
+    // already owns much of the popular list still gets a full page. Without this
+    // the tab renders a reordering-free copy of the popular listing next to it.
+    // The pools are raw upstream data, so they need the same gate as any other
+    // candidate — otherwise a new reader's fallback feed is the one place adult
+    // and already-read books slip through.
+    const coldCandidates = mergeCandidatePools([
+      { products: popularProducts, isPopular: true },
+      { products: latestProducts, isLatest: true },
+    ])
+      .filter(candidate => getIsProductEligible(candidate.product))
+      .map(candidate => ({
+        ...candidate,
+        isWishlisted: wishlistClassIdSet.has(getCandidateClassId(candidate.product)),
+      }))
+    const coldRanked = applyDiversityGuard(scoreCandidates(coldCandidates, portrait))
+    return buildFeedResponse(coldRanked.map(candidate => candidate.product), false, limit)
   }
 
   const topGenres = getTopAffinityKeys(portrait.genres, CANDIDATE_GENRE_POOL_COUNT)

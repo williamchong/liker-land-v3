@@ -5,6 +5,7 @@ import {
   computeBookEngagementWeight,
   derivePortraitFromDocs,
   filterMeaningfulKeywords,
+  getIsSignalBook,
   getTopAffinityKeys,
   scoreCandidates,
 } from '~~/shared/utils/recommendation'
@@ -97,6 +98,44 @@ describe('computeBookEngagementWeight', () => {
     )
     expect(stale).toBeLessThan(fresh)
     expect(stale).toBeGreaterThan(0)
+  })
+})
+
+describe('getIsSignalBook', () => {
+  // The gate the cold-start feed turns on, settled from Firestore docs alone —
+  // so it must agree with what derivePortraitFromDocs counts.
+  it('clears the bar at roughly 40 seconds of reading', () => {
+    expect(getIsSignalBook(makeEntry({ totalReadingTimeMs: 20_000 }))).toBe(false)
+    expect(getIsSignalBook(makeEntry({ totalReadingTimeMs: 60_000 }))).toBe(true)
+  })
+
+  it('counts an abandoned book as no signal however long it was read', () => {
+    expect(getIsSignalBook(
+      makeEntry({ totalReadingTimeMs: 600 * 60_000, didNotFinishAtMs: NOW }),
+    )).toBe(false)
+  })
+
+  it('counts a barely-read book that was completed or borrowed', () => {
+    expect(getIsSignalBook(makeEntry({ totalReadingTimeMs: 0, completedAtMs: NOW }))).toBe(true)
+    expect(getIsSignalBook(makeEntry({ totalReadingTimeMs: 0, plusBorrowedAtMs: NOW }))).toBe(true)
+  })
+
+  it('does not decay, so an old book still counts toward the gate', () => {
+    expect(getIsSignalBook(
+      makeEntry({ totalReadingTimeMs: 60 * 60_000, lastOpenedTimeMs: NOW - 400 * DAY_MS }),
+    )).toBe(true)
+  })
+
+  it('agrees with the count derivePortraitFromDocs reports', () => {
+    const entries = [
+      makeEntry({ nftClassId: '0xaaa', totalReadingTimeMs: 60_000 }),
+      makeEntry({ nftClassId: '0xbbb', totalReadingTimeMs: 20_000 }),
+      makeEntry({ nftClassId: '0xccc', totalReadingTimeMs: 600 * 60_000, didNotFinishAtMs: NOW }),
+    ]
+    const wishlist = ['0xddd']
+    const portrait = derivePortraitFromDocs(entries, wishlist, {}, NOW)
+    expect(entries.filter(getIsSignalBook).length + wishlist.length)
+      .toBe(portrait.signalBookCount)
   })
 })
 
@@ -384,6 +423,67 @@ describe('applyDiversityGuard', () => {
     ]
     const result = applyDiversityGuard(sorted)
     expect(result).toHaveLength(3)
+  })
+})
+
+describe('cold-start ranking', () => {
+  // Mirrors the cold-start branch of computeForYouRecommendations: the popular
+  // and latest pools scored against an empty portrait, then diversity-guarded.
+  const coldPortrait = makePortrait({ signalBookCount: 0 })
+
+  function rankCold(candidates: RecommendationCandidate[]) {
+    return applyDiversityGuard(scoreCandidates(candidates, coldPortrait))
+      .map(candidate => candidate.product.classId)
+  }
+
+  it('lifts a book that is both popular and recent above one that is merely popular', () => {
+    const ranked = rankCold([
+      makeCandidate('0xtop', { popularRank: 0 }),
+      makeCandidate('0xmid', { popularRank: 1 }),
+      makeCandidate('0xboth', { popularRank: 4, latestRank: 0 }),
+    ])
+    expect(ranked[0]).toBe('0xboth')
+  })
+
+  it('does not reproduce the popular listing order', () => {
+    const popularOrder = ['0xa', '0xb', '0xc', '0xd']
+    const ranked = rankCold([
+      ...popularOrder.map((classId, index) => makeCandidate(classId, { popularRank: index })),
+      makeCandidate('0xd', { popularRank: 3, latestRank: 0 }),
+    ])
+    expect(ranked).not.toEqual(popularOrder)
+  })
+
+  it('extends the tail with latest-only books so a picked-over page still fills', () => {
+    const ranked = rankCold([
+      makeCandidate('0xa', { popularRank: 0 }),
+      makeCandidate('0xnew', { latestRank: 0 }),
+    ])
+    // Popular still outranks latest-only, but the feed is no longer capped at
+    // whatever survives eligibility filtering in the popular pool alone.
+    expect(ranked).toEqual(['0xa', '0xnew'])
+  })
+
+  it('raises a wishlisted book above the popular head', () => {
+    const ranked = rankCold([
+      makeCandidate('0xa', { popularRank: 0 }),
+      makeCandidate('0xwish', { popularRank: 9, isWishlisted: true }),
+    ])
+    expect(ranked[0]).toBe('0xwish')
+  })
+
+  it('breaks up an author run the popular listing would keep together', () => {
+    const ranked = rankCold(
+      ['0xa', '0xb', '0xc', '0xd', '0xe'].map((classId, index) =>
+        makeCandidate(classId, {
+          popularRank: index,
+          product: { authorName: index < 4 ? 'Alice' : 'Bob' },
+        }),
+      ),
+    )
+    // Alice holds four of the top five in the popular order; the guard defers
+    // her fourth past Bob.
+    expect(ranked.slice(0, 4)).toContain('0xe')
   })
 })
 
