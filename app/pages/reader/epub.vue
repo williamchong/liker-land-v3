@@ -1378,12 +1378,16 @@ async function extractTTSSegments(book: Book) {
       // clone) so cfiFromRange below can resolve text-node positions back to
       // CFIs in the section document.
       const isInlineFootnote = (node: Element): boolean => {
+        // book.load() parses sections as XHTML, so tagName keeps the authored
+        // case ('a', not 'A') — an uppercase compare here silently matched
+        // nothing and let footnote markers be read aloud mid-sentence.
+        const tagName = node.tagName?.toLowerCase()
         if (FOOTNOTE_CLASS_RE.test(node.className || '')) return true
         if (node.matches?.('a[role="doc-noteref"]')) return true
         if (node.classList?.contains('footnote-number')) return true
-        if ((node.tagName === 'A' || node.tagName === 'SPAN')
+        if ((tagName === 'a' || tagName === 'span')
           && node.getAttribute('epub:type') === 'noteref') return true
-        if (node.tagName === 'A') {
+        if (tagName === 'a') {
           const sup = node.querySelector(':scope > sup')
           if (sup && FOOTNOTE_SUP_RE.test(sup.textContent?.trim() || '')) return true
         }
