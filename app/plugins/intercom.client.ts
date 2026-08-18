@@ -9,9 +9,11 @@ export default defineNuxtPlugin(() => {
     return
   }
 
-  useScriptIntercom({
+  // Registered here only: a second useScriptIntercom() without a trigger would
+  // load the widget at once and undo the deferral.
+  setIntercomScript(useScriptIntercom({
     scriptOptions: {
       trigger: useScriptTriggerIdleTimeout({ timeout: 3000 }),
     },
-  })
+  }))
 })

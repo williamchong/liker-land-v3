@@ -1,8 +1,24 @@
 // Single entry point for Intercom on web. Picks among the native RN SDK
-// bridge, the window.Intercom JS SDK, and a mailto fallback so call sites
-// don't have to branch on bridge / SDK availability themselves.
+// bridge, the web SDK, and a mailto fallback so call sites don't have to
+// branch on bridge / SDK availability themselves.
 
 type OpenResult = { method: 'chat' | 'link' }
+
+// Registered by the Intercom plugin; undefined in app, where it skips the web
+// SDK. Held as the script rather than its proxy: Nuxt Scripts swaps `.proxy`
+// from recording to forwarding on load, so a captured proxy stops delivering.
+type IntercomScript = Pick<ReturnType<typeof useScriptIntercom>, 'proxy' | 'onLoaded'>
+let intercomScript: IntercomScript | undefined
+
+// A logout before the widget boots cannot end Intercom's own session, and a
+// queued shutdown is wrong: a re-login in the meantime would boot the messenger
+// and then immediately kill it. Decide at load, off the session state by then.
+let hasPendingShutdown = false
+let hasShutDown = false
+
+export function setIntercomScript(script: IntercomScript | undefined): void {
+  intercomScript = script
+}
 
 function openMailto(subject?: string, body?: string): void {
   let mailto = `mailto:${CUSTOMER_SERVICE_EMAIL}`
@@ -47,15 +63,41 @@ export function useIntercom() {
     )
   }
 
+  // Queued through the script proxy rather than window.Intercom: the widget
+  // loads on a timer, and unlike show/showNewMessage a late replay is harmless.
   function trackEvent(name: string, params?: Record<string, unknown>): void {
     if (isNativeIntercomAvailable()) {
       postToNative({ type: 'intercomTrackEvent', name, metaData: params })
       return
     }
-    if (isWebIntercomReady()) {
-      window.Intercom('trackEvent', name, params)
-    }
+    intercomScript?.proxy.Intercom('trackEvent', name, params)
   }
 
-  return { show, showNewMessage, trackEvent }
+  // Runs immediately once the widget is up, since onLoaded fires straight away
+  // after load; before that it waits, and a re-login wins the race.
+  function shutdown(): void {
+    hasPendingShutdown = true
+    const script = intercomScript
+    script?.onLoaded(() => {
+      if (!hasPendingShutdown) return
+      hasPendingShutdown = false
+      hasShutDown = true
+      script.proxy.Intercom('shutdown')
+    })
+  }
+
+  // Intercom cannot be revived with update once shut down, so a logout followed
+  // by a re-login in the same session has to boot the messenger again. Boots off
+  // intercomSettings, which the caller has already filled with the app id.
+  function updateUser(settings: Record<string, unknown>): void {
+    hasPendingShutdown = false
+    if (!hasShutDown) {
+      intercomScript?.proxy.Intercom('update', settings)
+      return
+    }
+    hasShutDown = false
+    intercomScript?.proxy.Intercom('boot', { ...window.intercomSettings })
+  }
+
+  return { show, showNewMessage, trackEvent, shutdown, updateUser }
 }

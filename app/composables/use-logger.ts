@@ -222,12 +222,7 @@ export function useLogEvent(eventName: string, eventParams: EventParams = {}) {
       if (items) {
         params.items = JSON.stringify(items)
       }
-      if (isNativeIntercomAvailable()) {
-        postToNative({ type: 'intercomTrackEvent', name: eventName, metaData: params })
-      }
-      else if (isWebIntercomReady()) {
-        window.Intercom('trackEvent', eventName, params)
-      }
+      useIntercom().trackEvent(eventName, params)
     }
     catch (error) {
       console.error(`Failed to log event to Intercom: ${eventName}`, error)
@@ -498,7 +493,7 @@ export function useSetLogUser(user: User | null, locale: string) {
       if (!user) {
         const { app_id } = window.intercomSettings || {}
         window.intercomSettings = app_id ? { app_id } : {}
-        window.Intercom?.('shutdown')
+        useIntercom().shutdown()
       }
       else {
         const userSettings = {
@@ -519,7 +514,7 @@ export function useSetLogUser(user: User | null, locale: string) {
           locale,
         }
         window.intercomSettings = { ...window.intercomSettings, ...userSettings }
-        window.Intercom?.('update', userSettings)
+        useIntercom().updateUser(userSettings)
       }
     }
     catch (error) {
