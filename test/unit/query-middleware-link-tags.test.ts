@@ -7,12 +7,16 @@ const { mockNavigateTo } = vi.hoisted(() => ({ mockNavigateTo: vi.fn() }))
 
 mockNuxtImport('navigateTo', () => mockNavigateTo)
 
-function createRoute(query: Record<string, string> = {}) {
-  return { query, params: {} } as unknown as Parameters<typeof queryMiddleware>[0]
+function createRoute(query: Record<string, string> = {}, path = '/store') {
+  return { path, query, params: {} } as unknown as Parameters<typeof queryMiddleware>[0]
 }
 
-function runMiddleware(toQuery: Record<string, string>, fromQuery: Record<string, string>) {
-  return queryMiddleware(createRoute(toQuery), createRoute(fromQuery))
+function runMiddleware(
+  toQuery: Record<string, string>,
+  fromQuery: Record<string, string>,
+  { toPath = '/plus' } = {},
+) {
+  return queryMiddleware(createRoute(toQuery, toPath), createRoute(fromQuery))
 }
 
 describe('query.global carried link tags', () => {
@@ -57,6 +61,45 @@ describe('query.global carried link tags', () => {
     // `to`; clearing there would wipe the mark the first pass just set.
     runMiddleware({ ll_medium: 'recommendation' }, from)
     expect(useCarriedLinkTags().value.isLLMediumCarried).toBe(true)
+  })
+
+  it('drops a superseded redirect instead of shadowing the next navigation', () => {
+    // Armed by a redirect that never lands: the reader clicks a tagged link
+    // before it resolves, and that click sets both tags itself.
+    runMiddleware({}, { ll_medium: 'recommendation' }, { toPath: '/store/abc' })
+    runMiddleware(
+      { ll_medium: 'plus-cta', ll_source: 'bookstore' },
+      { ll_medium: 'recommendation' },
+      { toPath: '/plus' },
+    )
+    expect(useCarriedLinkTags().value).toEqual({
+      isLLMediumCarried: false,
+      isLLSourceCarried: false,
+    })
+  })
+
+  it('drops a superseded redirect that armed the route the reader then opened', () => {
+    // Same route as the redirect that never landed, but this link sets the tag
+    // itself, so the abandoned pass must not mark it inherited.
+    runMiddleware({}, { ll_medium: 'recommendation' }, { toPath: '/plus' })
+    runMiddleware({ ll_medium: 'plus-cta' }, {}, { toPath: '/plus' })
+    expect(useCarriedLinkTags().value).toEqual({
+      isLLMediumCarried: false,
+      isLLSourceCarried: false,
+    })
+  })
+
+  it('leaves the latch disarmed when a redirect carries no link tags', () => {
+    // A superseded redirect arms /plus, then the reader opens /plus from a link
+    // that sets the tag itself, so that click inherits the abandoned mark.
+    runMiddleware({}, { ll_medium: 'recommendation' }, { toPath: '/plus' })
+    runMiddleware({ ll_medium: 'recommendation' }, { utm_source: 'newsletter' })
+    // Its own redirect pass carries no tag, so it must be free to correct the mark.
+    runMiddleware({ ll_medium: 'recommendation', utm_source: 'newsletter' }, { utm_source: 'newsletter' })
+    expect(useCarriedLinkTags().value).toEqual({
+      isLLMediumCarried: false,
+      isLLSourceCarried: false,
+    })
   })
 
   it('clears the mark once a later navigation carries nothing', () => {
