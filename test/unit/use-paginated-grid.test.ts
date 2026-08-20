@@ -94,3 +94,23 @@ describe('usePaginatedGrid getVisibleCount', () => {
       .toBe(getVisibleCount({ itemsCount: 14, column: 7, maxRows: 2 }))
   })
 })
+
+describe('usePaginatedGrid hasRowTrimming', () => {
+  // Callers skip measuring the rendered grid when this is false, so it must
+  // never be false while a breakpoint still hides something.
+  it('is false only when every breakpoint renders every item', () => {
+    expect.hasAssertions()
+    for (const itemsCount of [0, 1, 5, 9, 14]) {
+      for (const maxRows of [0, 1, 2]) {
+        for (const hasMore of [false, true]) {
+          const { hasRowTrimming, getVisibleCount } = usePaginatedGrid({ itemsCount, hasMore, maxRows })
+          if (hasRowTrimming.value) continue
+          for (let column = 2; column <= 7; column++) {
+            expect(getVisibleCount(column), JSON.stringify({ itemsCount, maxRows, hasMore, column }))
+              .toBe(itemsCount)
+          }
+        }
+      }
+    }
+  })
+})

@@ -66,7 +66,7 @@ const visibleNFTClassIds = computed(() => props.nftClassIds.filter((nftClassId) 
   return true
 }))
 
-const { gridClasses, getGridItemClassesByIndex, getVisibleCount } = usePaginatedGrid({
+const { gridClasses, getGridItemClassesByIndex, getVisibleCount, hasRowTrimming } = usePaginatedGrid({
   itemsCount: computed(() => visibleNFTClassIds.value.length),
   hasMore: false,
   maxRows: computed(() => props.maxRows),
@@ -114,9 +114,9 @@ const { hasBeenVisible: hasSeenBookGrid, element: bookGridElement } = useVisibil
 // JS, which is the duplication this exists to avoid.
 function getRenderedBookCount() {
   const boundCount = visibleNFTClassIds.value.length
-  // A compact grid applies no hiding classes, and without a row cap nothing is
-  // hidden either — skip the forced style recalc for both.
-  if (props.isCompact || !props.maxRows) return boundCount
+  // A compact grid applies no hiding classes, and without row trimming nothing
+  // can be hidden — skip the forced style recalc for both.
+  if (props.isCompact || !hasRowTrimming.value) return boundCount
   const gridElement = unrefElement(bookGridElement)
   if (!gridElement) return boundCount
   const columns = window.getComputedStyle(gridElement).gridTemplateColumns
