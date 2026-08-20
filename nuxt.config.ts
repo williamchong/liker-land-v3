@@ -547,6 +547,10 @@ export default defineNuxtConfig({
   },
 
   security: {
+    // Off on purpose: `true` strips via vite.esbuild.drop, which Vite 8 discards
+    // for oxc, and the object form reprints files behind an identity sourcemap,
+    // which would misplace every Sentry stack trace. No app code logs today.
+    removeLoggers: false,
     headers: {
       contentSecurityPolicy: {
         // Vite injects its dev client and entry chunk without a CSP nonce, and
