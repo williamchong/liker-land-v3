@@ -31,6 +31,9 @@ export default function usePaginatedGrid(props: {
   const itemsCount = computed(() => toValue(props.itemsCount) || 0)
   const hasMore = computed(() => toValue(props.hasMore) || false)
   const maxRows = computed(() => toValue(props.maxRows) || 0)
+  // Without pagination or a row cap the grid renders every bound item, so
+  // callers can skip measuring it.
+  const hasRowTrimming = computed(() => hasMore.value || maxRows.value > 0)
 
   const gridClasses = computed(() => {
     const classes = ['grid']
@@ -57,7 +60,7 @@ export default function usePaginatedGrid(props: {
   }
 
   function getIsItemHidden(index: number, column: number) {
-    if (!hasMore.value && maxRows.value <= 0) return false
+    if (!hasRowTrimming.value) return false
     const isTrimmedLastRow = hasMore.value && index >= itemsCount.value - 1 - columnMax.value
     const isHiddenIncompleteRow = isTrimmedLastRow && isInIncompleteRow(index, column)
     // Whole rows only: under the cap, the ragged last row is trimmed too.
@@ -70,7 +73,7 @@ export default function usePaginatedGrid(props: {
 
   function getGridItemClassesByIndex(index: number) {
     const classes: string[] = []
-    if (!hasMore.value && maxRows.value <= 0) return classes
+    if (!hasRowTrimming.value) return classes
     for (let column = columnMin.value; column <= columnMax.value; column++) {
       if (!getIsItemHidden(index, column)) continue
       const gridItemClass = getColumnClass(column).gridItem
@@ -94,6 +97,7 @@ export default function usePaginatedGrid(props: {
     gridClasses,
     getGridItemClassesByIndex,
     getVisibleCount,
+    hasRowTrimming,
     columnMax,
   }
 }
