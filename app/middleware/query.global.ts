@@ -20,10 +20,16 @@ const CARRY_ON_QUERY_KEYS = [
   'utm_term',
 ]
 
+const LINK_TAG_QUERY_KEYS = ['ll_medium', 'll_source'] as const
+
 // The `navigateTo` below re-runs this middleware with the carried tags already
-// on `to`, so that second pass must not clear the mark the first one set. A
-// superseded redirect leaves this set, so one later navigation keeps a stale mark.
-let isCarryRedirectPending = false
+// on `to`, so that second pass must not clear the mark the first one set. Keyed
+// on the state that redirect lands in, so a superseded one matches nothing.
+let pendingCarryRedirectKey: string | undefined
+
+function getCarryRedirectKey(path: string, query: LocationQueryRaw) {
+  return [path, ...LINK_TAG_QUERY_KEYS.map(key => query[key] ?? '')].join('\n')
+}
 
 // `userId` is only ever bound by the publisher storefront routes
 // (/store/@<likerId> and its library twin).
@@ -46,10 +52,13 @@ export default defineNuxtRouteMiddleware((to, from) => {
   const isLLMediumCarried = !!carryQuery.ll_medium
   const isLLSourceCarried = !!carryQuery.ll_source
   const hasCarriedLinkTags = isLLMediumCarried || isLLSourceCarried
-  if (hasCarriedLinkTags || !isCarryRedirectPending) {
+  // Consumed on read: a redirect that never lands can only ever shadow the one
+  // navigation that follows it.
+  const isCarryRedirectPass = pendingCarryRedirectKey === getCarryRedirectKey(to.path, to.query)
+  pendingCarryRedirectKey = undefined
+  if (hasCarriedLinkTags || !isCarryRedirectPass) {
     useCarriedLinkTags().value = { isLLMediumCarried, isLLSourceCarried }
   }
-  isCarryRedirectPending = hasCarriedLinkTags
 
   // Leaving a publisher storefront makes that publisher the referrer, so a book
   // opened, shared, or bought from it attributes to them without every link
@@ -61,6 +70,12 @@ export default defineNuxtRouteMiddleware((to, from) => {
   }
 
   if (Object.keys(carryQuery).length) {
-    return navigateTo({ ...to, query: { ...to.query, ...carryQuery } })
+    const query = { ...to.query, ...carryQuery }
+    // Only a carried tag leaves a mark for the redirect pass to protect, so a
+    // redirect carrying anything else must not shadow the navigation after it.
+    if (hasCarriedLinkTags) {
+      pendingCarryRedirectKey = getCarryRedirectKey(to.path, query)
+    }
+    return navigateTo({ ...to, query })
   }
 })
