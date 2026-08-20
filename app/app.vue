@@ -230,16 +230,16 @@ useHead({
     // every later $fetch with "Load failed: <no response>" until the app is
     // killed — reload alone doesn't recover it.
     ...(likeCoinAPIEndpoint && !isIOS.value
-      ? [{ rel: 'preconnect', href: likeCoinAPIEndpoint, crossorigin: '', key: 'preconnect-like-api' }]
+      ? [{ rel: 'preconnect' as const, href: likeCoinAPIEndpoint, crossorigin: '' as const, key: 'preconnect-like-api' }]
       : []),
     ...(likeCoinStaticEndpoint
-      ? [{ rel: 'preconnect', href: likeCoinStaticEndpoint, key: 'preconnect-like-static' }]
+      ? [{ rel: 'preconnect' as const, href: likeCoinStaticEndpoint, key: 'preconnect-like-static' }]
       : []),
     ...(posthogHost
-      ? [{ rel: 'preconnect', href: posthogHost, crossorigin: '', key: 'preconnect-posthog' }]
+      ? [{ rel: 'preconnect' as const, href: posthogHost, crossorigin: '' as const, key: 'preconnect-posthog' }]
       : []),
     ...(!isApp.value
-      ? [{ rel: 'preconnect', href: 'https://js.stripe.com', crossorigin: '', key: 'preconnect-stripe' }]
+      ? [{ rel: 'preconnect' as const, href: 'https://js.stripe.com', crossorigin: '' as const, key: 'preconnect-stripe' }]
       : []),
     ...(i18nHead.value.link || []),
   ],

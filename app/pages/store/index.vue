@@ -707,13 +707,13 @@ useHead(() => {
 
   if (itemsCount.value > 0 && !isSearchResultEmpty.value) {
     script.push({
-      type: 'application/ld+json',
+      type: 'application/ld+json' as const,
       innerHTML: JSON.stringify(structuredData.value),
     })
 
     if (entityStructuredData.value) {
       script.push({
-        type: 'application/ld+json',
+        type: 'application/ld+json' as const,
         innerHTML: JSON.stringify(entityStructuredData.value),
       })
     }
@@ -727,7 +727,7 @@ useHead(() => {
     // cross-origin indexer hop happens server-side and can't poison WKWebView's
     // NSURLSession pool the way a direct cross-origin fetch could.
     listingPreloadLinks.push({
-      rel: 'preload',
+      rel: 'preload' as const,
       href: `/api/store/staking-books?sort_by=${mapTagIdToAPIStakingSortValue(tagId.value)}&sort_order=desc&limit=100`,
       as: 'fetch' as const,
       crossorigin: 'anonymous' as const,
@@ -740,7 +740,7 @@ useHead(() => {
   // response than the one the page goes on to fetch.
   else if (!isForYouTagId.value) {
     listingPreloadLinks.push({
-      rel: 'preload',
+      rel: 'preload' as const,
       href: `/api/store/products?tag=${encodedTagId}&limit=${MAX_BOOKSTORE_PAGE_SIZE}&ts=${getTimestampRoundedToMinute()}${isLibraryTab.value ? '&library=1' : ''}`,
       as: 'fetch' as const,
       crossorigin: 'anonymous' as const,
@@ -749,11 +749,11 @@ useHead(() => {
   }
   const link = [
     {
-      rel: 'canonical',
+      rel: 'canonical' as const,
       href: canonicalURL.value,
     },
     {
-      rel: 'preload',
+      rel: 'preload' as const,
       href: '/api/store/tags',
       as: 'fetch' as const,
       crossorigin: 'anonymous' as const,
