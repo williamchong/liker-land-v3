@@ -8,6 +8,16 @@ export const TTS_ERROR_NOT_ALLOWED = 'NotAllowedError'
 // seconds; a deeper window mostly buys unheard synthesis. Each player clamps it.
 const TTS_PREFETCH_COUNT = 20
 
+// How long the prefetch flag may stay unresolved before it counts as off.
+// PostHog loads lazily and can be blocked outright, so a start that races the
+// resolution pays this once at most, and only when it opens the player early.
+const TTS_PREFETCH_FLAG_TIMEOUT_MS = 1500
+
+// Why a session got the depth it did, reported on tts_start. Without it a
+// depth of 1 reads the same whether the account is free, the shell can't
+// prefetch, or the flag is off.
+type TTSPrefetchGate = 'ok' | 'not_plus' | 'no_capability' | 'flag_off'
+
 // Segments that must be local before a dropout is ridden out rather than
 // surfaced. Below this the runway is shorter than the stall detection that
 // follows, so playing on only buys the listener the same modal, half a minute later.
@@ -84,17 +94,21 @@ export function useTextToSpeech(options: TTSOptions) {
   const { isPlusOrDevicePlus } = useDevicePlusEntitlement()
   // Separate flags: the two lanes stage against different limits — backend
   // synthesis load for the app, browser storage for the web.
-  const isNativePrefetchEnabled = useFeatureFlagEnabled('app-tts-deep-prefetch')
-  const isWebPrefetchEnabled = useFeatureFlagEnabled('web-tts-deep-prefetch')
+  // Resolved once here, not per start: both players latch the depth at load()
+  // and never revisit it, so a flag arriving a tick late would otherwise strand
+  // the session at depth 1 — and a play tap awaits a settled promise instead of
+  // dropping out of its gesture, which iOS needs to let audio start.
+  const prefetchFlagPromise = fetchFeatureFlagEnabled(
+    isNativeBridge.value ? 'app-tts-deep-prefetch' : 'web-tts-deep-prefetch',
+    { timeoutMs: TTS_PREFETCH_FLAG_TIMEOUT_MS },
+  )
 
   // Only accounts with no daily TTS quota fill a runway: a free-trial user's
   // whole allowance is ~19 segments, which prefetch would spend unheard.
-  function getTTSPrefetchCount(): number {
-    if (!isPlusOrDevicePlus.value) return 1
-    const isEnabled = isNativeBridge.value
-      ? isNativeFeatureSupported('deepPrefetch') && isNativePrefetchEnabled.value
-      : isWebPrefetchEnabled.value
-    return isEnabled ? TTS_PREFETCH_COUNT : 1
+  async function resolveTTSPrefetchGate(): Promise<TTSPrefetchGate> {
+    if (!isPlusOrDevicePlus.value) return 'not_plus'
+    if (isNativeBridge.value && !isNativeFeatureSupported('deepPrefetch')) return 'no_capability'
+    return await prefetchFlagPromise ? 'ok' : 'flag_off'
   }
 
   const ttsSessionId = ref('')
@@ -587,10 +601,30 @@ export function useTextToSpeech(options: TTSOptions) {
       consecutiveAudioErrors.value = 0
       isTextToSpeechOn.value = true
 
-      ttsSessionId.value = crypto.randomUUID()
-      useLogEvent('tts_start', buildTTSEventPayload())
-
+      const sessionId = crypto.randomUUID()
+      ttsSessionId.value = sessionId
       isTextToSpeechLoading.value = true
+
+      const prefetchGate = await resolveTTSPrefetchGate()
+      // A stop or a restart while the gate resolved retired this session —
+      // loading now would play audio the listener already dismissed.
+      if (ttsSessionId.value !== sessionId) {
+        isTextToSpeechLoading.value = false
+        return
+      }
+      // Nothing left to read: this session still owns the state, so clear it
+      // rather than leaving the player switched on with no audio to load.
+      if (!ttsSegments.value.length) {
+        stopTextToSpeech()
+        return
+      }
+
+      const prefetchCount = prefetchGate === 'ok' ? TTS_PREFETCH_COUNT : 1
+      useLogEvent('tts_start', buildTTSEventPayload({
+        prefetch_count: prefetchCount,
+        prefetch_gate: prefetchGate,
+      }))
+
       player.load({
         segments: ttsSegments.value,
         getAudioSrc,
@@ -601,7 +635,7 @@ export function useTextToSpeech(options: TTSOptions) {
           authorName: toValue(bookAuthorName) || '',
           coverUrl: toValue(bookCoverSrc) || '',
         },
-        prefetchCount: getTTSPrefetchCount(),
+        prefetchCount,
       })
 
       setupMediaSession()
