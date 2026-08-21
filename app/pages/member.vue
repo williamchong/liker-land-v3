@@ -185,7 +185,7 @@ import type { ResolvableArray, ResolvableLink } from '@unhead/vue'
 
 import type { PricingPagePromoPricing } from '~/components/PricingPageContent.props'
 import type { AffiliatePublicConfig } from '~~/shared/types/affiliate'
-import { getAffiliatePricingPageContent } from '~/composables/use-pricing-page-campaign'
+import { getAffiliatePricingPageContent, getPricingPageCampaign } from '~/composables/use-pricing-page-campaign'
 import { formatLikerIdHandle, normalizeLikerId } from '~~/shared/utils/liker-id'
 
 import { DEFAULT_TRIAL_PERIOD_DAYS } from '~~/shared/constants/pricing'
@@ -385,11 +385,13 @@ useHead({
     { property: 'product:category', content: 6028 }, // Media Viewing Software
   ],
   link: computed(() => {
-    const hasCampaignId = !!(getRouteQuery('utm_term') || getRouteQuery('utm_campaign'))
+    const campaignId = getRouteQuery('utm_term') || getRouteQuery('utm_campaign')
     const links: ResolvableArray<ResolvableLink> = [
       { rel: 'canonical', href: canonicalURL.value },
     ]
-    if (hasCampaignId) {
+    // A mapped campaign paints its own media over the backdrop slot, so
+    // preloading it there costs 414KB the page never shows.
+    if (campaignId && !getPricingPageCampaign(campaignId)) {
       links.push({
         rel: 'preload',
         as: 'image',

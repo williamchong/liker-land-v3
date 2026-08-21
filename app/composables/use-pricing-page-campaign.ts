@@ -29,6 +29,20 @@ const CAMPAIGNS: Record<string, PricingPageCampaign> = {
   },
 }
 
+export function getPricingPageCampaign(campaignId: string | undefined) {
+  if (!campaignId) return undefined
+  const content = CAMPAIGNS[campaignId]
+  if (!content) return undefined
+  const { type } = content
+  return {
+    id: campaignId,
+    ...content,
+    isVideo: type === 'video',
+    isImage: type === 'image',
+    isCustom: type === 'custom',
+  }
+}
+
 export type AffiliateCouponEffect =
   | { type: 'percent', value: number }
   | { type: 'flat', amount: Partial<Record<PricingCurrency, number>> }
@@ -92,19 +106,7 @@ export function usePricingPageCampaign(options: {
     return campaignId.value
   })
 
-  const campaignContent = computed(() => {
-    if (!resolvedCampaignId.value) return undefined
-    const content = CAMPAIGNS[resolvedCampaignId.value]
-    if (!content) return undefined
-    const { type } = content
-    return {
-      id: resolvedCampaignId.value,
-      ...content,
-      isVideo: type === 'video',
-      isImage: type === 'image',
-      isCustom: type === 'custom',
-    }
-  })
+  const campaignContent = computed(() => getPricingPageCampaign(resolvedCampaignId.value))
 
   const isBlocktrendCampaign = computed(() => {
     return resolvedCampaignId.value === 'blocktrend-plus'
