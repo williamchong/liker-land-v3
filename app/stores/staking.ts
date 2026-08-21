@@ -85,15 +85,17 @@ export const useStakingStore = defineStore('staking', () => {
       stakingDataByWalletMap.value[walletAddress].isFetching = true
 
       const stakingData = new Map<string, StakingItem>()
+      let hasFetchedStakings = false
 
       // Get books user has staked on from collective indexer
       try {
         const stakingsResponse = await fetchCollectiveAccountStakings(walletAddress, {
           'pagination.limit': 100,
         })
+        hasFetchedStakings = true
 
         for (const staking of stakingsResponse.data) {
-          const nftClassId = staking.book_nft.toLowerCase()
+          const nftClassId = normalizeNFTClassId(staking.book_nft)
 
           if (stakingData.has(nftClassId)) {
             continue
@@ -124,7 +126,9 @@ export const useStakingStore = defineStore('staking', () => {
         return Number(b.stakedAmount - a.stakedAmount)
       })
 
-      if (items.length > 0) {
+      // Only overwrite on a successful fetch: an empty list is a real "nothing
+      // staked" answer, but a failed one must not wipe what is already shown.
+      if (hasFetchedStakings) {
         stakingDataByWalletMap.value[walletAddress].items = items
       }
 
@@ -154,7 +158,12 @@ export const useStakingStore = defineStore('staking', () => {
     }
   }
 
-  function updateStakingItem(walletAddress: string, nftClassId: string, updates: Partial<StakingItem>) {
+  function updateStakingItem(walletAddress: string, rawNFTClassId: string, updates: Partial<StakingItem>) {
+    // Callers pass the route param, which is not guaranteed to match the casing
+    // the indexer keyed the list by; without this the findIndex below misses and
+    // pushes a duplicate row that double-counts in totalUnclaimedRewards.
+    const nftClassId = normalizeNFTClassId(rawNFTClassId)
+
     // Initialize user data if it doesn't exist
     if (!stakingDataByWalletMap.value[walletAddress]) {
       stakingDataByWalletMap.value[walletAddress] = {
@@ -171,11 +180,11 @@ export const useStakingStore = defineStore('staking', () => {
     // Initialize item if it doesn't exist
     if (itemIndex === -1) {
       userData.items.push({
-        nftClassId,
         stakedAmount: 0n,
         pendingRewards: 0n,
         isOwned: false,
         ...updates,
+        nftClassId,
       } as StakingItem)
     }
     else {
@@ -246,7 +255,7 @@ export const useStakingStore = defineStore('staking', () => {
     ])
 
     const stakingItem = {
-      nftClassId,
+      nftClassId: normalizeNFTClassId(nftClassId),
       stakedAmount,
       pendingRewards,
       isOwned: false,

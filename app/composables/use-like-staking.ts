@@ -36,9 +36,14 @@ export function useLikeStaking() {
     return positionInfos
   }
 
+  // Sequential, and awaiting each receipt: parallel writes share a nonce and
+  // stack wallet prompts, and callers refetch as soon as this resolves.
   async function claimWalletRewardsOfNFTClass(wallet: string, nftClassId: string) {
     const tokenIds = await getWalletLikeStakePositionIdsOfNFTClassId(wallet, nftClassId)
-    await Promise.all(tokenIds.map(tokenId => claimRewardsFromStakePosition(tokenId)))
+    for (const tokenId of tokenIds) {
+      const claimHash = await claimRewardsFromStakePosition(tokenId)
+      await waitForTransaction(claimHash)
+    }
   }
 
   async function stakeToNFTClass(wallet: string, nftClassId: string, amount: bigint) {
@@ -59,7 +64,10 @@ export function useLikeStaking() {
 
   async function unstakeFromNFTClass(wallet: string, nftClassId: string) {
     const tokenIds = await getWalletLikeStakePositionIdsOfNFTClassId(wallet, nftClassId)
-    await Promise.all(tokenIds.map(tokenId => unstakeFromStakePosition(tokenId)))
+    for (const tokenId of tokenIds) {
+      const unstakeHash = await unstakeFromStakePosition(tokenId)
+      await waitForTransaction(unstakeHash)
+    }
   }
 
   async function depositReward(wallet: string, nftClassId: string, amount: bigint) {
@@ -95,12 +103,12 @@ export function useLikeStaking() {
 
       if (positionInfo.stakedAmount <= remainingAmount) {
         // Remove entire position
-        await unstakeFromStakePosition(tokenId)
+        await waitForTransaction(await unstakeFromStakePosition(tokenId))
         remainingAmount -= positionInfo.stakedAmount
       }
       else {
         // Decrease position partially
-        await decreaseStakePosition(tokenId, remainingAmount)
+        await waitForTransaction(await decreaseStakePosition(tokenId, remainingAmount))
         remainingAmount = 0n
       }
     }
