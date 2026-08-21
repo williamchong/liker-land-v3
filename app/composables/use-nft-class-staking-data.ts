@@ -22,7 +22,8 @@ export function useNFTClassStakingData(nftClassId: ComputedRef<string>) {
     if (!hasLoggedIn.value || !user.value?.evmWallet) return null
 
     const stakingData = stakingStore.getUserStakingData(user.value.evmWallet)
-    return stakingData.items.find(item => item.nftClassId === nftClassId.value)
+    const normalizedNFTClassId = normalizeNFTClassId(nftClassId.value)
+    return stakingData.items.find(item => item.nftClassId === normalizedNFTClassId)
   })
 
   // State proxied from store data or fallback to zeros
