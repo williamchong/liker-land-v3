@@ -389,9 +389,9 @@ useHead({
     const links: ResolvableArray<ResolvableLink> = [
       { rel: 'canonical', href: canonicalURL.value },
     ]
-    // A mapped campaign paints its own media over the backdrop slot, so
-    // preloading it there costs 414KB the page never shows.
-    if (campaignId && !getPricingPageCampaign(campaignId)) {
+    // Preload only where the backdrop paints:
+    // a campaign hero replaces it, but an affiliate outranks the campaign.
+    if (campaignId && (affiliateContent.value || !getPricingPageCampaign(campaignId))) {
       links.push({
         rel: 'preload',
         as: 'image',
