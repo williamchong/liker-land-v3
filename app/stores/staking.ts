@@ -54,15 +54,15 @@ export const useStakingStore = defineStore('staking', () => {
   })
 
   const getTotalStakeOfNFTClassCached = computed(() => (nftClassId: string) => {
-    return totalStakeByNFTClassMap.value[nftClassId]?.totalStake ?? 0n
+    return totalStakeByNFTClassMap.value[normalizeNFTClassId(nftClassId)]?.totalStake ?? 0n
   })
 
   const getStakingRankCached = computed(() => (nftClassId: string) => {
-    return totalStakeByNFTClassMap.value[nftClassId]?.stakingRank ?? 0
+    return totalStakeByNFTClassMap.value[normalizeNFTClassId(nftClassId)]?.stakingRank ?? 0
   })
 
   const getNumberOfStakersCached = computed(() => (nftClassId: string) => {
-    return totalStakeByNFTClassMap.value[nftClassId]?.numberOfStakers ?? 0
+    return totalStakeByNFTClassMap.value[normalizeNFTClassId(nftClassId)]?.numberOfStakers ?? 0
   })
 
   // Actions
@@ -84,15 +84,13 @@ export const useStakingStore = defineStore('staking', () => {
     try {
       stakingDataByWalletMap.value[walletAddress].isFetching = true
 
-      const stakingData = new Map<string, StakingItem>()
-      let hasFetchedStakings = false
-
       // Get books user has staked on from collective indexer
       try {
         const stakingsResponse = await fetchCollectiveAccountStakings(walletAddress, {
           'pagination.limit': 100,
         })
-        hasFetchedStakings = true
+
+        const stakingData = new Map<string, StakingItem>()
 
         for (const staking of stakingsResponse.data) {
           const nftClassId = normalizeNFTClassId(staking.book_nft)
@@ -115,21 +113,14 @@ export const useStakingStore = defineStore('staking', () => {
             })
           }
         }
+
+        // Sorted by staked amount descending
+        stakingDataByWalletMap.value[walletAddress].items = Array.from(stakingData.values())
+          .sort((a, b) => Number(b.stakedAmount - a.stakedAmount))
       }
       catch (error) {
+        // Keep the last known items: a failed fetch is not "nothing staked".
         console.warn('Failed to fetch collective staking data:', error)
-        // Continue with just owned books if collective API fails
-      }
-
-      // Convert to array and sort by staked amount descending
-      const items = Array.from(stakingData.values()).sort((a, b) => {
-        return Number(b.stakedAmount - a.stakedAmount)
-      })
-
-      // Only overwrite on a successful fetch: an empty list is a real "nothing
-      // staked" answer, but a failed one must not wipe what is already shown.
-      if (hasFetchedStakings) {
-        stakingDataByWalletMap.value[walletAddress].items = items
       }
 
       stakingDataByWalletMap.value[walletAddress].totalUnclaimedRewards = stakingDataByWalletMap.value[walletAddress].items.reduce(
@@ -158,11 +149,14 @@ export const useStakingStore = defineStore('staking', () => {
     }
   }
 
-  function updateStakingItem(walletAddress: string, rawNFTClassId: string, updates: Partial<StakingItem>) {
-    // Callers pass the route param, which is not guaranteed to match the casing
-    // the indexer keyed the list by; without this the findIndex below misses and
-    // pushes a duplicate row that double-counts in totalUnclaimedRewards.
-    const nftClassId = normalizeNFTClassId(rawNFTClassId)
+  // Items are keyed lowercase; a caller passing another casing would otherwise
+  // push a duplicate row that double-counts in totalUnclaimedRewards.
+  function updateStakingItem(
+    walletAddress: string,
+    nftClassId: string,
+    updates: Partial<Omit<StakingItem, 'nftClassId'>>,
+  ) {
+    const normalizedNFTClassId = normalizeNFTClassId(nftClassId)
 
     // Initialize user data if it doesn't exist
     if (!stakingDataByWalletMap.value[walletAddress]) {
@@ -175,20 +169,21 @@ export const useStakingStore = defineStore('staking', () => {
     }
 
     const userData = stakingDataByWalletMap.value[walletAddress]
-    const itemIndex = userData.items.findIndex(item => item.nftClassId === nftClassId)
+    const itemIndex = userData.items.findIndex(item => item.nftClassId === normalizedNFTClassId)
 
     // Initialize item if it doesn't exist
-    if (itemIndex === -1) {
+    const existingItem = userData.items[itemIndex]
+    if (!existingItem) {
       userData.items.push({
+        nftClassId: normalizedNFTClassId,
         stakedAmount: 0n,
         pendingRewards: 0n,
         isOwned: false,
         ...updates,
-        nftClassId,
-      } as StakingItem)
+      })
     }
     else {
-      userData.items[itemIndex] = { ...userData.items[itemIndex], ...updates } as StakingItem
+      userData.items[itemIndex] = { ...existingItem, ...updates }
     }
 
     // Recalculate total rewards
@@ -198,11 +193,13 @@ export const useStakingStore = defineStore('staking', () => {
     )
   }
 
-  async function fetchTotalStakeOfNFTClass(nftClassId: string, {
+  async function fetchTotalStakeOfNFTClass(rawNFTClassId: string, {
     isRefresh = false,
   }: {
     isRefresh?: boolean
   } = {}) {
+    // Keyed lowercase like the item list, so mixed casing can't split the cache.
+    const nftClassId = normalizeNFTClassId(rawNFTClassId)
     const cached = totalStakeByNFTClassMap.value[nftClassId]
 
     // Return cached value if available and not forcing refresh
@@ -254,15 +251,11 @@ export const useStakingStore = defineStore('staking', () => {
       getWalletPendingRewardsOfNFTClass(walletAddress, nftClassId),
     ])
 
-    const stakingItem = {
-      nftClassId: normalizeNFTClassId(nftClassId),
-      stakedAmount,
-      pendingRewards,
-      isOwned: false,
-    } as StakingItem
+    const normalizedNFTClassId = normalizeNFTClassId(nftClassId)
+    const updates = { stakedAmount, pendingRewards, isOwned: false }
+    updateStakingItem(walletAddress, normalizedNFTClassId, updates)
 
-    updateStakingItem(walletAddress, nftClassId, stakingItem)
-
+    const stakingItem: StakingItem = { nftClassId: normalizedNFTClassId, ...updates }
     return stakingItem
   }
 

@@ -22,7 +22,6 @@ mockNuxtImport('useUserSession', () => () => ({ loggedIn: ref(true) }))
 mockNuxtImport('useLikeCollectiveContract', () => () => ({
   getWalletPendingRewardsOfNFTClass: mockGetWalletPendingRewardsOfNFTClass,
   getWalletStakeOfNFTClass: mockGetWalletStakeOfNFTClass,
-  getTotalStakeOfNFTClass: vi.fn(),
 }))
 
 // The indexer keys book_nft in checksummed form; the store keys its items lowercase.
