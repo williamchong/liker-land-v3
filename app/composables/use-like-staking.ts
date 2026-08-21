@@ -36,8 +36,7 @@ export function useLikeStaking() {
     return positionInfos
   }
 
-  // Sequential, and awaiting each receipt: parallel writes share a nonce and
-  // stack wallet prompts, and callers refetch as soon as this resolves.
+  // Sequential: parallel writes from one wallet share a nonce and stack prompts.
   async function claimWalletRewardsOfNFTClass(wallet: string, nftClassId: string) {
     const tokenIds = await getWalletLikeStakePositionIdsOfNFTClassId(wallet, nftClassId)
     for (const tokenId of tokenIds) {
@@ -103,12 +102,14 @@ export function useLikeStaking() {
 
       if (positionInfo.stakedAmount <= remainingAmount) {
         // Remove entire position
-        await waitForTransaction(await unstakeFromStakePosition(tokenId))
+        const unstakeHash = await unstakeFromStakePosition(tokenId)
+        await waitForTransaction(unstakeHash)
         remainingAmount -= positionInfo.stakedAmount
       }
       else {
         // Decrease position partially
-        await waitForTransaction(await decreaseStakePosition(tokenId, remainingAmount))
+        const decreaseHash = await decreaseStakePosition(tokenId, remainingAmount)
+        await waitForTransaction(decreaseHash)
         remainingAmount = 0n
       }
     }
