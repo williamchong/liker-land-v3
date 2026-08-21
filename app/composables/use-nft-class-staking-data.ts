@@ -12,6 +12,7 @@ export function useNFTClassStakingData(nftClassId: ComputedRef<string>) {
     claimWalletRewardsOfNFTClass,
   } = useLikeStaking()
 
+  const { restoreConnection } = useAccountStore()
   const stakingStore = useStakingStore()
 
   // State
@@ -98,6 +99,7 @@ export function useNFTClassStakingData(nftClassId: ComputedRef<string>) {
     try {
       isClaimingRewards.value = true
 
+      await restoreConnection()
       await claimWalletRewardsOfNFTClass(user.value!.evmWallet, nftClassId.value)
 
       toast.add({
