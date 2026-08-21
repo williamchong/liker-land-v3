@@ -1,6 +1,6 @@
 <template>
   <video
-    v-if="campaignContent?.isVideo"
+    v-if="campaignContent?.type === 'video'"
     :src="videoSrc"
     :poster="imageSrc"
     :class="aspectClass"
@@ -12,7 +12,7 @@
     loop
   />
   <img
-    v-else-if="campaignContent?.isImage"
+    v-else-if="campaignContent?.type === 'image'"
     class="object-contain object-center"
     :class="aspectClass"
     :src="imageSrc"

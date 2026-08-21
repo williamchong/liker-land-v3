@@ -29,18 +29,17 @@ const CAMPAIGNS: Record<string, PricingPageCampaign> = {
   },
 }
 
-export function getPricingPageCampaign(campaignId: string | undefined) {
+export interface ResolvedPricingPageCampaign extends PricingPageCampaign {
+  id: string
+}
+
+export function getPricingPageCampaign(
+  campaignId: string | undefined,
+): ResolvedPricingPageCampaign | undefined {
   if (!campaignId) return undefined
   const content = CAMPAIGNS[campaignId]
   if (!content) return undefined
-  const { type } = content
-  return {
-    id: campaignId,
-    ...content,
-    isVideo: type === 'video',
-    isImage: type === 'image',
-    isCustom: type === 'custom',
-  }
+  return { id: campaignId, ...content }
 }
 
 export type AffiliateCouponEffect =
