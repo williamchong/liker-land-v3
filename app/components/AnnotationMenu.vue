@@ -2,7 +2,7 @@
   <div
     v-if="isVisible"
     ref="menuEl"
-    class="fixed z-50 flex items-center gap-2 bg-theme-white dark:bg-theme-black border rounded-lg shadow-lg"
+    class="fixed z-50 flex flex-wrap items-center justify-center gap-2 w-max max-w-[calc(100vw-2rem)] bg-theme-white dark:bg-theme-black border rounded-lg shadow-lg"
     :style="menuStyle"
   >
     <button
@@ -12,6 +12,14 @@
       class="w-6 h-6 rounded-full transition-transform hover:scale-110 focus:outline-none focus:ring-1 focus:ring-offset-1"
       :style="{ backgroundColor: ANNOTATION_INDICATOR_COLORS_MAP[color] }"
       @click="handleColorSelect(color)"
+    />
+    <UButton
+      :label="$t('reader_annotation_copy')"
+      icon="i-material-symbols-content-copy-rounded"
+      color="neutral"
+      variant="ghost"
+      size="sm"
+      @click="handleCopy"
     />
     <UButton
       :label="$t('reader_annotation_create_note')"
@@ -37,6 +45,8 @@ import { ANNOTATION_COLORS, ANNOTATION_INDICATOR_COLORS_MAP } from '~~/shared/co
 
 const { isIOS } = useAppDetection()
 
+// Keep in step with the `max-w-[calc(100vw-2rem)]` cap on the menu, which is
+// the same MENU_PADDING * 2 gutter the clamp below leaves on each side.
 const MENU_PADDING = 8
 
 const props = defineProps<{
@@ -46,7 +56,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'select', color: AnnotationColor): void
-  (e: 'create-note' | 'report-issue'): void
+  (e: 'copy' | 'create-note' | 'report-issue'): void
 }>()
 
 const { t: $t } = useI18n()
@@ -74,6 +84,10 @@ const menuStyle = computed(() => {
 
 function handleColorSelect(color: AnnotationColor) {
   emit('select', color)
+}
+
+function handleCopy() {
+  emit('copy')
 }
 
 function handleCreateNote() {
