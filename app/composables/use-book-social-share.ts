@@ -25,7 +25,6 @@ export function useBookSocialShare(options: BookSocialShareOptions) {
   const config = useRuntimeConfig()
   const { t: $t } = useI18n()
   const toast = useToast()
-  const { copy: copyToClipboard } = useClipboard()
   const { user } = useUserSession()
 
   const socialButtons = computed(() => [
@@ -81,23 +80,13 @@ export function useBookSocialShare(options: BookSocialShareOptions) {
 
     switch (key) {
       case 'copy-links':
-        try {
-          const shareUrl = getShareURL('copy-link')
-          await copyToClipboard(shareUrl)
+        {
+          const isCopied = await copyTextToClipboard(getShareURL('copy-link'))
           toast.add({
-            title: $t('copy_link_success'),
+            title: $t(isCopied ? 'copy_link_success' : 'copy_link_failed'),
             duration: 3000,
-            icon: 'i-material-symbols-link-rounded',
-            color: 'success',
-          })
-        }
-        catch (error) {
-          console.error('Failed to copy link:', error)
-          toast.add({
-            title: $t('copy_link_failed'),
-            icon: 'i-material-symbols-error-circle-rounded',
-            duration: 3000,
-            color: 'error',
+            icon: isCopied ? 'i-material-symbols-link-rounded' : 'i-material-symbols-error-circle-rounded',
+            color: isCopied ? 'success' : 'error',
           })
         }
         break

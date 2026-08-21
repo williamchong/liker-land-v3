@@ -2216,31 +2216,6 @@ function formatCopyText(text: string) {
   return `${text.slice(0, COPY_CHAR_LIMIT)}\n\n${attribution}`
 }
 
-// VueUse's `copy()` reports success even when the write is blocked, and falls
-// back only after an await, outside the gesture WebViews require. Do both steps
-// here so a blocked copy can be told apart from a successful one.
-async function copyTextToClipboard(text: string) {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text)
-      return true
-    }
-  }
-  catch {
-    // Blocked or unavailable, fall through to the legacy path.
-  }
-  const textarea = document.createElement('textarea')
-  textarea.value = text
-  textarea.style.position = 'absolute'
-  textarea.style.opacity = '0'
-  textarea.setAttribute('readonly', '')
-  document.body.appendChild(textarea)
-  textarea.select()
-  const isCopied = document.execCommand('copy')
-  textarea.remove()
-  return isCopied
-}
-
 // iOS clears the selection to dismiss the native callout, so this reads the text
 // stored at selection time rather than the live selection.
 async function handleAnnotationCopy() {
