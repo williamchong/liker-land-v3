@@ -3,15 +3,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { useQueryCache } from '@pinia/colada'
 
-import { BOOKSTORE_INFO_QUERY_KEY, NFT_CLASS_QUERY_KEY } from '~/utils/query-key-roots'
+import { BOOKSTORE_INFO_QUERY_KEY, BOOKSTORE_PENDING_REVIEW_QUERY_KEY, NFT_CLASS_QUERY_KEY } from '~/utils/query-key-roots'
 import {
   ensureNFTClassAggregatedMetadataThroughCache,
   fetchNFTClassAggregatedMetadataThroughCache,
   fetchNFTClassMessagesThroughCache,
   getBookstoreInfoByNFTClassIdFromCache,
+  getIsBookstorePendingReviewFromCache,
   getNFTClassMetadataByIdFromCache,
   revalidateNFTClassAggregatedMetadata,
   setBookstoreInfo,
+  setBookstorePendingReview,
   setNFTClassData,
 } from '~/composables/use-nft-book-metadata'
 
@@ -217,6 +219,36 @@ describe('use-nft-book-metadata', () => {
     expect(first).toEqual(messages)
     expect(second).toEqual(messages)
     expect(mockFetchMessages).toHaveBeenCalledTimes(1)
+  })
+
+  it('records a listing the API withheld pending review', async () => {
+    const nftClassId = nextClassId()
+    mockFetchAggregated.mockResolvedValue(
+      makeAggregatedResponse({ bookstoreInfo: null, isBookstorePendingReview: true }))
+
+    await fetchNFTClassAggregatedMetadataThroughCache(queryCache, nftClassId)
+
+    expect(getIsBookstorePendingReviewFromCache(queryCache, nftClassId)).toBe(true)
+  })
+
+  it('materialises no entry for a book that is not withheld', async () => {
+    const nftClassId = nextClassId()
+    mockFetchAggregated.mockResolvedValue(
+      makeAggregatedResponse({ isBookstorePendingReview: false }))
+
+    await fetchNFTClassAggregatedMetadataThroughCache(queryCache, nftClassId)
+
+    // Seed-only entries are never evicted, so the common case must not create one.
+    expect(queryCache.get([BOOKSTORE_PENDING_REVIEW_QUERY_KEY, nftClassId])).toBeUndefined()
+    expect(getIsBookstorePendingReviewFromCache(queryCache, nftClassId)).toBeUndefined()
+  })
+
+  it('clears the withheld flag once the listing is approved', () => {
+    const nftClassId = nextClassId()
+    setBookstorePendingReview(queryCache, nftClassId, true)
+    setBookstorePendingReview(queryCache, nftClassId, false)
+
+    expect(getIsBookstorePendingReviewFromCache(queryCache, nftClassId)).toBe(false)
   })
 
   it('keeps seed-only entries out of the garbage collector', () => {

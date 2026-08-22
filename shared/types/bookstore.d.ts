@@ -143,6 +143,9 @@ declare global {
     ownerWallet: string
     mustClaimToView: boolean
     isHidden: boolean
+    // Only ever present for the owner/moderator: the API withholds the whole
+    // listing from everyone else while it is pending review.
+    isPendingReview?: boolean
     isApprovedForSale: boolean
     isApprovedForIndexing: boolean
     isApprovedForAds: boolean

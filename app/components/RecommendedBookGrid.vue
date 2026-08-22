@@ -61,6 +61,8 @@ const isAdultContentEnabled = useAdultContentSetting()
 // a slow or failed metadata fetch must not blank the grid.
 const visibleNFTClassIds = computed(() => props.nftClassIds.filter((nftClassId) => {
   const bookstoreInfo = getBookstoreInfoByNFTClassIdFromCache(queryCache, nftClassId)
+  // null is a resolved "no listing"; undefined is merely unresolved.
+  if (bookstoreInfo === null) return false
   if (bookstoreInfo?.isHidden) return false
   if (!isAdultContentEnabled.value && bookstoreInfo?.isAdultOnly) return false
   return true

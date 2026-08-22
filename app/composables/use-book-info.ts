@@ -180,6 +180,16 @@ export default function (
     return bookstoreInfo.value?.isAdultOnly || false
   })
 
+  const hasBookstoreInfo = computed(() => !!bookstoreInfo.value)
+
+  // Holding the listing beats the flag: the owner and moderators receive their own
+  // pending-review book, so it is never withheld from them whatever a later
+  // anonymous refresh of the same class reports.
+  const isWithheldPendingReview = computed(() => {
+    return !bookstoreInfo.value
+      && !!getIsBookstorePendingReviewFromCache(queryCache, toValue(nftClassId))
+  })
+
   const isApprovedForSale = computed(() => {
     return bookstoreInfo.value?.isApprovedForSale || false
   })
@@ -379,6 +389,8 @@ export default function (
     isCustomMessageEnabled,
     isHidden,
     isAdultOnly,
+    hasBookstoreInfo,
+    isWithheldPendingReview,
     isApprovedForSale,
     isApprovedForIndexing,
     isApprovedForAds,

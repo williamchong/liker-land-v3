@@ -527,6 +527,9 @@ const baseProducts = computed<BookstoreItemList>(() => {
     const items: BookstoreItem[] = []
     staking.items.forEach((item) => {
       const bookInfo = getBookstoreInfoByNFTClassIdFromCache(queryCache, item.nftClassId)
+      // The indexer ranks every book NFT on chain, listed here or not, so drop the
+      // ones the bookstore resolved as absent (never listed, or pending review).
+      if (bookInfo === null) return
       if (bookInfo?.isHidden) return
       if (shouldFilterAdultOnly(bookInfo)) return
       items.push({

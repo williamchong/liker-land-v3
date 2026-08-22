@@ -814,6 +814,21 @@ if (nftClassId.value !== nftClassId.value.toLowerCase()) {
 
 const isCacheDisabled = useNoCache()
 
+function handleProductPageError(error: unknown) {
+  return handleError(error, {
+    isFatal: true,
+    customHandlerMap: {
+      404: {
+        description: $t('product_page_not_found_error'),
+      },
+      500: {
+        description: $t('product_page_fetch_metadata_failed_error'),
+      },
+    },
+    logPrefix: 'Product Page',
+  })
+}
+
 await callOnce(async () => {
   try {
     const data = await ensureNFTClassAggregatedMetadataThroughCache(queryCache, nftClassId.value, {
@@ -824,18 +839,7 @@ await callOnce(async () => {
     }
   }
   catch (error) {
-    await handleError(error, {
-      isFatal: true,
-      customHandlerMap: {
-        404: {
-          description: $t('product_page_not_found_error'),
-        },
-        500: {
-          description: $t('product_page_fetch_metadata_failed_error'),
-        },
-      },
-      logPrefix: 'Product Page',
-    })
+    await handleProductPageError(error)
   }
 })
 
@@ -851,6 +855,25 @@ if (newClassId && newClassId !== nftClassId.value) {
     query: route.query,
   }), { replace: true, redirectCode: 301 })
 }
+
+// An unapproved listing must not exist publicly, on either storefront. Read off the
+// cache rather than the callOnce result above, which does not re-run on a client-side
+// navigation between books.
+async function handleWithheldPendingReview() {
+  if (!bookInfo.isWithheldPendingReview.value) return
+  // A token bypasses the shared caches, so gating the retry on an already-withheld
+  // listing keeps it off the hot path for every other book.
+  if (user.value?.token) {
+    await fetchNFTClassAggregatedMetadataThroughCache(queryCache, nftClassId.value, {
+      include: ['bookstore'],
+      nocache: true,
+      token: user.value.token,
+    }).catch(() => { /* stay withheld and 404 below */ })
+  }
+  if (!bookInfo.isWithheldPendingReview.value) return
+  await handleProductPageError(createError({ statusCode: 404 }))
+}
+await handleWithheldPendingReview()
 
 // The library only serves Plus-reading titles; send the rest to the store.
 if (isLibrary.value && !bookInfo.isPlusReadingEnabled.value) {
