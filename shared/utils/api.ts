@@ -70,12 +70,18 @@ export interface FetchLikeCoinNFTClassAggregatedMetadataOptions {
   include?: LikeCoinNFTClassAggregatedMetadataOptionKey[]
   exclude?: LikeCoinNFTClassAggregatedMetadataOptionKey[]
   nocache?: boolean
+  // LikeCoin session token. Sent so an owner or moderator still sees their own
+  // pending-review listing; a tokened response is never shared-cached.
+  token?: string
 }
 
 export interface FetchLikeCoinNFTClassAggregatedMetadataResponseData {
   classData: NFTClassMetadata | null
   ownerInfo: Record<string, NFTIdList> | null
   bookstoreInfo: BookstoreInfo | null
+  // Set with a null bookstoreInfo when the listing is withheld pending review,
+  // which is what separates it from a class that was never listed at all.
+  isBookstorePendingReview?: boolean
 }
 
 export function resolveLikeCoinNFTMetadataDataOptions(
@@ -96,7 +102,10 @@ export function fetchLikeCoinNFTClassAggregatedMetadataById(
     data: resolveLikeCoinNFTMetadataDataOptions(options),
   }
   if (options.nocache) query.ts = `${Math.round(Date.now() / 1000)}`
-  return fetch<FetchLikeCoinNFTClassAggregatedMetadataResponseData>('/likerland/nft/metadata', { query })
+  return fetch<FetchLikeCoinNFTClassAggregatedMetadataResponseData>('/likerland/nft/metadata', {
+    query,
+    headers: options.token ? { Authorization: `Bearer ${options.token}` } : undefined,
+  })
 }
 
 /**
@@ -111,7 +120,8 @@ export function fetchCachedLikeCoinNFTClassAggregatedMetadataById(
   nftClassId: string,
   options: FetchLikeCoinNFTClassAggregatedMetadataOptions = { exclude: [], nocache: false },
 ) {
-  if (import.meta.client) {
+  // A tokened request bypasses the shared cache anyway, so the internal hop is pure cost.
+  if (import.meta.client || options.token) {
     return fetchLikeCoinNFTClassAggregatedMetadataById(nftClassId, options)
   }
   const query: Record<string, string | string[]> = {

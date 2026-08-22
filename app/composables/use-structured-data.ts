@@ -379,7 +379,9 @@ export function useStructuredData(
 
   function generateBookStructuredData({ canonicalURL }: { canonicalURL: string }) {
     const nftClassIdValue = toValue(nftClassId)
-    if (bookInfo.isHidden.value) {
+    // No listing means no product to describe — emitting Book/Offer markup for a
+    // class that isn't on sale is exactly the mismatch merchant reviews flag.
+    if (bookInfo.isHidden.value || !bookInfo.hasBookstoreInfo.value) {
       return []
     }
 

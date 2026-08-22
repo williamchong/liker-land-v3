@@ -10,6 +10,10 @@ function getBookstoreInfoQueryKey(nftClassId: string): EntryKey {
   return [BOOKSTORE_INFO_QUERY_KEY, normalizeNFTClassId(nftClassId)]
 }
 
+function getBookstorePendingReviewQueryKey(nftClassId: string): EntryKey {
+  return [BOOKSTORE_PENDING_REVIEW_QUERY_KEY, normalizeNFTClassId(nftClassId)]
+}
+
 function getNFTClassMessagesQueryKey(nftClassId: string): EntryKey {
   return [NFT_CLASS_MESSAGES_QUERY_KEY, normalizeNFTClassId(nftClassId)]
 }
@@ -72,6 +76,13 @@ export function getBookstoreInfoByNFTClassIdFromCache(
   return queryCache.getQueryData<BookstoreInfo | null>(getBookstoreInfoQueryKey(nftClassId))
 }
 
+export function getIsBookstorePendingReviewFromCache(
+  queryCache: QueryCache,
+  nftClassId: string,
+): boolean | undefined {
+  return queryCache.getQueryData<boolean>(getBookstorePendingReviewQueryKey(nftClassId))
+}
+
 export function getNFTClassMessagesFromCache(
   queryCache: QueryCache,
   nftClassId: string,
@@ -119,6 +130,20 @@ export function setBookstoreInfo(
   queryCache.setQueryData<BookstoreInfo | null>(key, () => bookstoreInfo)
 }
 
+export function setBookstorePendingReview(
+  queryCache: QueryCache,
+  nftClassId: string,
+  isPendingReview: boolean,
+) {
+  const key = getBookstorePendingReviewQueryKey(nftClassId)
+  const oldData = queryCache.getQueryData<boolean>(key)
+  if (oldData === isPendingReview) return
+  // Not-pending is the default, and these seed-only entries are never evicted:
+  // only ever materialise one to carry, or to clear, a pending flag.
+  if (!isPendingReview && oldData === undefined) return
+  queryCache.setQueryData<boolean>(key, () => isPendingReview)
+}
+
 export async function fetchNFTClassAggregatedMetadataThroughCache(
   queryCache: QueryCache,
   nftClassId: string,
@@ -130,6 +155,9 @@ export async function fetchNFTClassAggregatedMetadataThroughCache(
   }
   if (data.bookstoreInfo !== undefined) {
     setBookstoreInfo(queryCache, nftClassId, data.bookstoreInfo)
+  }
+  if (data.isBookstorePendingReview !== undefined) {
+    setBookstorePendingReview(queryCache, nftClassId, data.isBookstorePendingReview)
   }
   // Key off the requested options, not payload truthiness — a null classData is
   // a legitimate answer. nocache is required: a plain response may be the CDN's
