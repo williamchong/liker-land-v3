@@ -625,7 +625,6 @@ if (!isUploadedBook.value) {
   })
 }
 
-const lastSectionIndex = ref(0)
 const percentage = ref(0)
 // percentageFromCfi is null until locations.generate() resolves, and that runs
 // un-awaited, so the first relocations of a cold-cache open land here. Neither
@@ -639,12 +638,11 @@ function applyPercentageFromCfi(cfi: string) {
   }
 }
 const percentageLabel = computed(() => `${Math.round(percentage.value * 100)}%`)
-const isAtLastPage = computed(() => {
-  return currentSectionIndex.value >= lastSectionIndex.value && percentage.value >= 1
-})
-const isAtFirstPage = computed(() => {
-  return currentSectionIndex.value === 0 && percentage.value === 0
-})
+// Driven by the rendition's atStart/atEnd flags, which come from the actual
+// rendered pagination; the bucketed location percentage hits 1 a page early
+// at large font sizes and would hide the next arrow before the real end.
+const isAtLastPage = ref(false)
+const isAtFirstPage = ref(false)
 const currentPageStartCfi = ref<string>('')
 const currentPageEndCfi = ref<string>('')
 const currentPageHref = ref<string>('')
@@ -800,6 +798,11 @@ function applyWritingModeToLoadedSections() {
   })
 }
 
+// Themes reach the views that are already attached, so a change landing before
+// the pending render lays out needs no further pass.
+let themeVersion = 0
+let renderedThemeVersion = -1
+
 function applyTheme() {
   if (!rendition.value) return
 
@@ -841,14 +844,20 @@ function applyTheme() {
   }
   rendition.value.themes.default(themeRules)
   rendition.value.themes.fontSize(`${fontSize.value}px`)
+  themeVersion += 1
 }
 
-watch(fontSize, () => {
-  applyTheme()
-})
+// A synced setting also lands when the server value hydrates mid-load, so hold
+// the re-display until loadEPub() has anchored its own first page.
+let hasDisplayedInitialLocation = false
 
-watch(lineHeight, () => {
+// Re-display after a font or line-height change: themes alone reflow without a
+// guaranteed relocated report, leaving the boundary flags and CFI stale. Both
+// sources share one watcher so a reset that changes them together renders once.
+watch([fontSize, lineHeight], async () => {
   applyTheme()
+  if (!hasDisplayedInitialLocation) return
+  await rerenderRenditionAtCurrentLocation()
 })
 
 watch(colorModeValue, () => {
@@ -914,7 +923,31 @@ function applyRenditionDirection() {
   currentRendition.manager?.direction(direction)
 }
 
-async function rerenderRenditionAtCurrentLocation() {
+// Overlapping renders clear and re-display on top of each other, so a request
+// arriving mid-render folds into a single trailing pass.
+let activeRerenderPromise: Promise<void> | undefined
+let hasPendingRerender = false
+
+function rerenderRenditionAtCurrentLocation(): Promise<void> {
+  if (activeRerenderPromise) {
+    hasPendingRerender = true
+  }
+  else {
+    activeRerenderPromise = runRenditionRerender().finally(() => {
+      activeRerenderPromise = undefined
+    })
+  }
+  return activeRerenderPromise
+}
+
+async function runRenditionRerender() {
+  do {
+    hasPendingRerender = false
+    await displayRenditionAtCurrentLocation()
+  } while (hasPendingRerender && hasDisplayedInitialLocation && themeVersion !== renderedThemeVersion)
+}
+
+async function displayRenditionAtCurrentLocation() {
   if (!rendition.value) return
 
   const target = currentCfi.value || currentPageStartCfi.value || activeNavItemHref.value
@@ -924,6 +957,11 @@ async function rerenderRenditionAtCurrentLocation() {
   rendition.value.clear()
   await nextTick()
 
+  // A reload may have swapped the rendition out over that tick, and it anchors
+  // its own first page.
+  if (!hasDisplayedInitialLocation) return
+
+  renderedThemeVersion = themeVersion
   const hasDisplayed = await displayRendition(target, { isSilentError: true })
   if (!hasDisplayed) {
     await displayRendition(undefined)
@@ -947,6 +985,7 @@ async function displayRendition(href?: string, { isSilentError = false } = {}) {
 }
 
 async function loadEPub() {
+  hasDisplayedInitialLocation = false
   renderedHighlights.clear()
   // Reset per-book writing-mode detection so a prior book's result can't leak in
   // if this page instance is reused across books.
@@ -1008,7 +1047,6 @@ async function loadEPub() {
 
   activeNavItemHref.value = book.spine!.first()!.href
   currentPageHref.value = activeNavItemHref.value ?? ''
-  lastSectionIndex.value = book.spine!.last()!.index ?? 0
 
   if (!renditionElement.value) {
     return
@@ -1066,6 +1104,7 @@ async function loadEPub() {
       return
     }
   }
+  hasDisplayedInitialLocation = true
 
   // Clear stale TTS index from previous session so it doesn't override current page position
   activeTTSElementIndex.value = undefined
@@ -1288,6 +1327,8 @@ async function loadEPub() {
     currentPageEndCfi.value = location.end.cfi
     // Authoritative section of the visible page (see the `rendered` handler).
     currentSectionIndex.value = location.start.index
+    isAtFirstPage.value = !!location.atStart
+    isAtLastPage.value = !!location.atEnd
     const href = location.start.href
     currentPageHref.value = href
     activeNavItemHref.value = resolveActiveNavItemHref(href)
@@ -1701,10 +1742,14 @@ async function restoreDefaultDisplayOptions() {
   const hasWritingModeChanged = previousWritingMode !== writingMode.value
 
   applyWritingModeToLoadedSections()
-  applyTheme()
 
-  if (hasFontSizeChanged || hasLineHeightChanged || hasWritingModeChanged) {
-    await rerenderRenditionAtCurrentLocation()
+  // A font-size or line-height change already applies the theme and re-displays
+  // through its watcher, which also picks up the writing mode.
+  if (!hasFontSizeChanged && !hasLineHeightChanged) {
+    applyTheme()
+    if (hasWritingModeChanged) {
+      await rerenderRenditionAtCurrentLocation()
+    }
   }
 
   if (hasFontSizeChanged) {
