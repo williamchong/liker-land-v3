@@ -316,6 +316,7 @@
     <AnnotationMenu
       :is-visible="isAnnotationMenuVisible"
       :position="annotationMenuPosition"
+      @copy="handleAnnotationCopy"
       @select="handleAnnotationColorSelect"
       @create-note="handleAnnotationAddNote"
       @report-issue="handleAnnotationReportIssue"
@@ -461,6 +462,7 @@ const isPageLoading = ref(false)
 const isAnnotationMenuVisible = ref(false)
 const annotationMenuPosition = ref({ x: 0, y: 0, yBottom: 0 })
 const selectedText = ref('')
+const selectedCopyText = ref('')
 const selectedCfi = ref('')
 const selectedChapterTitle = ref('')
 const isAnnotationModalOpen = ref(false)
@@ -1212,12 +1214,8 @@ async function loadEPub() {
         event.preventDefault()
         event.stopPropagation()
 
-        const limitedText = selectedText.slice(0, COPY_CHAR_LIMIT)
-        const productPageURL = `${config.public.baseURL}${localeRoute({ name: 'store-nftClassId', params: { nftClassId: nftClassId.value } })?.path || ''}`
-        const textWithAttribution = `${limitedText}\n\n${bookInfo.name.value}\n${productPageURL}`
-
         if (event.clipboardData) {
-          event.clipboardData.setData('text/plain', textWithAttribution)
+          event.clipboardData.setData('text/plain', formatCopyText(selectedText))
         }
       }
     }, { capture: true })
@@ -2032,13 +2030,8 @@ function handleTextSelection(viewWindow: Window) {
   if (isClearingSelection) return
 
   const selection = viewWindow.getSelection()
-  if (!selection || selection.isCollapsed || !selection.toString().trim()) {
-    isAnnotationMenuVisible.value = false
-    return
-  }
-
-  const text = selection.toString().trim()
-  if (!text) {
+  const text = selection?.toString().trim()
+  if (!selection || selection.isCollapsed || !text) {
     isAnnotationMenuVisible.value = false
     return
   }
@@ -2060,6 +2053,7 @@ function handleTextSelection(viewWindow: Window) {
     }
 
     selectedText.value = text.slice(0, ANNOTATION_TEXT_MAX_LENGTH)
+    selectedCopyText.value = text.slice(0, COPY_CHAR_LIMIT)
     selectedCfi.value = cfiRange
     selectedChapterTitle.value = activeNavItemLabel.value
 
@@ -2209,6 +2203,38 @@ async function handleAnnotationAddNote() {
       color: 'error',
     })
   }
+}
+
+function formatCopyText(text: string) {
+  // An uploaded book has no store page, so it gets the title alone.
+  const productPagePath = 'getProductPageRoute' in bookInfo
+    ? bookInfo.getProductPageRoute({ llMedium: 'copy', llSource: 'reader' })?.path
+    : undefined
+  const attribution = productPagePath
+    ? `${bookInfo.name.value}\n${config.public.baseURL}${productPagePath}`
+    : bookInfo.name.value
+  return `${text.slice(0, COPY_CHAR_LIMIT)}\n\n${attribution}`
+}
+
+// iOS clears the selection to dismiss the native callout, so this reads the text
+// stored at selection time rather than the live selection.
+async function handleAnnotationCopy() {
+  isAnnotationMenuVisible.value = false
+  const text = selectedCopyText.value
+  const isCopied = !!text && await copyTextToClipboard(formatCopyText(text))
+
+  toast.add({
+    title: isCopied ? $t('reader_annotation_copy_success') : $t('reader_annotation_copy_failed'),
+    color: isCopied ? 'success' : 'error',
+  })
+  if (isCopied) {
+    useLogEvent('reader_annotation_copy', {
+      nft_class_id: nftClassId.value,
+      is_uploaded_book: isUploadedBook.value,
+    })
+  }
+
+  renditionViewWindow.value?.getSelection()?.removeAllRanges()
 }
 
 function handleAnnotationReportIssue() {

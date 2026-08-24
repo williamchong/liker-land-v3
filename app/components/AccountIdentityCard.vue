@@ -119,7 +119,6 @@ const { t: $t } = useI18n()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
 const accountStore = useAccountStore()
 const toast = useToast()
-const { copy: copyToClipboard } = useClipboard()
 
 const overlay = useOverlay()
 const displayNameModal = overlay.create(AccountDisplayNameModal)
@@ -142,47 +141,29 @@ async function handleMagicButtonClick() {
 
 async function handleLikerIdClick() {
   useLogEvent('liker_id_wallet_click')
-  try {
-    await copyToClipboard(user.value?.likerId || '')
+  const isCopied = await copyTextToClipboard(user.value?.likerId || '')
+  toast.add({
+    title: $t(isCopied ? 'copy_liker_id_success' : 'copy_liker_id_failed'),
+    icon: isCopied ? 'i-material-symbols-3p-outline-rounded' : 'i-material-symbols-error-circle-rounded',
+    duration: 3000,
+    color: isCopied ? 'success' : 'error',
+  })
+  if (isCopied) {
     useLogEvent('account_liker_id_copy')
-    toast.add({
-      title: $t('copy_liker_id_success'),
-      duration: 3000,
-      icon: 'i-material-symbols-3p-outline-rounded',
-      color: 'success',
-    })
-  }
-  catch (error) {
-    console.error('Failed to copy wallet address:', error)
-    toast.add({
-      title: $t('copy_liker_id_failed'),
-      icon: 'i-material-symbols-error-circle-rounded',
-      duration: 3000,
-      color: 'error',
-    })
   }
 }
 
 async function handleEVMWalletClick() {
   useLogEvent('account_evm_wallet_click')
-  try {
-    await copyToClipboard(user.value?.evmWallet || '')
+  const isCopied = await copyTextToClipboard(user.value?.evmWallet || '')
+  toast.add({
+    title: $t(isCopied ? 'copy_evm_wallet_success' : 'copy_evm_wallet_failed'),
+    icon: isCopied ? 'i-material-symbols-key-outline-rounded' : 'i-material-symbols-error-circle-rounded',
+    duration: 3000,
+    color: isCopied ? 'success' : 'error',
+  })
+  if (isCopied) {
     useLogEvent('account_evm_wallet_copy')
-    toast.add({
-      title: $t('copy_evm_wallet_success'),
-      duration: 3000,
-      icon: 'i-material-symbols-key-outline-rounded',
-      color: 'success',
-    })
-  }
-  catch (error) {
-    console.error('Failed to copy wallet address:', error)
-    toast.add({
-      title: $t('copy_evm_wallet_failed'),
-      icon: 'i-material-symbols-error-circle-rounded',
-      duration: 3000,
-      color: 'error',
-    })
   }
 }
 </script>

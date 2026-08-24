@@ -54,7 +54,6 @@ const emit = defineEmits<{
 
 const { t: $t, locale } = useI18n()
 const toast = useToast()
-const { copy: copyToClipboard } = useClipboard()
 const { user } = useUserSession()
 const { isApp, isNativeBridge, appPlatform, buildVersion } = useAppDetection()
 const { hasDevicePlus, isPlusOrDevicePlus } = useDevicePlusEntitlement()
@@ -173,24 +172,15 @@ const sections = computed(() => {
 })
 
 async function handleCopy() {
-  try {
-    await copyToClipboard(JSON.stringify(debugInfo.value, null, 2))
+  const isCopied = await copyTextToClipboard(JSON.stringify(debugInfo.value, null, 2))
+  toast.add({
+    title: $t(isCopied ? 'app_debug_info_copy_success' : 'app_debug_info_copy_failed'),
+    icon: isCopied ? 'i-material-symbols-check-circle-outline-rounded' : 'i-material-symbols-error-circle-rounded',
+    duration: 3000,
+    color: isCopied ? 'success' : 'error',
+  })
+  if (isCopied) {
     useLogEvent('app_debug_info_copy')
-    toast.add({
-      title: $t('app_debug_info_copy_success'),
-      icon: 'i-material-symbols-check-circle-outline-rounded',
-      duration: 3000,
-      color: 'success',
-    })
-  }
-  catch (error) {
-    console.error('Failed to copy debug info:', error)
-    toast.add({
-      title: $t('app_debug_info_copy_failed'),
-      icon: 'i-material-symbols-error-circle-rounded',
-      duration: 3000,
-      color: 'error',
-    })
   }
 }
 </script>
