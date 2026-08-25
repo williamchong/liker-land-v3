@@ -523,9 +523,9 @@ const shouldShowTTSSamples = computed(() => {
     || hasAffiliateVoices.value || hasReferrerSystemVoice.value
 })
 
-// Chinese-only, matching usePricingPageCampaign — English is a small fraction
-// of pricing traffic and would only add noise. Resolved here so the upsell
-// modal and gift pages stay on the control copy.
+// Chinese-only — English is a small fraction of pricing traffic and would
+// only add noise. Resolved here so the upsell modal and gift pages stay
+// on the control copy.
 const benefitsCopyABTest = locale.value === 'zh-Hant'
   ? useABTest({ experimentKey: 'pricing-benefits-copy' })
   : undefined

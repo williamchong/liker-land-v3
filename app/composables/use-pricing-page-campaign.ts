@@ -7,6 +7,7 @@ interface PricingPageCampaign {
   description?: string
 }
 
+// Campaigns are opt-in: a hero renders only when utm_term/utm_campaign names one.
 const CAMPAIGNS: Record<string, PricingPageCampaign> = {
   'blocktrend-plus': {
     type: 'custom',
@@ -26,6 +27,19 @@ const CAMPAIGNS: Record<string, PricingPageCampaign> = {
     title: '冬日慢活\n讓閱讀變得更自在，讓你成為更有趣的人',
     description: '閱讀與聽書，隨時切換，不限手機／平板／電腦',
   },
+}
+
+export interface ResolvedPricingPageCampaign extends PricingPageCampaign {
+  id: string
+}
+
+export function getPricingPageCampaign(
+  campaignId: string | undefined,
+): ResolvedPricingPageCampaign | undefined {
+  if (!campaignId) return undefined
+  const content = CAMPAIGNS[campaignId]
+  if (!content) return undefined
+  return { id: campaignId, ...content }
 }
 
 export type AffiliateCouponEffect =
@@ -77,47 +91,27 @@ export function usePricingPageCampaign(options: {
   affiliateLikerId?: MaybeRefOrGetter<string | undefined>
 } = { campaignId: undefined }) {
   const { onLoaded } = useScriptPostHog()
-  const { locale } = useI18n()
   const campaignId = computed(() => toValue(options.campaignId))
   const affiliateLikerId = computed(() => toValue(options.affiliateLikerId))
-  const isChineseLocale = computed(() => locale.value === 'zh-Hant')
 
-  // Affiliate hit takes precedence over campaign AB-test exposure so the
-  // two systems don't fight for the same hero slot — and so the affiliate
-  // visit doesn't pollute campaign experiment metrics.
+  // Affiliate hit takes precedence over the campaign hero so the two
+  // systems don't fight for the same slot.
   const isAffiliateActive = computed(
     () => !!getAffiliatePricingPageContent(affiliateLikerId.value),
   )
 
-  const abTest = isChineseLocale.value
-    ? useABTest({ experimentKey: 'pricing-page-campaign' })
-    : undefined
-
   const resolvedCampaignId = computed(() => {
-    if (isAffiliateActive.value) return null
-    // If campaign ID is explicitly provided, use it
-    if (campaignId.value) return campaignId.value
-    // Otherwise, use the experiment variant if available (Chinese locale only)
-    return abTest?.variant.value ?? null
+    if (isAffiliateActive.value) return undefined
+    return campaignId.value
   })
 
-  const campaignContent = computed(() => {
-    if (!resolvedCampaignId.value) return undefined
-    const content = CAMPAIGNS[resolvedCampaignId.value]
-    if (!content) return undefined
-    const { type } = content
-    return {
-      id: resolvedCampaignId.value,
-      ...content,
-      isVideo: type === 'video',
-      isImage: type === 'image',
-      isCustom: type === 'custom',
-    }
-  })
+  const campaignContent = computed(() => getPricingPageCampaign(resolvedCampaignId.value))
 
   const isBlocktrendCampaign = computed(() => {
     return resolvedCampaignId.value === 'blocktrend-plus'
   })
+  // Not experiment assignment — mirrors the campaign onto the flag so events
+  // carry $feature/pricing-page-campaign and stay breakable down by campaign.
   const overrideFeatureFlag = () => {
     if (isAffiliateActive.value) return
     const currentCampaignId = campaignId.value

@@ -24,9 +24,13 @@ export function useABTest(config: ABTestConfig) {
 
   let unsubscribe: (() => void) | undefined
   let stopWatch: (() => void) | undefined
+  let isDisposed = false
   onMounted(() => {
     const { onLoaded } = useScriptPostHog()
     onLoaded(({ posthog }) => {
+      // A component unmounted before PostHog loads has already run its dispose,
+      // so subscribing now would register a handler nothing can remove.
+      if (isDisposed) return
       posthogInstance = posthog
       // Manual-exposure callers read the variant on demand via captureExposure,
       // so skip the reactive subscription that would fire exposures on render.
@@ -37,6 +41,7 @@ export function useABTest(config: ABTestConfig) {
     })
   })
   onScopeDispose(() => {
+    isDisposed = true
     unsubscribe?.()
     stopWatch?.()
   })
