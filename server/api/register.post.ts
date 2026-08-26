@@ -19,6 +19,9 @@ export default defineEventHandler(async (event) => {
         magicUserId: body.magicUserId,
         magicDIDToken: body.magicDIDToken,
         locale: body.locale?.startsWith('zh') ? 'zh' : 'en',
+        // The upstream cf-ipcountry header would be this server's country,
+        // so the browser's detected country rides along in the body instead.
+        ipCountry: body.ipCountry || undefined,
         utmSource: body.utmSource || undefined,
         utmMedium: body.utmMedium || undefined,
         utmCampaign: body.utmCampaign || undefined,

@@ -61,6 +61,7 @@ export const useAccountStore = defineStore('account', () => {
   const { getLikeCoinV3BookMigrationSiteURL } = useLikeCoinV3MigrationSite()
   const userAccountSessionAPI = useUserAccountSessionAPI()
   const { getAnalyticsParameters } = useAnalytics()
+  const { detectedCountry } = useDetectedGeolocation()
 
   const { ensureMagicSession } = useMagicSession()
   const loginModal = overlay.create(LazyLoginModal)
@@ -361,6 +362,7 @@ export const useAccountStore = defineStore('account', () => {
             magicUserId,
             magicDIDToken,
             locale: locale.value,
+            ipCountry: detectedCountry.value || undefined,
             ...getAnalyticsParameters(),
           },
         })
