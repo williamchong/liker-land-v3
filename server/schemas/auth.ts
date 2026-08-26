@@ -38,6 +38,7 @@ export const RegisterBodySchema = v.object({
   magicUserId: v.optional(v.string()),
   magicDIDToken: v.optional(v.string()),
   locale: v.optional(v.string()),
+  ipCountry: v.optional(v.string()),
   utmSource: v.optional(v.string()),
   utmMedium: v.optional(v.string()),
   utmCampaign: v.optional(v.string()),
