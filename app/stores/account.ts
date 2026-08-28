@@ -1,4 +1,5 @@
 import { useConnection, useChainId, useConnect, useDisconnect, useSignMessage } from '@wagmi/vue'
+import { getConnection, ConnectorAlreadyConnectedError, type Connector } from '@wagmi/core'
 import { UserRejectedRequestError } from 'viem'
 import { FetchError } from 'ofetch'
 import { jwtDecode } from 'jwt-decode'
@@ -48,9 +49,9 @@ function verifyTokenPermissions(token: string): boolean {
 export const useAccountStore = defineStore('account', () => {
   const config = useRuntimeConfig()
   const { $wagmiConfig } = useNuxtApp()
-  const { address, isConnected } = useConnection()
+  const { isConnected } = useConnection()
   const currentChainId = useChainId()
-  const { connectAsync, connectors, status } = useConnect()
+  const { connectAsync, connectors } = useConnect()
   const { disconnectAsync } = useDisconnect()
   const { signMessageAsync } = useSignMessage()
   const { fetch: refreshSession, user } = useUserSession()
@@ -81,6 +82,22 @@ export const useAccountStore = defineStore('account', () => {
   function getActiveConnector() {
     const { state } = $wagmiConfig
     return state.current ? state.connections.get(state.current)?.connector : undefined
+  }
+
+  // wagmi throws ConnectorAlreadyConnectedError when the connector is already
+  // current. The deferred reconnect() in plugins/wagmi.ts can land inside our
+  // await window, so read the live connection here instead of trusting a ref
+  // captured before it.
+  async function connectOrReuse(connector: Connector) {
+    const live = getConnection($wagmiConfig)
+    if (live.isConnected && live.connector?.uid === connector.uid) return live
+    try {
+      await connectAsync({ connector, chainId: chainId.value })
+    }
+    catch (error) {
+      if (!(error instanceof ConnectorAlreadyConnectedError)) throw error
+    }
+    return getConnection($wagmiConfig)
   }
 
   const isLoginWithMagic = computed(() => {
@@ -399,14 +416,23 @@ export const useAccountStore = defineStore('account', () => {
     return false
   }
 
+  function assertConnectedWalletMatchesAccount(walletAddress?: string) {
+    if (!walletAddress || !user.value?.evmWallet) return
+    if (walletAddress.toLowerCase() !== user.value.evmWallet.toLowerCase()) {
+      throw createError({
+        statusCode: 400,
+        message: $t('error_connected_wallet_different'),
+      })
+    }
+  }
+
   async function restoreConnection() {
-    if (address.value) {
-      if (user.value?.evmWallet && address.value.toLowerCase() !== user.value.evmWallet.toLowerCase()) {
-        throw createError({
-          statusCode: 400,
-          message: $t('error_connected_wallet_different'),
-        })
-      }
+    // Read the live connection rather than `address`: the ref still lags while
+    // the deferred reconnect() settles, and returning early on a stale empty
+    // value skips the wallet-mismatch check below.
+    const live = getConnection($wagmiConfig)
+    if (live.isConnected) {
+      assertConnectedWalletMatchesAccount(live.address)
       return
     }
     const lastUsedConnectorId = user.value?.loginMethod
@@ -426,10 +452,17 @@ export const useAccountStore = defineStore('account', () => {
         await login()
         return
       }
-      await connectAsync({
-        connector,
-        chainId: chainId.value,
-      })
+      const connection = await connectOrReuse(connector)
+      // Callers chain writeContractAsync/signMessageAsync straight onto this;
+      // returning without a live connector hands them a bare wagmi
+      // ConnectorNotConnectedError instead of a message the user can act on.
+      if (!connection.isConnected) {
+        throw createError({
+          statusCode: 400,
+          message: $t('error_connect_wallet_failed'),
+        })
+      }
+      assertConnectedWalletMatchesAccount(connection.address)
     }
     else {
       await login()
@@ -483,13 +516,9 @@ export const useAccountStore = defineStore('account', () => {
       }
 
       isLoggingIn.value = true
+      let connection: Awaited<ReturnType<typeof connectOrReuse>> | undefined
       try {
-        if (status.value !== 'success') {
-          await connectAsync({
-            connector,
-            chainId: chainId.value,
-          })
-        }
+        connection = await connectOrReuse(connector)
       }
       finally {
         if (connectorId === 'magic') {
@@ -503,12 +532,11 @@ export const useAccountStore = defineStore('account', () => {
 
       blockingModal.open({ title: $t('account_verifying') })
 
-      const walletAddress = address.value
-      if (status.value !== 'success' || !walletAddress) {
+      const walletAddress = connection?.address
+      if (!connection?.isConnected || !walletAddress) {
         throw createError({
           statusCode: 400,
           message: $t('error_connect_wallet_failed'),
-          fatal: true,
         })
       }
 
