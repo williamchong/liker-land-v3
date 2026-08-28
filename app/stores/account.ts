@@ -469,7 +469,7 @@ export const useAccountStore = defineStore('account', () => {
     }
   }
 
-  async function login({ connectorId: preferredConnectorId, email: preferredEmail }: { connectorId?: string, email?: string } = {}) {
+  async function login({ connectorId: preferredConnectorId, email: preferredEmail, retryCount = 0 }: { connectorId?: string, email?: string, retryCount?: number } = {}) {
     let connectorId: string | undefined = preferredConnectorId
     try {
       isLoggingIn.value = true
@@ -646,7 +646,11 @@ export const useAccountStore = defineStore('account', () => {
         error_message: getErrorEventMessage(error),
       })
       await handleError(error)
-      return login()
+      // Retry once: the panel reopening is the recovery affordance, but an
+      // unbounded self-call loops the user through the same failure until
+      // they reload.
+      if (retryCount > 0) return
+      return login({ retryCount: retryCount + 1 })
     }
     finally {
       isLoggingIn.value = false
