@@ -222,6 +222,56 @@ export function revalidateNFTClassAggregatedMetadata(queryCache: QueryCache, nft
   pendingIds.forEach(id => revalidateNFTClassAggregatedMetadataById(queryCache, id))
 }
 
+// Bookstore info for listing rows that arrive without compliance flags — the
+// Airtable-backed search and the indexer carry neither restrictedTerritories nor
+// isHidden, so the gates reading them have nothing to decide on until this lands.
+const inflightBookstoreInfoPrefetches = new Map<string, Promise<unknown>>()
+// Higher than the revalidation cap: these requests ask for `bookstore` alone and
+// are CDN-served, so a search page of 100 rows drains in a few waves.
+const MAX_CONCURRENT_BOOKSTORE_INFO_PREFETCHES = 12
+let activeBookstoreInfoPrefetchCount = 0
+const queuedBookstoreInfoPrefetches: Array<() => void> = []
+
+function runNextBookstoreInfoPrefetch() {
+  if (activeBookstoreInfoPrefetchCount >= MAX_CONCURRENT_BOOKSTORE_INFO_PREFETCHES) return
+  const next = queuedBookstoreInfoPrefetches.shift()
+  if (!next) return
+  activeBookstoreInfoPrefetchCount += 1
+  next()
+}
+
+function prefetchBookstoreInfoById(queryCache: QueryCache, nftClassId: string) {
+  const key = normalizeNFTClassId(nftClassId)
+  const existing = inflightBookstoreInfoPrefetches.get(key)
+  if (existing) return existing
+  const promise = new Promise<void>((resolve) => {
+    queuedBookstoreInfoPrefetches.push(() => {
+      fetchNFTClassAggregatedMetadataThroughCache(queryCache, nftClassId, { include: ['bookstore'] })
+        // Leave the class unresolved rather than cache a failure: the gates fall
+        // back to showing the book, and a later listing retries it.
+        .catch(() => { /* ignore */ })
+        .finally(() => {
+          activeBookstoreInfoPrefetchCount -= 1
+          inflightBookstoreInfoPrefetches.delete(key)
+          resolve()
+          runNextBookstoreInfoPrefetch()
+        })
+    })
+    runNextBookstoreInfoPrefetch()
+  })
+  inflightBookstoreInfoPrefetches.set(key, promise)
+  return promise
+}
+
+// Resolves the class IDs with no cached bookstore info, coalesced and bounded.
+// Await it before publishing a listing whose gates depend on that info.
+export function prefetchBookstoreInfo(queryCache: QueryCache, nftClassIds: string[]) {
+  if (import.meta.server) return Promise.resolve()
+  const pendingIds = [...new Set(nftClassIds.map(id => normalizeNFTClassId(id)).filter(Boolean))]
+    .filter(id => getBookstoreInfoByNFTClassIdFromCache(queryCache, id) === undefined)
+  return Promise.all(pendingIds.map(id => prefetchBookstoreInfoById(queryCache, id)))
+}
+
 export async function ensureNFTClassAggregatedMetadataThroughCache(
   queryCache: QueryCache,
   nftClassId: string,

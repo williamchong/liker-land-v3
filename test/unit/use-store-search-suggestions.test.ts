@@ -6,7 +6,12 @@ import { useStoreSearchSuggestions } from '~/composables/use-store-search-sugges
 // Mirrors SUGGESTION_DEBOUNCE_MS in the composable (not exported).
 const DEBOUNCE_MS = 300
 
-const { mockFetch } = vi.hoisted(() => ({ mockFetch: vi.fn() }))
+const { mockFetch, mockGetBookstoreInfo, mockPrefetch, mockIsRegionRestricted } = vi.hoisted(() => ({
+  mockFetch: vi.fn(),
+  mockGetBookstoreInfo: vi.fn(),
+  mockPrefetch: vi.fn(),
+  mockIsRegionRestricted: vi.fn(),
+}))
 
 mockNuxtImport('fetchBookstoreCMSPublicationsBySearchTerm', () => mockFetch)
 mockNuxtImport('useImageResize', () => () => ({
@@ -15,6 +20,10 @@ mockNuxtImport('useImageResize', () => () => ({
 }))
 mockNuxtImport('normalizeNFTClassId', () => (id?: string) => id ?? '')
 mockNuxtImport('getTimestampRoundedToMinute', () => () => 0)
+mockNuxtImport('useQueryCache', () => () => ({}))
+mockNuxtImport('prefetchBookstoreInfo', () => mockPrefetch)
+mockNuxtImport('getBookstoreInfoByNFTClassIdFromCache', () => mockGetBookstoreInfo)
+mockNuxtImport('useBookRegionGate', () => () => ({ getIsRegionRestricted: mockIsRegionRestricted }))
 
 // Let awaited fetch continuations and the Vue watcher scheduler settle.
 async function flush() {
@@ -26,6 +35,12 @@ describe('useStoreSearchSuggestions', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     mockFetch.mockReset()
+    mockGetBookstoreInfo.mockReset()
+    mockGetBookstoreInfo.mockReturnValue(undefined)
+    mockPrefetch.mockReset()
+    mockPrefetch.mockResolvedValue(undefined)
+    mockIsRegionRestricted.mockReset()
+    mockIsRegionRestricted.mockReturnValue(false)
   })
 
   afterEach(() => {
@@ -52,6 +67,57 @@ describe('useStoreSearchSuggestions', () => {
       { classId: 'a', title: 'Book A', thumbnailUrl: 'resized:ipfs://a:100' },
       { classId: 'b', title: 'Book B', thumbnailUrl: undefined },
     ])
+  })
+
+  it('resolves bookstore info before publishing, then drops region-blocked books', async () => {
+    mockFetch.mockResolvedValue({
+      records: [
+        { classId: 'a', title: 'Book A', imageUrl: 'ipfs://a' },
+        { classId: 'blocked', title: 'Book B', imageUrl: 'ipfs://b' },
+      ],
+    })
+    mockGetBookstoreInfo.mockImplementation((_cache: unknown, classId: string) => (
+      classId === 'blocked' ? { restrictedTerritories: ['HK'] } : {}
+    ))
+    let resolvePrefetch: () => void = () => {}
+    mockPrefetch.mockImplementation(() => new Promise<void>((resolve) => {
+      resolvePrefetch = resolve
+    }))
+    mockIsRegionRestricted.mockImplementation((territories?: string[]) => !!territories?.includes('HK'))
+    const term = ref('')
+    const { suggestions } = useStoreSearchSuggestions(term)
+
+    term.value = 'harry'
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+
+    expect(mockPrefetch).toHaveBeenCalledWith(expect.anything(), ['a', 'blocked'])
+    // Nothing is offered until the info the gate reads has landed.
+    expect(suggestions.value).toEqual([])
+
+    resolvePrefetch()
+    await flush()
+
+    expect(suggestions.value).toEqual([
+      { classId: 'a', title: 'Book A', thumbnailUrl: 'resized:ipfs://a:100' },
+    ])
+  })
+
+  it('re-gates an already-resolved term when the region changes', async () => {
+    mockFetch.mockResolvedValue({
+      records: [{ classId: 'a', title: 'Book A', imageUrl: 'ipfs://a' }],
+    })
+    mockGetBookstoreInfo.mockReturnValue({ restrictedTerritories: ['HK'] })
+    const isRestricted = ref(false)
+    mockIsRegionRestricted.mockImplementation(() => isRestricted.value)
+    const term = ref('')
+    const { suggestions } = useStoreSearchSuggestions(term)
+
+    term.value = 'harry'
+    await vi.advanceTimersByTimeAsync(DEBOUNCE_MS)
+    expect(suggestions.value).toHaveLength(1)
+
+    isRestricted.value = true
+    expect(suggestions.value).toEqual([])
   })
 
   it('does not fetch for terms shorter than the minimum length', async () => {

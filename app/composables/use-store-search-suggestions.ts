@@ -13,8 +13,8 @@ const SUGGESTION_CACHE_MAX = 50
  * Live search suggestions for the store/library search input. Debounces the
  * term, hits the existing `/api/store/search` endpoint (sharing its 60s cache
  * via `ts`), and returns the top matching books. Reads the raw endpoint
- * response rather than the bookstore store getter so fresh matches aren't
- * dropped by the hidden-book filter before their bookstore info has loaded.
+ * response rather than the bookstore store getter, so a fresh match is kept
+ * while its bookstore info loads — only the region gate below withholds one.
  */
 export function useStoreSearchSuggestions(
   searchTerm: MaybeRefOrGetter<string>,
@@ -26,6 +26,8 @@ export function useStoreSearchSuggestions(
   const suggestions = ref<StoreSearchSuggestion[]>([])
   const isLoading = ref(false)
   const { getResizedNormalizedImageURL } = useImageResize()
+  const queryCache = useQueryCache()
+  const { getIsRegionRestricted } = useBookRegionGate()
 
   const debouncedTerm = refDebounced(
     computed(() => toValue(searchTerm).trim()),
@@ -70,6 +72,9 @@ export function useStoreSearchSuggestions(
       const cached = cache.get(cacheKey)
       if (cached) {
         suggestions.value = cached
+        // Cached terms hold ungated rows, and the info the gate reads may have
+        // been evicted since. Re-resolve without holding up the instant render.
+        prefetchBookstoreInfo(queryCache, cached.map(item => item.classId))
         return
       }
 
@@ -92,6 +97,12 @@ export function useStoreSearchSuggestions(
             // once here so the CSP-safe URL isn't rebuilt on every keystroke re-render.
             thumbnailUrl: record.imageUrl ? getResizedNormalizedImageURL(record.imageUrl, { size: 100 }) : undefined,
           }))
+        // Search records carry no restrictedTerritories, so resolve the bookstore
+        // info the region gate reads before publishing — otherwise a geoblocked
+        // book shows until the gate can drop it.
+        await prefetchBookstoreInfo(queryCache, items.map(item => item.classId))
+        if (requestId !== latestRequestId) return
+
         cache.set(cacheKey, items)
         // Cap the per-instance cache so a long session of distinct searches can't grow it unbounded.
         if (cache.size > SUGGESTION_CACHE_MAX) {
@@ -109,8 +120,15 @@ export function useStoreSearchSuggestions(
     },
   )
 
+  // Gated at read time rather than baked into the cache: switching region must
+  // re-gate an already-resolved term instead of serving its earlier verdict.
+  const visibleSuggestions = computed(() => suggestions.value.filter((suggestion) => {
+    const bookstoreInfo = getBookstoreInfoByNFTClassIdFromCache(queryCache, suggestion.classId)
+    return !getIsRegionRestricted(bookstoreInfo?.restrictedTerritories)
+  }))
+
   return {
-    suggestions: readonly(suggestions),
+    suggestions: visibleSuggestions,
     isLoading: readonly(isLoading),
   }
 }
