@@ -10,6 +10,10 @@ export const WALLET_CONNECT_IDB_TEARDOWN = 'The database connection is closing'
 // an Error. WalletConnect's pino logger does exactly that.
 export const OBJECT_CAPTURED_MARKER = 'captured as exception with keys'
 
+// WalletConnect session proposals carry a ~5 minute TTL. Walking away from the
+// QR modal rejects the proposal, which is an abandoned login, not a failure.
+export const WALLET_CONNECT_PROPOSAL_EXPIRED = 'Proposal expired'
+
 // epub-ts logs this from inside its own try/catch while measuring a Range. The
 // DOM offset sits in the message text, so every offset groups as a new issue.
 export const EPUB_RANGE_LOG_PREFIX = 'setting end offset to start container length failed'
@@ -30,6 +34,7 @@ export interface CapturedException {
 export function getIsIgnoredCapturedException(exception: CapturedException) {
   const value = exception.value || ''
   if (value.includes(WALLET_CONNECT_IDB_TEARDOWN)) return true
+  if (value.includes(WALLET_CONNECT_PROPOSAL_EXPIRED)) return true
   // Only the synthetic ones: posthog sets that when the thrown value carried no
   // stack of its own, which is the logger-object case. A message-less object we
   // throw ourselves is a real bug and reports synthetic: false. Verified against
