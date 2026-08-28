@@ -528,8 +528,6 @@ export const useAccountStore = defineStore('account', () => {
         }
       }
 
-      useLogEvent('login_wallet_connected', { method: connector.id })
-
       blockingModal.open({ title: $t('account_verifying') })
 
       const walletAddress = connection?.address
@@ -539,6 +537,8 @@ export const useAccountStore = defineStore('account', () => {
           message: $t('error_connect_wallet_failed'),
         })
       }
+
+      useLogEvent('login_wallet_connected', { method: connector.id })
 
       // Get email from Magic SDK if using Magic Link
       let email: string | undefined
