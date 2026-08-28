@@ -14,6 +14,13 @@ describe('getIsIgnoredCapturedException', () => {
     })).toBe(true)
   })
 
+  it('drops an expired WalletConnect session proposal', () => {
+    expect(getIsIgnoredCapturedException({
+      value: 'Error: Proposal expired',
+      mechanism: { synthetic: false },
+    })).toBe(true)
+  })
+
   // The four shapes WalletConnect's pino logger produced in production; all
   // reported synthetic: true, none carried a message worth triaging.
   it.each([

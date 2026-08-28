@@ -1,5 +1,5 @@
 import { useConnection, useChainId, useConnect, useDisconnect, useSignMessage } from '@wagmi/vue'
-import { getConnection, ConnectorAlreadyConnectedError, type Connector } from '@wagmi/core'
+import { getConnection, ConnectorAlreadyConnectedError, type Connector, type GetConnectionReturnType } from '@wagmi/core'
 import { UserRejectedRequestError } from 'viem'
 import { FetchError } from 'ofetch'
 import { jwtDecode } from 'jwt-decode'
@@ -80,22 +80,23 @@ export const useAccountStore = defineStore('account', () => {
   // Pass to signMessage so wagmi re-reads the chain from the connector,
   // avoiding a mismatch when Magic cached chainId 0 during connect.
   function getActiveConnector() {
-    const { state } = $wagmiConfig
-    return state.current ? state.connections.get(state.current)?.connector : undefined
+    return getConnection($wagmiConfig).connector
   }
 
-  // wagmi throws ConnectorAlreadyConnectedError when the connector is already
-  // current. The deferred reconnect() in plugins/wagmi.ts can land inside our
-  // await window, so read the live connection here instead of trusting a ref
-  // captured before it.
-  async function connectOrReuse(connector: Connector) {
-    const live = getConnection($wagmiConfig)
-    if (live.isConnected && live.connector?.uid === connector.uid) return live
+  // The deferred reconnect() in plugins/wagmi.ts can land inside our await
+  // window, so the connector may already be current by the time we connect.
+  async function ensureConnection(connector: Connector) {
+    const connection = getConnection($wagmiConfig)
+    if (connection.isConnected && connection.connector?.uid === connector.uid) return connection
     try {
       await connectAsync({ connector, chainId: chainId.value })
     }
     catch (error) {
-      if (!(error instanceof ConnectorAlreadyConnectedError)) throw error
+      // Match on name too: a duplicate @wagmi/core copy under @wagmi/vue would
+      // defeat instanceof and silently restore the crash this guards against.
+      const isAlreadyConnected = error instanceof ConnectorAlreadyConnectedError
+        || (error as Error)?.name === 'ConnectorAlreadyConnectedError'
+      if (!isAlreadyConnected) throw error
     }
     return getConnection($wagmiConfig)
   }
@@ -427,12 +428,11 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   async function restoreConnection() {
-    // Read the live connection rather than `address`: the ref still lags while
-    // the deferred reconnect() settles, and returning early on a stale empty
-    // value skips the wallet-mismatch check below.
-    const live = getConnection($wagmiConfig)
-    if (live.isConnected) {
-      assertConnectedWalletMatchesAccount(live.address)
+    // Read live state: the deferred reconnect() in plugins/wagmi.ts may not have
+    // run yet, and returning early on an empty ref skips the mismatch check.
+    const connection = getConnection($wagmiConfig)
+    if (connection.isConnected && connection.address) {
+      assertConnectedWalletMatchesAccount(connection.address)
       return
     }
     const lastUsedConnectorId = user.value?.loginMethod
@@ -444,40 +444,38 @@ export const useAccountStore = defineStore('account', () => {
       // exceeded" (circular connector→config→connectors graph).
       connector = $wagmiConfig.connectors.find(c => c.id === lastUsedConnectorId)
     }
-    if (connector) {
-      // Magic can only reconnect silently while its client session is alive; if
-      // it has expired, connectAsync falls into the connector's OTP form with no
-      // email and hangs, so fall back to the explicit login flow instead.
-      if (connector.id === 'magic' && !(await isMagicSessionAlive(connector))) {
-        await login()
-        return
-      }
-      const connection = await connectOrReuse(connector)
-      // Callers chain writeContractAsync/signMessageAsync straight onto this;
-      // returning without a live connector hands them a bare wagmi
-      // ConnectorNotConnectedError instead of a message the user can act on.
-      if (!connection.isConnected) {
-        throw createError({
-          statusCode: 400,
-          message: $t('error_connect_wallet_failed'),
-        })
-      }
-      assertConnectedWalletMatchesAccount(connection.address)
-    }
-    else {
+    if (!connector) {
       await login()
+      return
     }
+    // Magic can only reconnect silently while its client session is alive; if
+    // it has expired, connectAsync falls into the connector's OTP form with no
+    // email and hangs, so fall back to the explicit login flow instead.
+    if (connector.id === 'magic' && !(await isMagicSessionAlive(connector))) {
+      await login()
+      return
+    }
+    const restored = await ensureConnection(connector)
+    // Callers chain writeContractAsync/signMessageAsync straight onto this, so
+    // returning without a live connector hands them a bare wagmi
+    // ConnectorNotConnectedError instead of a message they can act on.
+    if (!restored.isConnected) {
+      throw createError({
+        statusCode: 400,
+        message: $t('error_connect_wallet_failed'),
+      })
+    }
+    assertConnectedWalletMatchesAccount(restored.address)
   }
 
-  async function login({ connectorId: preferredConnectorId, email: preferredEmail, retryCount = 0 }: { connectorId?: string, email?: string, retryCount?: number } = {}) {
+  async function login({ connectorId: preferredConnectorId, email: preferredEmail, isRetry = false }: { connectorId?: string, email?: string, isRetry?: boolean } = {}) {
     let connectorId: string | undefined = preferredConnectorId
     try {
       isLoggingIn.value = true
 
-      // Disconnect any existing connection
-      if (isConnected.value) {
-        await disconnectAsync().catch(() => {})
-      }
+      // Clear any existing connection. Already a no-op when there is none, and
+      // a reactive pre-check would read stale across the awaits that follow.
+      await disconnectAsync().catch(() => {})
       let magicEmail: string | undefined = preferredEmail
       // Magic needs an email to seed its OTP input; entering connectAsync without
       // one hangs the connector, so treat a magic login lacking an email as
@@ -516,9 +514,9 @@ export const useAccountStore = defineStore('account', () => {
       }
 
       isLoggingIn.value = true
-      let connection: Awaited<ReturnType<typeof connectOrReuse>> | undefined
+      let connection: GetConnectionReturnType | undefined
       try {
-        connection = await connectOrReuse(connector)
+        connection = await ensureConnection(connector)
       }
       finally {
         if (connectorId === 'magic') {
@@ -629,18 +627,14 @@ export const useAccountStore = defineStore('account', () => {
         // Ignore disconnect errors
       })
 
-      if (error instanceof UserRejectedRequestError) {
+      // An expired WalletConnect proposal means the user walked away from the
+      // QR modal, so it belongs with the explicit rejections.
+      if (error instanceof UserRejectedRequestError
+        || getErrorMessage(error).includes(WALLET_CONNECT_PROPOSAL_EXPIRED)) {
         useLogEvent('login_wallet_rejected', { method: connectorId })
         return
       }
-      if (error instanceof Error && error.message.includes('User canceled action.')) {
-        return
-      }
-      // Walking away from the WalletConnect QR modal expires the session
-      // proposal after its ~5 minute TTL. That is an abandoned login, so
-      // classify it beside the explicit rejections rather than as a failure.
-      if (error instanceof Error && error.message.includes(WALLET_CONNECT_PROPOSAL_EXPIRED)) {
-        useLogEvent('login_wallet_rejected', { method: connectorId })
+      if (getErrorMessage(error).includes('User canceled action.')) {
         return
       }
       if (error instanceof FetchError && error.data?.message === 'EMAIL_ALREADY_USED') {
@@ -653,11 +647,9 @@ export const useAccountStore = defineStore('account', () => {
         error_message: getErrorEventMessage(error),
       })
       await handleError(error)
-      // Retry once: the panel reopening is the recovery affordance, but an
-      // unbounded self-call loops the user through the same failure until
-      // they reload.
-      if (retryCount > 0) return
-      return login({ retryCount: retryCount + 1 })
+      // Retry once; the reopened panel is the recovery affordance.
+      if (isRetry) return
+      return login({ isRetry: true })
     }
     finally {
       isLoggingIn.value = false
