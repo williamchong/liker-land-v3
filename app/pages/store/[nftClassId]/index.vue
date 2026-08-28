@@ -675,6 +675,8 @@ const { isOwner: isUserBookOwner } = useUserBookOwnership(nftClassId)
 // The product page renders the owner, so it opts into fetching their profile.
 const bookInfo = useBookInfo({ nftClassId, isOwnerInfoEnabled: true })
 
+const { catchPlusReadingRemovedRedirect } = usePlusReadingRemovedNotice()
+
 const isLibrary = computed(() => getRouteBaseName(route) === 'library-nftClassId')
 const listingRouteName = computed(() => (isLibrary.value ? 'library' : 'store'))
 
@@ -1347,6 +1349,9 @@ const filteredRecommendedClassIds = computed(() => {
 })
 
 onMounted(async () => {
+  // An SSR reject from the reader lands here with no toast of its own.
+  catchPlusReadingRemovedRedirect({ nftClassId: nftClassId.value })
+
   // The app hides the store, so send Plus-reading titles to the library.
   if (!isLibrary.value && isApp.value && bookInfo.isPlusReadingEnabled.value) {
     await navigateTo(localeRoute({

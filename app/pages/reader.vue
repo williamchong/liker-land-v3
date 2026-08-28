@@ -55,6 +55,7 @@ else {
   const { isLikerPlus, isExpiredLikerPlus } = useSubscription()
   const queryCache = useQueryCache()
   const bookshelfStore = useBookshelfStore()
+  const { notifyPlusReadingRemoved } = usePlusReadingRemovedNotice()
 
   const isPreviewRequested = getRouteQuery('preview') === '1'
 
@@ -103,11 +104,16 @@ else {
     // shelf locks on. The server still gates fetches; a return purges the file.
     const normalizedNFTClassId = normalizeNFTClassId(nftClassId.value)
     const isPreLent = bookshelfStore.preLentNFTClassIds.includes(normalizedNFTClassId)
+    const hasPlusReadingBorrow = bookshelfStore.plusReadingBookIds.includes(normalizedNFTClassId)
     const hasPersistedBorrow = isPreLent
-      || (isLikerPlus.value && !isExpiredLikerPlus.value
-        && bookshelfStore.plusReadingBookIds.includes(normalizedNFTClassId))
+      || (isLikerPlus.value && !isExpiredLikerPlus.value && hasPlusReadingBorrow)
+    // A book never in the library reads as un-enabled too, so scope removal to a
+    // borrow this reader holds; every other non-owner reject belongs on the shelf.
+    // It also overrides the offline fallback, which would keep opening the file.
+    const isRemovedFromLibrary = bookInfo.isPlusReadingRemoved.value && hasPlusReadingBorrow
     const isOffline = import.meta.client && !navigator.onLine
-    const canBorrow = !isOwner && (canBorrowFromMetadata || (isOffline && hasPersistedBorrow))
+    const canBorrow = !isOwner && !isRemovedFromLibrary
+      && (canBorrowFromMetadata || (isOffline && hasPersistedBorrow))
     if (isPreviewRequested && (isOwner || canBorrow)) {
       // Real access wins over preview: strip the param (and canonicalize nft_id
       // for owners, as the block below would) so the full file is fetched and a
@@ -124,7 +130,17 @@ else {
     }
     const canPreview = isPreviewRequested && bookInfo.isPreviewEnabled.value
     if (!isOwner && !canBorrow && !canPreview) {
-      await navigateTo(rejectRoute.value)
+      // The shelf renders a removed book as locked and would bounce the reader
+      // straight back here, so that reject goes to the product page instead.
+      if (isRemovedFromLibrary) {
+        await navigateTo(bookInfo.getProductPageRoute({
+          ...notifyPlusReadingRemoved({ nftClassId: nftClassId.value, source: 'reader' }),
+          query: route.query,
+        }))
+      }
+      else {
+        await navigateTo(rejectRoute.value)
+      }
     }
 
     if (!isPreviewRequested && !nftId.value && bookInfo.firstUserOwnedNFTId.value) {
