@@ -200,6 +200,7 @@
               :is-owned="isMyBookshelf && item.isOwned"
               :is-plus-reading="item.isPlusReading"
               :is-plus-reading-accessible="item.isPlusReadingAccessible"
+              :is-plus-reading-removed="item.isPlusReadingRemoved"
               :can-archive="isMyBookshelf"
               :can-edit-reading-state="isMyBookshelf"
               :is-finished="item.completedAt != null"
@@ -449,7 +450,7 @@
 <script setup lang="ts">
 import { formatUnits } from 'viem'
 import { DeleteUploadedBookModal } from '#components'
-import { getBookEntityName, getHasFreeEdition } from '~~/shared/utils/bookstore'
+import { getBookEntityName, getHasFreeEdition, getIsPlusReadingRemoved } from '~~/shared/utils/bookstore'
 
 import type { BookshelfItem } from '~/stores/bookshelf'
 import type { StakingItem } from '~/stores/staking'
@@ -462,6 +463,7 @@ interface BookshelfItemWithStaking extends BookshelfItem {
   isOwned: boolean
   isPlusReading?: boolean
   isPlusReadingAccessible?: boolean
+  isPlusReadingRemoved?: boolean
 }
 
 const { likeCoinTokenDecimals } = useRuntimeConfig().public
@@ -487,10 +489,20 @@ const isUploadedBookAccessible = computed(() => isLikerPlus.value && !isExpiredL
 // Active Plus reads any borrowed book; free-edition borrows stay readable without
 // it. A lapsed member's paid borrows render locked (resubscribe CTA), free ones don't.
 const isActivePlusReadingAccessible = computed(() => isLikerPlus.value && !isExpiredLikerPlus.value)
-function getIsPlusReadingItemAccessible(nftClassId: string) {
-  if (isActivePlusReadingAccessible.value) return true
+// Both flags read the same listing, so they're derived together: one lookup per
+// item, and no way for a book to render accessible and removed at once.
+function getPlusReadingItemAccess(nftClassId: string) {
+  // A pre-lent grant stands on its own, independent of the library listing.
+  if (bookshelfStore.preLentNFTClassIds.includes(nftClassId)) {
+    return { isAccessible: true, isRemoved: false }
+  }
   const info = getBookstoreInfoByNFTClassIdFromCache(queryCache, nftClassId)
-  return !!info?.isPlusReadingEnabled && getHasFreeEdition(info?.prices)
+  // A book pulled from the library is gone for every borrower, Plus or not.
+  if (getIsPlusReadingRemoved(info)) return { isAccessible: false, isRemoved: true }
+  // Free books never lock behind a resubscribe CTA; the reader gate backstops.
+  const isAccessible = isActivePlusReadingAccessible.value
+    || (!!info?.isPlusReadingEnabled && getHasFreeEdition(info?.prices))
+  return { isAccessible, isRemoved: false }
 }
 const canUploadBook = computed(() => isMyBookshelf.value && isUploadedBookFeatureEnabled.value && isUploadedBookAccessible.value && !isApp.value)
 const isUploadedBookVisible = computed(() => isMyBookshelf.value && isUploadedBookFeatureEnabled.value && hasUploadedBooks.value)
@@ -536,17 +548,18 @@ const bookshelfItemsAll = computed<BookshelfItemWithStaking[]>(() => {
 // have no terminal state — they live in the Reading tab until returned (還書).
 const plusReadingItemsAll = computed<BookshelfItemWithStaking[]>(() => {
   if (!isMyBookshelf.value) return []
-  return [...bookshelfStore.plusReadingItems, ...bookshelfStore.preLentItems].map(item => ({
-    ...item,
-    stakedAmount: 0,
-    pendingRewards: 0,
-    isOwned: false,
-    isPlusReading: true,
-    // Raw free list on purpose (covers borrowed free books too):
-    // free books never lock behind a resubscribe CTA; the reader gate is the backstop.
-    isPlusReadingAccessible: bookshelfStore.preLentNFTClassIds.includes(item.nftClassId)
-      || getIsPlusReadingItemAccessible(item.nftClassId),
-  }))
+  return [...bookshelfStore.plusReadingItems, ...bookshelfStore.preLentItems].map((item) => {
+    const { isAccessible, isRemoved } = getPlusReadingItemAccess(item.nftClassId)
+    return {
+      ...item,
+      stakedAmount: 0,
+      pendingRewards: 0,
+      isOwned: false,
+      isPlusReading: true,
+      isPlusReadingAccessible: isAccessible,
+      isPlusReadingRemoved: isRemoved,
+    }
+  })
 })
 
 // Finished tab: books with completedAt set (not archived), sorted by completedAt desc

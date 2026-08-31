@@ -1,6 +1,9 @@
 <template>
   <aside
-    v-if="isUserBookOwner || actionButtons.isPlusReadingCtaVisible || (!isLibrary && pricingItems.length)"
+    v-if="isUserBookOwner
+      || actionButtons.isCheckoutVisible
+      || actionButtons.isPlusReadingCtaVisible
+      || actionButtons.isPreviewCtaVisible"
     :class="[
       'fixed',
       'bottom-17',

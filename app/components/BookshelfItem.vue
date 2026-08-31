@@ -19,7 +19,7 @@
           v-if="props.isPlusReading && !props.isPlusReadingAccessible"
           ref="plusReadingLockedUpsell"
           class="absolute inset-0 flex items-center justify-center bg-theme-black/50 rounded-[inherit]"
-          :aria-label="$t('bookshelf_plus_reading_locked_cta')"
+          :aria-label="plusReadingLockedLabel"
         >
           <UIcon
             class="text-theme-white"
@@ -169,6 +169,12 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  // The publisher pulled the book out of the library: the borrow is dead for
+  // good, so the locked cover explains that instead of upselling a resubscribe.
+  isPlusReadingRemoved: {
+    type: Boolean,
+    default: false,
+  },
   progress: {
     type: Number,
     default: 0,
@@ -250,6 +256,7 @@ const getContentTypeLabel = useContentTypeLabel()
 const { getResizedImageURL } = useImageResize()
 const { checkOwnership } = useUserBookOwnership(props.nftClassId)
 const { errorModal } = useErrorHandler()
+const { notifyPlusReadingRemoved } = usePlusReadingRemovedNotice()
 const { exportAnnotations } = useExportAnnotations({
   bookId: computed(() => props.nftClassId),
   bookName: bookInfo.name,
@@ -260,6 +267,10 @@ const [DefineMenuButton, MenuButton] = createReusableTemplate()
 const bookCoverSrc = computed(() => getResizedImageURL(bookInfo.coverSrc.value, { size: 300 }))
 
 const progressPercentage = computed(() => Math.round(props.progress * 100))
+
+const plusReadingLockedLabel = computed(() => props.isPlusReadingRemoved
+  ? $t('bookshelf_plus_reading_removed_cta')
+  : $t('bookshelf_plus_reading_locked_cta'))
 
 // A book is readable if owned, or borrowed via Plus reading with active Plus.
 const canRead = computed(() =>
@@ -545,9 +556,21 @@ usePlusUpsellImpression({
   templateRef: 'plusReadingLockedUpsell',
   slot: 'plus-reading-locked',
   source: 'shelf',
+  // A removed book locks for a reason no subscription fixes.
+  isEligible: () => !props.isPlusReadingRemoved,
 })
 
 function handleCoverClick() {
+  // Pulled from the library: there is nothing to resubscribe to, so explain the
+  // lock and route to the product page instead of the membership page.
+  if (props.isPlusReading && props.isPlusReadingRemoved) {
+    navigateTo(bookInfo.getProductPageRoute(notifyPlusReadingRemoved({
+      nftClassId: props.nftClassId,
+      source: 'shelf',
+    })))
+    return
+  }
+
   // Lapsed Plus on a borrowed book: route to the membership page to resubscribe.
   if (props.isPlusReading && !props.isPlusReadingAccessible) {
     useLogEvent('shelf_plus_reading_resub_click', { nft_class_id: props.nftClassId })

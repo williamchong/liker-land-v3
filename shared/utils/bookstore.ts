@@ -59,6 +59,13 @@ export function getHasFreeEdition(prices?: BookstorePrice[]): boolean {
   return !!prices?.some(price => price.price === 0 && !price.isUnlisted)
 }
 
+// The publisher pulled the book out of the Plus library: the borrow ends there
+// and then, so this outranks any subscription state. A missing listing (offline,
+// not yet fetched) is not read as a removal.
+export function getIsPlusReadingRemoved(info?: BookstoreInfo | null): boolean {
+  return !!info && !info.isPlusReadingEnabled
+}
+
 // The For You feed falls back to the popular list below the cold-start signal
 // threshold, so personalization is a property of the response, not the surface.
 export function getRecommendationLLMedium(isPersonalized: boolean) {

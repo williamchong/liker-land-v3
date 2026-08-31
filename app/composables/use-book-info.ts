@@ -1,6 +1,6 @@
 import type { LocationQueryRaw } from 'vue-router'
 import { getGenreI18nKey } from '~~/shared/constants/book-categories'
-import { getBookEntityName, getHasFreeEdition } from '~~/shared/utils/bookstore'
+import { getBookEntityName, getHasFreeEdition, getIsPlusReadingRemoved } from '~~/shared/utils/bookstore'
 
 export default function (
   { nftClassId, isOwnerInfoEnabled = false }: {
@@ -231,6 +231,8 @@ export default function (
     return bookstoreInfo.value?.isPlusReadingEnabled || false
   })
 
+  const isPlusReadingRemoved = computed(() => getIsPlusReadingRemoved(bookstoreInfo.value))
+
   const isPreviewEnabled = computed(() => {
     return bookstoreInfo.value?.isPreviewEnabled || false
   })
@@ -405,6 +407,7 @@ export default function (
     isUpsellDisabled,
     isPlusPromoEnabled,
     isPlusReadingEnabled,
+    isPlusReadingRemoved,
     isPreviewEnabled,
     hasFreeEdition,
     isFreeBorrowEnabled,
