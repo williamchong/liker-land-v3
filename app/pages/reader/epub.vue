@@ -343,6 +343,7 @@ import ePub, {
   type NavItem,
   type Location,
   type Section,
+  type Contents,
 } from '@likecoin/epub-ts'
 import type { ReaderLeftSidebarTab } from '~/components/ReaderLeftSidebar.props'
 import type { ReaderNavigationMethod } from '~~/shared/constants/analytics'
@@ -869,7 +870,9 @@ function applyTheme() {
 
 // Tags each image with its load state so the theme can placeholder it while the
 // blob URL resolves, and paint a neutral box instead of the browser's
-// broken-image glyph when it never arrives.
+// broken-image glyph when it never arrives. Only the rendered iframe document
+// works: images in the parsed section document never fetch, yet Chrome reports
+// them complete with a zero naturalWidth, so every one would read as failed.
 function applyImageLoadStateToDocument(document: Document) {
   for (const image of Array.from(document.querySelectorAll('img'))) {
     const markFailed = () => {
@@ -1163,7 +1166,9 @@ async function loadEPub() {
   }
   book.spine!.hooks.content.register((document: Document) => {
     applyWritingModeToDocument(document)
-    applyImageLoadStateToDocument(document)
+  })
+  rendition.value.hooks.content.register((contents: Contents) => {
+    applyImageLoadStateToDocument(contents.document)
   })
 
   // Settings load lazily (kicked off un-awaited in onMounted). Apply the theme
