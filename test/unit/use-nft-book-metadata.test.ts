@@ -12,6 +12,7 @@ import {
   getIsBookstorePendingReviewFromCache,
   getNFTClassMessagesFromCache,
   getNFTClassMetadataByIdFromCache,
+  prefetchBookstoreInfo,
   revalidateNFTClassAggregatedMetadata,
   setBookstoreInfo,
   setBookstorePendingReview,
@@ -170,6 +171,38 @@ describe('use-nft-book-metadata', () => {
 
     resolvers.splice(0).forEach(resolve => resolve())
     await flushMicrotasks()
+  })
+
+  it('bounds bookstore info prefetches to twelve concurrent fetches, coalesced by id', async () => {
+    const nftClassIds = Array.from({ length: 15 }, () => nextClassId())
+    const resolvers: Array<() => void> = []
+    mockFetchAggregated.mockImplementation(() => new Promise((resolve) => {
+      resolvers.push(() => resolve(makeAggregatedResponse()))
+    }))
+
+    const prefetched = prefetchBookstoreInfo(queryCache, [...nftClassIds, ...nftClassIds])
+    expect(mockFetchAggregated).toHaveBeenCalledTimes(12)
+    expect(mockFetchAggregated).toHaveBeenCalledWith(nftClassIds[0], { include: ['bookstore'] })
+
+    resolvers.splice(0).forEach(resolve => resolve())
+    await flushMicrotasks()
+    expect(mockFetchAggregated).toHaveBeenCalledTimes(15)
+
+    resolvers.splice(0).forEach(resolve => resolve())
+    await prefetched
+    expect(getBookstoreInfoByNFTClassIdFromCache(queryCache, nftClassIds[0])).toEqual(bookstoreInfo)
+  })
+
+  it('skips prefetching classes whose bookstore info is already cached', async () => {
+    const cachedId = nextClassId()
+    const pendingId = nextClassId()
+    setBookstoreInfo(queryCache, cachedId, bookstoreInfo)
+    mockFetchAggregated.mockResolvedValue(makeAggregatedResponse())
+
+    await prefetchBookstoreInfo(queryCache, [cachedId, pendingId])
+
+    expect(mockFetchAggregated).toHaveBeenCalledTimes(1)
+    expect(mockFetchAggregated).toHaveBeenCalledWith(pendingId, { include: ['bookstore'] })
   })
 
   it('skips identity-changing writes when the data is unchanged', () => {
