@@ -246,7 +246,10 @@ export function useTextToSpeech(options: TTSOptions) {
     isTextToSpeechPlaying.value = true
     isTextToSpeechLoading.value = false
     const timing = consumeSegmentLoadTimer()
-    if (timing && timing.index === currentTTSSegmentIndex.value) {
+    // The shell reports the same segment as `audio_segment`,
+    // and tts_start/tts_completed already carry every session-constant field.
+    // Reporting both bills one segment twice for no extra read.
+    if (!isNativeBridge.value && timing && timing.index === currentTTSSegmentIndex.value) {
       useLogEvent('tts_segment_loaded', buildTTSEventPayload({
         segment_index: timing.index,
         load_time_ms: timing.loadMs,
@@ -641,6 +644,7 @@ export function useTextToSpeech(options: TTSOptions) {
           coverUrl: toValue(bookCoverSrc) || '',
         },
         prefetchCount,
+        ttsSessionId: ttsSessionId.value,
       })
 
       setupMediaSession()
