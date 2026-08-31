@@ -229,7 +229,12 @@ export const useBookstoreStore = defineStore('bookstore', () => {
     return true
   }
 
-  function updateSearchResults(queryKey: string, items: BookstoreSearchResults['items'], nextKey: string | undefined, isRefresh: boolean) {
+  async function updateSearchResults(queryKey: string, items: BookstoreSearchResults['items'], nextKey: string | undefined, isRefresh: boolean) {
+    // Search rows come from Airtable or the indexer, neither of which carries
+    // restrictedTerritories, so publishing them before their bookstore info lands
+    // would show a geoblocked book until the region gate could drop it.
+    await prefetchBookstoreInfo(queryCache, items.map(item => item.classId))
+
     const state = bookstoreSearchResultsByQueryMap.value[queryKey]
     if (!state) return
 
@@ -269,7 +274,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
         isPlusReadingEnabled: item.isPlusReadingEnabled,
       }))
 
-    updateSearchResults(queryKey, mappedItems, result.offset, isRefresh)
+    await updateSearchResults(queryKey, mappedItems, result.offset, isRefresh)
   }
 
   async function fetchGenreSearch(genre: string, queryKey: string, { isRefresh, isLibrary }: Required<BookstoreSearchOptions>) {
@@ -291,7 +296,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
         isPlusReadingEnabled: item.isPlusReadingEnabled,
       }))
 
-    updateSearchResults(queryKey, mappedItems, result.offset, isRefresh)
+    await updateSearchResults(queryKey, mappedItems, result.offset, isRefresh)
   }
 
   async function fetchMetadataSearch(type: 'author' | 'publisher', searchTerm: string, queryKey: string, isRefresh: boolean) {
@@ -316,7 +321,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
         }))
 
       const nextKey = getIndexerNextKey(result, options.limit)?.toString()
-      updateSearchResults(queryKey, mappedItems, nextKey, isRefresh)
+      await updateSearchResults(queryKey, mappedItems, nextKey, isRefresh)
     }
   }
 
@@ -343,7 +348,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
         }))
 
       const nextKey = getIndexerNextKey(result, options.limit)?.toString()
-      updateSearchResults(queryKey, mappedItems, nextKey, isRefresh)
+      await updateSearchResults(queryKey, mappedItems, nextKey, isRefresh)
     }
   }
 
@@ -399,7 +404,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
       const config = await fetchAffiliateStoreConfigThroughCache(queryCache, likerId)
 
       if (!config?.active) {
-        updateSearchResults(queryKey, [], undefined, true)
+        await updateSearchResults(queryKey, [], undefined, true)
         return
       }
 
@@ -456,7 +461,7 @@ export const useBookstoreStore = defineStore('bookstore', () => {
         })
       })
 
-      updateSearchResults(queryKey, items, undefined, true)
+      await updateSearchResults(queryKey, items, undefined, true)
     }
     finally {
       finalizeSearchState(queryKey)
