@@ -24,6 +24,9 @@ declare interface TTSAudioPlayer {
     // playback — on disk natively, in the service worker cache on web. 1 means
     // no lookahead beyond the idle player's next segment.
     prefetchCount?: number
+    // Joins the shell's own audio events back to the web app's tts_* events,
+    // which are the only side carrying book, voice and trial context.
+    ttsSessionId?: string
   }): void
   // False when the player cannot resume in place — never loaded, or errored —
   // so the caller falls back to a full load rather than a silent no-op.

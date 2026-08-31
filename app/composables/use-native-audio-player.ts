@@ -85,6 +85,7 @@ export function useNativeAudioPlayer(isActive: Ref<boolean | undefined>): TTSAud
       rate: options.rate,
       metadata: options.metadata,
       prefetchCount: options.prefetchCount,
+      ttsSessionId: options.ttsSessionId,
     })
     prefetchCount = options.prefetchCount ?? 1
     hasCrossedSegment = false
