@@ -272,9 +272,8 @@ const {
   tagId,
   isDefaultTagId,
   isStakingTagId,
-  isPopularTagId,
-  isBestsellingTagId,
   isForYouTagId,
+  isPreRankedTagId,
   getIsLocalHistoriesTagId,
   normalizedLocale,
   activeCMSTag,
@@ -474,9 +473,9 @@ const cmsProducts = computed<BookstoreItemList>(() => {
       totalStaked: stakingInfo?.totalStaked ?? 0n,
       stakerCount: stakingInfo?.stakerCount ?? 0,
       // `likeRank` is a stake rank linking to the staking page, so it's meaningless on
-      // the reading/sales-ranked popular list and the personalized feed — suppress the
-      // badge rather than mislabel it.
-      likeRank: (isPopularTagId.value || isBestsellingTagId.value || isForYouTagId.value) ? 0 : (stakingInfo?.likeRank ?? 0),
+      // the lists that arrive ranked by reading or sales and on the personalized feed —
+      // suppress the badge rather than mislabel it.
+      likeRank: (isPreRankedTagId.value || isForYouTagId.value) ? 0 : (stakingInfo?.likeRank ?? 0),
     }
   })
 
@@ -1066,16 +1065,17 @@ async function fetchTagItems({ isRefresh = false } = {}) {
     return
   }
 
+  // Captured together, since everything below runs after awaits and the outgoing
+  // instance of this shared page sees the incoming tab's route. isPreRankedTagId is
+  // tab-dependent, so a split read would sort a pre-ranked library list by staking.
   const currentTagId = tagId.value
-  // Captured with currentTagId: both guards below run after awaits, and reading the
-  // reactive computed there would follow a mid-fetch tab switch instead of this batch.
-  const isPopularTag = isPopularTagId.value
-  const isBestsellingTag = isBestsellingTagId.value
+  const currentIsLibrary = isLibraryTab.value
+  const isPreRankedTag = isPreRankedTagId.value
   const apiSortValue = mapTagIdToAPIStakingSortValue(isStakingTagId.value ? currentTagId : STAKING_TAG_DEFAULT)
 
   if (isStakingTagId.value) {
     await bookstoreStore.fetchStakingBooks(apiSortValue, { isRefresh, limit: 100 })
-    if (isLibraryTab.value) {
+    if (currentIsLibrary) {
       // Staking candidates are gated by getIsPlusReading before they render, so
       // they never trigger their own SWR refresh; nudge them so stale/missing
       // Plus flags self-correct and the gate reactively re-filters.
@@ -1103,9 +1103,9 @@ async function fetchTagItems({ isRefresh = false } = {}) {
   // the staking fetch still runs since cmsProducts decorates items with staking data.
   const isConditionalTag = !!cmsTag?.isConditional
 
-  // Fetch staking books first so CMS tag items can be sorted by staking. The popular and
-  // bestselling lists arrive pre-ranked, so they need neither the fetch nor the sort.
-  if (!isPopularTag && !isBestsellingTag) {
+  // Fetch staking books first so CMS tag items can be sorted by staking. Pre-ranked lists
+  // need neither the fetch nor the sort.
+  if (!isPreRankedTag) {
     await bookstoreStore.fetchStakingBooks(apiSortValue, { isRefresh, limit: 100 }).catch((error) => {
       console.warn('[store] Failed to fetch staking data for CMS tag sorting:', error)
     })
@@ -1113,14 +1113,14 @@ async function fetchTagItems({ isRefresh = false } = {}) {
 
   // Capture the items array reference before fetch so we can detect
   // if the store replaced it (e.g. on refresh or expired-offset retry)
-  const currentTagKey = getBookstoreScopedKey(currentTagId, isLibraryTab.value)
+  const currentTagKey = getBookstoreScopedKey(currentTagId, currentIsLibrary)
   const itemsBefore = bookstoreStore.bookstoreCMSProductsByTagKeyMap[currentTagKey]?.items
   const countBefore = isRefresh ? 0 : (itemsBefore?.length ?? 0)
-  await bookstoreStore.fetchCMSProductsByTagId(currentTagId, { isRefresh, isLibrary: isLibraryTab.value })
+  await bookstoreStore.fetchCMSProductsByTagId(currentTagId, { isRefresh, isLibrary: currentIsLibrary })
 
   // Sort only the new batch by staking amount (skip 'latest' which preserves Airtable
-  // order, 'popular' and 'bestselling' which arrive pre-ranked, and conditional tags)
-  if (currentTagId !== 'latest' && !isPopularTag && !isBestsellingTag && !isConditionalTag) {
+  // order, the pre-ranked lists, and conditional tags)
+  if (currentTagId !== 'latest' && !isPreRankedTag && !isConditionalTag) {
     const items = bookstoreStore.bookstoreCMSProductsByTagKeyMap[currentTagKey]?.items
     if (items === itemsBefore && items?.length === countBefore) return
     // If the array was replaced (refresh or offset-refresh), sort from 0

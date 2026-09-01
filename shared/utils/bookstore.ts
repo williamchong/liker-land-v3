@@ -19,6 +19,12 @@ export const BOOKSTORE_POPULAR_LIST_TYPE: BookstoreBuiltInListType = 'popular'
 
 // Ranked upstream by paid sales.
 export const BOOKSTORE_BESTSELLING_LIST_TYPE: BookstoreBuiltInListType = 'bestselling'
+
+// Ordered by recency upstream, except where the library asks for it ranked
+// (see server/api/store/products.get.ts). Narrowed to the literal so it can type
+// the upstream `filter` it is passed as.
+export const BOOKSTORE_FREE_LIST_TYPE = 'free' satisfies BookstoreBuiltInListType
+
 // Personalized feed backed by the authed /api/store/for-you endpoint. Deliberately
 // not a built-in list type: /api/store/products does not serve it.
 export const BOOKSTORE_FOR_YOU_LIST_TYPE = 'for-you'
