@@ -1,5 +1,34 @@
 export type CheckoutUIMode = 'hosted' | 'embedded'
 
+export interface FetchLikerPlusCheckoutLinkPayload {
+  period?: SubscriptionPlan
+  tier?: LikerPlusTier
+  trialPeriodDays?: number
+  mustCollectPaymentMethod?: boolean
+  giftNFTClassId?: string
+  from?: string
+  currency?: string
+  referrer?: string
+  utmCampaign?: string
+  utmMedium?: string
+  utmSource?: string
+  utmContent?: string
+  utmTerm?: string
+  initialUtmCampaign?: string
+  initialUtmMedium?: string
+  initialUtmSource?: string
+  gaClientId?: string
+  gaSessionId?: string
+  gadClickId?: string
+  gadSource?: string
+  fbClickId?: string
+  fbp?: string
+  fbc?: string
+  posthogDistinctId?: string
+  coupon?: string
+  uiMode?: CheckoutUIMode
+}
+
 export interface FetchLikerPlusCheckoutLinkResponseData {
   sessionId: string
   paymentId: string
@@ -44,34 +73,7 @@ export function usePlusSessionAPI() {
     posthogDistinctId,
     coupon,
     uiMode,
-  }: {
-    period?: SubscriptionPlan
-    tier?: LikerPlusTier
-    trialPeriodDays?: number
-    mustCollectPaymentMethod?: boolean
-    giftNFTClassId?: string
-    from?: string
-    currency?: string
-    referrer?: string
-    utmCampaign?: string
-    utmMedium?: string
-    utmSource?: string
-    utmContent?: string
-    utmTerm?: string
-    initialUtmCampaign?: string
-    initialUtmMedium?: string
-    initialUtmSource?: string
-    gaClientId?: string
-    gaSessionId?: string
-    gadClickId?: string
-    gadSource?: string
-    fbClickId?: string
-    fbp?: string
-    fbc?: string
-    posthogDistinctId?: string
-    coupon?: string
-    uiMode?: CheckoutUIMode
-  }) {
+  }: FetchLikerPlusCheckoutLinkPayload) {
     return fetch.value<FetchLikerPlusCheckoutLinkResponseData>(`/plus/new`, {
       method: 'POST',
       query: { period, tier, from, currency },

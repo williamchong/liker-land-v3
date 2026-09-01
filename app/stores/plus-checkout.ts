@@ -1,3 +1,5 @@
+import type { FetchLikerPlusCheckoutLinkPayload } from '~/composables/use-plus-session-api'
+
 export const usePlusCheckoutStore = defineStore('plus-checkout', () => {
   const clientSecret = ref<string | null>(null)
   const paymentId = ref<string | null>(null)
@@ -5,6 +7,10 @@ export const usePlusCheckoutStore = defineStore('plus-checkout', () => {
   const tier = ref<LikerPlusTier | null>(null)
   const coupon = ref<string | null>(null)
   const isTrial = ref(false)
+  // The request that minted the embedded session, kept verbatim so a failed
+  // render can replay it in hosted mode without re-deriving gift, trial or
+  // attribution values the checkout page never saw.
+  const checkoutPayload = ref<FetchLikerPlusCheckoutLinkPayload | null>(null)
 
   function setSession(payload: {
     clientSecret: string
@@ -13,6 +19,7 @@ export const usePlusCheckoutStore = defineStore('plus-checkout', () => {
     tier?: LikerPlusTier
     coupon?: string | null
     isTrial: boolean
+    checkoutPayload: FetchLikerPlusCheckoutLinkPayload
   }) {
     clientSecret.value = payload.clientSecret
     paymentId.value = payload.paymentId
@@ -20,6 +27,7 @@ export const usePlusCheckoutStore = defineStore('plus-checkout', () => {
     tier.value = payload.tier ?? null
     coupon.value = payload.coupon ?? null
     isTrial.value = payload.isTrial
+    checkoutPayload.value = payload.checkoutPayload
   }
 
   function clear() {
@@ -29,6 +37,7 @@ export const usePlusCheckoutStore = defineStore('plus-checkout', () => {
     tier.value = null
     coupon.value = null
     isTrial.value = false
+    checkoutPayload.value = null
   }
 
   return {
@@ -38,6 +47,7 @@ export const usePlusCheckoutStore = defineStore('plus-checkout', () => {
     tier,
     coupon,
     isTrial,
+    checkoutPayload,
     setSession,
     clear,
   }

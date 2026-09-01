@@ -43,12 +43,22 @@
           :title="$t('plus_checkout_error_title')"
           :description="$t('plus_checkout_error_description')"
         />
-        <UButton
-          color="primary"
-          variant="soft"
-          :label="$t('plus_checkout_back_button')"
-          @click="handleCancel"
-        />
+        <div class="flex flex-wrap items-center gap-2">
+          <UButton
+            v-if="plusCheckoutStore.checkoutPayload"
+            color="primary"
+            :label="$t('plus_checkout_retry_hosted_button')"
+            :loading="isRetryingHosted"
+            @click="handleRetryHosted"
+          />
+          <UButton
+            color="primary"
+            variant="soft"
+            :label="$t('plus_checkout_back_button')"
+            :disabled="isRetryingHosted"
+            @click="handleCancel"
+          />
+        </div>
       </div>
 
       <div
@@ -100,11 +110,14 @@ const { t: $t } = useI18n()
 const localeRoute = useLocaleRoute()
 const runtimeConfig = useRuntimeConfig()
 const plusCheckoutStore = usePlusCheckoutStore()
+const plusSessionAPI = usePlusSessionAPI()
 const stripeScript = useScriptStripe()
+const toast = useToast()
 
 const containerRef = ref<HTMLElement | null>(null)
 const isLoading = ref(true)
 const hasLoadError = ref(false)
+const isRetryingHosted = ref(false)
 let embeddedCheckout: StripeEmbeddedCheckout | null = null
 let isDisposed = false
 // mount() resolving proves nothing: a Stripe iframe that never paints still
@@ -248,6 +261,43 @@ function handleComplete() {
       trial: isTrial ? '1' : '0',
     },
   }), { replace: true })
+}
+
+// Stripe gives an embedded session no hosted URL, so recovering the sale means
+// minting a second one from the same request rather than redirecting to this one.
+async function handleRetryHosted() {
+  const payload = plusCheckoutStore.checkoutPayload
+  if (!payload || isRetryingHosted.value) return
+  isRetryingHosted.value = true
+  const previousPaymentId = plusCheckoutStore.paymentId
+  try {
+    const { url, paymentId } = await plusSessionAPI.fetchLikerPlusCheckoutLink({
+      ...payload,
+      uiMode: 'hosted',
+    })
+    if (!url) throw new Error('Hosted checkout session missing url')
+    useLogEvent('subscription_checkout_hosted_fallback', {
+      transaction_id: paymentId,
+      embedded_transaction_id: previousPaymentId || undefined,
+    })
+    plusCheckoutStore.clear()
+    await navigateTo(url, { external: true })
+  }
+  catch (error) {
+    useLogEvent('subscription_checkout_error', {
+      error_reason: 'hosted_fallback',
+      error_message: getErrorMessage(error),
+      transaction_id: previousPaymentId || undefined,
+    })
+    toast.add({
+      title: $t('plus_checkout_error_description'),
+      color: 'error',
+    })
+    console.error('[plus-checkout]', error)
+  }
+  finally {
+    isRetryingHosted.value = false
+  }
 }
 
 function handleCancel() {

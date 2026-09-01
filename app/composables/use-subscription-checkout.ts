@@ -354,7 +354,7 @@ export function useSubscriptionCheckout() {
           ? embeddedCheckoutABTest.captureExposure()
           : null
         const uiMode: CheckoutUIMode = embeddedVariant === 'test' ? 'embedded' : 'hosted'
-        const { url, clientSecret, paymentId } = await plusSessionAPI.fetchLikerPlusCheckoutLink({
+        const checkoutPayload = {
           period: plan,
           tier,
           from: getRouteQuery('from'),
@@ -368,7 +368,8 @@ export function useSubscriptionCheckout() {
           utmSource: analyticsParams.utmSource || utmSource,
           coupon,
           uiMode,
-        })
+        }
+        const { url, clientSecret, paymentId } = await plusSessionAPI.fetchLikerPlusCheckoutLink(checkoutPayload)
         useLogEvent('begin_checkout', {
           ...eventPayloadWithCoupon,
           transaction_id: paymentId,
@@ -393,6 +394,7 @@ export function useSubscriptionCheckout() {
             tier,
             coupon,
             isTrial: trialPeriodDays > 0,
+            checkoutPayload,
           })
           await navigateTo(localeRoute({ name: 'plus-checkout' }))
         }
