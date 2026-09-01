@@ -976,12 +976,19 @@ async function processRenderQueue() {
 
   isRendering.value = true
 
-  while (renderQueue.value.length > 0) {
-    const task = renderQueue.value.shift()!
-    await task()
+  // The queued task catches its own rejections today, so nothing here should
+  // throw. Release the flag in a finally regardless: the guard above turns a
+  // latched flag into a reader that takes page turns and paints none of them,
+  // and that failure is invisible from the outside.
+  try {
+    while (renderQueue.value.length > 0) {
+      const task = renderQueue.value.shift()!
+      await task()
+    }
   }
-
-  isRendering.value = false
+  finally {
+    isRendering.value = false
+  }
 }
 
 async function renderTextLayer(
