@@ -35,8 +35,10 @@ async function fetchLatestTagClassIds(): Promise<string[]> {
     for (let page = 0; page < SITEMAP_LATEST_MAX_PAGES; page += 1) {
       const response = await fetchBookstoreBookListing(BUILT_IN_LIST_PATHS.latest, { pageSize: SITEMAP_PAGE_SIZE, nextKey })
       classIds.push(...response.records.flatMap(record => (record.classId ? [record.classId] : [])))
-      // Stop on the last page, an empty page, or a cursor that didn't advance.
-      if (!response.hasMore || !response.records.length || response.offset === nextKey) break
+      // Stop on the last page or on a cursor that didn't advance. Deliberately not on an
+      // empty page: upstream still returns a cursor when a whole page is filtered out
+      // (hidden/redirected books), and that must not end the walk early.
+      if (!response.offset || response.offset === nextKey) break
       nextKey = response.offset
     }
   }
