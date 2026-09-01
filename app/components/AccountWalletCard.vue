@@ -1,11 +1,11 @@
 <template>
   <section
-    v-if="hasLoggedIn && (likeBalance > 0n || !!user?.likeWallet)"
+    v-if="hasLoggedIn && (hasLikeCoinAssets || !!user?.likeWallet)"
     class="space-y-3"
   >
     <UCard :ui="{ body: '!p-0 divide-y-1 divide-(--ui-border)' }">
       <AccountSettingsItem
-        v-if="!isApp || likeBalance > 0n"
+        v-if="isLikeCoinRowVisible"
         :label="$t('account_page_likecoin')"
       >
         <template #label-prepend>
@@ -33,7 +33,7 @@
       </AccountSettingsItem>
 
       <AccountSettingsItem
-        v-if="!isApp || likeBalance > 0n"
+        v-if="isLikeCoinRowVisible"
         :label="$t('account_page_staking_reward')"
         icon="i-material-symbols-auto-graph-rounded"
       >
@@ -114,6 +114,7 @@ const {
   formattedLikeBalance,
   refetch: refetchLikeBalance,
 } = useLikeCoinBalance(walletAddress)
+const { veLikeBalance } = useVeLikeBalance(walletAddress)
 const { claimWalletRewards } = useLikeCollectiveContract()
 const waitForTransaction = useWaitForTransaction()
 
@@ -138,6 +139,28 @@ const stakingData = computed(() => {
 })
 
 const totalUnclaimedRewards = computed(() => stakingData.value.totalUnclaimedRewards)
+
+// Staked LIKE and veLIKE leave the wallet balance at 0, so gating on likeBalance
+// alone hides the only link to /account/deposit from the users who need it.
+const hasLikeCoinAssets = computed(() => {
+  return likeBalance.value > 0n
+    || veLikeBalance.value > 0n
+    || stakingData.value.items.length > 0
+})
+
+const isLikeCoinRowVisible = computed(() => !isApp.value || hasLikeCoinAssets.value)
+
+// The only staking-data load on this page; the rewards row reads an empty store
+// without it. Skipped on the server, where nothing awaits it into the payload.
+watchImmediate(walletAddress, async (address) => {
+  if (import.meta.server || !address || stakingData.value.hasFetched) return
+  try {
+    await stakingStore.fetchUserStakingData(address)
+  }
+  catch (error) {
+    console.warn('Failed to fetch staking data:', error)
+  }
+})
 
 function handleLikeWalletClick() {
   useLogEvent('account_like_wallet_click')
