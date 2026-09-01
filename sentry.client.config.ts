@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/nuxt'
 import {
   EPUB_RANGE_LOG_PREFIX,
   WALLET_CONNECT_IDB_TEARDOWN,
+  WALLET_CONNECT_PROPOSAL_EXPIRED,
 } from './app/utils/error-capture-filter'
 
 const sentryDsn = useRuntimeConfig().public.sentryDsn
@@ -25,6 +26,7 @@ if (sentryDsn) {
     ignoreErrors: [
       '["@context"].toLowerCase',
       WALLET_CONNECT_IDB_TEARDOWN,
+      WALLET_CONNECT_PROPOSAL_EXPIRED,
       EPUB_RANGE_LOG_PREFIX,
     ],
 
