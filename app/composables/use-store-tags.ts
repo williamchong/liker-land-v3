@@ -104,6 +104,12 @@ export function useStoreTags({
   const isPopularTagId = computed(() => tagId.value === BOOKSTORE_POPULAR_LIST_TYPE)
   const isBestsellingTagId = computed(() => tagId.value === BOOKSTORE_BESTSELLING_LIST_TYPE)
   const isForYouTagId = computed(() => getIsForYouTagId(tagId.value))
+  // Lists the API hands back already ranked, so the page must not re-sort them by staking.
+  // The library's free tab is the reading ranking narrowed to free books; the store's free
+  // tab is still the upstream timestamp order and sorts like any other tag.
+  const isPreRankedTagId = computed(() => isPopularTagId.value
+    || isBestsellingTagId.value
+    || (isLibraryTab.value && tagId.value === BOOKSTORE_FREE_LIST_TYPE))
 
   const normalizedLocale = computed(() => locale.value === 'zh-Hant' ? 'zh' : 'en')
 
@@ -224,9 +230,8 @@ export function useStoreTags({
     tagId,
     isDefaultTagId,
     isStakingTagId,
-    isPopularTagId,
-    isBestsellingTagId,
     isForYouTagId,
+    isPreRankedTagId,
     getIsLocalHistoriesTagId,
     normalizedLocale,
     activeCMSTag,

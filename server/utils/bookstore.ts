@@ -1,7 +1,7 @@
 import type { H3Event } from 'h3'
 import { FetchError } from 'ofetch'
 import { getLikeCoinAPIFetch } from '~~/shared/utils/api'
-import { MAX_BOOKSTORE_PAGE_SIZE, type BookstoreBuiltInListType, getBookEntityName } from '~~/shared/utils/bookstore'
+import { MAX_BOOKSTORE_PAGE_SIZE, type BOOKSTORE_FREE_LIST_TYPE, type BookstoreBuiltInListType, getBookEntityName } from '~~/shared/utils/bookstore'
 import { filterMeaningfulKeywords } from '~~/shared/utils/recommendation'
 
 export const BOOKSTORE_API_BASE_PATH = '/likernft/book/store'
@@ -66,6 +66,12 @@ interface BookstoreListingFetchOptions {
   nextKey?: string
   // When true, restricts results to Plus-reading titles via the upstream `library` flag.
   isLibrary?: boolean
+}
+
+// Kept off the shared options bag: only this listing narrows by filter, and a `filter` the
+// other fetchers silently drop would pass an unfiltered list off as a filtered one.
+interface BookstorePopularListingFetchOptions extends BookstoreListingFetchOptions {
+  filter?: typeof BOOKSTORE_FREE_LIST_TYPE
 }
 
 function normalizeCMSTag(tag: {
@@ -195,7 +201,8 @@ export async function fetchBookstorePopularListing(
     pageSize = MAX_BOOKSTORE_PAGE_SIZE,
     nextKey: key,
     isLibrary = false,
-  }: BookstoreListingFetchOptions = {},
+    filter,
+  }: BookstorePopularListingFetchOptions = {},
 ): Promise<FetchBookstoreCMSProductsResponseData> {
   const fetch = getLikeCoinAPIFetch()
   const { list, nextKey } = await fetch<NFTBookPopularListResponse>(path, {
@@ -203,6 +210,7 @@ export async function fetchBookstorePopularListing(
       limit: pageSize,
       key,
       library: isLibrary ? '1' : undefined,
+      filter,
     },
   })
   return {
@@ -212,15 +220,15 @@ export async function fetchBookstorePopularListing(
   }
 }
 
-// Parse a raw `limit` query value into a valid page size. An invalid/missing/empty
-// limit falls back to the max, while `limit=0` clamps to 1 (not the max — `0 || max`
-// would have swallowed it). `limit=` alone is treated as missing so it doesn't slip
-// through as Number('')=0.
 // Parse the `library=1` query flag shared by the store listing endpoints.
 export function parseIsLibraryQuery(library: string | string[] | undefined): boolean {
   return (Array.isArray(library) ? library[0] : library) === '1'
 }
 
+// Parse a raw `limit` query value into a valid page size. An invalid/missing/empty
+// limit falls back to the max, while `limit=0` clamps to 1 (not the max — `0 || max`
+// would have swallowed it). `limit=` alone is treated as missing so it doesn't slip
+// through as Number('')=0.
 export function parseBookstorePageSize(limit: string | string[] | undefined): number {
   const raw = Array.isArray(limit) ? limit[0] : limit
   const limitNum = raw === undefined || raw === '' ? NaN : Number(raw)
@@ -261,7 +269,7 @@ export async function respondWithBookstoreAPI(
   const query = getQuery(event)
   const offsetRaw = Array.isArray(query.offset) ? query.offset[0] : query.offset
   const pageSize = parseBookstorePageSize(query.limit as string | string[] | undefined)
-  const isLibrary = (Array.isArray(query.library) ? query.library[0] : query.library) === '1'
+  const isLibrary = parseIsLibraryQuery(query.library as string | string[] | undefined)
   // Default to a non-negative integer offset; treat 0 the same as omitted so page-1 stays cacheable.
   let nextKey: string | undefined
   if (offsetRaw !== undefined && offsetRaw !== '') {
