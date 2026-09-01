@@ -323,8 +323,9 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import type { RouteLocationRaw } from 'vue-router'
 import type { PDFDocumentProxy, PDFPageProxy, PageViewport } from 'pdfjs-dist'
 import type { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api'
+import type { PDFDisplayFailure } from './PDFReader.props'
 import type { ReaderLeftSidebarTab } from './ReaderLeftSidebar.props'
-import type { ReaderNavigationMethod } from '~~/shared/constants/analytics'
+import type { PDFDisplayStage, ReaderNavigationMethod } from '~~/shared/constants/analytics'
 import { ANNOTATION_TEXT_MAX_LENGTH } from '~~/shared/constants/annotations'
 import { SEARCH_EXCERPT_RADIUS, SEARCH_MAX_RESULTS } from '~~/shared/constants/reader-search'
 
@@ -426,7 +427,7 @@ const scaleMenuItems = computed<DropdownMenuItem[]>(() => {
         }
       }
       catch (error) {
-        emit('error', error as Error)
+        reportDisplayFailure('zoom', error)
       }
     },
   }))
@@ -591,6 +592,7 @@ async function handleBookmarkDelete(bookmark: Annotation) {
 
 const emit = defineEmits<{
   error: [error: Error]
+  displayFailed: [failure: PDFDisplayFailure]
   pdfLoaded: [pdfDocument: PDFDocumentProxy]
   ttsPlay: []
   pageChanged: [pageNumber: number]
@@ -598,6 +600,23 @@ const emit = defineEmits<{
 }>()
 
 const { pixelRatio } = useDevicePixelRatio()
+
+// The parent treats every emitted error as fatal and shows one modal for all of
+// them, so pair each with the stage that produced it. A document that never
+// parsed and a page that never rasterised look identical from the outside.
+function reportDisplayFailure(stage: PDFDisplayStage, error: unknown) {
+  const canvas = isDualPageMode.value ? leftCanvas.value : singleCanvas.value
+  emit('displayFailed', {
+    stage,
+    error,
+    pageNumber: clampedCurrentPage.value,
+    scale: scale.value,
+    pixelRatio: pixelRatio.value,
+    canvasWidth: canvas?.width,
+    canvasHeight: canvas?.height,
+  })
+  emit('error', error as Error)
+}
 
 const isMobile = useMediaQuery('(max-width: 768px)')
 const isDesktopScreen = useDesktopScreen()
@@ -650,7 +669,7 @@ onMounted(async () => {
     await loadPDF()
   }
   catch (error) {
-    emit('error', error as Error)
+    reportDisplayFailure('init', error)
   }
 })
 
@@ -712,7 +731,7 @@ const debouncedAutoZoom = useDebounceFn(async () => {
     await autoZoomToPageIfNeeded()
   }
   catch (error) {
-    emit('error', error as Error)
+    reportDisplayFailure('zoom', error)
   }
 }, 150)
 
@@ -763,7 +782,7 @@ async function loadPDF() {
     renderPages()
   }
   catch (error) {
-    emit('error', error as Error)
+    reportDisplayFailure('load', error)
   }
 }
 
@@ -929,7 +948,7 @@ async function renderPages() {
       // (unmount, or loadPDF replacing it). That is not a load failure, and the
       // parent treats every emitted error as fatal, so swallow it here.
       if (error instanceof Error && error.name === 'RenderingCancelledException') return
-      emit('error', error as Error)
+      reportDisplayFailure('render', error)
     }
   }
 

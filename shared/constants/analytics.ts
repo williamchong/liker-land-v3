@@ -143,3 +143,9 @@ export function getIsNonChannelInstallSource(source?: string) {
   if (!value) return false
   return NON_CHANNEL_INSTALL_SOURCE_SET.has(value)
 }
+
+// Where the PDF reader gave up, reported on `reader_pdf_display_failed`. The
+// reader can paint nothing for unrelated reasons — a document that never
+// parsed, a page that never rasterised — and the modal looks the same for all
+// of them, so the stage is the only thing that tells them apart.
+export type PDFDisplayStage = 'init' | 'load' | 'render' | 'zoom'
