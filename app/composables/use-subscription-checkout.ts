@@ -374,6 +374,14 @@ export function useSubscriptionCheckout() {
           transaction_id: paymentId,
           checkout_mode: uiMode,
         })
+        // begin_checkout is server-mirrored and deduped by transaction_id, so the
+        // server's property-less row wins and strips checkout_mode. Emit the mode on
+        // its own un-mirrored event, joinable back on transaction_id.
+        useLogEvent('subscription_checkout_started', {
+          ...subscriptionClickPayload,
+          transaction_id: paymentId,
+          checkout_mode: uiMode,
+        })
         if (redirectRoute && redirectRoute.name) {
           accountStore.savePlusRedirectRoute(redirectRoute)
         }
