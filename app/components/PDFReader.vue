@@ -1024,16 +1024,23 @@ async function renderPageToCanvas(
     return
   }
 
-  canvas.height = viewport.height * pixelRatio.value
-  canvas.width = viewport.width * pixelRatio.value
+  // The backing store scales with the device, the CSS box never does, so
+  // layout is unchanged whether or not the ratio had to come down.
+  const renderRatio = getClampedCanvasPixelRatio(
+    viewport.width,
+    viewport.height,
+    pixelRatio.value,
+  )
+  canvas.height = viewport.height * renderRatio
+  canvas.width = viewport.width * renderRatio
   canvas.style.width = `${viewport.width}px`
   canvas.style.height = `${viewport.height}px`
 
   await page.render({
     canvas,
     canvasContext: context,
-    transform: pixelRatio.value !== 1
-      ? [pixelRatio.value, 0, 0, pixelRatio.value, 0, 0]
+    transform: renderRatio !== 1
+      ? [renderRatio, 0, 0, renderRatio, 0, 0]
       : undefined,
     viewport,
   }).promise

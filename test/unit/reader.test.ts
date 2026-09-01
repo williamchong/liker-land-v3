@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clampPDFPageNumber, findOfflineBookCopy, getBookFileCacheKey, isEPUBTargetInSpine, isLikelyGarbledPDFText, isPDFCorpusUnreadable, isValidPDFPageNumber } from '~/utils/reader'
+import { clampPDFPageNumber, findOfflineBookCopy, getBookFileCacheKey, getClampedCanvasPixelRatio, isEPUBTargetInSpine, isLikelyGarbledPDFText, isPDFCorpusUnreadable, isValidPDFPageNumber } from '~/utils/reader'
 // ?raw, not node:fs: the nuxt test environment stubs fs via unenv.
 import epubPageSource from '~~/app/pages/reader/epub.vue?raw'
 
@@ -207,5 +207,35 @@ describe('epub rendition identity guards', () => {
   // every guard would miss and silently stop clearing the spinner.
   it('holds the rendition in a shallowRef', () => {
     expect(epubPageSource).toMatch(/const rendition = shallowRef</)
+  })
+})
+
+describe('getClampedCanvasPixelRatio', () => {
+  // US Letter at scale 1, the ordinary case: nothing should change.
+  it('keeps the device ratio for a page within the canvas budget', () => {
+    expect(getClampedCanvasPixelRatio(612, 792, 2)).toBe(2)
+    expect(getClampedCanvasPixelRatio(612, 792, 3)).toBe(3)
+  })
+
+  it('never scales a page up to reach the budget', () => {
+    expect(getClampedCanvasPixelRatio(100, 100, 1)).toBe(1)
+  })
+
+  // Letter at scale 3 on a DPR-3 screen asks for 5508x7128, about 39M pixels,
+  // which is where WebKit drops the canvas and the reader goes blank.
+  it('clamps a full-zoom retina page under the area limit', () => {
+    const ratio = getClampedCanvasPixelRatio(612 * 3, 792 * 3, 3)
+    expect(ratio).toBeLessThan(3)
+    expect(612 * 3 * ratio * (792 * 3 * ratio)).toBeLessThanOrEqual(16_777_216)
+  })
+
+  it('clamps a long thin page on the dimension limit', () => {
+    const ratio = getClampedCanvasPixelRatio(200, 6000, 3)
+    expect(6000 * ratio).toBeLessThanOrEqual(8192)
+  })
+
+  it('falls back to a sane ratio for degenerate input', () => {
+    expect(getClampedCanvasPixelRatio(0, 792, 2)).toBe(2)
+    expect(getClampedCanvasPixelRatio(612, 792, Number.NaN)).toBe(1)
   })
 })
