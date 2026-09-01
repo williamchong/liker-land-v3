@@ -653,10 +653,24 @@ async function loadPDFLib() {
   if (pdfjsLib.value) return pdfjsLib.value
 
   const pdfjs = await import('pdfjs-dist')
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url,
-  ).toString()
+  try {
+    // Construct the worker here rather than handing pdf.js a workerSrc, so the
+    // bundle it loads is our wrapper and the toHex shim runs inside the worker
+    // realm. Nothing a Nuxt plugin patches is visible in there.
+    pdfjs.GlobalWorkerOptions.workerPort = new Worker(
+      new URL('../workers/pdf-worker.ts', import.meta.url),
+      { type: 'module' },
+    )
+  }
+  catch {
+    // The oldest WebViews this pin exists for have no module workers. Hand the
+    // job back to pdf.js, which falls back to running the worker bundle on the
+    // main thread — where app/plugins/polyfill.ts has already shimmed toHex.
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+      'pdfjs-dist/build/pdf.worker.min.mjs',
+      import.meta.url,
+    ).toString()
+  }
   pdfjsLib.value = pdfjs
   return pdfjs
 }

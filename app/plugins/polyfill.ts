@@ -1,3 +1,5 @@
+import { installUint8ArrayToHex } from '../utils/uint8-array-to-hex'
+
 if (!Object.hasOwn) {
   Object.hasOwn = function (obj: Record<string | number | symbol, unknown>, prop: string | number | symbol): boolean {
     return Object.prototype.hasOwnProperty.call(obj, prop)
@@ -47,5 +49,9 @@ if (!Promise.withResolvers) {
     return { promise, resolve, reject }
   }
 }
+
+// Only reaches pdf.js when it falls back to a main-thread fake worker; the real
+// worker gets its own copy from app/workers/pdf-worker.ts.
+installUint8ArrayToHex()
 
 export default defineNuxtPlugin(() => {})
