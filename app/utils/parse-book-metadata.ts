@@ -86,11 +86,8 @@ export async function parseEPUBMetadata(file: File): Promise<ParsedBookMetadata>
 
 export async function parsePDFMetadata(file: File): Promise<ParsedBookMetadata> {
   // Lazy-load pdfjs — same reason as the epub branch above.
-  const pdfjs = await import('pdfjs-dist')
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url,
-  ).toString()
+  const { loadPDFJS } = await import('~/utils/pdfjs')
+  const pdfjs = await loadPDFJS()
 
   const arrayBuffer = await file.arrayBuffer()
   let doc: Awaited<ReturnType<typeof pdfjs.getDocument>['promise']>

@@ -1,14 +1,17 @@
 import type { PDFDisplayStage } from '~~/shared/constants/analytics'
 
-// What the reader knew at the moment it stopped painting. The canvas size and
-// pixel ratio ride along because a blank page and an oversized canvas the
-// browser silently dropped are indistinguishable from the error alone.
-export interface PDFDisplayFailure {
+// Canvas the reader was painting when a render failed. WebKit drops an
+// oversized canvas silently and resolves the render anyway, so the geometry is
+// the only evidence that path leaves.
+export interface PDFRenderAttempt {
+  pageNumber: number
+  pixelRatio: number
+  canvasWidth: number
+  canvasHeight: number
+}
+
+export interface PDFDisplayContext extends Partial<PDFRenderAttempt> {
   stage: PDFDisplayStage
-  error: unknown
-  pageNumber?: number
-  scale?: number
-  pixelRatio?: number
-  canvasWidth?: number
-  canvasHeight?: number
+  scale: number
+  pageNumber: number
 }

@@ -239,9 +239,8 @@ export default defineNuxtConfig({
   },
 
   vite: {
-    // app/workers/pdf-worker.ts is the only Worker in the app and is built with
-    // { type: 'module' }. Vite's default 'iife' worker output rejects the
-    // top-level await it needs to shim toHex before pdf.js evaluates.
+    // pdf.js loads app/workers/pdf-worker.ts as a module worker, which Vite's
+    // default 'iife' worker output cannot produce.
     worker: {
       format: 'es',
     },

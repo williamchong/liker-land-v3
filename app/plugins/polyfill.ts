@@ -50,8 +50,8 @@ if (!Promise.withResolvers) {
   }
 }
 
-// Only reaches pdf.js when it falls back to a main-thread fake worker; the real
-// worker gets its own copy from app/workers/pdf-worker.ts.
+// Covers only pdf.js's main-thread fake-worker fallback; the real worker
+// installs its own copy.
 installUint8ArrayToHex()
 
 export default defineNuxtPlugin(() => {})

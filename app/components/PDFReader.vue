@@ -323,11 +323,12 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import type { RouteLocationRaw } from 'vue-router'
 import type { PDFDocumentProxy, PDFPageProxy, PageViewport } from 'pdfjs-dist'
 import type { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api'
-import type { PDFDisplayFailure } from './PDFReader.props'
+import type { PDFDisplayContext, PDFRenderAttempt } from './PDFReader.props'
 import type { ReaderLeftSidebarTab } from './ReaderLeftSidebar.props'
 import type { PDFDisplayStage, ReaderNavigationMethod } from '~~/shared/constants/analytics'
 import { ANNOTATION_TEXT_MAX_LENGTH } from '~~/shared/constants/annotations'
 import { SEARCH_EXCERPT_RADIUS, SEARCH_MAX_RESULTS } from '~~/shared/constants/reader-search'
+import { loadPDFJS } from '~/utils/pdfjs'
 
 interface Props {
   bookName?: string
@@ -591,8 +592,7 @@ async function handleBookmarkDelete(bookmark: Annotation) {
 }
 
 const emit = defineEmits<{
-  error: [error: Error]
-  displayFailed: [failure: PDFDisplayFailure]
+  error: [error: Error, context: PDFDisplayContext]
   pdfLoaded: [pdfDocument: PDFDocumentProxy]
   ttsPlay: []
   pageChanged: [pageNumber: number]
@@ -601,21 +601,17 @@ const emit = defineEmits<{
 
 const { pixelRatio } = useDevicePixelRatio()
 
-// The parent treats every emitted error as fatal and shows one modal for all of
-// them, so pair each with the stage that produced it. A document that never
-// parsed and a page that never rasterised look identical from the outside.
+// Geometry of the render in flight, so a failure can report the canvas it was
+// actually painting rather than whatever the last successful one left behind.
+const renderAttempt = ref<PDFRenderAttempt>()
+
 function reportDisplayFailure(stage: PDFDisplayStage, error: unknown) {
-  const canvas = isDualPageMode.value ? leftCanvas.value : singleCanvas.value
-  emit('displayFailed', {
+  emit('error', error as Error, {
     stage,
-    error,
-    pageNumber: clampedCurrentPage.value,
     scale: scale.value,
-    pixelRatio: pixelRatio.value,
-    canvasWidth: canvas?.width,
-    canvasHeight: canvas?.height,
+    pageNumber: clampedCurrentPage.value,
+    ...(stage === 'render' ? renderAttempt.value : undefined),
   })
-  emit('error', error as Error)
 }
 
 const isMobile = useMediaQuery('(max-width: 768px)')
@@ -652,25 +648,7 @@ const isAtLastPage = computed(() =>
 async function loadPDFLib() {
   if (pdfjsLib.value) return pdfjsLib.value
 
-  const pdfjs = await import('pdfjs-dist')
-  try {
-    // Construct the worker here rather than handing pdf.js a workerSrc, so the
-    // bundle it loads is our wrapper and the toHex shim runs inside the worker
-    // realm. Nothing a Nuxt plugin patches is visible in there.
-    pdfjs.GlobalWorkerOptions.workerPort = new Worker(
-      new URL('../workers/pdf-worker.ts', import.meta.url),
-      { type: 'module' },
-    )
-  }
-  catch {
-    // The oldest WebViews this pin exists for have no module workers. Hand the
-    // job back to pdf.js, which falls back to running the worker bundle on the
-    // main thread — where app/plugins/polyfill.ts has already shimmed toHex.
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-      'pdfjs-dist/build/pdf.worker.min.mjs',
-      import.meta.url,
-    ).toString()
-  }
+  const pdfjs = await loadPDFJS()
   pdfjsLib.value = pdfjs
   return pdfjs
 }
@@ -976,10 +954,8 @@ async function processRenderQueue() {
 
   isRendering.value = true
 
-  // The queued task catches its own rejections today, so nothing here should
-  // throw. Release the flag in a finally regardless: the guard above turns a
-  // latched flag into a reader that takes page turns and paints none of them,
-  // and that failure is invisible from the outside.
+  // A latched flag silently turns every later render into a no-op, and the
+  // reader keeps taking page turns while it paints none of them.
   try {
     while (renderQueue.value.length > 0) {
       const task = renderQueue.value.shift()!
@@ -1042,6 +1018,12 @@ async function renderPageToCanvas(
   canvas.width = viewport.width * renderRatio
   canvas.style.width = `${viewport.width}px`
   canvas.style.height = `${viewport.height}px`
+  renderAttempt.value = {
+    pageNumber: pageNum,
+    pixelRatio: renderRatio,
+    canvasWidth: canvas.width,
+    canvasHeight: canvas.height,
+  }
 
   await page.render({
     canvas,

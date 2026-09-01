@@ -58,9 +58,12 @@ describe('installUint8ArrayToHex', () => {
     })
   })
 
-  it('leaves a native implementation alone', () => {
-    const before = proto.toHex
-    installUint8ArrayToHex()
-    expect(proto.toHex).toBe(before)
+  it('leaves an existing implementation alone', () => {
+    withoutNativeToHex(() => {
+      installUint8ArrayToHex()
+      const before = proto.toHex
+      installUint8ArrayToHex()
+      expect(proto.toHex).toBe(before)
+    })
   })
 })

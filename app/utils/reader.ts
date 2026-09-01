@@ -454,11 +454,9 @@ export function isEPUBTargetInSpine(
   }
 }
 
-// WebKit refuses a canvas past roughly 16.7M pixels, and it refuses it
-// silently: the backing store is dropped, page.render() still resolves, and the
-// reader shows a blank page with nothing in the logs. A retina device at full
-// zoom clears that ceiling on its own — a Letter page at scale 3 on a DPR-3
-// screen asks for 39M pixels — so cap the ratio instead of the zoom.
+// WebKit refuses a canvas past roughly 16.7M pixels, and refuses it silently:
+// the backing store is dropped, page.render() still resolves, and the reader
+// paints nothing. A retina device at full zoom clears that ceiling on its own.
 const MAX_CANVAS_AREA = 16_777_216
 const MAX_CANVAS_DIMENSION = 8192
 
@@ -473,7 +471,7 @@ export function getClampedCanvasPixelRatio(
   pixelRatio: number,
 ): number {
   const ratio = Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1
-  if (!(cssWidth > 0) || !(cssHeight > 0)) return ratio
+  if (!(cssWidth > 0 && cssHeight > 0)) return ratio
 
   const areaRatio = Math.sqrt(MAX_CANVAS_AREA / (cssWidth * cssHeight))
   const widthRatio = MAX_CANVAS_DIMENSION / cssWidth

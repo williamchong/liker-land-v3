@@ -144,8 +144,7 @@ export function getIsNonChannelInstallSource(source?: string) {
   return NON_CHANNEL_INSTALL_SOURCE_SET.has(value)
 }
 
-// Where the PDF reader gave up, reported on `reader_pdf_display_failed`. The
-// reader can paint nothing for unrelated reasons — a document that never
-// parsed, a page that never rasterised — and the modal looks the same for all
-// of them, so the stage is the only thing that tells them apart.
+// Where the PDF reader gave up, reported on `reader_pdf_display_failed`. One
+// modal covers every failure, so the stage is what tells a document that never
+// parsed apart from a page that never rasterised.
 export type PDFDisplayStage = 'init' | 'load' | 'render' | 'zoom'
