@@ -280,9 +280,6 @@ async function handleRetryHosted() {
       ...payload,
       uiMode: 'hosted',
     })
-    // The user can leave while the session is minting; without this the redirect
-    // would drag them off whatever page they moved on to.
-    if (isDisposed) return
     if (!url) {
       throw createError({
         statusCode: 502,
@@ -294,9 +291,10 @@ async function handleRetryHosted() {
       transaction_id: paymentId,
       embedded_transaction_id: embeddedPaymentId || undefined,
     })
-    // Cleared only once the navigation is away: a throw here would otherwise
-    // strand the user on the error screen with the retry button gone.
-    await navigateTo(url, { external: true })
+    // The user can leave while the session is minting;
+    // never drag them off the page they moved on to.
+    // Clearing after the redirect keeps the retry button alive on a throw.
+    if (!isDisposed) await navigateTo(url, { external: true })
     plusCheckoutStore.clear()
   }
   catch (error) {
@@ -305,6 +303,8 @@ async function handleRetryHosted() {
       error_reason: 'hosted_fallback',
       error_message: getErrorMessage(error),
     })
+    // Never raise the modal over the page the user moved on to.
+    if (isDisposed) return
     await handleError(error, { logPrefix: 'plus-checkout' })
   }
   finally {

@@ -9,6 +9,7 @@ import type { RouteLocationAsRelativeGeneric } from 'vue-router'
 import { LazyLoginModal, LazyRegistrationModal } from '#components'
 
 import { TTS_AUDIO_CACHE } from '~~/shared/constants/tts-cache'
+import { usePlusCheckoutStore } from '~/stores/plus-checkout'
 
 const REGISTER_TIME_LIMIT_IN_TS = 15 * 60 * 1000 // 15 minutes
 
@@ -701,9 +702,13 @@ export const useAccountStore = defineStore('account', () => {
     try {
       await disconnectAsync()
       await apiFetch('/logout', { method: 'POST', retry: API_MAX_RETRIES })
-      await refreshSession()
+      // The Stripe session and saved redirect belong to the account that left;
+      // drop them before the fallible refresh, which would otherwise strand
+      // them for the next login.
+      usePlusCheckoutStore().clear()
       clearCaches()
       savePlusRedirectRoute(null)
+      await refreshSession()
       blockingModal.patch({ title: $t('account_logged_out') })
       // Wait for a moment to show the logged out message
       await sleep(500)

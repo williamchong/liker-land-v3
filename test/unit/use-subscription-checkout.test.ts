@@ -1,23 +1,39 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
+import { useRuntimeConfig } from '#imports'
+import type { FetchLikerPlusCheckoutLinkPayload } from '~/composables/use-plus-session-api'
 import { useSubscriptionCheckout } from '~/composables/use-subscription-checkout'
 
 const {
   mockAnalyticsParams,
+  mockEmbeddedVariant,
+  mockFetchCheckoutLink,
+  mockIsApp,
+  mockIsIAPSupported,
   mockIsLikerPlus,
   mockPurchase,
   mockRefreshSessionInfo,
+  mockSetSession,
 } = vi.hoisted(() => ({
   mockAnalyticsParams: { value: {} as Record<string, string | undefined> },
+  mockEmbeddedVariant: { value: null as string | null },
+  mockFetchCheckoutLink: vi.fn(async (_payload: FetchLikerPlusCheckoutLinkPayload): Promise<{
+    url?: string
+    clientSecret?: string
+    paymentId: string
+  }> => ({ paymentId: '' })),
+  mockIsApp: { value: true },
+  mockIsIAPSupported: { value: true },
   mockIsLikerPlus: { value: false },
   mockPurchase: vi.fn(async (_options: { attributes: Record<string, string> }) => (
     { status: 'success' as const, message: '' }
   )),
   mockRefreshSessionInfo: vi.fn(),
+  mockSetSession: vi.fn(),
 }))
 
 vi.mock('~/stores/plus-checkout', () => ({
-  usePlusCheckoutStore: () => ({ setSession: vi.fn() }),
+  usePlusCheckoutStore: () => ({ setSession: mockSetSession }),
 }))
 
 mockNuxtImport('useSubscription', () => () => ({
@@ -30,7 +46,7 @@ mockNuxtImport('useSubscription', () => () => ({
   getCheckoutCurrency: () => 'usd',
 }))
 mockNuxtImport('usePlusSessionAPI', () => () => ({
-  fetchLikerPlusCheckoutLink: vi.fn(),
+  fetchLikerPlusCheckoutLink: mockFetchCheckoutLink,
   updateLikerPlusSubscription: vi.fn(),
 }))
 mockNuxtImport('useI18n', () => () => ({ t: (key: string) => key }))
@@ -47,13 +63,13 @@ mockNuxtImport('useBlockingModal', () => () => ({ open: vi.fn(), close: vi.fn() 
 mockNuxtImport('useAnalytics', () => () => ({
   getAnalyticsParameters: () => mockAnalyticsParams.value,
 }))
-mockNuxtImport('useAppDetection', () => () => ({ isApp: { value: true } }))
+mockNuxtImport('useAppDetection', () => () => ({ isApp: mockIsApp }))
 mockNuxtImport('useNativeIAP', () => () => ({
-  isIAPSupported: { value: true },
+  isIAPSupported: mockIsIAPSupported,
   purchase: mockPurchase,
 }))
 mockNuxtImport('usePlusEligibility', () => () => ({ isCivicOfferable: { value: true } }))
-mockNuxtImport('useABTest', () => () => ({ captureExposure: () => null }))
+mockNuxtImport('useABTest', () => () => ({ captureExposure: () => mockEmbeddedVariant.value }))
 mockNuxtImport('useErrorHandler', () => () => ({ handleError: vi.fn() }))
 mockNuxtImport('useLogEvent', () => () => {})
 mockNuxtImport('requestNativeStoreReview', () => () => {})
@@ -63,10 +79,22 @@ function getPurchasedAttributes() {
   return mockPurchase.mock.calls[0]![0].attributes
 }
 
+function getCheckoutRequest() {
+  return mockFetchCheckoutLink.mock.calls[0]![0]
+}
+
 beforeEach(() => {
   mockAnalyticsParams.value = {}
   mockIsLikerPlus.value = false
+  mockIsApp.value = true
+  mockIsIAPSupported.value = true
+  mockEmbeddedVariant.value = null
   mockPurchase.mockClear()
+  mockSetSession.mockClear()
+  mockFetchCheckoutLink.mockReset().mockResolvedValue({
+    clientSecret: 'cs_test_1',
+    paymentId: 'pay_1',
+  })
   // The purchase flow polls the session until the webhook grants Plus; flip it on
   // the first refresh so the test doesn't sit through the retry backoff.
   mockRefreshSessionInfo.mockReset().mockImplementation(() => {
@@ -128,5 +156,82 @@ describe('useSubscriptionCheckout IAP first-touch attributes', () => {
     // an earlier one resolved — unlike attributionSource below, it gets no tombstone.
     expect('mediaSource' in attributes).toBe(false)
     expect('campaign' in attributes).toBe(false)
+  })
+})
+
+describe('useSubscriptionCheckout embedded checkout replay payload', () => {
+  let stripePublishableKey: string
+
+  beforeEach(() => {
+    // The embedded variant is web-only and needs a publishable key,
+    // so leave the native IAP path and give the config one.
+    const { public: publicConfig } = useRuntimeConfig()
+    stripePublishableKey = publicConfig.stripePublishableKey
+    publicConfig.stripePublishableKey = 'pk_test'
+    mockIsApp.value = false
+    mockIsIAPSupported.value = false
+    mockEmbeddedVariant.value = 'test'
+  })
+
+  // The config object is shared with the rest of the file, so put it back.
+  afterEach(() => {
+    useRuntimeConfig().public.stripePublishableKey = stripePublishableKey
+  })
+
+  it('stores the minted request verbatim so the hosted fallback can replay it', async () => {
+    mockAnalyticsParams.value = {
+      utmSource: 'plus-modal',
+      initialUtmSource: 'facebookads',
+    }
+    const { startSubscription } = useSubscriptionCheckout()
+    await startSubscription({
+      plan: 'yearly',
+      coupon: 'LAUNCH',
+      trialPeriodDays: 7,
+      mustCollectPaymentMethod: false,
+      nftClassId: '0xgift',
+      utmCampaign: '120210000000000000',
+    })
+
+    const request = getCheckoutRequest()
+    expect(request.uiMode).toBe('embedded')
+    // The fallback re-mints from this payload alone, so it must carry every field
+    // the checkout page never sees.
+    expect(mockSetSession).toHaveBeenCalledWith(expect.objectContaining({
+      clientSecret: 'cs_test_1',
+      paymentId: 'pay_1',
+      period: 'yearly',
+      tier: 'plus',
+      coupon: 'LAUNCH',
+      isTrial: true,
+      checkoutPayload: request,
+    }))
+    expect(request).toMatchObject({
+      period: 'yearly',
+      tier: 'plus',
+      coupon: 'LAUNCH',
+      trialPeriodDays: 7,
+      mustCollectPaymentMethod: false,
+      giftNFTClassId: '0xgift',
+      currency: 'usd',
+      utmSource: 'plus-modal',
+      initialUtmSource: 'facebookads',
+      utmCampaign: '120210000000000000',
+    })
+  })
+
+  it('keeps the hosted variant off the replay store', async () => {
+    mockEmbeddedVariant.value = 'control'
+    // A clientSecret alongside the url keeps uiMode the only thing that can send
+    // this to the store.
+    mockFetchCheckoutLink.mockResolvedValue({
+      url: 'https://checkout.stripe.com/c/pay_1',
+      clientSecret: 'cs_test_1',
+      paymentId: 'pay_1',
+    })
+    const { startSubscription } = useSubscriptionCheckout()
+    await startSubscription({ plan: 'yearly' })
+    expect(getCheckoutRequest().uiMode).toBe('hosted')
+    expect(mockSetSession).not.toHaveBeenCalled()
   })
 })
