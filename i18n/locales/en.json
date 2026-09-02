@@ -779,6 +779,7 @@
   "plus_checkout_iap_pending_description": "Your store is still processing the payment. We'll unlock your subscription as soon as it clears.",
   "plus_checkout_iap_pending_title": "Payment pending",
   "plus_checkout_loading": "Loading secure checkout…",
+  "plus_checkout_retry_hosted_button": "Try another payment page",
   "plus_checkout_title": "Start your Plus journey",
   "plus_subscribe_cta_continue": "Continue",
   "plus_subscribe_cta_custom_voice_free": "Try TTS Now",
