@@ -1,3 +1,5 @@
+import { parseURL } from 'ufo'
+
 // `capture_exceptions: { capture_console_errors: true }` (nuxt.config) turns
 // every console.error into an $exception, including diagnostics third-party
 // libraries write from inside their own try/catch.
@@ -25,6 +27,16 @@ const PLAYBACK_STUCK_MESSAGE = 'Playback stuck'
 // A grouping identity, deliberately not the matched text: rewording the native
 // message must not also move the key that holds the issue together.
 const PLAYBACK_STUCK_FINGERPRINT = 'native_playback_stuck'
+
+// ofetch bakes the request URL and the response status into the message it
+// throws, so one route forks per query string, per browser wording (WebKit says
+// "Load failed", Chromium "Failed to fetch") and per call-site stack.
+const OFETCH_REQUEST_PATTERN = /\[(\w+)\] "([^"]+)": (?:(\d{3})|<no response>)/
+
+// Wallet and NFT class addresses sit in the path on the LikeCoin API, so
+// dropping the query string alone still forks the path per book. Global because
+// one path carries two; only ever used with .replace(), which resets lastIndex.
+const ADDRESS_SEGMENT_PATTERN = /\/0x[0-9a-f]+(?=\/|$)/gi
 
 export interface CapturedException {
   value?: string
@@ -54,10 +66,30 @@ export function normalizeCapturedExceptionMessage(message: string) {
 // depend on where it escaped forks a new issue per deploy. Undefined leaves
 // PostHog's own fingerprint in place.
 export function getStableExceptionFingerprint(exceptions: Array<CapturedException>) {
+  // Two passes on purpose: a stall anywhere in the list outranks a fetch
+  // failure earlier in it.
   if (exceptions.some(exception => exception.value?.includes(PLAYBACK_STUCK_MESSAGE))) {
     return PLAYBACK_STUCK_FINGERPRINT
   }
+  for (const exception of exceptions) {
+    const fingerprint = getOfetchRequestFingerprint(exception.value)
+    if (fingerprint) return fingerprint
+  }
   return undefined
+}
+
+// Unanchored so a request wrapped in one of our own thrown errors still groups
+// by the request that failed. A 401 and a 500 on one route are different bugs,
+// so the status stays in the key.
+function getOfetchRequestFingerprint(value = '') {
+  // Every ofetch message opens `[METHOD] "url"`, so skip the scan otherwise.
+  if (!value.includes('] "')) return undefined
+  const match = value.match(OFETCH_REQUEST_PATTERN)
+  if (!match) return undefined
+  const [, method = '', url = '', status = 'no_response'] = match
+  const { host = '', pathname } = parseURL(url)
+  const path = pathname.replace(ADDRESS_SEGMENT_PATTERN, '/<address>')
+  return `fetch_${method.toLowerCase()}_${host}${path}_${status}`
 }
 
 export function getIsLocalhostHostname(hostname: string) {
