@@ -9,10 +9,6 @@
           class="text-sm text-muted"
           v-text="regionLabel"
         />
-
-        <template #right>
-          <RegionSwitcher />
-        </template>
       </AccountSettingsItem>
 
       <AccountSettingsItem
@@ -100,7 +96,7 @@ const localeRoute = useLocaleRoute()
 const { isApp } = useAppDetection()
 
 const { locales } = useAutoLocale()
-const { regionLabel } = useRegionOptions()
+const { regionLabel } = useRegionLabel()
 const { currency, options: currencyOptions } = usePaymentCurrency()
 const { preference: colorModePreference, options: colorModeOptions } = useColorModeSync()
 

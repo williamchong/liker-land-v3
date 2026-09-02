@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { COUNTRIES, PRIORITY_COUNTRY_CODES } from '~~/shared/constants/countries'
+import { COUNTRIES } from '~~/shared/constants/countries'
 import { COUNTRY_CODES } from '~~/shared/constants/country-codes'
 
 describe('country constants', () => {
@@ -18,12 +18,6 @@ describe('country constants', () => {
     for (const country of COUNTRIES) {
       expect(country.name.en, country.code).toBeTruthy()
       expect(country.name['zh-Hant'], country.code).toBeTruthy()
-    }
-  })
-
-  it('includes every priority code', () => {
-    for (const code of PRIORITY_COUNTRY_CODES) {
-      expect(COUNTRY_CODES).toContain(code)
     }
   })
 })

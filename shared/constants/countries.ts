@@ -7,6 +7,3 @@ export interface Country {
 }
 
 export const COUNTRIES: readonly Country[] = countries
-
-// Pulled to the top of the Region selector, in this order.
-export const PRIORITY_COUNTRY_CODES = ['HK', 'TW'] as const
