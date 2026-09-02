@@ -7,6 +7,8 @@ export const UserSettingsUpdateSchema = v.pipe(
     currency: v.optional(v.picklist(['auto', 'hkd', 'twd', 'usd'])),
     colorMode: v.optional(v.picklist(['light', 'dark', 'system'])),
     isAdultContentEnabled: v.optional(v.boolean()),
+    // No longer written — the region is detected per load. Kept because
+    // strictObject rejects the whole body, and pre-detection bundles still PATCH it.
     region: v.optional(v.picklist(COUNTRY_CODES)),
   }, 'INVALID_KEYS'),
   v.check(input => Object.keys(input).length > 0, 'MISSING_BODY'),

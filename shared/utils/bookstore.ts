@@ -43,20 +43,16 @@ export function getBookEntityName(entity?: BookEntity): string {
 }
 
 // Compliance geo gate: a book tagged restrictedTerritories must not be offered in
-// those regions. Checked client-side against both the chosen region and the IP
-// country, so the shared, region-less server caches stay valid.
+// those regions. Checked client-side against the detected region, so the shared,
+// region-less server caches stay valid.
 export function getIsBookRegionRestricted(
   restrictedTerritories: string[] | undefined,
   region: RegionCode | undefined,
-  ipCountry: RegionCode | undefined,
 ): boolean {
-  if (!restrictedTerritories?.length) return false
+  if (!restrictedTerritories?.length || !region) return false
   // Upstream sends the territories unnormalized, so a lowercase 'hk' would open
-  // the gate; region and ipCountry are already uppercased by parseRegionCode.
-  return restrictedTerritories.some((territory) => {
-    const code = territory.toUpperCase()
-    return (!!region && code === region) || (!!ipCountry && code === ipCountry)
-  })
+  // the gate; region is already uppercased by parseRegionCode.
+  return restrictedTerritories.some(territory => territory.toUpperCase() === region)
 }
 
 // A free edition is a listed (non-unlisted) price-0 edition. Kept in lockstep

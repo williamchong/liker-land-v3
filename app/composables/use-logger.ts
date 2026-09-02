@@ -3,6 +3,7 @@ import { v5 as uuidv5 } from 'uuid'
 import { sha256 } from 'viem'
 import type { User } from '#auth-utils'
 import type { PlusUpsellSlot, PlusUpsellSource, TTSSampleAction, TTSSamplePlacement } from '~~/shared/constants/analytics'
+import type { RegionCode } from '~~/shared/types/user-settings'
 import { getEffectiveLikerPlusTier } from '~~/shared/utils/subscription'
 
 interface EventParams {
@@ -517,7 +518,7 @@ export function useSetLogPersonProperties(properties: Record<string, unknown>) {
 // state hydrates; resetting then would wipe attribution super-properties.
 let hasIdentifiedPostHog = false
 
-export function useSetLogUser(user: User | null, locale: string) {
+export function useSetLogUser(user: User | null, locale: string, region?: RegionCode) {
   // Set user in Sentry
   if (!user) {
     setSentryUser(null)
@@ -629,6 +630,7 @@ export function useSetLogUser(user: User | null, locale: string) {
             email: user.email || undefined,
             name: user.displayName || user.evmWallet || user.likeWallet,
             locale,
+            region,
             is_liker_plus: !!user.isLikerPlus,
             // Discriminates Civic from Plus; `is_liker_plus` stays true for both.
             // Null rather than undefined so a downgrade clears the stored value.

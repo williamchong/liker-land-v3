@@ -64,6 +64,7 @@ export const useAccountStore = defineStore('account', () => {
   const userAccountSessionAPI = useUserAccountSessionAPI()
   const { getAnalyticsParameters } = useAnalytics()
   const { detectedCountry } = useDetectedGeolocation()
+  const { region } = useRegion()
 
   const { ensureMagicSession } = useMagicSession()
   const loginModal = overlay.create(LazyLoginModal)
@@ -109,7 +110,7 @@ export const useAccountStore = defineStore('account', () => {
   watch(
     () => user.value,
     async (user) => {
-      useSetLogUser(user, locale.value)
+      useSetLogUser(user, locale.value, region.value)
       // logout() awaits client-only composables (wagmi disconnect, $fetch, useOverlay);
       // running it during SSR drops the Nuxt instance after the first await and 500s.
       if (!import.meta.client) return
