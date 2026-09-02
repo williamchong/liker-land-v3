@@ -323,10 +323,12 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import type { RouteLocationRaw } from 'vue-router'
 import type { PDFDocumentProxy, PDFPageProxy, PageViewport } from 'pdfjs-dist'
 import type { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api'
+import type { PDFDisplayContext, PDFRenderAttempt } from './PDFReader.props'
 import type { ReaderLeftSidebarTab } from './ReaderLeftSidebar.props'
-import type { ReaderNavigationMethod } from '~~/shared/constants/analytics'
+import type { PDFDisplayStage, ReaderNavigationMethod } from '~~/shared/constants/analytics'
 import { ANNOTATION_TEXT_MAX_LENGTH } from '~~/shared/constants/annotations'
 import { SEARCH_EXCERPT_RADIUS, SEARCH_MAX_RESULTS } from '~~/shared/constants/reader-search'
+import { loadPDFJS } from '~/utils/pdfjs'
 
 interface Props {
   bookName?: string
@@ -426,7 +428,7 @@ const scaleMenuItems = computed<DropdownMenuItem[]>(() => {
         }
       }
       catch (error) {
-        emit('error', error as Error)
+        reportDisplayFailure('zoom', error)
       }
     },
   }))
@@ -590,7 +592,7 @@ async function handleBookmarkDelete(bookmark: Annotation) {
 }
 
 const emit = defineEmits<{
-  error: [error: Error]
+  error: [error: Error, context: PDFDisplayContext]
   pdfLoaded: [pdfDocument: PDFDocumentProxy]
   ttsPlay: []
   pageChanged: [pageNumber: number]
@@ -598,6 +600,19 @@ const emit = defineEmits<{
 }>()
 
 const { pixelRatio } = useDevicePixelRatio()
+
+// Geometry of the render in flight, so a failure can report the canvas it was
+// actually painting rather than whatever the last successful one left behind.
+const renderAttempt = ref<PDFRenderAttempt>()
+
+function reportDisplayFailure(stage: PDFDisplayStage, error: unknown) {
+  emit('error', error as Error, {
+    stage,
+    scale: scale.value,
+    pageNumber: clampedCurrentPage.value,
+    ...(stage === 'render' ? renderAttempt.value : undefined),
+  })
+}
 
 const isMobile = useMediaQuery('(max-width: 768px)')
 const isDesktopScreen = useDesktopScreen()
@@ -633,11 +648,7 @@ const isAtLastPage = computed(() =>
 async function loadPDFLib() {
   if (pdfjsLib.value) return pdfjsLib.value
 
-  const pdfjs = await import('pdfjs-dist')
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url,
-  ).toString()
+  const pdfjs = await loadPDFJS()
   pdfjsLib.value = pdfjs
   return pdfjs
 }
@@ -650,7 +661,7 @@ onMounted(async () => {
     await loadPDF()
   }
   catch (error) {
-    emit('error', error as Error)
+    reportDisplayFailure('init', error)
   }
 })
 
@@ -712,7 +723,7 @@ const debouncedAutoZoom = useDebounceFn(async () => {
     await autoZoomToPageIfNeeded()
   }
   catch (error) {
-    emit('error', error as Error)
+    reportDisplayFailure('zoom', error)
   }
 }, 150)
 
@@ -763,7 +774,7 @@ async function loadPDF() {
     renderPages()
   }
   catch (error) {
-    emit('error', error as Error)
+    reportDisplayFailure('load', error)
   }
 }
 
@@ -929,7 +940,7 @@ async function renderPages() {
       // (unmount, or loadPDF replacing it). That is not a load failure, and the
       // parent treats every emitted error as fatal, so swallow it here.
       if (error instanceof Error && error.name === 'RenderingCancelledException') return
-      emit('error', error as Error)
+      reportDisplayFailure('render', error)
     }
   }
 
@@ -943,12 +954,17 @@ async function processRenderQueue() {
 
   isRendering.value = true
 
-  while (renderQueue.value.length > 0) {
-    const task = renderQueue.value.shift()!
-    await task()
+  // A latched flag silently turns every later render into a no-op, and the
+  // reader keeps taking page turns while it paints none of them.
+  try {
+    while (renderQueue.value.length > 0) {
+      const task = renderQueue.value.shift()!
+      await task()
+    }
   }
-
-  isRendering.value = false
+  finally {
+    isRendering.value = false
+  }
 }
 
 async function renderTextLayer(
@@ -991,16 +1007,29 @@ async function renderPageToCanvas(
     return
   }
 
-  canvas.height = viewport.height * pixelRatio.value
-  canvas.width = viewport.width * pixelRatio.value
+  // The backing store scales with the device, the CSS box never does, so
+  // layout is unchanged whether or not the ratio had to come down.
+  const renderRatio = getClampedCanvasPixelRatio(
+    viewport.width,
+    viewport.height,
+    pixelRatio.value,
+  )
+  canvas.height = viewport.height * renderRatio
+  canvas.width = viewport.width * renderRatio
   canvas.style.width = `${viewport.width}px`
   canvas.style.height = `${viewport.height}px`
+  renderAttempt.value = {
+    pageNumber: pageNum,
+    pixelRatio: renderRatio,
+    canvasWidth: canvas.width,
+    canvasHeight: canvas.height,
+  }
 
   await page.render({
     canvas,
     canvasContext: context,
-    transform: pixelRatio.value !== 1
-      ? [pixelRatio.value, 0, 0, pixelRatio.value, 0, 0]
+    transform: renderRatio !== 1
+      ? [renderRatio, 0, 0, renderRatio, 0, 0]
       : undefined,
     viewport,
   }).promise

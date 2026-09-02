@@ -1,3 +1,5 @@
+import { installUint8ArrayToHex } from '../utils/uint8-array-to-hex'
+
 if (!Object.hasOwn) {
   Object.hasOwn = function (obj: Record<string | number | symbol, unknown>, prop: string | number | symbol): boolean {
     return Object.prototype.hasOwnProperty.call(obj, prop)
@@ -47,5 +49,9 @@ if (!Promise.withResolvers) {
     return { promise, resolve, reject }
   }
 }
+
+// Covers only pdf.js's main-thread fake-worker fallback; the real worker
+// installs its own copy.
+installUint8ArrayToHex()
 
 export default defineNuxtPlugin(() => {})

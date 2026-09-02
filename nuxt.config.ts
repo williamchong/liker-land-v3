@@ -239,6 +239,11 @@ export default defineNuxtConfig({
   },
 
   vite: {
+    // pdf.js loads app/workers/pdf-worker.ts as a module worker, which Vite's
+    // default 'iife' worker output cannot produce.
+    worker: {
+      format: 'es',
+    },
     optimizeDeps: {
       exclude: ['@resvg/resvg-wasm'],
     },

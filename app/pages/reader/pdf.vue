@@ -42,6 +42,7 @@
 <script setup lang="ts">
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import type { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api'
+import type { PDFDisplayContext } from '~/components/PDFReader.props'
 
 // Force a fresh page instance when switching between NFT and uploaded books:
 // useReader() branches on the `source` query at setup, so a within-route
@@ -344,7 +345,19 @@ async function handleTTSPlay() {
   })
 }
 
-function handlePDFError(error: Error) {
+// Mirrors reader_epub_display_failed.
+function handlePDFError(error: Error, context: PDFDisplayContext) {
+  useLogEvent('reader_pdf_display_failed', {
+    nft_class_id: nftClassId.value,
+    error_message: getErrorEventMessage(error),
+    stage: context.stage,
+    page_number: context.pageNumber,
+    scale: context.scale,
+    pixel_ratio: context.pixelRatio,
+    canvas_width: context.canvasWidth,
+    canvas_height: context.canvasHeight,
+    is_preview: isPreviewMode.value,
+  })
   handleError(error, {
     title: $t('error_reader_load_pdf_failed'),
     actions: getBookLoadErrorActions(error),
