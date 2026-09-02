@@ -102,6 +102,71 @@ describe('getStableExceptionFingerprint', () => {
   it('handles an empty exception list', () => {
     expect(getStableExceptionFingerprint([])).toBeUndefined()
   })
+
+  // The three production issues for one query-less route: WebKit and Chromium
+  // word the drop differently, and the same wording forked again on the stack.
+  it('gives one route one fingerprint across browser wording and stack', () => {
+    const fingerprints = [
+      '[GET] "/api/store/for-you": <no response> Load failed',
+      '[GET] "/api/store/for-you": <no response> Failed to fetch',
+      '[GET] "/api/store/for-you": <no response> Fetch is aborted',
+    ].map(value => getStableExceptionFingerprint([{ value }]))
+    expect(new Set(fingerprints).size).toBe(1)
+    expect(fingerprints[0]).toBeTruthy()
+  })
+
+  it('collapses a route whose query string carries the NFT class id', () => {
+    const build = (nftClassId: string) =>
+      `[GET] "/api/book-list?nft_class_id=${nftClassId}&price_index=0": <no response> Load failed`
+    expect(getStableExceptionFingerprint([{ value: build('0x0cbf57dab1e90953d6d8fd0d195199d774627e4a') }]))
+      .toBe(getStableExceptionFingerprint([{ value: build('0x5c5623cc312dcd36ca869444e91b95ff5238f1b0') }]))
+  })
+
+  it('collapses an address that sits in the path', () => {
+    const build = (nftClassId: string) =>
+      `[GET] "https://api.like.co/likernft/book/purchase/${nftClassId}/messages": 502 `
+    expect(getStableExceptionFingerprint([{ value: build('0x28e3c71f7e244508562b5ec0c0f1a980156ff582') }]))
+      .toBe(getStableExceptionFingerprint([{ value: build('0xb1cc4739a501f74635e66b8199d54e0418b98ef3') }]))
+  })
+
+  // The rest of these compare keys to each other, so they would also pass a key
+  // that dropped the route. Pin the shape once.
+  it.each([
+    ['[GET] "https://api.like.co/likernft/book/purchase/0x28e3c71f7e244508562b5ec0c0f1a980156ff582/messages": 502 ', 'fetch_get_api.like.co/likernft/book/purchase/<address>/messages_502'],
+    ['[GET] "/api/store/search?q=%E5%A4%A7&limit=100": <no response> Failed to fetch', 'fetch_get_/api/store/search_no_response'],
+  ])('builds the fingerprint from method, host, path and status: %s', (value, expected) => {
+    expect(getStableExceptionFingerprint([{ value }])).toBe(expected)
+  })
+
+  it('groups a request wrapped in one of our own thrown errors', () => {
+    const request = '[GET] "https://api.like.co/likernft/book/purchase/0x28e3c71f7e244508562b5ec0c0f1a980156ff582/messages": 502 '
+    const wrapped = `Failed to fetch messages for NFT class 0x28e3c71f7e244508562b5ec0c0f1a980156ff582: FetchError: ${request}`
+    const bare = request
+    expect(getStableExceptionFingerprint([{ value: wrapped }]))
+      .toBe(getStableExceptionFingerprint([{ value: bare }]))
+  })
+
+  // A 401 and a dropped connection on one route are different bugs.
+  it('keeps statuses apart on the same route', () => {
+    const route = '[GET] "/api/book-list?nft_class_id=0x0cbf57dab1e90953d6d8fd0d195199d774627e4a&price_index=0"'
+    const noResponse = getStableExceptionFingerprint([{ value: `${route}: <no response> Load failed` }])
+    const unauthorized = getStableExceptionFingerprint([{ value: `${route}: 401 ` }])
+    expect(noResponse).toBeTruthy()
+    expect(unauthorized).toBeTruthy()
+    expect(noResponse).not.toBe(unauthorized)
+  })
+
+  it('keeps methods apart on the same route', () => {
+    expect(getStableExceptionFingerprint([{ value: '[GET] "/api/register": <no response> Load failed' }]))
+      .not.toBe(getStableExceptionFingerprint([{ value: '[POST] "/api/register": <no response> Load failed' }]))
+  })
+
+  it('leaves the native stall on its own fingerprint when both are present', () => {
+    expect(getStableExceptionFingerprint([
+      { value: '[GET] "/api/store/for-you": <no response> Load failed' },
+      { value: 'Playback stuck' },
+    ])).toBe(getStableExceptionFingerprint([{ value: 'Playback stuck' }]))
+  })
 })
 
 describe('getIsLocalhostHostname', () => {
