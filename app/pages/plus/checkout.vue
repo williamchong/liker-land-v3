@@ -112,7 +112,7 @@ const runtimeConfig = useRuntimeConfig()
 const plusCheckoutStore = usePlusCheckoutStore()
 const plusSessionAPI = usePlusSessionAPI()
 const stripeScript = useScriptStripe()
-const toast = useToast()
+const { handleError } = useErrorHandler()
 
 const containerRef = ref<HTMLElement | null>(null)
 const isLoading = ref(true)
@@ -223,6 +223,7 @@ async function mountCheckout() {
         ...getCheckoutEventBase(),
         error_reason: 'container_missing',
       })
+      destroyCheckout()
       hasLoadError.value = true
       return
     }
@@ -238,6 +239,9 @@ async function mountCheckout() {
       error_reason: 'exception',
       error_message: getErrorMessage(error),
     })
+    // mount() can throw after the instance exists, leaving a live checkout
+    // behind the error screen.
+    destroyCheckout()
     hasLoadError.value = true
     isLoading.value = false
     console.error('[plus-checkout]', error)
@@ -269,31 +273,39 @@ async function handleRetryHosted() {
   const payload = plusCheckoutStore.checkoutPayload
   if (!payload || isRetryingHosted.value) return
   isRetryingHosted.value = true
-  const previousPaymentId = plusCheckoutStore.paymentId
+  settle()
+  const embeddedPaymentId = plusCheckoutStore.paymentId
   try {
     const { url, paymentId } = await plusSessionAPI.fetchLikerPlusCheckoutLink({
       ...payload,
       uiMode: 'hosted',
     })
-    if (!url) throw new Error('Hosted checkout session missing url')
+    // The user can leave while the session is minting; without this the redirect
+    // would drag them off whatever page they moved on to.
+    if (isDisposed) return
+    if (!url) {
+      throw createError({
+        statusCode: 502,
+        message: 'Hosted checkout session missing url',
+        data: { description: $t('plus_checkout_error_description') },
+      })
+    }
     useLogEvent('subscription_checkout_hosted_fallback', {
       transaction_id: paymentId,
-      embedded_transaction_id: previousPaymentId || undefined,
+      embedded_transaction_id: embeddedPaymentId || undefined,
     })
-    plusCheckoutStore.clear()
+    // Cleared only once the navigation is away: a throw here would otherwise
+    // strand the user on the error screen with the retry button gone.
     await navigateTo(url, { external: true })
+    plusCheckoutStore.clear()
   }
   catch (error) {
     useLogEvent('subscription_checkout_error', {
+      ...getCheckoutEventBase(),
       error_reason: 'hosted_fallback',
       error_message: getErrorMessage(error),
-      transaction_id: previousPaymentId || undefined,
     })
-    toast.add({
-      title: $t('plus_checkout_error_description'),
-      color: 'error',
-    })
-    console.error('[plus-checkout]', error)
+    await handleError(error, { logPrefix: 'plus-checkout' })
   }
   finally {
     isRetryingHosted.value = false
