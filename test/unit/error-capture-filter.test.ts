@@ -92,8 +92,34 @@ describe('getStableExceptionFingerprint', () => {
     ])).toBeTruthy()
   })
 
+  // One unsupported-source fault, as production spelled it across our wrapper,
+  // Chromium's demuxer text, the play() rejection and the stall watchdog.
+  it('gives every reported spelling of a media load failure one fingerprint', () => {
+    const fingerprints = [
+      'MediaError MEDIA_ERR_SRC_NOT_SUPPORTED',
+      'MediaError MEDIA_ERR_SRC_NOT_SUPPORTED: MEDIA_ELEMENT_ERROR: Format error',
+      'MediaError MEDIA_ERR_NETWORK: PipelineStatus::PIPELINE_ERROR_READ: FFmpegDemuxer: data source error',
+      'MEDIA_ELEMENT_ERROR: Format error',
+      'NotSupportedError: Failed to load because no supported source was found.',
+      'NotSupportedError',
+      'STUCK_TIMEOUT',
+    ].map(value => getStableExceptionFingerprint([{ value }]))
+    expect(new Set(fingerprints).size).toBe(1)
+    expect(fingerprints[0]).toBeTruthy()
+  })
+
+  it('keeps the native stall ahead of a media failure', () => {
+    const stall = getStableExceptionFingerprint([{ value: 'Playback stuck' }])
+    expect(getStableExceptionFingerprint([
+      { value: 'MediaError MEDIA_ERR_NETWORK' },
+      { value: 'Playback stuck' },
+    ])).toBe(stall)
+  })
+
   it.each([
     { value: 'TypeError: Cannot read properties of undefined' },
+    // Matched whole, so an unrelated DOM NotSupportedError keeps its own issue.
+    { value: 'NotSupportedError: CSS.registerProperty failed' },
     {},
   ])('leaves unrelated exceptions on PostHog\'s own fingerprint: %s', (exception) => {
     expect(getStableExceptionFingerprint([exception])).toBeUndefined()

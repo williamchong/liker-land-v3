@@ -28,6 +28,22 @@ const PLAYBACK_STUCK_MESSAGE = 'Playback stuck'
 // message must not also move the key that holds the issue together.
 const PLAYBACK_STUCK_FINGERPRINT = 'native_playback_stuck'
 
+// The five spellings one media load failure reached us under, kept for clients
+// still on a cached bundle: our MediaError wrapper, Chromium's demuxer text,
+// the pipeline message, the play() rejection and the stall watchdog.
+const MEDIA_FAILURE_MARKERS = [
+  'MEDIA_ERR_',
+  'MEDIA_ELEMENT_ERROR',
+  'NotSupportedError: Failed to load',
+  'STUCK_TIMEOUT',
+]
+
+// Matched whole: NotSupportedError is a general DOM error, and only the audio
+// element raised it here.
+const MEDIA_FAILURE_EXACT = 'NotSupportedError'
+
+const MEDIA_FAILURE_FINGERPRINT = 'media_playback_failure'
+
 // ofetch bakes the request URL and the response status into the message it
 // throws, so one route forks per query string, per browser wording (WebKit says
 // "Load failed", Chromium "Failed to fetch") and per call-site stack.
@@ -66,16 +82,24 @@ export function normalizeCapturedExceptionMessage(message: string) {
 // depend on where it escaped forks a new issue per deploy. Undefined leaves
 // PostHog's own fingerprint in place.
 export function getStableExceptionFingerprint(exceptions: Array<CapturedException>) {
-  // Two passes on purpose: a stall anywhere in the list outranks a fetch
-  // failure earlier in it.
+  // Separate passes on purpose: a stall, then a media failure, each anywhere in
+  // the list, outranks a fetch failure earlier in it.
   if (exceptions.some(exception => exception.value?.includes(PLAYBACK_STUCK_MESSAGE))) {
     return PLAYBACK_STUCK_FINGERPRINT
+  }
+  if (exceptions.some(exception => getIsMediaFailureValue(exception.value))) {
+    return MEDIA_FAILURE_FINGERPRINT
   }
   for (const exception of exceptions) {
     const fingerprint = getOfetchRequestFingerprint(exception.value)
     if (fingerprint) return fingerprint
   }
   return undefined
+}
+
+function getIsMediaFailureValue(value = '') {
+  if (value === MEDIA_FAILURE_EXACT) return true
+  return MEDIA_FAILURE_MARKERS.some(marker => value.includes(marker))
 }
 
 // Unanchored so a request wrapped in one of our own thrown errors still groups

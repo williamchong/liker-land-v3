@@ -2,6 +2,7 @@ import { useDocumentVisibility, useEventListener, useStorage } from '@vueuse/cor
 import type { CustomVoiceData, AffiliateVoiceData } from '~~/shared/types/custom-voice'
 
 export const TTS_ERROR_NOT_ALLOWED = 'NotAllowedError'
+export const TTS_ERROR_NOT_SUPPORTED = 'NotSupportedError'
 
 // ~4 minutes of runway at the observed 13s median segment. Sized against real
 // stalls, 99% of which recover inside 4 minutes and three quarters inside 2
@@ -43,7 +44,7 @@ export function formatTTSError(error: string | Event | MediaError): string {
 
 interface TTSOptions {
   nftClassId: string
-  onError?: (error: string | Event | MediaError) => void
+  onError?: (error: string | Event | MediaError, state: { isExhausted: boolean }) => void
   onAllSegmentsPlayed?: () => void
   onTrialExhausted?: () => void
   bookName?: string | Ref<string> | ComputedRef<string>
@@ -334,7 +335,7 @@ export function useTextToSpeech(options: TTSOptions) {
       // against this one's start time.
       clearSegmentLoadTimer()
       stopTextToSpeech()
-      options.onError?.(error)
+      options.onError?.(error, { isExhausted: false })
       return
     }
 
@@ -352,10 +353,16 @@ export function useTextToSpeech(options: TTSOptions) {
       }))
     }
 
-    // Whatever the error code, being offline is the diagnosis: a retry can't
-    // reach the network, and the skip further down would only cost the listener
-    // their place in the book. Halt and wait, as for a connectivity event.
-    if (!navigator.onLine && hasMoreTracks()) {
+    // Being offline is the diagnosis whatever the code, and so is a
+    // MEDIA_ERR_NETWORK that already survived a retry. Only then: `handleOnline`
+    // is the sole auto-resume, so halting while online waits on an event that
+    // will never fire.
+    const isNetworkError = !navigator.onLine || (
+      consecutiveAudioErrors.value >= 1
+      && error instanceof MediaError
+      && error.code === MediaError.MEDIA_ERR_NETWORK
+    )
+    if (isNetworkError && hasMoreTracks()) {
       haltForOffline('network_error')
       return
     }
@@ -374,13 +381,14 @@ export function useTextToSpeech(options: TTSOptions) {
       return
     }
 
-    options.onError?.(error)
-    if (consecutiveAudioErrors.value >= MAX_CONSECUTIVE_ERRORS) {
+    const isExhausted = consecutiveAudioErrors.value >= MAX_CONSECUTIVE_ERRORS
+    if (isExhausted) {
       console.warn(`TTS paused after ${MAX_CONSECUTIVE_ERRORS} consecutive audio errors`)
       useLogEvent('tts_error', buildTTSEventPayload({ consecutive_errors: consecutiveAudioErrors.value }))
       pauseTextToSpeech()
-      return
     }
+    options.onError?.(error, { isExhausted })
+    if (isExhausted) return
     setTimeout(() => {
       if (isTextToSpeechOn.value) {
         playNextElement()
@@ -427,7 +435,9 @@ export function useTextToSpeech(options: TTSOptions) {
   // Stop on a dropout and wait for the network, rather than burning through
   // segments that are all equally unreachable.
   function haltForOffline(trigger: TTSOfflineModalTrigger) {
-    isOffline.value = true
+    // Not always true: a halt on a live connection must not raise copy that
+    // promises the auto-resume only `handleOnline` can deliver.
+    isOffline.value = !navigator.onLine
     shouldResumeWhenOnline.value = true
     showOfflineModalWithLog(trigger)
     pauseTextToSpeech()
@@ -782,6 +792,7 @@ export function useTextToSpeech(options: TTSOptions) {
     isTextToSpeechPlaying,
     isTextToSpeechLoading,
     showOfflineModal,
+    isOffline,
     currentTTSSegment,
     currentTTSSegmentText,
     currentTTSSegmentIndex,

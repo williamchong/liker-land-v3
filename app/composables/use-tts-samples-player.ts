@@ -3,6 +3,11 @@ import type { TTSSampleAction } from '~~/shared/constants/analytics'
 import type { SystemVoice, TTSSampleLanguage } from '~~/shared/utils/tts-sample'
 import { encodeAffiliateVoiceId } from '~~/shared/utils/tts-sig'
 import { getAffiliateSampleScript, getFlagshipSystemVoice, getSystemVoiceByOwnerLikerId, getTTSSampleText } from '~~/shared/utils/tts-sample'
+import { TTS_ERROR_NOT_ALLOWED, TTS_ERROR_NOT_SUPPORTED } from '~/composables/use-text-to-speech'
+
+// `play()` rejections that mean "not playing", not "broken": the browser
+// blocked playback, or the element already reported the load failure itself.
+const IGNORED_PLAY_REJECTION_NAMES: Array<string> = [TTS_ERROR_NOT_ALLOWED, TTS_ERROR_NOT_SUPPORTED]
 
 interface TTSSamplesPlayerOptions {
   onError?: (error: unknown) => void
@@ -22,6 +27,7 @@ function getCanPlayNow(audio: HTMLAudioElement) {
 export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
   const { onError, onEnd, affiliateVoices, affiliateLikerId, affiliateExclusiveBadgeText } = options
   const { t: $t } = useI18n()
+  const toast = useToast()
   const { detectedCountry } = useDetectedGeolocation()
   const affiliateVoicesComputed = computed(() => toValue(affiliateVoices) ?? [])
   const { getVoiceAvatar } = useTTSVoice({ affiliateVoices: affiliateVoicesComputed })
@@ -265,10 +271,23 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
       playNextSegment()
     }
 
-    newAudio.onerror = (e) => {
-      const error = newAudio.error || e
+    newAudio.onerror = () => {
       isLoading.value = false
-      onError?.(error)
+
+      // Skipping past the last segment would reach `onEnd` and report a sample
+      // that never played as completed. Stop instead; the failed element stays
+      // attached, so tapping play rebuilds it through `resume()`.
+      if (!getHasNextSegment()) {
+        isPlaying.value = false
+        toast.add({
+          id: 'tts-sample-playback-failed',
+          title: $t('tts_sample_playback_failed'),
+          duration: 3000,
+          icon: 'i-material-symbols-error-circle-rounded',
+          color: 'error',
+        })
+        return
+      }
 
       // Try to continue with next segment after error
       errorRetryTimer = setTimeout(() => {
@@ -289,13 +308,15 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
       // A superseded segment rejects after the next one is already loading, so
       // its state writes would land on the element that replaced it.
       if (audio.value !== element) return
-      // `play()` rejects when the browser blocks playback (iOS low power mode,
-      // the native WebView). That is not worth an error modal: staying paused
-      // leaves the play button ready to retry.
+      // A load failure already reached the element's own error handler, which
+      // owns the recovery; its retry only advances while the intent still holds.
+      if (element.error && getHasNextSegment()) return
+      // Staying paused leaves the play button ready to retry, so a blocked or
+      // already-reported rejection needs no modal of its own.
       isPlaying.value = false
       isLoading.value = false
       if (getIsAbortError(error)) return
-      if (error instanceof DOMException && error.name === 'NotAllowedError') return
+      if (error instanceof DOMException && IGNORED_PLAY_REJECTION_NAMES.includes(error.name)) return
       onError?.(error)
     }
   }
@@ -307,8 +328,12 @@ export function useTTSSamplesPlayer(options: TTSSamplesPlayerOptions = {}) {
     await startAudio(createAudio(segment))
   }
 
+  function getHasNextSegment() {
+    return currentSegmentIndex.value + 1 < segments.value.length
+  }
+
   function playNextSegment() {
-    if (currentSegmentIndex.value + 1 >= segments.value.length) {
+    if (!getHasNextSegment()) {
       // All segments played, complete playback
       onEnd?.()
       stop()
