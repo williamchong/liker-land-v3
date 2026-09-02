@@ -2,8 +2,8 @@
   <ErrorModal
     v-if="showOfflineModal"
     level="warning"
-    :title="$t('tts_offline_modal_title')"
-    :description="$t('tts_offline_modal_description')"
+    :title="$t(isOffline ? 'tts_offline_modal_title' : 'tts_playback_error_title')"
+    :description="$t(isOffline ? 'tts_offline_modal_description' : 'tts_playback_error_description')"
     :actions="offlineModalActions"
     @close="handleOfflineModalStop"
   />
@@ -255,7 +255,7 @@
 
 <script setup lang="ts">
 import type { TTSPlayerModalProps } from './TTSPlayerModal.props'
-import { TTS_ERROR_NOT_ALLOWED } from '~/composables/use-text-to-speech'
+import { TTS_ERROR_NOT_ALLOWED, TTS_ERROR_NOT_SUPPORTED } from '~/composables/use-text-to-speech'
 import { encodeAffiliateVoiceId } from '~~/shared/utils/tts-sig'
 import { estimateTTSMinutes } from '~~/shared/utils/tts-trial'
 
@@ -264,7 +264,7 @@ const { hasDevicePlus } = useDevicePlusEntitlement()
 const accountStore = useAccountStore()
 const subscription = useSubscriptionModal()
 const { isProcessingSubscription } = subscription
-const { errorModal, handleError } = useErrorHandler()
+const { errorModal } = useErrorHandler()
 
 const { customVoice, hasCustomVoice, fetchCustomVoice } = useCustomVoice()
 const {
@@ -376,6 +376,7 @@ const {
   consumeTrackChangeResync,
   cyclePlaybackRate,
   showOfflineModal,
+  isOffline,
   forceResume,
   buildTTSEventPayload,
 } = useTextToSpeech({
@@ -387,7 +388,9 @@ const {
   bookLanguage: props.bookLanguage,
   customVoice,
   affiliateVoices,
-  onError: async (error: string | Event | MediaError) => {
+  // Only auth-shaped failures are actionable here; the composable's ladder
+  // retries the rest silently and flags the terminal rung as `isExhausted`.
+  onError: async (error: string | Event | MediaError, { isExhausted }) => {
     // Autoplay was blocked by the browser because the modal auto-started
     // without a user gesture (e.g. reloading the reader with ?tts=1). The
     // composable has already reset playback state — leave the modal open so
@@ -396,7 +399,7 @@ const {
       return
     }
     const isAuthLikeError = (
-      typeof error === 'string' && error === 'NotSupportedError'
+      typeof error === 'string' && error === TTS_ERROR_NOT_SUPPORTED
     ) || (
       error instanceof MediaError && error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
     )
@@ -425,17 +428,9 @@ const {
         handleTrialExhausted('server_402')
         return
       }
-      // Plus user → real media error, fall through.
+      // Plus user → a real media error the ladder below handles.
     }
-    if (error instanceof MediaError) {
-      handleError(new Error(`MediaError ${formatTTSError(error)}`))
-      return
-    }
-    if (error instanceof Event) {
-      handleError(new Error(`Audio error event: ${error.type}`))
-      return
-    }
-    handleError(error)
+    if (isExhausted) handlePlaybackExhausted()
   },
   onAllSegmentsPlayed: () => {
     if (props.isAutoClose) {
@@ -464,6 +459,16 @@ function handleTrialExhausted(source: 'server_402' | 'client_gate') {
     utmMedium: 'tts',
     checkoutPlacement: 'tts-trial-limit',
     redirectRoute: buildSubscribeRedirectRoute(),
+  })
+}
+
+// Not `handleError`: the raw MediaError text helps nobody, and the composable
+// has already logged the failure with a far better payload.
+function handlePlaybackExhausted() {
+  errorModal.open({
+    level: 'warning',
+    title: $t('tts_playback_error_title'),
+    description: $t('tts_playback_error_description'),
   })
 }
 
