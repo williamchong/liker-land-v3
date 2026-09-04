@@ -1071,15 +1071,20 @@ async function displayRenditionAtCurrentLocation() {
 
 async function handleDisplayFailure(error: unknown, target: string | undefined, {
   isSilentError,
+  hasFallbackAttempt,
   isTargetMissing = false,
   attempt,
-}: { isSilentError: boolean, isTargetMissing?: boolean, attempt: number }) {
-  console.error(`Error occurred when displaying${target ? ` ${target}` : ''} in rendition of ${nftClassId.value}`, error)
+}: { isSilentError: boolean, hasFallbackAttempt: boolean, isTargetMissing?: boolean, attempt: number }) {
+  // Warn only when a further rung will try: console.error becomes a Sentry and
+  // PostHog exception, and a recovered rung would report as a user-facing break.
+  // Silent is a different test — a ToC jump hides its own modal but may hit one.
+  console[hasFallbackAttempt ? 'warn' : 'error'](`Error occurred when displaying${target ? ` ${target}` : ''} in rendition of ${nftClassId.value}`, error)
   // A fallback display recovers most of these, so keep them measurable.
   useLogEvent('reader_epub_display_failed', {
     nft_class_id: nftClassId.value,
     error_message: getErrorEventMessage(error),
     is_silent_error: isSilentError,
+    has_fallback_attempt: hasFallbackAttempt,
     has_target: !!target,
     is_target_missing: isTargetMissing,
     // Rung of the caller's fallback ladder, so a retry that recovers stays
@@ -1091,12 +1096,16 @@ async function handleDisplayFailure(error: unknown, target: string | undefined, 
   }
 }
 
-async function displayRendition(target?: string, { isSilentError = false, attempt = 0 } = {}) {
+async function displayRendition(target?: string, {
+  isSilentError = false,
+  hasFallbackAttempt = isSilentError,
+  attempt = 0,
+}: { isSilentError?: boolean, hasFallbackAttempt?: boolean, attempt?: number } = {}) {
   if (!rendition.value) return false
   // epub.js rejects the whole display for a section this file no longer has,
   // so drop the target here and let the caller's fallback repaint instead.
   if (!isEPUBTargetInSpine(rendition.value.book?.spine, target)) {
-    await handleDisplayFailure(new Error('No spine section for display target'), target, { isSilentError, isTargetMissing: true, attempt })
+    await handleDisplayFailure(new Error('No spine section for display target'), target, { isSilentError, hasFallbackAttempt, isTargetMissing: true, attempt })
     return false
   }
   try {
@@ -1104,7 +1113,7 @@ async function displayRendition(target?: string, { isSilentError = false, attemp
     return true
   }
   catch (error) {
-    await handleDisplayFailure(error, target, { isSilentError, attempt })
+    await handleDisplayFailure(error, target, { isSilentError, hasFallbackAttempt, attempt })
   }
   return false
 }
@@ -1748,31 +1757,52 @@ async function extractTTSSegments(book: Book) {
 // Resolves to whether the nav item was actually displayed, so a caller that
 // has a fallback (the cold-open jump below) can take it instead of assuming
 // the jump landed.
-async function setActiveNavItem(item: NavItem, { isSilentError = false } = {}) {
+async function setActiveNavItem(item: NavItem, {
+  isSilentError = false,
+  hasFallbackAttempt = isSilentError,
+}: { isSilentError?: boolean, hasFallbackAttempt?: boolean } = {}) {
   activeTTSElementIndex.value = undefined
   activeNavItemHref.value = item.href
   isPageLoading.value = true
   // Explicit TOC navigation isn't a footnote jump; drop any pending return.
   dismissFootnoteReturn()
 
-  let hasDisplayed = await displayRendition(item.href, { isSilentError: true })
-  if (hasDisplayed) return true
-
-  // Try replacing nav item's href with spine's href if section cannot be found
+  // The nav item's href and the spine's can name one file by different paths.
   const anchor = item.href.split('#')[1]
   const filename = getHrefBaseFilename(item.href)
-  if (filename) {
-    let spineHref = sectionHrefByFilename.value[filename]
-    if (spineHref) {
-      if (anchor) {
-        spineHref = `${spineHref}#${anchor}`
-      }
-      // Preview mode handles the failure below with its own CTA, so stay silent
-      // here to avoid stacking an error modal in front of it.
-      hasDisplayed = await displayRendition(spineHref, { isSilentError: isSilentError || isPreviewMode.value })
-      if (hasDisplayed) {
-        return true
-      }
+  let spineHref = filename ? sectionHrefByFilename.value[filename] : undefined
+  if (spineHref && anchor) {
+    spineHref = `${spineHref}#${anchor}`
+  }
+
+  // epub.js fails the whole display on a target the spine can't resolve, so
+  // start from the spine's own href when the nav one misses: the jump then
+  // lands on the first attempt instead of recovering from a logged failure.
+  const isNavHrefInSpine = isEPUBTargetInSpine(rendition.value?.book?.spine, item.href)
+  const primaryHref = isNavHrefInSpine || !spineHref ? item.href : spineHref
+
+  // Skipped when the spine href already went first: retrying it would only
+  // repeat the same failure. Without it this rung is the only one, so a silent
+  // jump here can still end at the modal below.
+  const hasSpineRetry = !!spineHref && spineHref !== primaryHref
+  let hasDisplayed = await displayRendition(primaryHref, {
+    isSilentError: true,
+    hasFallbackAttempt: hasFallbackAttempt || hasSpineRetry,
+    attempt: 0,
+  })
+  if (hasDisplayed) return true
+
+  if (hasSpineRetry) {
+    // Preview mode handles the failure below with its own CTA, so stay silent
+    // here to avoid stacking an error modal in front of it.
+    hasDisplayed = await displayRendition(spineHref, {
+      isSilentError: isSilentError || isPreviewMode.value,
+      // The truncated-chapter CTA is the designed outcome, not a break.
+      hasFallbackAttempt: hasFallbackAttempt || isPreviewMode.value,
+      attempt: 1,
+    })
+    if (hasDisplayed) {
+      return true
     }
   }
   // Nothing was rendered, so stop showing the page spinner before handing the
