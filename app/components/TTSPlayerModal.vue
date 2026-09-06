@@ -524,9 +524,9 @@ onBeforeUnmount(() => {
   isTTSPlaying.value = false
 })
 
-// The route-watch in use-tts-player-modal.ts can race the reader page's
-// unmount and leave this fullscreen modal covering /plus/checkout. Close
-// explicitly when the subscription handoff begins.
+// The navigation close can't see two handoffs: a hosted checkout leaves via an
+// external navigation, and a store purchase presents its sheet without one.
+// Close on the handoff itself so this fullscreen player isn't left underneath.
 watch(isProcessingSubscription, (isProcessing) => {
   if (isProcessing) handleModalClose()
 })
