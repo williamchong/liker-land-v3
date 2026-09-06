@@ -223,7 +223,7 @@
                 :ui="{ leadingIcon: 'size-10' }"
                 icon="i-material-symbols-play-arrow-rounded"
                 variant="solid"
-                @click="startTextToSpeech(currentTTSSegmentIndex)"
+                @click="handlePlayClick"
               />
               <UButton
                 class="rounded-full"
@@ -460,6 +460,21 @@ function handleTrialExhausted(source: 'server_402' | 'client_gate') {
     checkoutPlacement: 'tts-trial-limit',
     redirectRoute: buildSubscribeRedirectRoute(),
   })
+}
+
+// startTextToSpeech returns silently on an empty segment list, so a player left
+// open without one gave the play button no response at all. Say why instead.
+function handlePlayClick() {
+  if (!props.segments.length) {
+    useLogEvent('tts_no_segments', { nft_class_id: props.nftClassId })
+    errorModal.open({
+      level: 'warning',
+      title: $t('reader_text_to_speech_no_segments'),
+      description: $t('reader_text_to_speech_no_segments_description'),
+    })
+    return
+  }
+  startTextToSpeech(currentTTSSegmentIndex.value)
 }
 
 // Not `handleError`: the raw MediaError text helps nobody, and the composable

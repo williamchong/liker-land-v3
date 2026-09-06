@@ -974,6 +974,8 @@
   "reader_search_title": "搜尋",
   "reader_text_to_speech_button": "朗讀",
   "reader_text_to_speech_button_disabled_tooltip": "本作品無朗讀授權",
+  "reader_text_to_speech_no_segments": "沒有可朗讀的內容",
+  "reader_text_to_speech_no_segments_description": "本書的文字未能載入，因此沒有內容可以朗讀。請關閉播放器後再開啟一次。",
   "reader_text_to_speech_pdf_unreadable": "無法朗讀此 PDF",
   "reader_text_to_speech_pdf_unreadable_description": "此 PDF 的文字內嵌為圖像字形，未提供可讀取的文字資料，無法朗讀。",
   "reader_title": "閱讀 《{name}》 - {author}",
