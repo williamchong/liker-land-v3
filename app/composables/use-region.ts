@@ -1,16 +1,8 @@
 import { COUNTRIES } from '~~/shared/constants/countries'
-import { COUNTRY_CODES } from '~~/shared/constants/country-codes'
 import type { RegionCode } from '~~/shared/types/user-settings'
+import { parseRegionCode } from '~~/shared/utils/region'
 
 const DEFAULT_REGION: RegionCode = 'HK'
-
-const COUNTRY_CODE_SET = new Set<string>(COUNTRY_CODES)
-
-export function parseRegionCode(value: string | null | undefined): RegionCode | undefined {
-  if (!value) return undefined
-  const code = value.toUpperCase()
-  return COUNTRY_CODE_SET.has(code) ? code : undefined
-}
 
 // Detected, never chosen: the region follows cf-ipcountry, which only reaches the
 // server render, then the browser locale, then HK. Derived rather than resolved

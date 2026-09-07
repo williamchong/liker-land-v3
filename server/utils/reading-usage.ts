@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import type { PacedDeltas } from '~~/shared/utils/analytics-pacing'
+import { parseRegionCode } from '~~/shared/utils/region'
 
 interface SessionContext {
   activeReadingTimeMs: number
@@ -29,6 +30,17 @@ interface RecordPacedReadingUsageInput {
   rawDelta: PacedDeltas
   // Present only for session flushes, which carry cumulative totals and progress.
   session?: SessionContext
+}
+
+/**
+ * Reader's country, off the browser's own request, kept only when it parses as an
+ * ISO-3166-1 code so a cf-ipcountry sentinel ('XX', 'T1') never becomes a region.
+ * Deliberately without useDetectedGeolocation's browser-locale fallback: that reads a
+ * language preference as a location, which is fine for a UI placeholder and wrong for a
+ * usage statistic.
+ */
+function getRequestIPCountry(event: H3Event): string | undefined {
+  return parseRegionCode(getRequestHeader(event, 'cf-ipcountry'))
 }
 
 /**
@@ -96,5 +108,6 @@ export async function recordPacedReadingUsage(input: RecordPacedReadingUsageInpu
     classId: nftClassId,
     readingTimeMs: paced.activeReadingTimeMsDelta,
     ttsTimeMs: paced.ttsActiveTimeMsDelta,
+    ipCountry: getRequestIPCountry(event),
   })
 }
