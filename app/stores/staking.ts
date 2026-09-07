@@ -71,11 +71,26 @@ export const useStakingStore = defineStore('staking', () => {
   })
 
   // Actions
-  async function fetchUserStakingData(walletAddress: string) {
-    if (stakingDataByWalletMap.value[walletAddress]?.isFetching) {
-      return
+  // Keyed per wallet and held in the store (not module scope) so an SSR request
+  // and a test's fresh Pinia each get their own.
+  const inflightFetchByWallet = new Map<string, Promise<void>>()
+
+  // Overlapping callers join the walk in progress instead of being dropped: a
+  // post-claim refresh or a retry that lands mid-walk used to return as done
+  // while the first fetch was still paging, silently skipping the refresh.
+  function fetchUserStakingData(walletAddress: string) {
+    const pendingFetch = inflightFetchByWallet.get(walletAddress)
+    if (pendingFetch) {
+      return pendingFetch
     }
 
+    const task = runUserStakingDataFetch(walletAddress)
+      .finally(() => inflightFetchByWallet.delete(walletAddress))
+    inflightFetchByWallet.set(walletAddress, task)
+    return task
+  }
+
+  async function runUserStakingDataFetch(walletAddress: string) {
     if (!stakingDataByWalletMap.value[walletAddress]) {
       stakingDataByWalletMap.value[walletAddress] = {
         items: [],

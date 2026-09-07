@@ -139,6 +139,64 @@ describe('staking store rewards', () => {
     expect(totalUnclaimedRewards).toBe(500n)
   })
 
+  it('shares one walk between overlapping callers', async () => {
+    let resolvePage: (value: unknown) => void = () => {}
+    mockFetchCollectiveAccountStakings.mockReturnValueOnce(
+      new Promise((resolve) => { resolvePage = resolve }),
+    )
+
+    // The shelf load and a post-claim refresh can land in the same tick.
+    const first = store.fetchUserStakingData(WALLET)
+    const second = store.fetchUserStakingData(WALLET)
+
+    let hasSecondSettled = false
+    void second.then(() => {
+      hasSecondSettled = true
+    })
+    for (let tick = 0; tick < 5; tick += 1) {
+      await Promise.resolve()
+    }
+
+    // The joining caller must wait for the walk. It used to get `undefined`
+    // back and settle within a tick, reporting done on a fetch still paging.
+    expect(hasSecondSettled).toBe(false)
+
+    resolvePage(makeStakingsResponse([{ bookNFT: CHECKSUMMED, staked: '1000', pending: '500' }]))
+    await Promise.all([first, second])
+
+    expect(hasSecondSettled).toBe(true)
+    expect(mockFetchCollectiveAccountStakings).toHaveBeenCalledTimes(1)
+    expect(store.getUserStakingData(WALLET).totalUnclaimedRewards).toBe(500n)
+  })
+
+  it('fetches again once the previous walk has settled', async () => {
+    mockFetchCollectiveAccountStakings.mockResolvedValueOnce(
+      makeStakingsResponse([{ bookNFT: CHECKSUMMED, staked: '1000', pending: '500' }]),
+    )
+    await store.fetchUserStakingData(WALLET)
+
+    mockFetchCollectiveAccountStakings.mockResolvedValueOnce(
+      makeStakingsResponse([{ bookNFT: CHECKSUMMED, staked: '1000', pending: '0' }]),
+    )
+    await store.fetchUserStakingData(WALLET)
+
+    expect(mockFetchCollectiveAccountStakings).toHaveBeenCalledTimes(2)
+    expect(store.getUserStakingData(WALLET).totalUnclaimedRewards).toBe(0n)
+  })
+
+  it('does not wedge the wallet when a walk rejects', async () => {
+    mockFetchCollectiveAccountStakings.mockRejectedValueOnce(new Error('indexer down'))
+    await store.fetchUserStakingData(WALLET)
+
+    mockFetchCollectiveAccountStakings.mockResolvedValueOnce(
+      makeStakingsResponse([{ bookNFT: CHECKSUMMED, staked: '1000', pending: '500' }]),
+    )
+    await store.fetchUserStakingData(WALLET)
+
+    expect(mockFetchCollectiveAccountStakings).toHaveBeenCalledTimes(2)
+    expect(store.getUserStakingData(WALLET).totalUnclaimedRewards).toBe(500n)
+  })
+
   it('updates the existing row when a per-book refresh uses checksummed casing', async () => {
     mockFetchCollectiveAccountStakings.mockResolvedValueOnce(
       makeStakingsResponse([{ bookNFT: CHECKSUMMED, staked: '1000', pending: '500' }]),
