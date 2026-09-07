@@ -36,13 +36,35 @@ export function useTTSPlayerModal(options: TTSPlayerOptions) {
     chapterTitlesBySection: chapterTitlesBySection.value,
     startIndex: startIndex.value,
     onSegmentChange: options.onSegmentChange,
-    onClose: options.onClose,
+    onClose: handleClose,
   }))
 
   const overlay = useOverlay()
-  const modal = overlay.create(TTSPlayerModal, {
-    props: ttsPlayerModalProps.value,
-  })
+  type PlayerOverlay = ReturnType<typeof overlay.create>
+  let modal: PlayerOverlay | null = null
+
+  // destroyOnClose so a closed player leaves the app-root overlay store rather
+  // than stranding one entry per reader mount, each pinning that book's whole
+  // segment list through the props it holds.
+  function ensureModal(): PlayerOverlay {
+    if (!modal) {
+      modal = overlay.create(TTSPlayerModal, {
+        props: ttsPlayerModalProps.value,
+        destroyOnClose: true,
+      })
+    }
+    return modal
+  }
+
+  function handleClose() {
+    modal = null
+    options.onClose?.()
+  }
+
+  function closePlayer() {
+    modal?.close()
+    modal = null
+  }
 
   // `overlay.create` snapshots props once, but the reader confirms
   // `isLibraryBook` asynchronously — sync it so an open player doesn't tag TTS
@@ -51,10 +73,8 @@ export function useTTSPlayerModal(options: TTSPlayerOptions) {
     updateTTSPlayerModalProps()
   })
 
-  const route = useRoute()
-  watch(() => route.path, () => {
-    modal.close()
-  })
+  useCloseOverlayOnNavigate(closePlayer)
+  onScopeDispose(closePlayer)
 
   function setTTSSegments(elements: TTSSegment[]) {
     ttsSegments.value = elements
@@ -169,7 +189,7 @@ export function useTTSPlayerModal(options: TTSPlayerOptions) {
     else {
       startIndex.value = 0
     }
-    modal.open({ ...ttsPlayerModalProps.value, ...props })
+    ensureModal().open({ ...ttsPlayerModalProps.value, ...props })
   }
 
   function updateTTSPlayerModalProps(
@@ -177,11 +197,11 @@ export function useTTSPlayerModal(options: TTSPlayerOptions) {
   ) {
     const baseProps = ttsPlayerModalProps.value
     const mergedProps = { ...baseProps, ...overrideProps }
-    modal.patch(mergedProps)
+    modal?.patch(mergedProps)
   }
 
   return {
-    modal,
+    closePlayer,
     openPlayer,
     updateTTSPlayerModalProps,
 

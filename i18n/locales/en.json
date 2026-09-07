@@ -974,6 +974,8 @@
   "reader_search_title": "Search",
   "reader_text_to_speech_button": "Listen",
   "reader_text_to_speech_button_disabled_tooltip": "This work cannot be read due to license issue",
+  "reader_text_to_speech_no_segments": "Nothing to narrate",
+  "reader_text_to_speech_no_segments_description": "The text of this book didn't load, so there is nothing to read aloud. Close the player and open it again to retry.",
   "reader_text_to_speech_pdf_unreadable": "Can't read this PDF aloud",
   "reader_text_to_speech_pdf_unreadable_description": "This PDF's text is embedded as glyph shapes without a readable text layer, so it can't be narrated.",
   "reader_title": "Read \"{name}\" - {author}",

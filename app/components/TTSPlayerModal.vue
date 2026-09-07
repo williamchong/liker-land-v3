@@ -223,7 +223,7 @@
                 :ui="{ leadingIcon: 'size-10' }"
                 icon="i-material-symbols-play-arrow-rounded"
                 variant="solid"
-                @click="startTextToSpeech(currentTTSSegmentIndex)"
+                @click="handlePlayClick"
               />
               <UButton
                 class="rounded-full"
@@ -462,6 +462,21 @@ function handleTrialExhausted(source: 'server_402' | 'client_gate') {
   })
 }
 
+// startTextToSpeech returns silently on an empty segment list, so a player left
+// open without one gave the play button no response at all. Say why instead.
+function handlePlayClick() {
+  if (!props.segments.length) {
+    useLogEvent('tts_no_segments', { nft_class_id: props.nftClassId })
+    errorModal.open({
+      level: 'warning',
+      title: $t('reader_text_to_speech_no_segments'),
+      description: $t('reader_text_to_speech_no_segments_description'),
+    })
+    return
+  }
+  startTextToSpeech(currentTTSSegmentIndex.value)
+}
+
 // Not `handleError`: the raw MediaError text helps nobody, and the composable
 // has already logged the failure with a far better payload.
 function handlePlaybackExhausted() {
@@ -509,9 +524,9 @@ onBeforeUnmount(() => {
   isTTSPlaying.value = false
 })
 
-// The route-watch in use-tts-player-modal.ts can race the reader page's
-// unmount and leave this fullscreen modal covering /plus/checkout. Close
-// explicitly when the subscription handoff begins.
+// The navigation close can't see two handoffs: a hosted checkout leaves via an
+// external navigation, and a store purchase presents its sheet without one.
+// Close on the handoff itself so this fullscreen player isn't left underneath.
 watch(isProcessingSubscription, (isProcessing) => {
   if (isProcessing) handleModalClose()
 })
