@@ -106,7 +106,12 @@ export interface CollectiveEventQueryResponse<T> {
 
 function getCollectiveIndexerAPIFetch() {
   const config = useRuntimeConfig()
-  return createRetryingFetch({ baseURL: config.public.likeCoinEVMChainCollectiveAPIEndpoint })
+  // Bound wedged requests (see createRetryingFetch) so the staking walk can't
+  // hang, stranding the shelf's staking tab on its loading spinner.
+  return createRetryingFetch({
+    baseURL: config.public.likeCoinEVMChainCollectiveAPIEndpoint,
+    timeout: API_FETCH_TIMEOUT_MS,
+  })
 }
 
 export interface CollectiveQueryOptions {
