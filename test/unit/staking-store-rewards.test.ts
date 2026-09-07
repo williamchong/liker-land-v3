@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { createPinia, setActivePinia } from 'pinia'
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 
 import { useStakingStore } from '~/stores/staking'
 
@@ -18,7 +18,8 @@ const {
 }))
 
 mockNuxtImport('fetchCollectiveAccountStakings', () => mockFetchCollectiveAccountStakings)
-mockNuxtImport('useUserSession', () => () => ({ loggedIn: ref(true) }))
+const hasLoggedIn = ref(true)
+mockNuxtImport('useUserSession', () => () => ({ loggedIn: hasLoggedIn }))
 mockNuxtImport('useLikeCollectiveContract', () => () => ({
   getWalletPendingRewardsOfNFTClass: mockGetWalletPendingRewardsOfNFTClass,
   getWalletStakeOfNFTClass: mockGetWalletStakeOfNFTClass,
@@ -58,6 +59,7 @@ describe('staking store rewards', () => {
   let store: ReturnType<typeof useStakingStore>
 
   beforeEach(() => {
+    hasLoggedIn.value = true
     setActivePinia(createPinia())
     store = useStakingStore()
     mockFetchCollectiveAccountStakings.mockReset()
@@ -184,17 +186,35 @@ describe('staking store rewards', () => {
     expect(store.getUserStakingData(WALLET).totalUnclaimedRewards).toBe(0n)
   })
 
-  it('does not wedge the wallet when a walk rejects', async () => {
-    mockFetchCollectiveAccountStakings.mockRejectedValueOnce(new Error('indexer down'))
-    await store.fetchUserStakingData(WALLET)
+  it('does not leave a logged-out walk joinable', async () => {
+    let resolvePage: (value: unknown) => void = () => {}
+    mockFetchCollectiveAccountStakings.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolvePage = resolve
+      }),
+    )
 
+    const abandoned = store.fetchUserStakingData(WALLET)
+    // Logging out is the only trigger for the store's reset.
+    hasLoggedIn.value = false
+    await nextTick()
+
+    // Signing back in while the abandoned walk is still paging must start a
+    // fresh one, not join a walk whose entry was cleared out from under it.
+    hasLoggedIn.value = true
     mockFetchCollectiveAccountStakings.mockResolvedValueOnce(
-      makeStakingsResponse([{ bookNFT: CHECKSUMMED, staked: '1000', pending: '500' }]),
+      makeStakingsResponse([{ bookNFT: CHECKSUMMED, staked: '1000', pending: '250' }]),
     )
     await store.fetchUserStakingData(WALLET)
 
     expect(mockFetchCollectiveAccountStakings).toHaveBeenCalledTimes(2)
-    expect(store.getUserStakingData(WALLET).totalUnclaimedRewards).toBe(500n)
+    expect(store.getUserStakingData(WALLET).totalUnclaimedRewards).toBe(250n)
+
+    // And when the abandoned walk finally lands it must not clobber the new row.
+    resolvePage(makeStakingsResponse([{ bookNFT: CHECKSUMMED, staked: '1000', pending: '500' }]))
+    await abandoned
+
+    expect(store.getUserStakingData(WALLET).totalUnclaimedRewards).toBe(250n)
   })
 
   it('updates the existing row when a per-book refresh uses checksummed casing', async () => {

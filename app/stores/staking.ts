@@ -78,96 +78,98 @@ export const useStakingStore = defineStore('staking', () => {
   // Overlapping callers join the walk in progress instead of being dropped: a
   // post-claim refresh or a retry that lands mid-walk used to return as done
   // while the first fetch was still paging, silently skipping the refresh.
-  function fetchUserStakingData(walletAddress: string) {
+  async function fetchUserStakingData(walletAddress: string) {
     const pendingFetch = inflightFetchByWallet.get(walletAddress)
     if (pendingFetch) {
       return pendingFetch
     }
 
-    const task = runUserStakingDataFetch(walletAddress)
-      .finally(() => inflightFetchByWallet.delete(walletAddress))
-    inflightFetchByWallet.set(walletAddress, task)
-    return task
-  }
-
-  async function runUserStakingDataFetch(walletAddress: string) {
-    if (!stakingDataByWalletMap.value[walletAddress]) {
-      stakingDataByWalletMap.value[walletAddress] = {
-        items: [],
-        totalUnclaimedRewards: 0n,
-        isFetching: false,
-        hasFetched: false,
-        ts: getTimestampRoundedToMinute(),
+    const task = (async () => {
+      if (!stakingDataByWalletMap.value[walletAddress]) {
+        stakingDataByWalletMap.value[walletAddress] = {
+          items: [],
+          totalUnclaimedRewards: 0n,
+          isFetching: false,
+          hasFetched: false,
+          ts: getTimestampRoundedToMinute(),
+        }
       }
-    }
 
-    try {
-      stakingDataByWalletMap.value[walletAddress].isFetching = true
+      // Every write goes through this entry rather than re-reading the map: a
+      // logout swaps the map out mid-walk, and writing into whatever replaced
+      // it would resurrect the signed-out row or clobber a newer fetch.
+      const stakingData = stakingDataByWalletMap.value[walletAddress]!
 
-      // Get books user has staked on from collective indexer
       try {
-        const stakingData = new Map<string, StakingItem>()
-        let paginationKey: number | undefined
+        stakingData.isFetching = true
 
-        for (let page = 0; page < STAKINGS_MAX_PAGES; page += 1) {
-          const stakingsResponse = await fetchCollectiveAccountStakings(walletAddress, {
-            'pagination.limit': STAKINGS_PAGE_LIMIT,
-            'pagination.key': paginationKey,
-          })
+        // Get books user has staked on from collective indexer
+        try {
+          const stakingItemsByNFTClassId = new Map<string, StakingItem>()
+          let paginationKey: number | undefined
 
-          for (const staking of stakingsResponse.data) {
-            const nftClassId = normalizeNFTClassId(staking.book_nft)
+          for (let page = 0; page < STAKINGS_MAX_PAGES; page += 1) {
+            const stakingsResponse = await fetchCollectiveAccountStakings(walletAddress, {
+              'pagination.limit': STAKINGS_PAGE_LIMIT,
+              'pagination.key': paginationKey,
+            })
 
-            if (stakingData.has(nftClassId)) {
-              continue
+            for (const staking of stakingsResponse.data) {
+              const nftClassId = normalizeNFTClassId(staking.book_nft)
+
+              if (stakingItemsByNFTClassId.has(nftClassId)) {
+                continue
+              }
+
+              // Use data from indexer
+              const stakedAmount = BigInt(staking.staked_amount)
+              const pendingRewards = BigInt(staking.pending_reward_amount)
+
+              // Only add if there's still an active stake or pending rewards
+              if (stakedAmount > 0n || pendingRewards > 0n) {
+                stakingItemsByNFTClassId.set(nftClassId, {
+                  nftClassId,
+                  stakedAmount,
+                  pendingRewards,
+                  isOwned: false, // This will be updated in UI layer for owned books
+                })
+              }
             }
 
-            // Use data from indexer
-            const stakedAmount = BigInt(staking.staked_amount)
-            const pendingRewards = BigInt(staking.pending_reward_amount)
-
-            // Only add if there's still an active stake or pending rewards
-            if (stakedAmount > 0n || pendingRewards > 0n) {
-              stakingData.set(nftClassId, {
-                nftClassId,
-                stakedAmount,
-                pendingRewards,
-                isOwned: false, // This will be updated in UI layer for owned books
-              })
-            }
+            paginationKey = getIndexerNextKey(stakingsResponse, STAKINGS_PAGE_LIMIT)
+            if (!paginationKey) break
           }
 
-          paginationKey = getIndexerNextKey(stakingsResponse, STAKINGS_PAGE_LIMIT)
-          if (!paginationKey) break
+          if (paginationKey) {
+            console.warn(`Stopped paging staking positions after ${STAKINGS_MAX_PAGES} pages:`, walletAddress)
+          }
+
+          // Assigned only after the last page, so a mid-loop failure commits nothing.
+          // Sorted by staked amount descending
+          stakingData.items = Array.from(stakingItemsByNFTClassId.values())
+            .sort((a, b) => Number(b.stakedAmount - a.stakedAmount))
+        }
+        catch (error) {
+          // Keep the last known items: a failed fetch is not "nothing staked".
+          console.warn('Failed to fetch collective staking data:', error)
         }
 
-        if (paginationKey) {
-          console.warn(`Stopped paging staking positions after ${STAKINGS_MAX_PAGES} pages:`, walletAddress)
-        }
-
-        // Assigned only after the last page, so a mid-loop failure commits nothing.
-        // Sorted by staked amount descending
-        stakingDataByWalletMap.value[walletAddress].items = Array.from(stakingData.values())
-          .sort((a, b) => Number(b.stakedAmount - a.stakedAmount))
+        stakingData.totalUnclaimedRewards = stakingData.items.reduce(
+          (total, item) => total + item.pendingRewards,
+          0n,
+        )
+        stakingData.hasFetched = true
       }
       catch (error) {
-        // Keep the last known items: a failed fetch is not "nothing staked".
-        console.warn('Failed to fetch collective staking data:', error)
+        stakingData.hasFetched = true
+        throw error
       }
-
-      stakingDataByWalletMap.value[walletAddress].totalUnclaimedRewards = stakingDataByWalletMap.value[walletAddress].items.reduce(
-        (total, item) => total + item.pendingRewards,
-        0n,
-      )
-      stakingDataByWalletMap.value[walletAddress].hasFetched = true
-    }
-    catch (error) {
-      stakingDataByWalletMap.value[walletAddress].hasFetched = true
-      throw error
-    }
-    finally {
-      stakingDataByWalletMap.value[walletAddress].isFetching = false
-    }
+      finally {
+        stakingData.isFetching = false
+      }
+    })().finally(() => inflightFetchByWallet.delete(walletAddress))
+    inflightFetchByWallet.set(walletAddress, task)
+    return task
   }
 
   function clearUserStakingData(walletAddress: string) {
@@ -294,6 +296,9 @@ export const useStakingStore = defineStore('staking', () => {
   function reset() {
     stakingDataByWalletMap.value = {}
     totalStakeByNFTClassMap.value = {}
+    // Without this a walk still in flight stays joinable, so a re-login would
+    // wait on a fetch whose entry is gone and can no longer commit anything.
+    inflightFetchByWallet.clear()
   }
 
   watch(hasLoggedIn, (value, oldValue) => {
