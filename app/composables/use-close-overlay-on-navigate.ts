@@ -1,12 +1,5 @@
-/**
- * Close an app-root overlay when navigation commits.
- *
- * Not `watch(() => route.path)`: a page that unmounts on the same navigation
- * tears the watcher's scope down before its async-flushed callback runs, so the
- * overlay is stranded on the next page. `router.afterEach` fires synchronously
- * during navigation, before unmount. Guarded on path so in-place query updates
- * don't dismiss the overlay.
- */
+// Close an app-root overlay when navigation commits (router.afterEach avoids route.path watcher teardown on unmount).
+
 export function useCloseOverlayOnNavigate(close: () => void) {
   const router = useRouter()
   const stopCloseOnNavigate = router.afterEach((to, from) => {
