@@ -13,6 +13,11 @@
           class="text-sm/5"
           v-text="subscriptionStateLabel"
         />
+        <div
+          v-if="canDowngradeToPlus && hasPendingPlusDowngrade"
+          class="text-sm/5 text-muted"
+          v-text="$t('account_page_plus_downgrade_pending')"
+        />
 
         <template
           v-if="likerPlusManageMode !== 'none'"
@@ -23,6 +28,19 @@
             class="text-sm text-muted text-right"
             v-text="$t('account_page_manage_on_device')"
           />
+          <UDropdownMenu
+            v-else-if="canDowngradeToPlus"
+            :items="manageSubscriptionMenuItems"
+            :content="{ align: 'end' }"
+          >
+            <UButton
+              :label="likerPlusButtonLabel"
+              trailing-icon="i-material-symbols-keyboard-arrow-down-rounded"
+              variant="outline"
+              color="neutral"
+              :loading="isOpeningBillingPortal"
+            />
+          </UDropdownMenu>
           <UButton
             v-else
             :label="likerPlusButtonLabel"
@@ -91,7 +109,8 @@
 </template>
 
 <script setup lang="ts">
-import { CustomVoiceUploadModal } from '#components'
+import type { DropdownMenuItem } from '@nuxt/ui'
+import { CustomVoiceUploadModal, PlusDowngradeModal } from '#components'
 
 const { t: $t } = useI18n()
 const { loggedIn: hasLoggedIn, user } = useUserSession()
@@ -104,12 +123,13 @@ const {
   likerPlusButtonLabel,
   likerPlusManageMode,
   isCivicOfferable,
+  canDowngradeToPlus,
   isOpeningBillingPortal,
   isManagingSubscription,
   handleLikerPlusButtonClick,
 } = usePlusManagement()
 
-const { likerPlusPeriod } = useSubscription()
+const { likerPlusPeriod, hasPendingPlusDowngrade } = useSubscription()
 
 // Send the upgrade to the pricing page — the surface that shows Civic's
 // benefits and price with an explicit CTA. Preselect the billing period
@@ -126,6 +146,31 @@ function handleUpgradeToCivicButtonClick() {
   useLogEvent('account_civic_upgrade_button_click')
 }
 
+const overlay = useOverlay()
+const downgradeModal = overlay.create(PlusDowngradeModal)
+useCloseOverlayOnNavigate(() => downgradeModal.close())
+
+function handleOpenDowngradeModal() {
+  useLogEvent('account_plus_downgrade_button_click')
+  downgradeModal.open()
+}
+
+// Civic members on Stripe get a menu: billing portal plus the switch down to Plus,
+// which is disabled once a switch is already scheduled for the next renewal.
+const manageSubscriptionMenuItems = computed<DropdownMenuItem[]>(() => [
+  {
+    label: $t('account_page_billing_portal'),
+    icon: 'i-material-symbols-credit-card-outline',
+    onSelect: handleLikerPlusButtonClick,
+  },
+  {
+    label: $t('account_page_plus_downgrade_button'),
+    icon: 'i-material-symbols-arrow-downward-rounded',
+    disabled: hasPendingPlusDowngrade.value,
+    onSelect: handleOpenDowngradeModal,
+  },
+])
+
 const { handlePlusUpsellClick: handleCustomVoiceUpsellClick } = usePlusUpsellSlot({
   templateRef: 'customVoiceUpsell',
   slot: 'custom-voice',
@@ -133,7 +178,6 @@ const { handlePlusUpsellClick: handleCustomVoiceUpsellClick } = usePlusUpsellSlo
 })
 
 const { customVoice, hasCustomVoice } = useCustomVoice()
-const overlay = useOverlay()
 const customVoiceModal = overlay.create(CustomVoiceUploadModal)
 
 function handleOpenCustomVoiceModal() {
