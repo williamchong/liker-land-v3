@@ -3,7 +3,9 @@ import { basename, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { sanitizeTTSText } from '../../app/utils/tts'
 import type { TTSRequestParams } from '../../server/utils/api-tts'
-import { buildID3v2Tag } from '../../server/utils/id3'
+import { buildID3v2Tag, stripID3v2Tag } from '../../shared/utils/id3'
+import { getSafeFilenameSlug } from '../../shared/utils/filename'
+import { getIsRetryableHTTPError } from '../../shared/utils/http-status'
 import { generateTTSCacheKey, getTTSCacheBucket } from '../../server/utils/storage'
 import {
   createTTSPronunciationSigGetter,
@@ -93,20 +95,6 @@ async function fetchEpub(source: string): Promise<Buffer> {
   return readFile(resolve(source))
 }
 
-/**
- * Drop a leading ID3v2 tag. Cached objects are stored tagged, so a downloaded
- * segment would otherwise splice an ID3 header into the middle of the chapter
- * MP3 it is concatenated into.
- */
-function stripID3v2Tag(buffer: Buffer): Buffer {
-  if (buffer.length < 10 || buffer.toString('ascii', 0, 3) !== 'ID3') return buffer
-  // Size is synchsafe: four 7-bit groups, excluding this 10-byte header.
-  const size = ((buffer[6]! & 0x7F) << 21) | ((buffer[7]! & 0x7F) << 14)
-    | ((buffer[8]! & 0x7F) << 7) | (buffer[9]! & 0x7F)
-  const hasFooter = (buffer[5]! & 0x10) !== 0
-  return buffer.subarray(10 + size + (hasFooter ? 10 : 0))
-}
-
 function toCSVCell(value: string | number): string {
   return `"${String(value).replace(/"/g, '""')}"`
 }
@@ -142,14 +130,6 @@ async function mapWithConcurrency<T, R>(
   return results
 }
 
-/** A client error other than rate limiting will fail identically on a retry. */
-function getIsRetryable(error: unknown): boolean {
-  const status = (error as { status?: number, statusCode?: number })?.status
-    ?? (error as { statusCode?: number })?.statusCode
-  if (typeof status !== 'number') return true
-  return status === 429 || status < 400 || status >= 500
-}
-
 async function synthesizeWithRetry(
   provider: MinimaxTTSProvider,
   params: TTSRequestParams,
@@ -164,7 +144,7 @@ async function synthesizeWithRetry(
     }
     catch (error) {
       lastError = error
-      if (!getIsRetryable(error)) break
+      if (!getIsRetryableHTTPError(error)) break
       if (attempt < attempts) {
         // Jittered, so a pool that trips a rate limit together does not retry together.
         await new Promise(r => setTimeout(r, 500 * 2 ** (attempt - 1) * (1 + Math.random())))
@@ -376,7 +356,7 @@ export async function main(argv: string[]) {
   // One MP3 per section, so a chapter is playable on its own. Segment audio is
   // concatenated raw and given a single leading tag — one tag per segment would
   // litter ID3 headers through the middle of the file.
-  const bySection = new Map<number, Buffer[]>()
+  const bySection = new Map<number, Uint8Array[]>()
   for (const segment of planned) {
     const buffer = bufferByText.get(segment.synthesisText)
     if (!buffer) continue
@@ -388,7 +368,7 @@ export async function main(argv: string[]) {
   for (const [sectionIndex, buffers] of [...bySection.entries()].sort((a, b) => a[0] - b[0])) {
     const title = chapterTitles[sectionIndex] || `Section ${sectionIndex}`
     const tag = buildID3v2Tag({ title, artist: voiceDisplayName, comment: `3ook.com TTS — ${sourceName}` })
-    const name = `${String(sectionIndex).padStart(3, '0')}-${title.replace(/[^\p{L}\p{N}]+/gu, '-').slice(0, 60)}.mp3`
+    const name = `${String(sectionIndex).padStart(3, '0')}-${getSafeFilenameSlug(title, { fallback: 'section' })}.mp3`
     await writeFile(join(outDir, name), Buffer.concat([tag, ...buffers]))
   }
 

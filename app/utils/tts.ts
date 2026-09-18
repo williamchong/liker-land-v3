@@ -1,3 +1,4 @@
+import { TTS_AUDIO_DOWNLOAD_HEADER } from '~~/shared/constants/tts-cache'
 // Fullwidth letters/digits/symbols (ＡＢＣ, １２３, ＊, （）) trip up Minimax,
 // so the fullwidth sweep normalizes them to basic ASCII. Fullwidth CJK
 // punctuation is excluded: ，；：！？ are the correct, prosody-bearing
@@ -210,4 +211,26 @@ export function getTTSConfigCacheKey(cacheKeyPrefix: string) {
 
 export function getTTSConfigKeyWithSuffix(key: string, suffix: TTSConfigKeySuffix) {
   return `${key}-${suffix}`
+}
+
+/**
+ * Fetch one segment so the worker caches it — `isDownload` into the downloads
+ * cache rather than the lookahead one — returning its byte length. Undefined on
+ * a 400, usually this segment's own text. Any other failure throws with its
+ * status: another 4xx (session, entitlement, voice access) rejects the whole
+ * run. The body is drained rather than cancelled, which would abort the
+ * worker's write.
+ */
+export async function fetchTTSSegmentIntoCache(
+  url: string,
+  signal?: AbortSignal,
+  { isDownload = false }: { isDownload?: boolean } = {},
+): Promise<number | undefined> {
+  const headers = isDownload ? { [TTS_AUDIO_DOWNLOAD_HEADER]: '1' } : undefined
+  const response = await fetch(url, { signal, headers })
+  if (!response.ok) {
+    if (response.status === 400) return undefined
+    throw createError({ statusCode: response.status, statusMessage: 'TTS_SEGMENT_FETCH_FAILED' })
+  }
+  return (await response.arrayBuffer()).byteLength
 }

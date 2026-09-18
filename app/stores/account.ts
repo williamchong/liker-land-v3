@@ -8,7 +8,7 @@ import type { RouteLocationAsRelativeGeneric } from 'vue-router'
 
 import { LazyLoginModal, LazyRegistrationModal } from '#components'
 
-import { TTS_AUDIO_CACHE } from '~~/shared/constants/tts-cache'
+import { TTS_AUDIO_CACHE, TTS_AUDIO_DOWNLOAD_CACHE } from '~~/shared/constants/tts-cache'
 import { usePlusCheckoutStore } from '~/stores/plus-checkout'
 
 const REGISTER_TIME_LIMIT_IN_TS = 15 * 60 * 1000 // 15 minutes
@@ -664,17 +664,20 @@ export const useAccountStore = defineStore('account', () => {
     // The app keeps its own TTS segment cache on disk, invisible to the
     // web-layer purge below; ask the shell to drop that too.
     requestNativeClearCaches()
+    // Downloads are stopped before their caches go, or they re-record their pins.
+    revokeTTSDownloads({ prefix: '' })
     if (!window.caches) return
     try {
       isClearingCaches.value = true
+      // No early return on an empty cache: the localStorage sidecars below
+      // outlive a browser-level eviction and must go regardless.
       const keys = await window.caches.keys()
-      if (!keys?.length) return
 
       const bookKeys = keys.filter(key => key.startsWith(config.public.cacheKeyPrefix))
       await Promise.all(bookKeys.map(key => caches.delete(key)))
 
-      // Workbox names its cache without the prefix, so the filter misses it.
-      await caches.delete(TTS_AUDIO_CACHE)
+      // Workbox names its caches without the prefix, so the filter misses them.
+      await Promise.all([TTS_AUDIO_CACHE, TTS_AUDIO_DOWNLOAD_CACHE].map(name => caches.delete(name)))
 
       if (!window.localStorage) return
 
@@ -685,6 +688,10 @@ export const useAccountStore = defineStore('account', () => {
       })
 
       window.localStorage.removeItem(getBookFileCacheIndexKey(config.public.cacheKeyPrefix))
+      // The pin index is the audio cache's sidecar, exactly as the line above is
+      // the book caches'. Left behind, it lists downloads whose audio just went.
+      window.localStorage.removeItem(getTTSPinIndexKey(config.public.cacheKeyPrefix))
+      window.localStorage.removeItem(getTTSPinUnavailableKey(config.public.cacheKeyPrefix))
 
       // Must use the same cacheKeyPrefix-scoped key the values are written under
       // (getTTSConfigCacheKey); the unprefixed key would clear nothing.
@@ -707,7 +714,9 @@ export const useAccountStore = defineStore('account', () => {
       // drop them before the fallible refresh, which would otherwise strand
       // them for the next login.
       usePlusCheckoutStore().clear()
-      clearCaches()
+      // Awaited so no purge is still running under the next session, but a
+      // failed one must not strand the logout.
+      await clearCaches().catch(error => console.error(error))
       savePlusRedirectRoute(null)
       await refreshSession()
       blockingModal.patch({ title: $t('account_logged_out') })

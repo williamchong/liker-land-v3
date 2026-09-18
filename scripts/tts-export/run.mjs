@@ -25,5 +25,13 @@ const jiti = createJiti(import.meta.url, {
   alias: { '~~': root, '~': `${root}/app` },
 })
 
+// Two more auto-imports sit behind the execute path: the provider's
+// getMiniMaxSpeechClient() and the cache bucket's getFirebaseApp().
+const [{ getFirebaseApp }, { getMiniMaxSpeechClient }] = await Promise.all([
+  jiti.import(`${root}/server/utils/firebase.ts`),
+  jiti.import(`${root}/server/utils/minimax-client.ts`),
+])
+Object.assign(globalThis, { getFirebaseApp, getMiniMaxSpeechClient })
+
 const { main } = await jiti.import(`${root}/scripts/tts-export/index.ts`)
 await main(process.argv.slice(2))

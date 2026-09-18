@@ -1,3 +1,4 @@
+import { TTS_AUDIO_VERSION, TTS_AUDIO_VERSION_PARAM } from '~~/shared/constants/tts-cache'
 import type { AffiliateVoiceData, CustomVoiceData } from '~~/shared/types/custom-voice'
 import { computeTTSTextSig, decodeAffiliateVoiceId, isAffiliateVoiceId } from '~~/shared/utils/tts-sig'
 
@@ -49,6 +50,12 @@ function appendCommonParams(
   }
 }
 
+// Appended last, and only once bumped, so every existing CDN key stays put.
+function toTTSAudioPath(params: URLSearchParams): string {
+  if (TTS_AUDIO_VERSION) params.set(TTS_AUDIO_VERSION_PARAM, TTS_AUDIO_VERSION)
+  return `/api/reader/tts?${params.toString()}`
+}
+
 // Builds the `/api/reader/tts` URL for a sanitized segment text. Parameter
 // order is part of the CDN cache key — keep it stable.
 export function buildTTSAudioURL(sanitizedText: string, context: TTSAudioURLContext): string {
@@ -69,7 +76,7 @@ export function buildTTSAudioURL(sanitizedText: string, context: TTSAudioURLCont
       voice_id: languageVoice,
     })
     appendCommonParams(params, { text: sanitizedText, voiceId: languageVoice, language, isPrivateVoice: true }, context)
-    return `/api/reader/tts?${params.toString()}`
+    return toTTSAudioPath(params)
   }
 
   if (languageVoice === 'custom') {
@@ -86,7 +93,7 @@ export function buildTTSAudioURL(sanitizedText: string, context: TTSAudioURLCont
     if (context.customVoice?.updatedAt) {
       params.set('_t', context.customVoice.updatedAt.toString())
     }
-    return `/api/reader/tts?${params.toString()}`
+    return toTTSAudioPath(params)
   }
 
   const parsed = parseLanguageVoice(languageVoice)
@@ -98,7 +105,7 @@ export function buildTTSAudioURL(sanitizedText: string, context: TTSAudioURLCont
     voice_id: voiceId,
   })
   appendCommonParams(params, { text: sanitizedText, voiceId, language, isPrivateVoice: false }, context)
-  return `/api/reader/tts?${params.toString()}`
+  return toTTSAudioPath(params)
 }
 
 // The key Workbox stored a segment under: its `cacheKeyWillBeUsed` strips
