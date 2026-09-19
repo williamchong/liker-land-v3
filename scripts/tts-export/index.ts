@@ -267,19 +267,13 @@ export async function main(argv: string[]) {
   let done = 0
   let reused = 0
   let consecutiveFailures = 0
-  const failures: PlannedSegment[] = []
 
   const audioByText = await mapWithConcurrency(uniqueTexts, concurrency, async (text) => {
     const segment = segmentByText.get(text)!
     // Lazy and memoised: a stale entry scans the dictionary once, not again on write.
     const getExpectedSig = createTTSPronunciationSigGetter(language, text)
     try {
-      // Record the skip: failures.csv is the list of what is missing from the
-      // audio, and everything queued behind a tripped breaker is missing too.
-      if (consecutiveFailures >= CONSECUTIVE_FAILURE_LIMIT) {
-        failures.push(segment)
-        return undefined
-      }
+      if (consecutiveFailures >= CONSECUTIVE_FAILURE_LIMIT) return undefined
 
       if (bucket && segment.cacheKey) {
         try {
@@ -342,7 +336,6 @@ export async function main(argv: string[]) {
     }
     catch (error) {
       consecutiveFailures++
-      failures.push(segment)
       console.warn(`[export] Segment ${segment.index} (${segment.id}) failed:`, error)
       return undefined
     }
@@ -374,6 +367,9 @@ export async function main(argv: string[]) {
 
   console.log(`[export] Wrote ${bySection.size} chapter files to ${outDir}`)
   if (reused) console.log(`[export] Reused ${reused} cached segment(s)`)
+  // Derived from the audio rather than collected per synthesis: a text that
+  // failed or sat behind a tripped breaker is missing from every place it appears.
+  const failures = planned.filter(segment => !bufferByText.get(segment.synthesisText))
   if (failures.length) {
     const failurePath = join(outDir, 'failures.csv')
     await writeAuditCSV(failurePath, failures)
