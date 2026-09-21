@@ -110,6 +110,9 @@ export function useStoreTags({
   const isPreRankedTagId = computed(() => isPopularTagId.value
     || isBestsellingTagId.value
     || (isLibraryTab.value && tagId.value === BOOKSTORE_FREE_LIST_TYPE))
+  // Stake ranking is a storefront signal, mirroring the staking tabs the library
+  // drops, so only the store's feed lifts staked books to the front.
+  const isForYouStakingLifted = computed(() => isForYouTagId.value && !isLibraryTab.value)
 
   const normalizedLocale = computed(() => locale.value === 'zh-Hant' ? 'zh' : 'en')
 
@@ -231,6 +234,7 @@ export function useStoreTags({
     isDefaultTagId,
     isStakingTagId,
     isForYouTagId,
+    isForYouStakingLifted,
     isPreRankedTagId,
     getIsLocalHistoriesTagId,
     normalizedLocale,
