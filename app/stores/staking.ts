@@ -293,6 +293,31 @@ export const useStakingStore = defineStore('staking', () => {
     return stakingItem
   }
 
+  // Reads the contract instead of the indexer, which lags the chain and would
+  // write a just-claimed balance back on top of the row.
+  async function fetchUserPendingRewards(walletAddress: string) {
+    const items = stakingDataByWalletMap.value[walletAddress]?.items ?? []
+    const updates = await Promise.all(items.map(async ({ nftClassId }) => {
+      try {
+        return { nftClassId, pendingRewards: await getWalletPendingRewardsOfNFTClass(walletAddress, nftClassId) }
+      }
+      catch (error) {
+        // One unreadable class must not fail the rest, nor the claim that called us.
+        console.warn('Failed to fetch pending rewards of book:', nftClassId, error)
+        return undefined
+      }
+    }))
+
+    // A logout between the reads and the writes drops the entry; writing now
+    // would resurrect the signed-out row.
+    if (!stakingDataByWalletMap.value[walletAddress]) return
+
+    for (const update of updates) {
+      if (!update) continue
+      updateStakingItem(walletAddress, update.nftClassId, { pendingRewards: update.pendingRewards })
+    }
+  }
+
   function reset() {
     stakingDataByWalletMap.value = {}
     totalStakeByNFTClassMap.value = {}
@@ -322,6 +347,7 @@ export const useStakingStore = defineStore('staking', () => {
     fetchUserStakingData,
     fetchTotalStakeOfNFTClass,
     fetchNFTClassStakingData,
+    fetchUserPendingRewards,
     clearUserStakingData,
     updateStakingItem,
   }

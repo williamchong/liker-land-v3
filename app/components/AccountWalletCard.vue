@@ -192,10 +192,10 @@ async function handleClaimStakingRewardButtonClick() {
       book_count: bookshelfStore.items.length,
     })
 
-    // Reload data to refresh rewards
+    // Rewards come from the chain: the indexer still reports the pre-claim amount.
     if (user.value?.evmWallet) {
       await Promise.all([
-        stakingStore.fetchUserStakingData(user.value.evmWallet),
+        stakingStore.fetchUserPendingRewards(user.value.evmWallet),
         bookshelfStore.fetchItems({ walletAddress: user.value.evmWallet, isRefresh: true }),
         refetchLikeBalance(),
       ])
