@@ -273,6 +273,7 @@ const {
   isDefaultTagId,
   isStakingTagId,
   isForYouTagId,
+  isForYouStakingLifted,
   isPreRankedTagId,
   getIsLocalHistoriesTagId,
   normalizedLocale,
@@ -466,7 +467,7 @@ const cmsProducts = computed<BookstoreItemList>(() => {
   }, {} as Record<string, { totalStaked: bigint, stakerCount: number, likeRank?: number }>)
 
   const listingProducts = bookstoreStore.getBookstoreCMSProductsByTagId(tagId.value, isLibraryTab.value)
-  const items = listingProducts.items.map((item) => {
+  let items = listingProducts.items.map((item) => {
     const stakingInfo = stakingData[item.classId?.toLowerCase() || '']
     return {
       ...item,
@@ -478,6 +479,16 @@ const cmsProducts = computed<BookstoreItemList>(() => {
       likeRank: (isPreRankedTagId.value || isForYouTagId.value) ? 0 : (stakingInfo?.likeRank ?? 0),
     }
   })
+
+  // The feed arrives personalized-ranked, so lift staked books ahead of the rest
+  // rather than re-sort by amount — each group keeps the server's order. Done here,
+  // not in fetchTagItems, so a late-resolving staking fetch still reorders it.
+  if (isForYouStakingLifted.value) {
+    const stakedItems = items.filter(item => item.totalStaked > 0n)
+    if (stakedItems.length && stakedItems.length < items.length) {
+      items = [...stakedItems, ...items.filter(item => item.totalStaked <= 0n)]
+    }
+  }
 
   return {
     ...listingProducts,
@@ -882,6 +893,8 @@ const itemLLMedium = computed(() =>
 const GRID_LL_SOURCE = 'bookstore'
 
 const hasForYouFetchError = ref(false)
+// Held only by the first staking fetch: a refresh must not re-log the view.
+const isAwaitingForYouStaking = ref(false)
 
 function handleBookstoreItemOpen(classId: string, index: number) {
   // The click sits behind the same gate as the impression: a For You click has
@@ -922,6 +935,8 @@ const forYouFeedViewKey = computed(() => {
   // fetchForYouProducts marks hasFetched even when it throws, so a failed feed
   // would otherwise log a view and consume the one its retry should log.
   if (hasForYouFetchError.value) return undefined
+  // The staking fetch is unawaited, so without this the view logs the pre-lift order.
+  if (isAwaitingForYouStaking.value) return undefined
   // Wallet included so a switched-to reader's feed counts as their own view.
   return `${isLibraryTab.value ? 'library' : 'store'}:${llMedium.value}:${walletAddress.value}`
 })
@@ -1048,9 +1063,26 @@ function getFetchItemsErrorActions(): ErrorHandlerAction[] {
 }
 
 async function fetchTagItems({ isRefresh = false } = {}) {
-  // The personalized feed is server-ranked and a single fixed page: skip the
-  // staking fetch and the client-side staking re-sort below entirely.
+  // The personalized feed is server-ranked and a single fixed page, so it skips
+  // the batch re-sort below. It still needs the staking listing: cmsProducts lifts
+  // staked books to the front of the feed, and without this they all read as 0n.
   if (isForYouTagId.value) {
+    const stakingSortValue = mapTagIdToAPIStakingSortValue(STAKING_TAG_DEFAULT)
+    // Page 1 only: fetchStakingBooks pages deeper whenever it still holds a cursor,
+    // and page 2 onwards is served uncached for a lift the top page already covers.
+    const shouldFetchStaking = isForYouStakingLifted.value
+      && (isRefresh || !bookstoreStore.getStakingBooks(stakingSortValue).hasFetchedItems)
+    if (shouldFetchStaking) {
+      // Unawaited: the lift is applied reactively in cmsProducts, so making the
+      // feed's own error and scroll restore wait on staking only costs latency.
+      if (!isRefresh) isAwaitingForYouStaking.value = true
+      bookstoreStore.fetchStakingBooks(stakingSortValue, { isRefresh, limit: 100 }).catch((error) => {
+        // A missing staking listing only costs the lift, so let the feed render.
+        console.warn('[store] Failed to fetch staking data for For You sorting:', error)
+      }).finally(() => {
+        isAwaitingForYouStaking.value = false
+      })
+    }
     // Report before rethrowing: the caller turns this into a generic listing
     // error, so the feed's own failure rate is otherwise invisible.
     try {
