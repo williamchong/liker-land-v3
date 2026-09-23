@@ -28,6 +28,10 @@ interface NFTClassTotalStake {
 const STAKINGS_PAGE_LIMIT = 100
 const STAKINGS_MAX_PAGES = 50
 
+function hasStakeOrRewards({ stakedAmount, pendingRewards }: Pick<StakingItem, 'stakedAmount' | 'pendingRewards'>) {
+  return stakedAmount > 0n || pendingRewards > 0n
+}
+
 export const useStakingStore = defineStore('staking', () => {
   const { likeCoinTokenDecimals } = useRuntimeConfig().public
   const { loggedIn: hasLoggedIn } = useUserSession()
@@ -125,8 +129,7 @@ export const useStakingStore = defineStore('staking', () => {
               const stakedAmount = BigInt(staking.staked_amount)
               const pendingRewards = BigInt(staking.pending_reward_amount)
 
-              // Only add if there's still an active stake or pending rewards
-              if (stakedAmount > 0n || pendingRewards > 0n) {
+              if (hasStakeOrRewards({ stakedAmount, pendingRewards })) {
                 stakingItemsByNFTClassId.set(nftClassId, {
                   nftClassId,
                   stakedAmount,
@@ -204,20 +207,26 @@ export const useStakingStore = defineStore('staking', () => {
 
     const userData = stakingDataByWalletMap.value[walletAddress]
     const itemIndex = userData.items.findIndex(item => item.nftClassId === normalizedNFTClassId)
-
-    // Initialize item if it doesn't exist
-    const existingItem = userData.items[itemIndex]
-    if (!existingItem) {
-      userData.items.push({
+    const item: StakingItem = {
+      ...(userData.items[itemIndex] ?? {
         nftClassId: normalizedNFTClassId,
         stakedAmount: 0n,
         pendingRewards: 0n,
         isOwned: false,
-        ...updates,
-      })
+      }),
+      ...updates,
+    }
+
+    // A row with nothing staked or unclaimed would still count as a LIKE asset,
+    // e.g. after claiming an unstaked book or viewing a book never staked on.
+    if (!hasStakeOrRewards(item)) {
+      if (itemIndex >= 0) userData.items.splice(itemIndex, 1)
+    }
+    else if (itemIndex >= 0) {
+      userData.items[itemIndex] = item
     }
     else {
-      userData.items[itemIndex] = { ...existingItem, ...updates }
+      userData.items.push(item)
     }
 
     // Recalculate total rewards
