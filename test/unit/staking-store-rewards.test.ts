@@ -315,5 +315,28 @@ describe('staking store rewards', () => {
 
       expect(store.stakingDataByWalletMap[WALLET]).toBeUndefined()
     })
+
+    it('does not overwrite the row loaded by a re-login mid-read', async () => {
+      await seedTwoRows()
+      const resolveReads: Array<(value: bigint) => void> = []
+      mockGetWalletPendingRewardsOfNFTClass.mockImplementation(() => new Promise((resolve) => {
+        resolveReads.push(resolve)
+      }))
+
+      const refresh = store.fetchUserPendingRewards(WALLET)
+      hasLoggedIn.value = false
+      await nextTick()
+      hasLoggedIn.value = true
+      mockFetchCollectiveAccountStakings.mockResolvedValueOnce(
+        makeStakingsResponse([{ bookNFT: CHECKSUMMED, staked: '1000', pending: '250' }]),
+      )
+      await store.fetchUserStakingData(WALLET)
+      resolveReads.forEach(resolve => resolve(0n))
+      await refresh
+
+      const { items, totalUnclaimedRewards } = store.getUserStakingData(WALLET)
+      expect(items.map(item => item.nftClassId)).toEqual([LOWERCASE])
+      expect(totalUnclaimedRewards).toBe(250n)
+    })
   })
 })

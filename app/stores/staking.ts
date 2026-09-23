@@ -305,8 +305,9 @@ export const useStakingStore = defineStore('staking', () => {
   // Reads the contract instead of the indexer, which lags the chain and would
   // write a just-claimed balance back on top of the row.
   async function fetchUserPendingRewards(walletAddress: string) {
-    const items = stakingDataByWalletMap.value[walletAddress]?.items ?? []
-    const updates = await Promise.all(items.map(async ({ nftClassId }) => {
+    const userData = stakingDataByWalletMap.value[walletAddress]
+    if (!userData) return
+    const updates = await Promise.all(userData.items.map(async ({ nftClassId }) => {
       try {
         return { nftClassId, pendingRewards: await getWalletPendingRewardsOfNFTClass(walletAddress, nftClassId) }
       }
@@ -317,9 +318,9 @@ export const useStakingStore = defineStore('staking', () => {
       }
     }))
 
-    // A logout between the reads and the writes drops the entry; writing now
-    // would resurrect the signed-out row.
-    if (!stakingDataByWalletMap.value[walletAddress]) return
+    // A logout between the reads and the writes drops the entry, and a re-login
+    // replaces it; writing now would resurrect or clobber the row.
+    if (stakingDataByWalletMap.value[walletAddress] !== userData) return
 
     for (const update of updates) {
       if (!update) continue
