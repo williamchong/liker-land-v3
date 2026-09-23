@@ -893,6 +893,8 @@ const itemLLMedium = computed(() =>
 const GRID_LL_SOURCE = 'bookstore'
 
 const hasForYouFetchError = ref(false)
+// Held only by the first staking fetch: a refresh must not re-log the view.
+const isAwaitingForYouStaking = ref(false)
 
 function handleBookstoreItemOpen(classId: string, index: number) {
   // The click sits behind the same gate as the impression: a For You click has
@@ -933,6 +935,8 @@ const forYouFeedViewKey = computed(() => {
   // fetchForYouProducts marks hasFetched even when it throws, so a failed feed
   // would otherwise log a view and consume the one its retry should log.
   if (hasForYouFetchError.value) return undefined
+  // The staking fetch is unawaited, so without this the view logs the pre-lift order.
+  if (isAwaitingForYouStaking.value) return undefined
   // Wallet included so a switched-to reader's feed counts as their own view.
   return `${isLibraryTab.value ? 'library' : 'store'}:${llMedium.value}:${walletAddress.value}`
 })
@@ -1071,9 +1075,12 @@ async function fetchTagItems({ isRefresh = false } = {}) {
     if (shouldFetchStaking) {
       // Unawaited: the lift is applied reactively in cmsProducts, so making the
       // feed's own error and scroll restore wait on staking only costs latency.
+      if (!isRefresh) isAwaitingForYouStaking.value = true
       bookstoreStore.fetchStakingBooks(stakingSortValue, { isRefresh, limit: 100 }).catch((error) => {
         // A missing staking listing only costs the lift, so let the feed render.
         console.warn('[store] Failed to fetch staking data for For You sorting:', error)
+      }).finally(() => {
+        isAwaitingForYouStaking.value = false
       })
     }
     // Report before rethrowing: the caller turns this into a generic listing
