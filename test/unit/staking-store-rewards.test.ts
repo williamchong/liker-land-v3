@@ -233,4 +233,110 @@ describe('staking store rewards', () => {
     expect(items[0]?.nftClassId).toBe(LOWERCASE)
     expect(totalUnclaimedRewards).toBe(0n)
   })
+
+  it('drops the row when a per-book refresh finds nothing staked or unclaimed', async () => {
+    mockFetchCollectiveAccountStakings.mockResolvedValueOnce(
+      makeStakingsResponse([{ bookNFT: CHECKSUMMED, staked: '0', pending: '500' }]),
+    )
+    await store.fetchUserStakingData(WALLET)
+
+    // The product page refreshes a single book after claiming its rewards.
+    mockGetWalletStakeOfNFTClass.mockResolvedValueOnce(0n)
+    mockGetWalletPendingRewardsOfNFTClass.mockResolvedValueOnce(0n)
+    await store.fetchNFTClassStakingData(WALLET, CHECKSUMMED)
+
+    expect(store.getUserStakingData(WALLET).items).toEqual([])
+    expect(store.getUserStakingData(WALLET).totalUnclaimedRewards).toBe(0n)
+  })
+
+  describe('fetchUserPendingRewards', () => {
+    const OTHER = makePage(1, 1)[0]!.bookNFT
+
+    async function seedTwoRows() {
+      mockFetchCollectiveAccountStakings.mockResolvedValueOnce(makeStakingsResponse([
+        { bookNFT: CHECKSUMMED, staked: '1000', pending: '500' },
+        { bookNFT: OTHER, staked: '1000', pending: '300' },
+      ]))
+      await store.fetchUserStakingData(WALLET)
+    }
+
+    it('writes each book\'s on-chain rewards and recomputes the total', async () => {
+      await seedTwoRows()
+      mockGetWalletPendingRewardsOfNFTClass.mockImplementation(async (_, nftClassId: string) => (
+        nftClassId === LOWERCASE ? 0n : 20n
+      ))
+
+      await store.fetchUserPendingRewards(WALLET)
+
+      const { items, totalUnclaimedRewards } = store.getUserStakingData(WALLET)
+      expect(items.map(item => item.pendingRewards)).toEqual([0n, 20n])
+      expect(totalUnclaimedRewards).toBe(20n)
+    })
+
+    it('keeps the other books updated when one read rejects', async () => {
+      await seedTwoRows()
+      mockGetWalletPendingRewardsOfNFTClass.mockImplementation(async (_, nftClassId: string) => {
+        if (nftClassId === LOWERCASE) throw new Error('rpc down')
+        return 0n
+      })
+
+      await expect(store.fetchUserPendingRewards(WALLET)).resolves.toBeUndefined()
+
+      const { items, totalUnclaimedRewards } = store.getUserStakingData(WALLET)
+      expect(items.map(item => item.pendingRewards)).toEqual([500n, 0n])
+      expect(totalUnclaimedRewards).toBe(500n)
+    })
+
+    it('drops an unstaked row once its rewards are claimed', async () => {
+      mockFetchCollectiveAccountStakings.mockResolvedValueOnce(
+        makeStakingsResponse([{ bookNFT: CHECKSUMMED, staked: '0', pending: '500' }]),
+      )
+      await store.fetchUserStakingData(WALLET)
+      mockGetWalletPendingRewardsOfNFTClass.mockResolvedValueOnce(0n)
+
+      await store.fetchUserPendingRewards(WALLET)
+
+      expect(store.getUserStakingData(WALLET).items).toEqual([])
+      expect(store.getUserStakingData(WALLET).totalUnclaimedRewards).toBe(0n)
+    })
+
+    it('does not resurrect the row after a logout mid-read', async () => {
+      await seedTwoRows()
+      const resolveReads: Array<(value: bigint) => void> = []
+      mockGetWalletPendingRewardsOfNFTClass.mockImplementation(() => new Promise((resolve) => {
+        resolveReads.push(resolve)
+      }))
+
+      const refresh = store.fetchUserPendingRewards(WALLET)
+      hasLoggedIn.value = false
+      await nextTick()
+      resolveReads.forEach(resolve => resolve(0n))
+      await refresh
+
+      expect(store.stakingDataByWalletMap[WALLET]).toBeUndefined()
+    })
+
+    it('does not overwrite the row loaded by a re-login mid-read', async () => {
+      await seedTwoRows()
+      const resolveReads: Array<(value: bigint) => void> = []
+      mockGetWalletPendingRewardsOfNFTClass.mockImplementation(() => new Promise((resolve) => {
+        resolveReads.push(resolve)
+      }))
+
+      const refresh = store.fetchUserPendingRewards(WALLET)
+      hasLoggedIn.value = false
+      await nextTick()
+      hasLoggedIn.value = true
+      mockFetchCollectiveAccountStakings.mockResolvedValueOnce(
+        makeStakingsResponse([{ bookNFT: CHECKSUMMED, staked: '1000', pending: '250' }]),
+      )
+      await store.fetchUserStakingData(WALLET)
+      resolveReads.forEach(resolve => resolve(0n))
+      await refresh
+
+      const { items, totalUnclaimedRewards } = store.getUserStakingData(WALLET)
+      expect(items.map(item => item.nftClassId)).toEqual([LOWERCASE])
+      expect(totalUnclaimedRewards).toBe(250n)
+    })
+  })
 })

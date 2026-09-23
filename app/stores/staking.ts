@@ -28,6 +28,10 @@ interface NFTClassTotalStake {
 const STAKINGS_PAGE_LIMIT = 100
 const STAKINGS_MAX_PAGES = 50
 
+function hasStakeOrRewards({ stakedAmount, pendingRewards }: Pick<StakingItem, 'stakedAmount' | 'pendingRewards'>) {
+  return stakedAmount > 0n || pendingRewards > 0n
+}
+
 export const useStakingStore = defineStore('staking', () => {
   const { likeCoinTokenDecimals } = useRuntimeConfig().public
   const { loggedIn: hasLoggedIn } = useUserSession()
@@ -125,8 +129,7 @@ export const useStakingStore = defineStore('staking', () => {
               const stakedAmount = BigInt(staking.staked_amount)
               const pendingRewards = BigInt(staking.pending_reward_amount)
 
-              // Only add if there's still an active stake or pending rewards
-              if (stakedAmount > 0n || pendingRewards > 0n) {
+              if (hasStakeOrRewards({ stakedAmount, pendingRewards })) {
                 stakingItemsByNFTClassId.set(nftClassId, {
                   nftClassId,
                   stakedAmount,
@@ -204,20 +207,26 @@ export const useStakingStore = defineStore('staking', () => {
 
     const userData = stakingDataByWalletMap.value[walletAddress]
     const itemIndex = userData.items.findIndex(item => item.nftClassId === normalizedNFTClassId)
-
-    // Initialize item if it doesn't exist
-    const existingItem = userData.items[itemIndex]
-    if (!existingItem) {
-      userData.items.push({
+    const item: StakingItem = {
+      ...(userData.items[itemIndex] ?? {
         nftClassId: normalizedNFTClassId,
         stakedAmount: 0n,
         pendingRewards: 0n,
         isOwned: false,
-        ...updates,
-      })
+      }),
+      ...updates,
+    }
+
+    // A row with nothing staked or unclaimed would still count as a LIKE asset,
+    // e.g. after claiming an unstaked book or viewing a book never staked on.
+    if (!hasStakeOrRewards(item)) {
+      if (itemIndex >= 0) userData.items.splice(itemIndex, 1)
+    }
+    else if (itemIndex >= 0) {
+      userData.items[itemIndex] = item
     }
     else {
-      userData.items[itemIndex] = { ...existingItem, ...updates }
+      userData.items.push(item)
     }
 
     // Recalculate total rewards
@@ -293,6 +302,32 @@ export const useStakingStore = defineStore('staking', () => {
     return stakingItem
   }
 
+  // Reads the contract instead of the indexer, which lags the chain and would
+  // write a just-claimed balance back on top of the row.
+  async function fetchUserPendingRewards(walletAddress: string) {
+    const userData = stakingDataByWalletMap.value[walletAddress]
+    if (!userData) return
+    const updates = await Promise.all(userData.items.map(async ({ nftClassId }) => {
+      try {
+        return { nftClassId, pendingRewards: await getWalletPendingRewardsOfNFTClass(walletAddress, nftClassId) }
+      }
+      catch (error) {
+        // One unreadable class must not fail the rest, nor the claim that called us.
+        console.warn('Failed to fetch pending rewards of book:', nftClassId, error)
+        return undefined
+      }
+    }))
+
+    // A logout between the reads and the writes drops the entry, and a re-login
+    // replaces it; writing now would resurrect or clobber the row.
+    if (stakingDataByWalletMap.value[walletAddress] !== userData) return
+
+    for (const update of updates) {
+      if (!update) continue
+      updateStakingItem(walletAddress, update.nftClassId, { pendingRewards: update.pendingRewards })
+    }
+  }
+
   function reset() {
     stakingDataByWalletMap.value = {}
     totalStakeByNFTClassMap.value = {}
@@ -322,6 +357,7 @@ export const useStakingStore = defineStore('staking', () => {
     fetchUserStakingData,
     fetchTotalStakeOfNFTClass,
     fetchNFTClassStakingData,
+    fetchUserPendingRewards,
     clearUserStakingData,
     updateStakingItem,
   }
